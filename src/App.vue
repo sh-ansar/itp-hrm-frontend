@@ -1,0 +1,4 @@
+<script setup lang="ts">import { LayoutDashboard, Users, Network, BriefcaseBusiness } from 'lucide-vue-next'
+const links=[{to:'/',label:'Обзор',icon:LayoutDashboard},{to:'/employees',label:'Сотрудники',icon:Users},{to:'/organization',label:'Структура',icon:Network},{to:'/staffing',label:'Штатное расписание',icon:BriefcaseBusiness}]
+</script>
+<template><div class="app-shell"><aside class="sidebar"><div class="brand">ITP HRM<small>Кадровая система</small></div><nav aria-label="Главная навигация"><RouterLink v-for="link in links" :key="link.to" class="nav-item" :to="link.to"><component :is="link.icon" :size="19"/>{{link.label}}</RouterLink></nav></aside><div class="main"><header class="topbar"><strong>Кадровая служба</strong><span class="muted">Демонстрационная среда</span></header><main class="content"><RouterView/></main></div></div></template>

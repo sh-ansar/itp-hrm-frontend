@@ -13,10 +13,10 @@ export class ApiError extends Error {
   }
 }
 
-const requestedBaseUrl = (import.meta.env.VITE_API_BASE_URL || '/api/v1').replace(/\/$/, '')
-const baseUrl = requestedBaseUrl.startsWith('/') && !requestedBaseUrl.startsWith('//')
-  ? requestedBaseUrl
-  : '/api/v1'
+const baseUrl = (import.meta.env.VITE_API_BASE_URL || '/api/v1').replace(/\/$/, '')
+if (!baseUrl.startsWith('/') || baseUrl.startsWith('//')) {
+  throw new Error('VITE_API_BASE_URL must be a same-origin relative path (e.g. /api/v1)')
+}
 const DEFAULT_TIMEOUT_MS = 15_000
 
 /** Only accept relative same-origin paths; never forward CSRF tokens to an external URL. */

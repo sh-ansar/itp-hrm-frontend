@@ -3,7 +3,7 @@ import { computed } from 'vue'
 import BaseEmptyState from './BaseEmptyState.vue'
 import BaseLoadingState from './BaseLoadingState.vue'
 
-export interface TableColumn {
+interface TableColumn {
   key: string
   label: string
 }
@@ -15,6 +15,7 @@ const props = withDefaults(defineProps<{
   emptyTitle?: string
   emptyDescription?: string
   caption?: string
+  rowKey: keyof T & string
 }>(), {
   loading: false,
   emptyTitle: 'Данные не найдены',
@@ -35,7 +36,7 @@ const hasRows = computed(() => !props.loading && props.rows.length > 0)
         <tr><th v-for="column in columns" :key="column.key" scope="col">{{ column.label }}</th></tr>
       </thead>
       <tbody>
-        <tr v-for="(record, index) in rows" :key="index">
+        <tr v-for="record in rows"  :key="String(record[rowKey])">
           <td v-for="column in columns" :key="column.key">
             <slot :name="`cell-${column.key}`" :row="record" :value="record[column.key]">
               {{ record[column.key] ?? '—' }}

@@ -7,6 +7,7 @@ import BaseButton from '../components/ui/BaseButton.vue'
 import BaseDataTable from '../components/ui/BaseDataTable.vue'
 import BaseNotice from '../components/ui/BaseNotice.vue'
 import BaseLoadingState from '../components/ui/BaseLoadingState.vue'
+import EmployeeProfileCreateForm from '../components/EmployeeProfileCreateForm.vue'
 import { getEmployee, type EmployeeDetail } from '../api/personnel'
 
 const route = useRoute()
@@ -63,6 +64,9 @@ onMounted(load)
           <template #cell-valid_to="{ value }">{{ value ?? 'По настоящее время' }}</template>
         </BaseDataTable>
         <BaseNotice v-if="profile.meta.assignments_truncated" tone="info">Отображены первые 100 назначений. Полная история требует отдельного просмотра.</BaseNotice>
+      </BaseCard>
+      <BaseCard v-if="profile.meta.profile_writes_enabled">
+        <EmployeeProfileCreateForm :company-id="String(route.params.company)" :employee-id="String(route.params.employee)" @saved="load" />
       </BaseCard>
       <template v-if="profile.meta.extended_sections_visible">
         <BaseCard>

@@ -31,5 +31,5 @@ dialog::backdrop{background:#0b253a99}
 header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px}
 h2{font-size:21px;line-height:1.3;margin:0}
 button{border:1px solid var(--color-stroke);border-radius:9px;min-width:40px;min-height:40px;background:transparent;color:inherit;font-size:25px;cursor:pointer}
-button:focus-visible{outline:3px solid #82b8f5;outline-offset:2px}
+button:focus-visible{outline:3px solid var(--color-focus);outline-offset:2px}
 </style>

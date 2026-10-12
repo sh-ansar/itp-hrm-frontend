@@ -112,10 +112,8 @@ onMounted(loadCompanies)
 <style scoped>
 .organization-page{display:grid;gap:20px}
 .section-title{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
-.page-heading p{margin:0}
 .section-title{margin-bottom:18px}
-.section-title h2{font-size:20px;margin:0}
+.section-title h2{font-size:var(--font-section-heading);margin:0}
 .selector{display:grid;gap:8px;max-width:540px}
 .hierarchy-label{display:inline-block;padding-inline-start:clamp(0px,calc(var(--depth) * 15px),180px);max-width:100%;overflow-wrap:anywhere}
-@media(max-width:600px){.page-heading{align-items:flex-start}.page-heading :deep(button){width:100%}}
 </style>

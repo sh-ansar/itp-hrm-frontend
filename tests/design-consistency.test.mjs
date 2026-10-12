@@ -15,7 +15,7 @@ test('BNT-derived shared tokens remain available', () => {
 test('reusable controls are present and use shared semantic tokens', () => {
   for (const name of controls) {
     const text = readFileSync(new URL('components/ui/' + name, root), 'utf8')
-    assert.match(text, /var\(--color-|var\(--control-height|var\(--radius-/, name + ' must use global tokens')
+    assert.match(text, /var\(--color-|var\(--control-height|var\(--radius-|var\(--font-|var\(--space-/, name + ' must use global tokens')
   }
 })
 

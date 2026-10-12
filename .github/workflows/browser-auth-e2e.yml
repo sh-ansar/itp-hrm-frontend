@@ -34,7 +34,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: sh-ansar/itp-hrm-backend
-          ref: b72548e0fe5625a8662102a18441ea872cd905ad
+          ref: 52b225571c96643857354242316ac560d01bc022
           path: backend
           persist-credentials: false
       - name: Set up PHP and SQLite

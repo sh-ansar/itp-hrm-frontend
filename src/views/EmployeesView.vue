@@ -104,7 +104,7 @@ onMounted(loadCompanies)
 </template>
 
 <style scoped>
-.personnel-page{display:grid;gap:20px}
+.personnel-page{display:grid;grid-template-columns:minmax(0,1fr);gap:20px}
 .section-heading{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
 .section-heading{margin-bottom:18px}
 .section-heading h2{font-size:var(--font-section-heading);margin:0}

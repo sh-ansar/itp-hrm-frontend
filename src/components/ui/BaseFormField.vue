@@ -4,7 +4,7 @@ import { computed, useId } from 'vue'
 const props = withDefaults(defineProps<{
   label: string
   modelValue: string
-  type?: 'text' | 'email' | 'password'
+  type?: 'text' | 'email' | 'password' | 'date'
   placeholder?: string
   required?: boolean
   disabled?: boolean

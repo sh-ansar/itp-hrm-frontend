@@ -107,7 +107,6 @@ onMounted(loadCompanies)
 .personnel-page{display:grid;gap:20px}
 .section-heading{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
 .section-heading{margin-bottom:18px}
-.section-heading h2{font-size:20px;margin:0}
+.section-heading h2{font-size:var(--font-section-heading);margin:0}
 .selector{display:grid;gap:8px;max-width:540px}
-@media(max-width:600px){.page-heading{align-items:flex-start}.page-heading :deep(button){width:100%}}
 </style>

@@ -1,3 +1,5 @@
+import '../../../src/styles/tokens.css'
+import '../../../src/styles/global.css'
 import { createApp, defineComponent, h, ref } from 'vue'
 import BaseFormField from '../../../src/components/ui/BaseFormField.vue'
 import BaseDialog from '../../../src/components/ui/BaseDialog.vue'

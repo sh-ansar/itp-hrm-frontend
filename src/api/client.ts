@@ -7,6 +7,8 @@ export class ApiError extends Error {
     public readonly kind: ApiErrorKind,
     public readonly status: number | null,
     message: string,
+    public readonly code: string | null = null,
+    public readonly requestId: string | null = null,
   ) {
     super(message)
     this.name = 'ApiError'
@@ -68,7 +70,25 @@ export async function requestJson<T>(
         : response.status >= 500 ? 'Ошибка сервера. Повторите позже'
         : 'Не удалось выполнить запрос'
 
-      throw new ApiError('http', response.status, message)
+      // Metadata is optional: old backends and /auth endpoints keep working.
+      // Never display untrusted server text or identifiers as user messages.
+      let code: string | null = null
+      try {
+        const payload: unknown = await response.clone().json()
+        if (payload && typeof payload === 'object' && !Array.isArray(payload)) {
+          const candidate = (payload as Record<string, unknown>).code
+          if (typeof candidate === 'string' && /^[A-Z][A-Z0-9_]{0,63}$/.test(candidate)) {
+            code = candidate
+          }
+        }
+      } catch {
+        // A malformed error payload must not replace the original HTTP error.
+      }
+
+      const requestIdHeader = response.headers.get('X-Request-ID')
+      const requestId = requestIdHeader && /^[a-f0-9-]{36}$/i.test(requestIdHeader)
+        ? requestIdHeader : null
+      throw new ApiError('http', response.status, message, code, requestId)
     }
 
     if (response.status === 204) return undefined as T

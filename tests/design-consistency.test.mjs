@@ -41,3 +41,16 @@ test('organization and personnel views reuse shared page controls and typography
     assert.match(tokens, new RegExp(token + ':'))
   }
 })
+
+test('shared BNT table/button visuals use semantic tokens instead of magic colors', () => {
+  const table = readFileSync(new URL('components/ui/BaseDataTable.vue', root), 'utf8')
+  const button = readFileSync(new URL('components/ui/BaseButton.vue', root), 'utf8')
+  for (const name of ['--color-table-heading', '--color-table-heading-text', '--color-table-hover', '--font-table-size', '--color-on-primary']) {
+    assert.match(tokens, new RegExp(name + ':'))
+  }
+  for (const style of [table, button]) {
+    assert.doesNotMatch(style, /#[a-fA-F0-9]{3,8}\b/, 'base controls must not hard-code hex colors')
+  }
+  assert.match(table, /var\(--color-table-heading\)/)
+  assert.match(button, /var\(--control-height\)/)
+})

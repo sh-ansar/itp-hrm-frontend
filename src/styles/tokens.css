@@ -15,6 +15,11 @@
   --color-stroke:rgba(68,112,134,.16);
   --color-accent-soft:#e5f6ff;
   --color-focus:#82b8f5;
+  --color-table-heading:#eff5f8;
+  --color-table-heading-text:#285065;
+  --color-table-hover:#f8fbfc;
+  --color-on-primary:#fff;
+  --font-table-size:14px;
   --color-danger:#982c2c;
   --color-danger-border:#be4747;
   --color-danger-surface:#fff1f1;

@@ -83,6 +83,7 @@ test('employee register opens scoped detail and assignment history', async () =>
     await page.goto('/employees')
     await page.getByRole('row', { name: /E2E-001/ }).getByRole('link', { name: 'Открыть' }).click()
     await page.getByRole('heading', { name: 'Карточка сотрудника' }).waitFor()
+    await page.getByText('Synthetic Employee').waitFor()
     assert.match(await page.locator('main').innerText(), /Synthetic Employee/)
     assert.match(await page.locator('main').innerText(), /Test Engineer/)
     assert.match(await page.locator('main').innerText(), /Visible Finance/)

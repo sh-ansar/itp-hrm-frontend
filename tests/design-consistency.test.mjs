@@ -2,7 +2,7 @@ import { readFileSync, readdirSync } from 'node:fs'
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 
-const root = new URL('../../src/', import.meta.url)
+const root = new URL('../src/', import.meta.url)
 const tokens = readFileSync(new URL('styles/tokens.css', root), 'utf8')
 const requiredTokens = ['--color-primary', '--color-text', '--color-surface', '--color-stroke', '--color-focus', '--control-height']
 const controls = ['BaseButton.vue', 'BaseFormField.vue', 'BaseDialog.vue', 'BaseNotice.vue', 'BaseDataTable.vue', 'BaseEmptyState.vue']

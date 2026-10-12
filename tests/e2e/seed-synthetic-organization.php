@@ -20,4 +20,7 @@ $db->insert([['id'=>$a,'name'=>'Test Company Visible'],['id'=>$b,'name'=>'Test C
     ['id'=>'55555555-5555-4555-8555-555555555555','company_id'=>$a,'parent_id'=>'33333333-3333-4333-8333-333333333333','name'=>'Visible Finance Child'],
 ]);
 if (\Illuminate\Support\Facades\DB::table('departments')->where('company_id', $a)->count() !== 2) { throw new RuntimeException('Synthetic department seed was not persisted.'); }
+\Illuminate\Support\Facades\DB::table('positions')->insert(['id'=>'66666666-6666-4666-8666-666666666666','company_id'=>$a,'name'=>'Test Engineer']);
+\Illuminate\Support\Facades\DB::table('employees')->insert(['id'=>'77777777-7777-4777-8777-777777777777','company_id'=>$a,'personnel_number'=>'E2E-001','last_name'=>'Synthetic','first_name'=>'Employee']);
+\Illuminate\Support\Facades\DB::table('employee_assignments')->insert(['id'=>'88888888-8888-4888-8888-888888888888','employee_id'=>'77777777-7777-4777-8777-777777777777','department_id'=>'33333333-3333-4333-8333-333333333333','position_id'=>'66666666-6666-4666-8666-666666666666','valid_from'=>'2026-01-01']);
 echo "Synthetic isolated organizational fixtures provisioned.\n";

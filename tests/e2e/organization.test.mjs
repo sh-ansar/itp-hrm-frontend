@@ -70,3 +70,28 @@ test('organization and employee registries remain usable at mobile tablet deskto
     } finally { await context.close() }
   }
 })
+
+test('employee register opens scoped detail and assignment history', async () => {
+  const context = await browser.newContext({ baseURL: 'http://127.0.0.1:5173', viewport: { width: 375, height: 850 } })
+  const page = await context.newPage()
+  try {
+    await page.goto('/login')
+    await page.getByLabel('Электронная почта').fill('synthetic-e2e@example.test')
+    await page.getByLabel('Пароль').fill('SyntheticE2E-Only!2026')
+    await page.getByRole('button', { name: 'Войти' }).click()
+    await page.getByRole('heading', { name: 'Обзор системы' }).waitFor()
+    await page.goto('/employees')
+    await page.getByRole('row', { name: /E2E-001/ }).getByRole('link', { name: 'Открыть' }).click()
+    await page.getByRole('heading', { name: 'Карточка сотрудника' }).waitFor()
+    await page.getByText('Synthetic Employee').waitFor()
+    assert.match(await page.locator('main').innerText(), /Synthetic Employee/)
+    assert.match(await page.locator('main').innerText(), /Test Engineer/)
+    assert.match(await page.locator('main').innerText(), /Visible Finance/)
+    const unauthorized = await page.evaluate(async () => {
+      const r = await fetch('/api/v1/companies/22222222-2222-4222-8222-222222222222/employees/77777777-7777-4777-8777-777777777777', { headers: { Accept:'application/json' } })
+      return r.status
+    })
+    assert.equal(unauthorized, 403)
+    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1), false)
+  } finally { await context.close() }
+})

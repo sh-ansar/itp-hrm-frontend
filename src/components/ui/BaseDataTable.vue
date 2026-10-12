@@ -49,13 +49,13 @@ const hasRows = computed(() => !props.loading && props.rows.length > 0)
 </template>
 
 <style scoped>
-.table-scroll{width:100%;max-width:100%;overflow-x:auto;border:1px solid var(--color-stroke);border-radius:14px;background:var(--color-surface)}
-.table-scroll:focus-visible{outline:3px solid #82b8f5;outline-offset:2px}
-table{border-collapse:collapse;width:100%;min-width:540px;text-align:left;font-size:14px}
-th{position:sticky;top:0;background:#eff5f8;color:#285065;font-weight:700;white-space:nowrap;padding:14px 16px;border-bottom:1px solid var(--color-stroke)}
+.table-scroll{width:100%;max-width:100%;overflow-x:auto;border:1px solid var(--color-stroke);border-radius:var(--radius-lg);background:var(--color-surface)}
+.table-scroll:focus-visible{outline:3px solid var(--color-focus);outline-offset:2px}
+table{border-collapse:collapse;width:100%;min-width:540px;text-align:left;font-size:var(--font-table-size)}
+th{position:sticky;top:0;background:var(--color-table-heading);color:var(--color-table-heading-text);font-weight:700;white-space:nowrap;padding:14px 16px;border-bottom:1px solid var(--color-stroke)}
 td{padding:13px 16px;border-bottom:1px solid var(--color-stroke);color:var(--color-text);overflow-wrap:anywhere}
 tbody tr:last-child td{border-bottom:0}
-tbody tr:hover{background:#f8fbfc}
+tbody tr:hover{background:var(--color-table-hover)}
 .sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap}
 @media(max-width:600px){th,td{padding:12px}}
 </style>

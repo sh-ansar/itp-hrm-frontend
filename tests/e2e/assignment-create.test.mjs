@@ -6,7 +6,7 @@ let browser
 before(async () => { browser = await chromium.launch({ headless: true }) })
 after(async () => { await browser?.close() })
 
-test('HR creates and closes assignments from the employee card at mobile width', async () => {
+test('HR creates edits and atomically transfers assignments at mobile width', async () => {
   const context = await browser.newContext({
     baseURL: 'http://127.0.0.1:5173',
     viewport: { width: 375, height: 850 },
@@ -40,18 +40,28 @@ test('HR creates and closes assignments from the employee card at mobile width',
     assert.match(await row.innerText(), /Test Engineer/)
     assert.match(await row.innerText(), /2025-01-01/)
 
-    const activeRow = table.getByRole('row', { name: /По настоящее время/ })
-    await activeRow.getByRole('button', { name: 'Изменить' }).click()
+    await row.getByRole('button', { name: 'Изменить' }).click()
     const editor = page.getByRole('region', { name: 'Редактирование назначения' })
     await editor.waitFor()
-    assert.equal(await editor.getByLabel('Действует с').inputValue(), '2026-01-01')
-    await editor.getByLabel('Действует по').fill('2026-12-31')
-    await editor.getByLabel('Основание').fill('Приказ E2E-close')
+    await editor.getByLabel('Основание').fill('Приказ E2E-15-updated')
     await editor.getByRole('button', { name: 'Сохранить изменения' }).click()
+    await table.getByRole('row', { name: /Приказ E2E-15-updated/ }).waitFor()
 
-    const closed = table.getByRole('row', { name: /Приказ E2E-close/ })
-    await closed.waitFor()
-    assert.match(await closed.innerText(), /2026-12-31/)
+    const activeRow = table.getByRole('row', { name: /По настоящее время/ })
+    await activeRow.getByRole('button', { name: 'Перевести' }).click()
+    const transfer = page.getByRole('region', { name: 'Перевод сотрудника' })
+    await transfer.waitFor()
+    await transfer.getByLabel('Новое подразделение').selectOption('55555555-5555-4555-8555-555555555555')
+    await transfer.getByLabel('Новая должность').selectOption('66666666-6666-4666-8666-666666666666')
+    await transfer.getByLabel('Новое назначение с').fill('2026-07-01')
+    await transfer.getByLabel('Основание').fill('Приказ E2E-transfer')
+    await transfer.getByRole('button', { name: 'Выполнить перевод' }).click()
+
+    const transferred = table.getByRole('row', { name: /Приказ E2E-transfer/ })
+    await transferred.waitFor()
+    assert.match(await transferred.innerText(), /Visible Finance Child/)
+    const closedPrevious = table.getByRole('row', { name: /2026-06-30/ })
+    await closedPrevious.waitFor()
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1), false)
   } finally {
     await context.close()

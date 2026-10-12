@@ -26,6 +26,7 @@ const columns = [
   { key: 'last_name', label: 'Фамилия' },
   { key: 'first_name', label: 'Имя' },
   { key: 'middle_name', label: 'Отчество' },
+  { key: 'details', label: 'Карточка' },
 ]
 const currentCompany = computed(() => companies.value.find(x => x.id === selectedCompany.value))
 
@@ -96,7 +97,9 @@ onMounted(loadCompanies)
       <BaseDataTable :rows="employees" :columns="columns" row-key="id"
         caption="Реестр сотрудников выбранной компании" :loading="employeeLoading"
         empty-title="Доступные сотрудники не найдены"
-        empty-description="Нет записей, разрешённых для просмотра в выбранной компании." />
+        empty-description="Нет записей, разрешённых для просмотра в выбранной компании.">
+        <template #cell-details="{ row }"><RouterLink class="employee-link" :to="{ name: 'employee-detail', params: { company: selectedCompany, employee: row.id } }">Открыть</RouterLink></template>
+      </BaseDataTable>
       <BasePagination :page="page" :last-page="lastPage" :loading="employeeLoading"
         caption="Страницы реестра сотрудников" @previous="page--" @next="page++" />
     </BaseCard>
@@ -109,4 +112,6 @@ onMounted(loadCompanies)
 .section-heading{margin-bottom:18px}
 .section-heading h2{font-size:var(--font-section-heading);margin:0}
 .selector{display:grid;gap:8px;max-width:540px}
+.employee-link{color:var(--color-primary);font-weight:600;text-decoration:underline;text-underline-offset:3px}
+.employee-link:focus-visible{outline:3px solid var(--color-focus)}
 </style>

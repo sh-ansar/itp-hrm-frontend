@@ -42,3 +42,30 @@ test('organization page displays authorized company and department only', async 
     assert.equal(unauthorized, 403)
   } finally { await context.close() }
 })
+
+
+test('organization and employee registries remain usable at mobile tablet desktop widths', async () => {
+  for (const width of [375, 768, 1440]) {
+    const context = await browser.newContext({ baseURL: 'http://127.0.0.1:5173', viewport: { width, height: 850 } })
+    const page = await context.newPage()
+    try {
+      await page.goto('/login')
+      await page.getByLabel('Электронная почта').fill('synthetic-e2e@example.test')
+      await page.getByLabel('Пароль').fill('SyntheticE2E-Only!2026')
+      await page.getByRole('button', { name: 'Войти' }).click()
+      await page.getByRole('heading', { name: 'Обзор системы' }).waitFor()
+      for (const [route, heading] of [['/organization', 'Организационная структура'], ['/employees', 'Реестр сотрудников']]) {
+        await page.goto(route)
+        await page.getByRole('heading', { name: heading }).waitFor()
+        await page.getByLabel('Компания').waitFor()
+        await page.getByRole('button', { name: 'Обновить' }).waitFor()
+        const horizontalOverflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1)
+        assert.equal(horizontalOverflow, false, `${route} width ${width} should not overflow document`)
+        const select = page.getByLabel('Компания')
+        const bounds = await select.boundingBox()
+        assert.ok(bounds && bounds.width > 80 && bounds.x >= 0 && bounds.x + bounds.width <= width + 1,
+          `${route} selector must fit viewport ${width}`)
+      }
+    } finally { await context.close() }
+  }
+})

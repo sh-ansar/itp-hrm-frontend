@@ -80,7 +80,7 @@ jobs:
           cat "$RUNNER_TEMP/hrm-backend.log" "$RUNNER_TEMP/hrm-frontend.log"
           exit 1
       - name: Run Chromium browser integration tests
-        run: node --test tests/e2e/auth.test.mjs
+        run: node --test tests/e2e/auth.test.mjs tests/e2e/components.test.mjs
       - name: Print server diagnostics on failure
         if: failure()
         run: |

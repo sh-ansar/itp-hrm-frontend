@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { nextTick, ref, watch } from 'vue'
+import { nextTick, ref, useId, watch } from 'vue'
 
 const props = defineProps<{ open: boolean; title: string }>()
 const emit = defineEmits<{ close: [] }>()
 const dialog = ref<HTMLDialogElement | null>(null)
-const titleId = 'dialog-title-' + Math.random().toString(36).slice(2)
+const titleId = useId()
 
 watch(() => props.open, async (open) => {
   await nextTick()

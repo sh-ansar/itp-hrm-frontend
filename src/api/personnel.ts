@@ -48,7 +48,7 @@ export async function createEmployeeProfileRecord(
   const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
   if (!uuid.test(companyId) || !uuid.test(employeeId)) throw new Error('Некорректный идентификатор')
   if (!['experience', 'reserve', 'training'].includes(section)) throw new Error('Некорректный раздел')
-  return apiRequest('/companies/' + companyId + '/employees/' + employeeId + '/profile/' + section, {
+  return apiRequest<{ data: { id: string; section: ProfileSection } }>('/companies/' + companyId + '/employees/' + employeeId + '/profile/' + section, {
     method: 'POST',
     body: JSON.stringify(payload),
   })

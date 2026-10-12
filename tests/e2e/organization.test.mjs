@@ -21,7 +21,7 @@ test('organization page displays authorized company and department only', async 
     await select.waitFor()
     assert.match(await select.textContent(), /Test Company Visible/)
     assert.doesNotMatch(await select.textContent(), /Test Company Hidden/)
-    await page.getByRole('cell', { name: 'Visible Finance' }).waitFor()
+    await page.getByRole('cell', { name: /Visible Finance/ }).waitFor()
     assert.equal(await page.getByText('Hidden Department').count(), 0)
     const childRow = page.getByRole('row', { name: /Visible Finance Child/ })
     await childRow.waitFor()

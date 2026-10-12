@@ -3,6 +3,7 @@ import { ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useSessionStore } from '../stores/session'
 import BaseCard from '../components/ui/BaseCard.vue'
+import BaseNotice from '../components/ui/BaseNotice.vue'
 import BaseButton from '../components/ui/BaseButton.vue'
 import BaseField from '../components/ui/BaseField.vue'
 
@@ -48,16 +49,16 @@ async function submit() {
         <h1>Вход в систему</h1>
         <p class="muted">Используйте корпоративную учётную запись.</p>
 
-        <div v-if="!enabled" class="login-notice" role="status">
+        <BaseNotice v-if="!enabled" tone="warning">
           Авторизация пока не включена. Подключение доступно после согласования безопасности и адресов размещения.
-        </div>
+        </BaseNotice>
 
         <form v-else class="login-form" @submit.prevent="submit">
           <BaseField id="login-email" v-model="email" label="Электронная почта" type="email"
             autocomplete="username" required :disabled="session.loading" :invalid="!!message" />
           <BaseField id="login-password" v-model="password" label="Пароль" type="password"
             autocomplete="current-password" required :disabled="session.loading" :invalid="!!message" />
-          <p v-if="message || session.error" class="login-error" role="alert">{{ message || session.error }}</p>
+          <BaseNotice v-if="message || session.error" tone="error">{{ message || session.error }}</BaseNotice>
           <BaseButton type="submit" :disabled="session.loading || !email || !password">
             {{ session.loading ? 'Проверка данных…' : 'Войти' }}
           </BaseButton>
@@ -80,8 +81,7 @@ async function submit() {
 .login-wrap p{line-height:1.5;margin:0 0 20px}
 .login-form{display:grid;gap:18px}
 .login-form :deep(.base-button){min-height:44px;margin-top:4px}
-.login-error{color:#ba2020;font-size:14px;margin:0!important}
-.login-notice{border:1px solid #e8d2a5;background:#fff9e7;border-radius:10px;padding:14px;line-height:1.5;color:#675322;font-size:14px}
+
 .login-back{display:inline-block;margin-top:20px;color:var(--color-primary);font-size:14px;text-decoration:underline}
 .login-footnote{font-size:12px;color:#688696;text-align:center;margin:0}
 </style>

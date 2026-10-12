@@ -2,6 +2,7 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { LayoutDashboard, Users, Network, BriefcaseBusiness } from 'lucide-vue-next'
+import BaseNotice from './components/ui/BaseNotice.vue'
 import BaseButton from './components/ui/BaseButton.vue'
 import { useSessionStore } from './stores/session'
 import { browserLoginEnabled } from './router'
@@ -47,7 +48,7 @@ async function logout() {
         </div>
         <span v-else class="muted">Демонстрационная среда</span>
       </header>
-      <p v-if="logoutError" class="shell-error" role="alert">{{ logoutError }}</p>
+      <BaseNotice v-if="logoutError" class="shell-error" tone="error">{{ logoutError }}</BaseNotice>
       <main class="content"><RouterView /></main>
     </div>
   </div>
@@ -55,6 +56,6 @@ async function logout() {
 
 <style scoped>
 .user-panel{display:flex;gap:12px;align-items:center}
-.shell-error{color:#b72b2b;margin:12px 32px}
+.shell-error{margin:12px 32px}
 @media(max-width:700px){.user-panel{gap:8px}.user-panel .muted{max-width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}}
 </style>

@@ -17,6 +17,7 @@ const loading = ref(false)
 const error = ref('')
 const editing = ref<{ section: ProfileSection; record: ProfileEditRow } | null>(null)
 const assignmentEditing = ref<EmployeeAssignment | null>(null)
+const assignmentTransitioning = ref<EmployeeAssignment | null>(null)
 function beginEdit(section: ProfileSection, record: ProfileEditRow) {
   editing.value = { section, record }
 }
@@ -36,6 +37,7 @@ async function load() {
   loading.value = true
   editing.value = null
   assignmentEditing.value = null
+  assignmentTransitioning.value = null
   error.value = ''
   profile.value = null
   try {
@@ -73,12 +75,15 @@ onMounted(load)
           empty-description="Для сотрудника нет доступных кадровых назначений.">
           <template #cell-valid_to="{ value }">{{ value ?? 'По настоящее время' }}</template>
           <template #cell-edit="{ row }">
-            <BaseButton variant="secondary" @click="assignmentEditing = row">Изменить</BaseButton>
+            <div class="row-actions">
+              <BaseButton variant="secondary" @click="assignmentEditing = row; assignmentTransitioning = null">Изменить</BaseButton>
+              <BaseButton v-if="row.valid_to === null" @click="assignmentTransitioning = row; assignmentEditing = null">Перевести</BaseButton>
+            </div>
           </template>
         </BaseDataTable>
         <BaseNotice v-if="profile.meta.assignments_truncated" tone="info">Отображены первые 100 назначений. Полная история требует отдельного просмотра.</BaseNotice>
         <EmployeeAssignmentCreateForm
-          v-if="profile.meta.assignment_writes_enabled && !assignmentEditing"
+          v-if="profile.meta.assignment_writes_enabled && !assignmentEditing && !assignmentTransitioning"
           :company-id="String(route.params.company)"
           :employee-id="String(route.params.employee)"
           @saved="load"
@@ -91,6 +96,15 @@ onMounted(load)
           :employee-id="String(route.params.employee)"
           @saved="load"
           @cancelled="assignmentEditing = null"
+        />
+        <EmployeeAssignmentCreateForm
+          v-if="profile.meta.assignment_writes_enabled && assignmentTransitioning"
+          :key="'transition:' + assignmentTransitioning.id + ':' + assignmentTransitioning.revision"
+          :transition-from="assignmentTransitioning"
+          :company-id="String(route.params.company)"
+          :employee-id="String(route.params.employee)"
+          @saved="load"
+          @cancelled="assignmentTransitioning = null"
         />
       </BaseCard>
       <BaseCard v-if="profile.meta.profile_writes_enabled">
@@ -153,6 +167,7 @@ onMounted(load)
 .profile-grid>div{display:grid;gap:var(--space-2)}
 .field-label{font-size:var(--font-caption-size);color:var(--color-muted)}
 strong{font-size:var(--font-body-size);overflow-wrap:anywhere}
+.row-actions{display:flex;gap:var(--space-2);flex-wrap:wrap}
 h2{font-size:var(--font-section-heading);margin:0 0 var(--space-4)}
 .back-link{display:inline-flex;align-items:center;color:var(--color-primary);font-weight:600;padding:var(--space-2)}
 .back-link:focus-visible{outline:3px solid var(--color-focus)}

@@ -7,6 +7,7 @@ import BaseSelectField from './ui/BaseSelectField.vue'
 import { listDepartments, listPositions, type DepartmentRecord, type PositionRecord } from '../api/organization'
 import {
   createEmployeeAssignment,
+  transitionEmployeeAssignment,
   updateEmployeeAssignment,
   type EmployeeAssignment,
 } from '../api/personnel'
@@ -15,6 +16,7 @@ const props = defineProps<{
   companyId: string
   employeeId: string
   edit?: EmployeeAssignment | null
+  transitionFrom?: EmployeeAssignment | null
 }>()
 
 const emit = defineEmits<{ saved: []; cancelled: [] }>()
@@ -31,6 +33,10 @@ const saving = ref(false)
 const error = ref('')
 const savedMessage = ref('')
 const isEditing = computed(() => !!props.edit)
+const isTransition = computed(() => !!props.transitionFrom)
+const isSecondaryFlow = computed(() => isEditing.value || isTransition.value)
+const title = computed(() => isTransition.value ? 'Перевод сотрудника' : isEditing.value ? 'Редактирование назначения' : 'Новое назначение')
+const titleId = computed(() => isTransition.value ? 'assignment-transition-title' : isEditing.value ? 'assignment-edit-title' : 'assignment-create-title')
 
 async function loadDirectories() {
   loadingDirectories.value = true
@@ -61,6 +67,10 @@ async function submit() {
     error.value = 'Дата окончания не может быть раньше даты начала'
     return
   }
+  if (props.transitionFrom && validFrom.value <= props.transitionFrom.valid_from) {
+    error.value = 'Дата нового назначения должна быть позже даты текущего назначения'
+    return
+  }
 
   saving.value = true
   const payload = {
@@ -72,7 +82,16 @@ async function submit() {
   }
 
   try {
-    if (props.edit) {
+    if (props.transitionFrom) {
+      await transitionEmployeeAssignment(
+        props.companyId,
+        props.employeeId,
+        props.transitionFrom.id,
+        props.transitionFrom.revision,
+        payload,
+      )
+      savedMessage.value = 'Перевод выполнен'
+    } else if (props.edit) {
       await updateEmployeeAssignment(
         props.companyId,
         props.employeeId,
@@ -102,13 +121,14 @@ onMounted(loadDirectories)
 </script>
 
 <template>
-  <section class="assignment-form" :aria-labelledby="isEditing ? 'assignment-edit-title' : 'assignment-create-title'">
+  <section class="assignment-form" :aria-labelledby="titleId">
     <div class="heading">
       <div>
-        <h3 :id="isEditing ? 'assignment-edit-title' : 'assignment-create-title'">
-          {{ isEditing ? 'Редактирование назначения' : 'Новое назначение' }}
-        </h3>
-        <p v-if="isEditing">
+        <h3 :id="titleId">{{ title }}</h3>
+        <p v-if="isTransition">
+          Текущее назначение будет закрыто днём перед новой датой, а новое создано в одной операции. При ошибке изменения не применятся.
+        </p>
+        <p v-else-if="isEditing">
           Скорректируйте период или закройте текущее назначение датой окончания. Конфликтующую версию система не перезапишет.
         </p>
         <p v-else>Добавьте кадровое назначение с периодом действия. Пересекающиеся периоды система не сохранит.</p>
@@ -122,19 +142,21 @@ onMounted(loadDirectories)
     <BaseNotice v-if="savedMessage" tone="success">{{ savedMessage }}</BaseNotice>
 
     <form class="form-grid" @submit.prevent="submit">
-      <BaseSelectField v-model="departmentId" label="Подразделение" placeholder="Выберите подразделение"
-        :options="departments" :disabled="loadingDirectories || saving" required />
-      <BaseSelectField v-model="positionId" label="Должность" placeholder="Выберите должность"
-        :options="positions" :disabled="loadingDirectories || saving" required />
-      <BaseFormField v-model="validFrom" label="Действует с" type="date" :disabled="saving" required />
-      <BaseFormField v-model="validTo" label="Действует по" type="date" :disabled="saving" />
+      <BaseSelectField v-model="departmentId" :label="isTransition ? 'Новое подразделение' : 'Подразделение'"
+        placeholder="Выберите подразделение" :options="departments" :disabled="loadingDirectories || saving" required />
+      <BaseSelectField v-model="positionId" :label="isTransition ? 'Новая должность' : 'Должность'"
+        placeholder="Выберите должность" :options="positions" :disabled="loadingDirectories || saving" required />
+      <BaseFormField v-model="validFrom" :label="isTransition ? 'Новое назначение с' : 'Действует с'"
+        type="date" :disabled="saving" required />
+      <BaseFormField v-model="validTo" :label="isTransition ? 'Новое назначение по' : 'Действует по'"
+        type="date" :disabled="saving" />
       <div class="wide">
         <BaseFormField v-model="basisReference" label="Основание" placeholder="Например: приказ № 15-к" :disabled="saving" />
       </div>
       <div class="actions">
-        <BaseButton v-if="isEditing" type="button" variant="secondary" :disabled="saving" @click="emit('cancelled')">Отмена</BaseButton>
+        <BaseButton v-if="isSecondaryFlow" type="button" variant="secondary" :disabled="saving" @click="emit('cancelled')">Отмена</BaseButton>
         <BaseButton type="submit" :disabled="saving || loadingDirectories">
-          {{ saving ? 'Сохранение…' : isEditing ? 'Сохранить изменения' : 'Добавить назначение' }}
+          {{ saving ? 'Сохранение…' : isTransition ? 'Выполнить перевод' : isEditing ? 'Сохранить изменения' : 'Добавить назначение' }}
         </BaseButton>
       </div>
     </form>

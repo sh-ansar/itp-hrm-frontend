@@ -87,6 +87,8 @@ test('employee register opens scoped detail and assignment history', async () =>
     assert.match(await page.locator('main').innerText(), /Synthetic Employee/)
     assert.match(await page.locator('main').innerText(), /Test Engineer/)
     assert.match(await page.locator('main').innerText(), /Visible Finance/)
+    assert.equal(await page.getByRole('button', { name: 'Перевести' }).count(), 0)
+    assert.equal(await page.getByRole('region', { name: 'Новое назначение' }).count(), 0)
     const unauthorized = await page.evaluate(async () => {
       const r = await fetch('/api/v1/companies/22222222-2222-4222-8222-222222222222/employees/77777777-7777-4777-8777-777777777777', { headers: { Accept:'application/json' } })
       return r.status

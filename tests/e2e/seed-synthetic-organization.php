@@ -17,5 +17,6 @@ $db->insert([['id'=>$a,'name'=>'Test Company Visible'],['id'=>$b,'name'=>'Test C
 \Illuminate\Support\Facades\DB::table('departments')->insert([
     ['id'=>'33333333-3333-4333-8333-333333333333','company_id'=>$a,'name'=>'Visible Finance'],
     ['id'=>'44444444-4444-4444-8444-444444444444','company_id'=>$b,'name'=>'Hidden Department'],
+    ['id'=>'55555555-5555-4555-8555-555555555555','company_id'=>$a,'parent_id'=>'33333333-3333-4333-8333-333333333333','name'=>'Visible Finance Child'],
 ]);
 echo "Synthetic isolated organizational fixtures provisioned.\n";

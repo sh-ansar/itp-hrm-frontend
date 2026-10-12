@@ -27,7 +27,10 @@ export interface EmployeeAssignment extends Record<string, unknown> {
 export interface EmployeeDetail {
   data: EmployeeRecord
   assignments: EmployeeAssignment[]
-  meta: { assignments_limit: number; assignments_truncated: boolean }
+  experience: Array<{ id: string; experience_type: string; started_on: string; ended_on: string | null; basis_reference: string | null }>
+  reserve: Array<{ id: string; target_position: string; reserve_level: string; reserve_type: string; joined_year: number; left_year: number | null; notes: string | null }>
+  training: Array<{ id: string; training_type: string; training_mode: string; topic: string; provider: string | null; city: string | null; started_on: string; ended_on: string | null; document_reference: string | null }>
+  meta: { assignments_limit: number; assignments_truncated: boolean; extended_sections_visible: boolean }
 }
 export function getEmployee(companyId: string, employeeId: string): Promise<EmployeeDetail> {
   const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i

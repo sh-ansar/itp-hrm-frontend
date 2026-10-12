@@ -120,3 +120,23 @@ export function updateEmployeeAssignment(
     body: JSON.stringify({ ...payload, revision }),
   })
 }
+
+
+export function transitionEmployeeAssignment(
+  companyId: string,
+  employeeId: string,
+  assignmentId: string,
+  revision: number,
+  payload: AssignmentCreatePayload,
+): Promise<{ data: {
+  closed_assignment: { id: string; valid_to: string; revision: number }
+  new_assignment: { id: string; employee_id: string; valid_from: string; valid_to: string | null; revision: number }
+} }> {
+  if (![companyId, employeeId, assignmentId].every(id => uuid.test(id))) throw new Error('Некорректный идентификатор')
+  if (!uuid.test(payload.department_id) || !uuid.test(payload.position_id)) throw new Error('Выберите новое подразделение и должность')
+  if (!Number.isSafeInteger(revision) || revision < 1) throw new Error('Неверная версия назначения')
+  return apiRequest(`/companies/${companyId}/employees/${employeeId}/assignments/${assignmentId}/transition`, {
+    method: 'POST',
+    body: JSON.stringify({ ...payload, revision }),
+  })
+}

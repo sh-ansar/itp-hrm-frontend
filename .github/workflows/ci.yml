@@ -12,5 +12,6 @@ jobs:
           node-version: '22'
           cache: npm
       - run: npm ci
+      - run: node --test tests/design-consistency.test.mjs
       - run: npm run typecheck
       - run: npm run build

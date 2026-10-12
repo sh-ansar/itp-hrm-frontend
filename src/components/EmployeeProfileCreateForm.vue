@@ -2,15 +2,19 @@
 import { computed, reactive, ref } from 'vue'
 import BaseButton from './ui/BaseButton.vue'
 import BaseNotice from './ui/BaseNotice.vue'
-import { createEmployeeProfileRecord, type ProfileSection } from '../api/personnel'
+import { createEmployeeProfileRecord, updateEmployeeProfileRecord, type ProfileEditRow, type ProfileSection } from '../api/personnel'
 
-const props = defineProps<{ companyId: string; employeeId: string }>()
-const emit = defineEmits<{ saved: [] }>()
-const section = ref<ProfileSection>('experience')
+const props = defineProps<{ companyId: string; employeeId: string; edit?: { section: ProfileSection; record: ProfileEditRow } }>()
+const emit = defineEmits<{ saved: []; cancelled: [] }>()
+const section = ref<ProfileSection>(props.edit?.section ?? 'experience')
 const saving = ref(false)
 const error = ref('')
 const success = ref('')
-const form = reactive<Record<string, string>>({})
+// The component is keyed by record ID/revision when used as an editor: an
+// outdated form cannot silently inherit fields from another employee record.
+const form = reactive<Record<string, string>>(Object.fromEntries(
+  Object.entries(props.edit?.record ?? {}).map(([key, value]) => [key, value == null ? '' : String(value)]),
+))
 const sections: { value: ProfileSection; label: string }[] = [
   { value: 'experience', label: 'Стаж' },
   { value: 'reserve', label: 'Кадровый резерв' },
@@ -74,9 +78,16 @@ async function submit() {
   }
   saving.value = true
   try {
-    await createEmployeeProfileRecord(props.companyId, props.employeeId, section.value, body)
-    for (const key of Object.keys(form)) delete form[key]
-    success.value = 'Запись создана.'
+    if (props.edit) {
+      await updateEmployeeProfileRecord(
+        props.companyId, props.employeeId, section.value,
+        props.edit.record.id, props.edit.record.revision, body,
+      )
+    } else {
+      await createEmployeeProfileRecord(props.companyId, props.employeeId, section.value, body)
+      for (const key of Object.keys(form)) delete form[key]
+    }
+    success.value = props.edit ? 'Изменения сохранены.' : 'Запись создана.'
     emit('saved')
   } catch (cause) {
     error.value = cause instanceof Error ? cause.message : 'Не удалось сохранить запись'
@@ -87,10 +98,10 @@ async function submit() {
 </script>
 
 <template>
-  <section class="create-form" aria-label="Добавление кадровых сведений">
-    <h2>Добавить кадровые сведения</h2>
+  <section class="create-form" :aria-label="edit ? 'Редактирование кадровых сведений' : 'Добавление кадровых сведений'">
+    <h2>{{ edit ? 'Редактировать кадровые сведения' : 'Добавить кадровые сведения' }}</h2>
     <p class="form-hint">Изменения сохраняются с проверкой прав и журналом аудита.</p>
-    <div class="section-tabs" role="group" aria-label="Раздел карточки">
+    <div v-if="!edit" class="section-tabs" role="group" aria-label="Раздел карточки">
       <BaseButton v-for="item in sections" :key="item.value" variant="secondary"
         :disabled="saving" @click="selectSection(item.value)">{{ item.label }}{{ section === item.value ? ' ✓' : '' }}</BaseButton>
     </div>
@@ -111,7 +122,10 @@ async function submit() {
       </div>
       <BaseNotice v-if="error" tone="error">{{ error }}</BaseNotice>
       <BaseNotice v-if="success" tone="info">{{ success }}</BaseNotice>
-      <BaseButton type="submit" :disabled="saving">{{ saving ? 'Сохранение…' : 'Сохранить запись' }}</BaseButton>
+      <div class="form-actions">
+        <BaseButton type="submit" :disabled="saving">{{ saving ? 'Сохранение…' : (edit ? 'Сохранить изменения' : 'Сохранить запись') }}</BaseButton>
+        <BaseButton v-if="edit" variant="secondary" :disabled="saving" @click="emit('cancelled')">Отмена</BaseButton>
+      </div>
     </form>
   </section>
 </template>
@@ -120,7 +134,7 @@ async function submit() {
 .create-form{display:grid;gap:var(--space-4);min-width:0}
 .create-form h2{margin:0;font-size:var(--font-section-heading)}
 .form-hint{margin:0;color:var(--color-muted)}
-.section-tabs{display:flex;flex-wrap:wrap;gap:var(--space-2)}
+.section-tabs,.form-actions{display:flex;flex-wrap:wrap;gap:var(--space-2)}
 .create-form form{display:grid;gap:var(--space-4)}
 .form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--space-4)}
 .field{display:grid;gap:var(--space-2);min-width:0;font-size:var(--font-body-size)}

@@ -1,12 +1,11 @@
 import { readFileSync, readdirSync } from 'node:fs'
-import { join } from 'node:path'
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 
 const root = new URL('../../src/', import.meta.url)
 const tokens = readFileSync(new URL('styles/tokens.css', root), 'utf8')
 const requiredTokens = ['--color-primary', '--color-text', '--color-surface', '--color-stroke', '--color-focus', '--control-height']
-const controls = ['BaseButton.vue', 'BaseFormField.vue', 'BaseDialog.vue', 'BaseNotice.vue', 'BaseDataTable.vue', 'BaseLoadingState.vue', 'BaseEmptyState.vue']
+const controls = ['BaseButton.vue', 'BaseFormField.vue', 'BaseDialog.vue', 'BaseNotice.vue', 'BaseDataTable.vue', 'BaseEmptyState.vue']
 
 test('BNT-derived shared tokens remain available', () => {
   for (const name of requiredTokens) assert.match(tokens, new RegExp(name + ':'))

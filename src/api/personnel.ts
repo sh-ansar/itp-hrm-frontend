@@ -9,12 +9,17 @@ export interface EmployeeRecord extends Record<string, unknown> {
   last_name: string
   first_name: string
   middle_name: string | null
+  revision: number
 }
 
-export function listEmployees(companyId: string, page = 1): Promise<PagedResponse<EmployeeRecord>> {
+export interface EmployeeListResponse extends PagedResponse<EmployeeRecord> {
+  meta: PagedResponse<EmployeeRecord>['meta'] & { employee_writes_enabled: boolean }
+}
+
+export function listEmployees(companyId: string, page = 1): Promise<EmployeeListResponse> {
   if (!uuid.test(companyId)) throw new Error('Некорректный идентификатор компании')
   if (!Number.isSafeInteger(page) || page < 1) throw new Error('Некорректная страница')
-  return apiRequest<PagedResponse<EmployeeRecord>>(`/companies/${companyId}/employees?per_page=25&page=${page}`)
+  return apiRequest<EmployeeListResponse>(`/companies/${companyId}/employees?per_page=25&page=${page}`)
 }
 
 export interface EmployeeAssignment extends Record<string, unknown> {
@@ -41,6 +46,7 @@ export interface EmployeeDetail {
     extended_sections_visible: boolean
     profile_writes_enabled: boolean
     assignment_writes_enabled: boolean
+    employee_writes_enabled: boolean
   }
 }
 
@@ -48,6 +54,39 @@ export function getEmployee(companyId: string, employeeId: string): Promise<Empl
   if (!uuid.test(companyId) || !uuid.test(employeeId)) throw new Error('Некорректный идентификатор')
   return apiRequest<EmployeeDetail>(`/companies/${companyId}/employees/${employeeId}`)
 }
+
+export interface EmployeeIdentityPayload {
+  personnel_number: string
+  last_name: string
+  first_name: string
+  middle_name: string | null
+}
+
+export function createEmployee(
+  companyId: string,
+  payload: EmployeeIdentityPayload,
+): Promise<{ data: EmployeeRecord }> {
+  if (!uuid.test(companyId)) throw new Error('Некорректный идентификатор компании')
+  return apiRequest<{ data: EmployeeRecord }>(`/companies/${companyId}/employees`, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
+}
+
+export function updateEmployee(
+  companyId: string,
+  employeeId: string,
+  revision: number,
+  payload: EmployeeIdentityPayload,
+): Promise<{ data: EmployeeRecord }> {
+  if (!uuid.test(companyId) || !uuid.test(employeeId)) throw new Error('Некорректный идентификатор')
+  if (!Number.isSafeInteger(revision) || revision < 1) throw new Error('Неверная версия карточки')
+  return apiRequest<{ data: EmployeeRecord }>(`/companies/${companyId}/employees/${employeeId}`, {
+    method: 'PUT',
+    body: JSON.stringify({ ...payload, revision }),
+  })
+}
+
 
 export interface AssignmentCreatePayload {
   department_id: string

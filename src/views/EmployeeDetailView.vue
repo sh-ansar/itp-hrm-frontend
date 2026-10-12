@@ -8,12 +8,16 @@ import BaseDataTable from '../components/ui/BaseDataTable.vue'
 import BaseNotice from '../components/ui/BaseNotice.vue'
 import BaseLoadingState from '../components/ui/BaseLoadingState.vue'
 import EmployeeProfileCreateForm from '../components/EmployeeProfileCreateForm.vue'
-import { getEmployee, type EmployeeDetail } from '../api/personnel'
+import { getEmployee, type EmployeeDetail, type ProfileEditRow, type ProfileSection } from '../api/personnel'
 
 const route = useRoute()
 const profile = ref<EmployeeDetail | null>(null)
 const loading = ref(false)
 const error = ref('')
+const editing = ref<{ section: ProfileSection; record: ProfileEditRow } | null>(null)
+function beginEdit(section: ProfileSection, record: ProfileEditRow) {
+  editing.value = { section, record }
+}
 let generation = 0
 const columns = [
   { key: 'department_name', label: 'Подразделение' },
@@ -26,6 +30,7 @@ async function load() {
   const company = String(route.params.company ?? '')
   const employee = String(route.params.employee ?? '')
   loading.value = true
+  editing.value = null
   error.value = ''
   profile.value = null
   try {
@@ -72,20 +77,47 @@ onMounted(load)
         <BaseCard>
           <h2>Трудовой стаж</h2>
           <BaseDataTable :rows="profile.experience" row-key="id" caption="Периоды трудового стажа"
-            :columns="[{key:'experience_type',label:'Вид стажа'},{key:'started_on',label:'Начало'},{key:'ended_on',label:'Окончание'},{key:'basis_reference',label:'Основание'}]"
-            empty-title="Сведения о стаже отсутствуют" empty-description="Периоды стажа ещё не внесены." />
+            :columns="[{key:'experience_type',label:'Вид стажа'},{key:'started_on',label:'Начало'},{key:'ended_on',label:'Окончание'},{key:'basis_reference',label:'Основание'}, ...(profile.meta.profile_writes_enabled ? [{key:'edit',label:'Действия'}] : [])]"
+            empty-title="Сведения о стаже отсутствуют" empty-description="Периоды стажа ещё не внесены." >
+            <template #cell-edit="{ row }">
+              <BaseButton variant="secondary" @click="beginEdit('experience', row)">Изменить</BaseButton>
+            </template>
+          </BaseDataTable>
+          <EmployeeProfileCreateForm
+            v-if="editing?.section === 'experience' && profile.meta.profile_writes_enabled"
+            :key="editing.record.id + ':' + editing.record.revision"
+            :edit="editing" :company-id="String(route.params.company)" :employee-id="String(route.params.employee)"
+            @saved="load" @cancelled="editing = null" />
         </BaseCard>
         <BaseCard>
           <h2>Кадровый резерв</h2>
           <BaseDataTable :rows="profile.reserve" row-key="id" caption="Кадровый резерв сотрудника"
-            :columns="[{key:'target_position',label:'Резервируемая должность'},{key:'reserve_level',label:'Уровень'},{key:'reserve_type',label:'Вид'},{key:'joined_year',label:'Год зачисления'},{key:'left_year',label:'Год исключения'}]"
-            empty-title="Записей резерва нет" empty-description="Сотрудник не включён в записи кадрового резерва." />
+            :columns="[{key:'target_position',label:'Резервируемая должность'},{key:'reserve_level',label:'Уровень'},{key:'reserve_type',label:'Вид'},{key:'joined_year',label:'Год зачисления'},{key:'left_year',label:'Год исключения'}, ...(profile.meta.profile_writes_enabled ? [{key:'edit',label:'Действия'}] : [])]"
+            empty-title="Записей резерва нет" empty-description="Сотрудник не включён в записи кадрового резерва." >
+            <template #cell-edit="{ row }">
+              <BaseButton variant="secondary" @click="beginEdit('reserve', row)">Изменить</BaseButton>
+            </template>
+          </BaseDataTable>
+          <EmployeeProfileCreateForm
+            v-if="editing?.section === 'reserve' && profile.meta.profile_writes_enabled"
+            :key="editing.record.id + ':' + editing.record.revision"
+            :edit="editing" :company-id="String(route.params.company)" :employee-id="String(route.params.employee)"
+            @saved="load" @cancelled="editing = null" />
         </BaseCard>
         <BaseCard>
           <h2>Дополнительное обучение</h2>
           <BaseDataTable :rows="profile.training" row-key="id" caption="Обучение сотрудника"
-            :columns="[{key:'training_type',label:'Вид'},{key:'training_mode',label:'Способ'},{key:'topic',label:'Тема'},{key:'provider',label:'Центр обучения'},{key:'city',label:'Город'},{key:'started_on',label:'С даты'},{key:'ended_on',label:'По дату'},{key:'document_reference',label:'Документ'}]"
-            empty-title="Обучение не зарегистрировано" empty-description="Данных о дополнительном обучении пока нет." />
+            :columns="[{key:'training_type',label:'Вид'},{key:'training_mode',label:'Способ'},{key:'topic',label:'Тема'},{key:'provider',label:'Центр обучения'},{key:'city',label:'Город'},{key:'started_on',label:'С даты'},{key:'ended_on',label:'По дату'},{key:'document_reference',label:'Документ'}, ...(profile.meta.profile_writes_enabled ? [{key:'edit',label:'Действия'}] : [])]"
+            empty-title="Обучение не зарегистрировано" empty-description="Данных о дополнительном обучении пока нет." >
+            <template #cell-edit="{ row }">
+              <BaseButton variant="secondary" @click="beginEdit('training', row)">Изменить</BaseButton>
+            </template>
+          </BaseDataTable>
+          <EmployeeProfileCreateForm
+            v-if="editing?.section === 'training' && profile.meta.profile_writes_enabled"
+            :key="editing.record.id + ':' + editing.record.revision"
+            :edit="editing" :company-id="String(route.params.company)" :employee-id="String(route.params.employee)"
+            @saved="load" @cancelled="editing = null" />
         </BaseCard>
       </template>
     </template>

@@ -27,9 +27,9 @@ export interface EmployeeAssignment extends Record<string, unknown> {
 export interface EmployeeDetail {
   data: EmployeeRecord
   assignments: EmployeeAssignment[]
-  experience: Array<{ id: string; experience_type: string; started_on: string; ended_on: string | null; basis_reference: string | null }>
-  reserve: Array<{ id: string; target_position: string; reserve_level: string; reserve_type: string; joined_year: number; left_year: number | null; notes: string | null }>
-  training: Array<{ id: string; training_type: string; training_mode: string; topic: string; provider: string | null; city: string | null; started_on: string; ended_on: string | null; document_reference: string | null }>
+  experience: Array<{ id: string; revision: number; experience_type: string; started_on: string; ended_on: string | null; basis_reference: string | null }>
+  reserve: Array<{ id: string; revision: number; target_position: string; reserve_level: string; reserve_type: string; joined_year: number; left_year: number | null; notes: string | null }>
+  training: Array<{ id: string; revision: number; training_type: string; training_mode: string; topic: string; provider: string | null; city: string | null; started_on: string; ended_on: string | null; document_reference: string | null }>
   meta: { assignments_limit: number; assignments_truncated: boolean; extended_sections_visible: boolean; profile_writes_enabled: boolean }
 }
 export function getEmployee(companyId: string, employeeId: string): Promise<EmployeeDetail> {
@@ -52,4 +52,24 @@ export async function createEmployeeProfileRecord(
     method: 'POST',
     body: JSON.stringify(payload),
   })
+}
+
+export type ProfileEditRow = { id: string; revision: number; [key: string]: unknown }
+
+export function updateEmployeeProfileRecord(
+  companyId: string,
+  employeeId: string,
+  section: ProfileSection,
+  recordId: string,
+  revision: number,
+  payload: Record<string, string | number | null>,
+): Promise<{ data: { id: string; section: ProfileSection; revision: number } }> {
+  const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+  if (![companyId, employeeId, recordId].every(id => uuid.test(id))) throw new Error('Некорректный идентификатор')
+  if (!['experience', 'reserve', 'training'].includes(section)) throw new Error('Некорректный раздел')
+  if (!Number.isSafeInteger(revision) || revision < 1) throw new Error('Неверная версия записи')
+  return apiRequest<{ data: { id: string; section: ProfileSection; revision: number } }>(
+    '/companies/' + companyId + '/employees/' + employeeId + '/profile/' + section + '/' + recordId,
+    { method: 'PUT', body: JSON.stringify({ ...payload, revision }) },
+  )
 }

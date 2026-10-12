@@ -1,0 +1,88 @@
+name: A09 Browser Session E2E
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  chromium-session:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      APP_ENV: local
+      APP_DEBUG: 'false'
+      APP_KEY: base64:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+      APP_URL: http://127.0.0.1:8000
+      DB_CONNECTION: sqlite
+      CACHE_STORE: file
+      SESSION_DRIVER: file
+      SESSION_COOKIE: itp_hrm_e2e_session
+      SESSION_SECURE_COOKIE: 'false'
+      SESSION_HTTP_ONLY: 'true'
+      SESSION_SAME_SITE: lax
+      QUEUE_CONNECTION: sync
+      HRM_BROWSER_LOGIN_ENABLED: 'true'
+      HRM_ROLE_MANAGEMENT_ENABLED: 'false'
+      SANCTUM_STATEFUL_DOMAINS: 127.0.0.1:5173,localhost:5173
+      VITE_ENABLE_BROWSER_LOGIN: 'true'
+      VITE_API_BASE_URL: /api/v1
+    steps:
+      - name: Checkout frontend
+        uses: actions/checkout@v4
+      - name: Checkout reviewed Laravel backend at fixed SHA
+        uses: actions/checkout@v4
+        with:
+          repository: sh-ansar/itp-hrm-backend
+          ref: 0c1cdb1810aac49268681a54a234030f820caa5b
+          path: backend
+          persist-credentials: false
+      - name: Set up PHP and SQLite
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: mbstring, pdo_sqlite, sqlite3, fileinfo
+          coverage: none
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install backend dependencies
+        working-directory: backend
+        run: composer install --prefer-dist --no-interaction --no-progress
+      - name: Install frontend and pinned browser test runtime
+        run: |
+          npm ci --no-audit --no-fund
+          npm install --no-save --package-lock=false --no-audit --no-fund playwright@1.56.1
+          npx playwright install --with-deps chromium
+      - name: Provision ephemeral DB and synthetic identity
+        run: |
+          touch backend/database/browser-e2e.sqlite
+          echo "DB_DATABASE=$GITHUB_WORKSPACE/backend/database/browser-e2e.sqlite" >> "$GITHUB_ENV"
+          DB_DATABASE="$GITHUB_WORKSPACE/backend/database/browser-e2e.sqlite" php backend/artisan migrate --force
+          DB_DATABASE="$GITHUB_WORKSPACE/backend/database/browser-e2e.sqlite" php tests/e2e/seed-synthetic-user.php
+      - name: Launch first-party browser application
+        run: |
+          (
+            cd backend
+            php artisan serve --host=127.0.0.1 --port=8000 > "$RUNNER_TEMP/hrm-backend.log" 2>&1 &
+          )
+          npm run dev -- --host 127.0.0.1 > "$RUNNER_TEMP/hrm-frontend.log" 2>&1 &
+          for i in $(seq 1 60); do
+            if curl --silent --fail http://127.0.0.1:8000/api/v1/health > /dev/null \
+              && curl --silent --fail http://127.0.0.1:5173/login > /dev/null; then
+              echo "Isolated first-party test services are available"
+              exit 0
+            fi
+            sleep 1
+          done
+          cat "$RUNNER_TEMP/hrm-backend.log" "$RUNNER_TEMP/hrm-frontend.log"
+          exit 1
+      - name: Run Chromium browser integration tests
+        run: node --test tests/e2e/auth.test.mjs
+      - name: Print server diagnostics on failure
+        if: failure()
+        run: |
+          tail -n 100 "$RUNNER_TEMP/hrm-backend.log" || true
+          tail -n 100 "$RUNNER_TEMP/hrm-frontend.log" || true

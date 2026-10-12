@@ -134,7 +134,7 @@ test('personnel editor stays hidden while server write flag is disabled', async 
     await page.goto('/employees')
     await page.getByRole('row', { name:/E2E-001/ }).getByRole('link', { name:'Открыть' }).click()
     await page.getByRole('heading', { name:'Карточка сотрудника' }).waitFor()
-    await page.getByRole('table', { name:'Кадровый резерв сотрудника' }).waitFor()
+    await page.getByText('Synthetic Employee').waitFor()
     assert.equal(await page.getByRole('region', { name:'Добавление кадровых сведений' }).count(), 0)
     assert.equal(await page.getByRole('button', { name:'Сохранить запись' }).count(), 0)
   } finally { await context.close() }

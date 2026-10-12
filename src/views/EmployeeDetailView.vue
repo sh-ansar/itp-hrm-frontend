@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
-import { BadgeCheck, BookOpenCheck, BriefcaseBusiness, Clock3, ShieldCheck, UserRound } from 'lucide-vue-next'
+import { BadgeCheck, BookOpenCheck, BriefcaseBusiness, Clock3, Pencil, ShieldCheck, UserRound } from 'lucide-vue-next'
 import { useRoute } from 'vue-router'
 import BaseCard from '../components/ui/BaseCard.vue'
 import BasePageHeading from '../components/ui/BasePageHeading.vue'
@@ -10,6 +10,8 @@ import BaseNotice from '../components/ui/BaseNotice.vue'
 import BaseLoadingState from '../components/ui/BaseLoadingState.vue'
 import EmployeeProfileCreateForm from '../components/EmployeeProfileCreateForm.vue'
 import EmployeeAssignmentCreateForm from '../components/EmployeeAssignmentCreateForm.vue'
+import EmployeeRecordForm from '../components/EmployeeRecordForm.vue'
+import BaseDialog from '../components/ui/BaseDialog.vue'
 import { getEmployee, type EmployeeAssignment, type EmployeeDetail, type ProfileEditRow, type ProfileSection } from '../api/personnel'
 
 const route = useRoute()
@@ -19,6 +21,7 @@ const error = ref('')
 const editing = ref<{ section: ProfileSection; record: ProfileEditRow } | null>(null)
 const assignmentEditing = ref<EmployeeAssignment | null>(null)
 const assignmentTransitioning = ref<EmployeeAssignment | null>(null)
+const identityEditOpen = ref(false)
 
 const currentAssignment = computed(() => profile.value?.assignments.find(item => item.valid_to === null) ?? profile.value?.assignments[0] ?? null)
 const initials = computed(() => {
@@ -49,6 +52,7 @@ async function load() {
   editing.value = null
   assignmentEditing.value = null
   assignmentTransitioning.value = null
+  identityEditOpen.value = false
   error.value = ''
   profile.value = null
   try {
@@ -69,6 +73,7 @@ onMounted(load)
   <section class="employee-profile">
     <BasePageHeading title="Карточка сотрудника" description="Единая карточка кадровых сведений, назначений и развития">
       <RouterLink class="back-link" to="/employees">К реестру</RouterLink>
+      <BaseButton v-if="profile?.meta.employee_writes_enabled" variant="secondary" @click="identityEditOpen = true"><Pencil :size="16" /> Изменить карточку</BaseButton>
       <BaseButton variant="secondary" :disabled="loading" @click="load">Обновить</BaseButton>
     </BasePageHeading>
 
@@ -203,6 +208,17 @@ onMounted(load)
         </BaseCard>
       </template>
     </template>
+
+    <BaseDialog :open="identityEditOpen" title="Основные данные сотрудника" @close="identityEditOpen = false">
+      <EmployeeRecordForm
+        v-if="profile"
+        :key="profile.data.id + ':' + profile.data.revision"
+        :company-id="String(route.params.company)"
+        :edit="profile.data"
+        @saved="identityEditOpen = false; load()"
+        @cancelled="identityEditOpen = false"
+      />
+    </BaseDialog>
   </section>
 </template>
 

@@ -8,7 +8,7 @@ export interface PagedResponse<T> {
 }
 
 export const listCompanies = () => apiRequest<PagedResponse<CompanyRecord>>('/companies?per_page=100')
-export const listDepartments = (companyId: string) => {
+export const listDepartments = (companyId: string, page = 1) => {
   if (!/^[a-f0-9-]{36}$/i.test(companyId)) throw new Error('Некорректный идентификатор компании')
-  return apiRequest<PagedResponse<DepartmentRecord>>(`/companies/${companyId}/departments?per_page=100`)
+  return apiRequest<PagedResponse<DepartmentRecord>>(`/companies/${companyId}/departments?per_page=25&page=${encodeURIComponent(page)}`)
 }

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import BaseCard from '../components/ui/BaseCard.vue'
 import BaseDataTable from '../components/ui/BaseDataTable.vue'
 import BaseLoadingState from '../components/ui/BaseLoadingState.vue'
@@ -14,6 +14,7 @@ const loadingCompanies = ref(false)
 const loadingDepartments = ref(false)
 const error = ref('')
 const total = ref(0)
+const departmentNames = computed(() => new Map(departments.value.map(item => [item.id, item.name])))
 let generation = 0
 
 async function loadCompanies() {
@@ -75,7 +76,7 @@ onMounted(loadCompanies)
         :columns="[{key:'name',label:'Название подразделения'},{key:'parent_id',label:'Родительское подразделение'}]"
         :rows="departments" empty-title="Подразделения не найдены"
         empty-description="Для выбранной компании нет доступных подразделений." >
-        <template #cell-parent_id="{ value }">{{ value || 'Корневое подразделение' }}</template>
+        <template #cell-parent_id="{ value }">{{ !value ? 'Корневое подразделение' : (departmentNames.get(String(value)) ?? 'Родитель вне доступного списка') }}</template>
       </BaseDataTable>
       <p v-if="total > departments.length" class="muted paging-note">
         Показаны первые {{ departments.length }} из {{ total }} подразделений. Постраничная навигация появится в следующем этапе.

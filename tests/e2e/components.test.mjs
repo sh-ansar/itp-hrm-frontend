@@ -47,3 +47,33 @@ test('table exposes semantic headers and stable row contents', async () => {
     assert.equal(await page.getByRole('cell', { name: 'Тестовая запись' }).count(), 1)
   } finally { await page.close() }
 })
+
+test('shared field, table and dialog work at mobile, tablet and desktop widths', async () => {
+  for (const width of [375, 768, 1440]) {
+    const page = await browser.newPage({ viewport: { width, height: 820 } })
+    try {
+      await page.goto('http://127.0.0.1:5173/tests/e2e/fixtures/components.html')
+      const field = page.getByRole('textbox', { name: 'Тестовое поле' })
+      await field.fill('responsive')
+      assert.equal(await page.locator('#field-value').textContent(), 'responsive')
+      const fieldBounds = await field.boundingBox()
+      assert.ok(fieldBounds && fieldBounds.x >= 0 && fieldBounds.x + fieldBounds.width <= width + 1,
+        'field must fit viewport at ' + width)
+      const region = page.getByRole('region', { name: 'Тестовый реестр' })
+      assert.equal(await region.count(), 1)
+      const regionBounds = await region.boundingBox()
+      assert.ok(regionBounds && regionBounds.x >= 0 && regionBounds.x + regionBounds.width <= width + 1,
+        'table scroll container must fit viewport at ' + width)
+      await page.getByRole('button', { name: 'Открыть диалог' }).click()
+      const dialog = page.getByRole('dialog', { name: 'Проверка диалога' })
+      await dialog.waitFor()
+      const dialogBounds = await dialog.boundingBox()
+      assert.ok(dialogBounds && dialogBounds.x >= 0 && dialogBounds.x + dialogBounds.width <= width + 1,
+        'modal must fit viewport at ' + width)
+      await page.keyboard.press('Escape')
+      await dialog.waitFor({ state: 'hidden' })
+    } finally {
+      await page.close()
+    }
+  }
+})

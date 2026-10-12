@@ -64,6 +64,26 @@ onMounted(load)
         </BaseDataTable>
         <BaseNotice v-if="profile.meta.assignments_truncated" tone="info">Отображены первые 100 назначений. Полная история требует отдельного просмотра.</BaseNotice>
       </BaseCard>
+      <template v-if="profile.meta.extended_sections_visible">
+        <BaseCard>
+          <h2>Трудовой стаж</h2>
+          <BaseDataTable :rows="profile.experience" row-key="id" caption="Периоды трудового стажа"
+            :columns="[{key:'experience_type',label:'Вид стажа'},{key:'started_on',label:'Начало'},{key:'ended_on',label:'Окончание'},{key:'basis_reference',label:'Основание'}]"
+            empty-title="Сведения о стаже отсутствуют" empty-description="Периоды стажа ещё не внесены." />
+        </BaseCard>
+        <BaseCard>
+          <h2>Кадровый резерв</h2>
+          <BaseDataTable :rows="profile.reserve" row-key="id" caption="Кадровый резерв сотрудника"
+            :columns="[{key:'target_position',label:'Резервируемая должность'},{key:'reserve_level',label:'Уровень'},{key:'reserve_type',label:'Вид'},{key:'joined_year',label:'Год зачисления'},{key:'left_year',label:'Год исключения'}]"
+            empty-title="Записей резерва нет" empty-description="Сотрудник не включён в записи кадрового резерва." />
+        </BaseCard>
+        <BaseCard>
+          <h2>Дополнительное обучение</h2>
+          <BaseDataTable :rows="profile.training" row-key="id" caption="Обучение сотрудника"
+            :columns="[{key:'training_type',label:'Вид'},{key:'training_mode',label:'Способ'},{key:'topic',label:'Тема'},{key:'provider',label:'Центр обучения'},{key:'city',label:'Город'},{key:'started_on',label:'С даты'},{key:'ended_on',label:'По дату'},{key:'document_reference',label:'Документ'}]"
+            empty-title="Обучение не зарегистрировано" empty-description="Данных о дополнительном обучении пока нет." />
+        </BaseCard>
+      </template>
     </template>
   </section>
 </template>

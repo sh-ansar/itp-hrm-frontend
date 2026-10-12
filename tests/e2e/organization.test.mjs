@@ -120,3 +120,22 @@ test('staffing route reads actual authorized positions without leaking other-com
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1), false)
   } finally { await context.close() }
 })
+
+
+test('personnel editor stays hidden while server write flag is disabled', async () => {
+  const context = await browser.newContext({ baseURL:'http://127.0.0.1:5173', viewport:{ width:375,height:850 } })
+  const page = await context.newPage()
+  try {
+    await page.goto('/login')
+    await page.getByLabel('Электронная почта').fill('synthetic-e2e@example.test')
+    await page.getByLabel('Пароль').fill('SyntheticE2E-Only!2026')
+    await page.getByRole('button', { name:'Войти' }).click()
+    await page.getByRole('heading', { name:'Обзор системы' }).waitFor()
+    await page.goto('/employees')
+    await page.getByRole('row', { name:/E2E-001/ }).getByRole('link', { name:'Открыть' }).click()
+    await page.getByRole('heading', { name:'Карточка сотрудника' }).waitFor()
+    await page.getByRole('table', { name:'Кадровый резерв сотрудника' }).waitFor()
+    assert.equal(await page.getByRole('region', { name:'Добавление кадровых сведений' }).count(), 0)
+    assert.equal(await page.getByRole('button', { name:'Сохранить запись' }).count(), 0)
+  } finally { await context.close() }
+})

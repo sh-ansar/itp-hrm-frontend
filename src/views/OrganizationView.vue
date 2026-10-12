@@ -14,6 +14,8 @@ const loadingCompanies = ref(false)
 const loadingDepartments = ref(false)
 const error = ref('')
 const total = ref(0)
+const page = ref(1)
+const lastPage = ref(1)
 const departmentNames = computed(() => new Map(departments.value.map(item => [item.id, item.name])))
 let generation = 0
 
@@ -29,7 +31,8 @@ async function loadCompanies() {
   } finally { loadingCompanies.value = false }
 }
 
-watch(selectedCompany, async (id) => {
+watch(selectedCompany, () => { page.value = 1 })
+watch([selectedCompany, page], async ([id, currentPage]) => {
   const current = ++generation
   departments.value = []
   total.value = 0
@@ -37,10 +40,11 @@ watch(selectedCompany, async (id) => {
   loadingDepartments.value = true
   error.value = ''
   try {
-    const result = await listDepartments(id)
+    const result = await listDepartments(id, currentPage)
     if (current !== generation) return
     departments.value = result.data
     total.value = result.meta.total
+    lastPage.value = result.meta.last_page
   } catch (cause) {
     if (current === generation) error.value = cause instanceof Error ? cause.message : 'Ошибка загрузки подразделений'
   } finally { if (current === generation) loadingDepartments.value = false }
@@ -78,9 +82,11 @@ onMounted(loadCompanies)
         empty-description="Для выбранной компании нет доступных подразделений." >
         <template #cell-parent_id="{ value }">{{ !value ? 'Корневое подразделение' : (departmentNames.get(String(value)) ?? 'Родитель вне доступного списка') }}</template>
       </BaseDataTable>
-      <p v-if="total > departments.length" class="muted paging-note">
-        Показаны первые {{ departments.length }} из {{ total }} подразделений. Постраничная навигация появится в следующем этапе.
-      </p>
+      <nav v-if="lastPage > 1" class="page-controls" aria-label="Страницы подразделений">
+        <BaseButton variant="secondary" :disabled="loadingDepartments || page <= 1" @click="page--">Назад</BaseButton>
+        <span class="muted">Страница {{ page }} из {{ lastPage }} · всего {{ total }}</span>
+        <BaseButton variant="secondary" :disabled="loadingDepartments || page >= lastPage" @click="page++">Далее</BaseButton>
+      </nav>
     </BaseCard>
   </section>
 </template>
@@ -95,6 +101,6 @@ onMounted(loadCompanies)
 .selector label{font-size:14px;font-weight:600;color:var(--color-text)}
 .selector select{min-height:var(--control-height);width:100%;padding:10px 12px;border:1px solid var(--color-stroke);border-radius:var(--radius-md);background:var(--color-surface);color:var(--color-text);font:inherit}
 .selector select:focus-visible{outline:3px solid var(--color-focus);outline-offset:2px}
-.paging-note{font-size:13px;line-height:1.5;margin:14px 0 0}
+.page-controls{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-top:16px;font-size:13px}
 @media(max-width:600px){.page-heading{align-items:flex-start}.page-heading :deep(button){width:100%}}
 </style>

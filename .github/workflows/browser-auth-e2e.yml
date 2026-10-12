@@ -85,5 +85,6 @@ jobs:
       - name: Print server diagnostics on failure
         if: failure()
         run: |
+          DB_DATABASE="$GITHUB_WORKSPACE/backend/database/browser-e2e.sqlite" php tests/e2e/inspect-synthetic-organization.php || true
           tail -n 100 "$RUNNER_TEMP/hrm-backend.log" || true
           tail -n 100 "$RUNNER_TEMP/hrm-frontend.log" || true

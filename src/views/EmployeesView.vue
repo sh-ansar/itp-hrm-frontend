@@ -2,6 +2,9 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import BaseCard from '../components/ui/BaseCard.vue'
 import BaseButton from '../components/ui/BaseButton.vue'
+import BaseSelectField from '../components/ui/BaseSelectField.vue'
+import BasePagination from '../components/ui/BasePagination.vue'
+import BasePageHeading from '../components/ui/BasePageHeading.vue'
 import BaseNotice from '../components/ui/BaseNotice.vue'
 import BaseLoadingState from '../components/ui/BaseLoadingState.vue'
 import BaseDataTable from '../components/ui/BaseDataTable.vue'
@@ -71,21 +74,14 @@ onMounted(loadCompanies)
 
 <template>
   <section class="personnel-page">
-    <div class="page-heading">
-      <div>
-        <h1 class="page-title">Реестр сотрудников</h1>
-        <p class="muted">Только сотрудники и поля, разрешённые вашим доступом</p>
-      </div>
+    <BasePageHeading title="Реестр сотрудников" description="Только сотрудники и поля, разрешённые вашим доступом">
       <BaseButton variant="secondary" :disabled="companyLoading" @click="loadCompanies">Обновить</BaseButton>
-    </div>
+    </BasePageHeading>
     <BaseNotice v-if="error" tone="error">{{ error }}</BaseNotice>
     <BaseCard>
       <BaseLoadingState v-if="companyLoading" label="Загрузка доступных компаний" />
       <div v-else-if="companies.length" class="selector">
-        <label for="employees-company">Компания</label>
-        <select id="employees-company" v-model="selectedCompany">
-          <option v-for="company in companies" :key="company.id" :value="company.id">{{ company.name }}</option>
-        </select>
+        <BaseSelectField v-model="selectedCompany" label="Компания" :options="companies" />
       </div>
       <BaseNotice v-else-if="!error" tone="info">Нет доступных компаний. Обратитесь к администратору доступа.</BaseNotice>
     </BaseCard>
@@ -101,25 +97,16 @@ onMounted(loadCompanies)
         caption="Реестр сотрудников выбранной компании" :loading="employeeLoading"
         empty-title="Доступные сотрудники не найдены"
         empty-description="Нет записей, разрешённых для просмотра в выбранной компании." />
-      <nav v-if="lastPage > 1" class="page-controls" aria-label="Страницы реестра сотрудников">
-        <BaseButton variant="secondary" :disabled="employeeLoading || page <= 1" @click="page--">Назад</BaseButton>
-        <span class="muted">Страница {{ page }} из {{ lastPage }}</span>
-        <BaseButton variant="secondary" :disabled="employeeLoading || page >= lastPage" @click="page++">Далее</BaseButton>
-      </nav>
+      <BasePagination :page="page" :last-page="lastPage" :loading="employeeLoading"
+        caption="Страницы реестра сотрудников" @previous="page--" @next="page++" />
     </BaseCard>
   </section>
 </template>
 
 <style scoped>
 .personnel-page{display:grid;gap:20px}
-.page-heading,.section-heading{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
-.page-heading p,.section-heading p{margin:0}
+.section-heading{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
 .section-heading{margin-bottom:18px}
-.section-heading h2{font-size:20px;margin:0}
+.section-heading h2{font-size:var(--font-section-heading);margin:0}
 .selector{display:grid;gap:8px;max-width:540px}
-.selector label{font-size:14px;font-weight:600;color:var(--color-text)}
-.selector select{width:100%;min-height:44px;padding:10px 12px;border:1px solid var(--color-stroke);border-radius:var(--radius-md);background:var(--color-surface);color:var(--color-text);font:inherit}
-.selector select:focus-visible{outline:3px solid var(--color-focus);outline-offset:2px}
-.page-controls{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:16px;font-size:13px}
-@media(max-width:600px){.page-heading{align-items:flex-start}.page-heading :deep(button){width:100%}}
 </style>

@@ -5,6 +5,9 @@ import BaseDataTable from '../components/ui/BaseDataTable.vue'
 import BaseLoadingState from '../components/ui/BaseLoadingState.vue'
 import BaseNotice from '../components/ui/BaseNotice.vue'
 import BaseButton from '../components/ui/BaseButton.vue'
+import BaseSelectField from '../components/ui/BaseSelectField.vue'
+import BasePagination from '../components/ui/BasePagination.vue'
+import BasePageHeading from '../components/ui/BasePageHeading.vue'
 import { listCompanies, listDepartments, type CompanyRecord, type DepartmentRecord } from '../api/organization'
 
 const companies = ref<CompanyRecord[]>([])
@@ -78,21 +81,14 @@ onMounted(loadCompanies)
 
 <template>
   <section class="organization-page">
-    <div class="page-heading">
-      <div>
-        <h1 class="page-title">Организационная структура</h1>
-        <p class="muted">Компании и подразделения, доступные вашей учётной записи</p>
-      </div>
+    <BasePageHeading title="Организационная структура" description="Компании и подразделения, доступные вашей учётной записи">
       <BaseButton variant="secondary" :disabled="loadingCompanies" @click="loadCompanies">Обновить</BaseButton>
-    </div>
+    </BasePageHeading>
     <BaseNotice v-if="error" tone="error">{{ error }}</BaseNotice>
     <BaseCard>
       <BaseLoadingState v-if="loadingCompanies" label="Загрузка компаний" />
       <div v-else-if="companies.length" class="selector">
-        <label for="organization-company">Компания</label>
-        <select id="organization-company" v-model="selectedCompany">
-          <option v-for="company in companies" :key="company.id" :value="company.id">{{ company.name }}</option>
-        </select>
+        <BaseSelectField v-model="selectedCompany" label="Компания" :options="companies" />
       </div>
       <BaseNotice v-else-if="!error" tone="info">Нет доступных компаний. Обратитесь к администратору доступа.</BaseNotice>
     </BaseCard>
@@ -107,26 +103,17 @@ onMounted(loadCompanies)
         <template #cell-name="{ row }"><span class="hierarchy-label" :style="{ '--depth': Math.min(Number(row.depth), 12) }">{{ row.depth ? '↳ ' : '' }}{{ row.name }}</span></template>
         <template #cell-parentLabel="{ value }">{{ value }}</template>
       </BaseDataTable>
-      <nav v-if="lastPage > 1" class="page-controls" aria-label="Страницы подразделений">
-        <BaseButton variant="secondary" :disabled="loadingDepartments || page <= 1" @click="page--">Назад</BaseButton>
-        <span class="muted">Страница {{ page }} из {{ lastPage }} · всего {{ total }}</span>
-        <BaseButton variant="secondary" :disabled="loadingDepartments || page >= lastPage" @click="page++">Далее</BaseButton>
-      </nav>
+      <BasePagination :page="page" :last-page="lastPage" :loading="loadingDepartments"
+        caption="Страницы подразделений" @previous="page--" @next="page++" />
     </BaseCard>
   </section>
 </template>
 
 <style scoped>
 .organization-page{display:grid;gap:20px}
-.page-heading,.section-title{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
-.page-heading p{margin:0}
+.section-title{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
 .section-title{margin-bottom:18px}
-.section-title h2{font-size:20px;margin:0}
+.section-title h2{font-size:var(--font-section-heading);margin:0}
 .selector{display:grid;gap:8px;max-width:540px}
-.selector label{font-size:14px;font-weight:600;color:var(--color-text)}
-.selector select{min-height:var(--control-height);width:100%;padding:10px 12px;border:1px solid var(--color-stroke);border-radius:var(--radius-md);background:var(--color-surface);color:var(--color-text);font:inherit}
-.selector select:focus-visible{outline:3px solid var(--color-focus);outline-offset:2px}
 .hierarchy-label{display:inline-block;padding-inline-start:clamp(0px,calc(var(--depth) * 15px),180px);max-width:100%;overflow-wrap:anywhere}
-.page-controls{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-top:16px;font-size:13px}
-@media(max-width:600px){.page-heading{align-items:flex-start}.page-heading :deep(button){width:100%}}
 </style>

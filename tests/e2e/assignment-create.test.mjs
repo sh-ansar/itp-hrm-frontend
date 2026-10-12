@@ -6,7 +6,7 @@ let browser
 before(async () => { browser = await chromium.launch({ headless: true }) })
 after(async () => { await browser?.close() })
 
-test('HR creates a non-overlapping assignment from the employee card at mobile width', async () => {
+test('HR creates and closes assignments from the employee card at mobile width', async () => {
   const context = await browser.newContext({
     baseURL: 'http://127.0.0.1:5173',
     viewport: { width: 375, height: 850 },
@@ -39,6 +39,19 @@ test('HR creates a non-overlapping assignment from the employee card at mobile w
     assert.match(await row.innerText(), /Visible Finance/)
     assert.match(await row.innerText(), /Test Engineer/)
     assert.match(await row.innerText(), /2025-01-01/)
+
+    const activeRow = table.getByRole('row', { name: /По настоящее время/ })
+    await activeRow.getByRole('button', { name: 'Изменить' }).click()
+    const editor = page.getByRole('region', { name: 'Редактирование назначения' })
+    await editor.waitFor()
+    assert.equal(await editor.getByLabel('Действует с').inputValue(), '2026-01-01')
+    await editor.getByLabel('Действует по').fill('2026-12-31')
+    await editor.getByLabel('Основание').fill('Приказ E2E-close')
+    await editor.getByRole('button', { name: 'Сохранить изменения' }).click()
+
+    const closed = table.getByRole('row', { name: /Приказ E2E-close/ })
+    await closed.waitFor()
+    assert.match(await closed.innerText(), /2026-12-31/)
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1), false)
   } finally {
     await context.close()

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import BaseCard from '../components/ui/BaseCard.vue'
 import BasePageHeading from '../components/ui/BasePageHeading.vue'
@@ -9,30 +9,33 @@ import BaseNotice from '../components/ui/BaseNotice.vue'
 import BaseLoadingState from '../components/ui/BaseLoadingState.vue'
 import EmployeeProfileCreateForm from '../components/EmployeeProfileCreateForm.vue'
 import EmployeeAssignmentCreateForm from '../components/EmployeeAssignmentCreateForm.vue'
-import { getEmployee, type EmployeeDetail, type ProfileEditRow, type ProfileSection } from '../api/personnel'
+import { getEmployee, type EmployeeAssignment, type EmployeeDetail, type ProfileEditRow, type ProfileSection } from '../api/personnel'
 
 const route = useRoute()
 const profile = ref<EmployeeDetail | null>(null)
 const loading = ref(false)
 const error = ref('')
 const editing = ref<{ section: ProfileSection; record: ProfileEditRow } | null>(null)
+const assignmentEditing = ref<EmployeeAssignment | null>(null)
 function beginEdit(section: ProfileSection, record: ProfileEditRow) {
   editing.value = { section, record }
 }
 let generation = 0
-const columns = [
+const columns = computed(() => [
   { key: 'department_name', label: 'Подразделение' },
   { key: 'position_name', label: 'Должность' },
   { key: 'valid_from', label: 'С даты' },
   { key: 'valid_to', label: 'По дату' },
   { key: 'basis_reference', label: 'Основание' },
-]
+  ...(profile.value?.meta.assignment_writes_enabled ? [{ key: 'edit', label: 'Действия' }] : []),
+])
 async function load() {
   const current = ++generation
   const company = String(route.params.company ?? '')
   const employee = String(route.params.employee ?? '')
   loading.value = true
   editing.value = null
+  assignmentEditing.value = null
   error.value = ''
   profile.value = null
   try {
@@ -69,13 +72,25 @@ onMounted(load)
           caption="Доступная история назначений" empty-title="Назначений не найдено"
           empty-description="Для сотрудника нет доступных кадровых назначений.">
           <template #cell-valid_to="{ value }">{{ value ?? 'По настоящее время' }}</template>
+          <template #cell-edit="{ row }">
+            <BaseButton variant="secondary" @click="assignmentEditing = row">Изменить</BaseButton>
+          </template>
         </BaseDataTable>
         <BaseNotice v-if="profile.meta.assignments_truncated" tone="info">Отображены первые 100 назначений. Полная история требует отдельного просмотра.</BaseNotice>
         <EmployeeAssignmentCreateForm
-          v-if="profile.meta.assignment_writes_enabled"
+          v-if="profile.meta.assignment_writes_enabled && !assignmentEditing"
           :company-id="String(route.params.company)"
           :employee-id="String(route.params.employee)"
           @saved="load"
+        />
+        <EmployeeAssignmentCreateForm
+          v-if="profile.meta.assignment_writes_enabled && assignmentEditing"
+          :key="assignmentEditing.id + ':' + assignmentEditing.revision"
+          :edit="assignmentEditing"
+          :company-id="String(route.params.company)"
+          :employee-id="String(route.params.employee)"
+          @saved="load"
+          @cancelled="assignmentEditing = null"
         />
       </BaseCard>
       <BaseCard v-if="profile.meta.profile_writes_enabled">

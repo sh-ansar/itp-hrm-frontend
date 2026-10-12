@@ -26,6 +26,7 @@ export interface EmployeeAssignment extends Record<string, unknown> {
   valid_from: string
   valid_to: string | null
   basis_reference: string | null
+  revision: number
 }
 
 export interface EmployeeDetail {
@@ -60,10 +61,10 @@ export function createEmployeeAssignment(
   companyId: string,
   employeeId: string,
   payload: AssignmentCreatePayload,
-): Promise<{ data: { id: string; employee_id: string; valid_from: string; valid_to: string | null } }> {
+): Promise<{ data: { id: string; employee_id: string; valid_from: string; valid_to: string | null; revision: number } }> {
   if (!uuid.test(companyId) || !uuid.test(employeeId)) throw new Error('Некорректный идентификатор')
   if (!uuid.test(payload.department_id) || !uuid.test(payload.position_id)) throw new Error('Выберите подразделение и должность')
-  return apiRequest<{ data: { id: string; employee_id: string; valid_from: string; valid_to: string | null } }>(
+  return apiRequest<{ data: { id: string; employee_id: string; valid_from: string; valid_to: string | null; revision: number } }>(
     `/companies/${companyId}/employees/${employeeId}/assignments`,
     { method: 'POST', body: JSON.stringify(payload) },
   )
@@ -101,4 +102,21 @@ export function updateEmployeeProfileRecord(
     '/companies/' + companyId + '/employees/' + employeeId + '/profile/' + section + '/' + recordId,
     { method: 'PUT', body: JSON.stringify({ ...payload, revision }) },
   )
+}
+
+
+export function updateEmployeeAssignment(
+  companyId: string,
+  employeeId: string,
+  assignmentId: string,
+  revision: number,
+  payload: AssignmentCreatePayload,
+): Promise<{ data: { id: string; employee_id: string; valid_from: string; valid_to: string | null; revision: number } }> {
+  if (![companyId, employeeId, assignmentId].every(id => uuid.test(id))) throw new Error('Некорректный идентификатор')
+  if (!uuid.test(payload.department_id) || !uuid.test(payload.position_id)) throw new Error('Выберите подразделение и должность')
+  if (!Number.isSafeInteger(revision) || revision < 1) throw new Error('Неверная версия назначения')
+  return apiRequest(`/companies/${companyId}/employees/${employeeId}/assignments/${assignmentId}`, {
+    method: 'PUT',
+    body: JSON.stringify({ ...payload, revision }),
+  })
 }

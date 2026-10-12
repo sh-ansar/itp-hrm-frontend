@@ -21,8 +21,19 @@ test('organization page displays authorized company and department only', async 
     await select.waitFor()
     assert.match(await select.textContent(), /Test Company Visible/)
     assert.doesNotMatch(await select.textContent(), /Test Company Hidden/)
-    await page.getByRole('cell', { name: 'Visible Finance' }).waitFor()
+    const table = page.getByRole('table', { name: 'Подразделения компании' })
+    try { await table.waitFor({ timeout: 8000 }) } catch {
+      const diagnostics = await page.locator('body').innerText()
+      const api = await page.evaluate(async () => { const r = await fetch('/api/v1/companies/11111111-1111-4111-8111-111111111111/departments', { headers: { Accept: 'application/json' } }); return { status: r.status, body: (await r.text()).slice(0,500) } })
+      throw new Error('Organization table absent: ' + JSON.stringify({ diagnostics: diagnostics.slice(0,600), api }))
+    }
+    assert.match(await page.getByRole('table', { name: 'Подразделения компании' }).textContent(), /Visible Finance/)
     assert.equal(await page.getByText('Hidden Department').count(), 0)
+    const childRow = page.getByRole('row', { name: /Visible Finance Child/ })
+    await childRow.waitFor()
+    assert.match(await childRow.textContent(), /Visible Finance/)
+    assert.match(await childRow.locator('td').first().textContent(), /↳/)
+    assert.equal(await page.getByText('Родитель вне текущего списка').count(), 0)
     const unauthorized = await page.evaluate(async () => {
       const result = await fetch('/api/v1/companies/22222222-2222-4222-8222-222222222222/departments',
         { credentials: 'same-origin', headers: { Accept: 'application/json' } })

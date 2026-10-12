@@ -17,6 +17,29 @@ const total = ref(0)
 const page = ref(1)
 const lastPage = ref(1)
 const departmentNames = computed(() => new Map(departments.value.map(item => [item.id, item.name])))
+// Hierarchy is assembled only from visible rows on the current page. A missing parent
+// is not treated as a root: it may be scoped out or on another page.
+const hierarchyRows = computed(() => {
+  const lookup = new Map(departments.value.map(item => [item.id, item]))
+  const depths = new Map<string, number>()
+  const visiting = new Set<string>()
+  function depthOf(id: string): number {
+    if (depths.has(id)) return depths.get(id)!
+    if (visiting.has(id)) return 0 // broken/cyclic legacy data, never recurse forever
+    visiting.add(id)
+    const node = lookup.get(id)
+    const depth = node?.parent_id && lookup.has(node.parent_id)
+      ? Math.min(depthOf(node.parent_id) + 1, 12) : 0
+    visiting.delete(id)
+    depths.set(id, depth)
+    return depth
+  }
+  return departments.value.map(item => ({
+    ...item, depth: depthOf(item.id),
+    parentLabel: !item.parent_id ? 'Верхний уровень'
+      : (departmentNames.value.get(item.parent_id) ?? 'Родитель вне текущего списка'),
+  }))
+})
 let generation = 0
 
 async function loadCompanies() {
@@ -75,12 +98,14 @@ onMounted(loadCompanies)
     </BaseCard>
     <BaseCard v-if="selectedCompany">
       <div class="section-title"><h2>Подразделения</h2><span class="muted">Всего: {{ total }}</span></div>
+      <BaseNotice v-if="total > departments.length" tone="info">Отображена только текущая страница. Для полной иерархии перейдите по страницам; скрытые подразделения не раскрываются.</BaseNotice>
       <BaseDataTable row-key="id" caption="Подразделения компании"
         :loading="loadingDepartments"
-        :columns="[{key:'name',label:'Название подразделения'},{key:'parent_id',label:'Родительское подразделение'}]"
-        :rows="departments" empty-title="Подразделения не найдены"
+        :columns="[{key:'name',label:'Подразделение'},{key:'parentLabel',label:'Родитель'}]"
+        :rows="hierarchyRows" empty-title="Подразделения не найдены"
         empty-description="Для выбранной компании нет доступных подразделений." >
-        <template #cell-parent_id="{ value }">{{ !value ? 'Корневое подразделение' : (departmentNames.get(String(value)) ?? 'Родитель вне доступного списка') }}</template>
+        <template #cell-name="{ row }"><span class="hierarchy-label" :style="{ '--depth': Math.min(Number(row.depth), 12) }">{{ row.depth ? '↳ ' : '' }}{{ row.name }}</span></template>
+        <template #cell-parentLabel="{ value }">{{ value }}</template>
       </BaseDataTable>
       <nav v-if="lastPage > 1" class="page-controls" aria-label="Страницы подразделений">
         <BaseButton variant="secondary" :disabled="loadingDepartments || page <= 1" @click="page--">Назад</BaseButton>
@@ -101,6 +126,7 @@ onMounted(loadCompanies)
 .selector label{font-size:14px;font-weight:600;color:var(--color-text)}
 .selector select{min-height:var(--control-height);width:100%;padding:10px 12px;border:1px solid var(--color-stroke);border-radius:var(--radius-md);background:var(--color-surface);color:var(--color-text);font:inherit}
 .selector select:focus-visible{outline:3px solid var(--color-focus);outline-offset:2px}
+.hierarchy-label{display:inline-block;padding-inline-start:clamp(0px,calc(var(--depth) * 15px),180px);max-width:100%;overflow-wrap:anywhere}
 .page-controls{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-top:16px;font-size:13px}
 @media(max-width:600px){.page-heading{align-items:flex-start}.page-heading :deep(button){width:100%}}
 </style>

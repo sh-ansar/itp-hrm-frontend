@@ -10,16 +10,21 @@ export interface EmployeeRecord extends Record<string, unknown> {
   first_name: string
   middle_name: string | null
   revision: number
+  current_department_name?: string | null
+  current_position_name?: string | null
+  current_assignment_valid_from?: string | null
 }
 
 export interface EmployeeListResponse extends PagedResponse<EmployeeRecord> {
   meta: PagedResponse<EmployeeRecord>['meta'] & { employee_writes_enabled: boolean }
 }
 
-export function listEmployees(companyId: string, page = 1): Promise<EmployeeListResponse> {
+export function listEmployees(companyId: string, page = 1, search = ''): Promise<EmployeeListResponse> {
   if (!uuid.test(companyId)) throw new Error('Некорректный идентификатор компании')
   if (!Number.isSafeInteger(page) || page < 1) throw new Error('Некорректная страница')
-  return apiRequest<EmployeeListResponse>(`/companies/${companyId}/employees?per_page=25&page=${page}`)
+  const params = new URLSearchParams({ per_page: '25', page: String(page) })
+  if (search.trim()) params.set('search', search.trim())
+  return apiRequest<EmployeeListResponse>(`/companies/${companyId}/employees?${params.toString()}`)
 }
 
 export interface EmployeeAssignment extends Record<string, unknown> {

@@ -110,7 +110,7 @@ onMounted(loadCompanies)
 </template>
 
 <style scoped>
-.organization-page{display:grid;gap:20px}
+.organization-page{display:grid;grid-template-columns:minmax(0,1fr);gap:20px}
 .section-title{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
 .section-title{margin-bottom:18px}
 .section-title h2{font-size:var(--font-section-heading);margin:0}

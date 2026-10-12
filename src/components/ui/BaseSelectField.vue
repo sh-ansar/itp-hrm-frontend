@@ -6,16 +6,20 @@ withDefaults(defineProps<{
   label: string
   options: { id: string; name: string }[]
   disabled?: boolean
-}>(), { disabled: false })
+  placeholder?: string
+  required?: boolean
+}>(), { disabled: false, placeholder: '', required: false })
+
 defineEmits<{ 'update:modelValue': [value: string] }>()
 const id = useId()
 </script>
 
 <template>
   <div class="base-select-field">
-    <label :for="id">{{ label }}</label>
-    <select :id="id" :value="modelValue" :disabled="disabled"
+    <label :for="id">{{ label }}<span v-if="required" aria-hidden="true"> *</span></label>
+    <select :id="id" :value="modelValue" :disabled="disabled" :required="required"
       @change="$emit('update:modelValue', ($event.target as HTMLSelectElement).value)">
+      <option v-if="placeholder" value="" disabled>{{ placeholder }}</option>
       <option v-for="option in options" :key="option.id" :value="option.id">{{ option.name }}</option>
     </select>
   </div>

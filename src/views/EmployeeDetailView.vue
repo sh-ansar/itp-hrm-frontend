@@ -8,6 +8,7 @@ import BaseDataTable from '../components/ui/BaseDataTable.vue'
 import BaseNotice from '../components/ui/BaseNotice.vue'
 import BaseLoadingState from '../components/ui/BaseLoadingState.vue'
 import EmployeeProfileCreateForm from '../components/EmployeeProfileCreateForm.vue'
+import EmployeeAssignmentCreateForm from '../components/EmployeeAssignmentCreateForm.vue'
 import { getEmployee, type EmployeeDetail, type ProfileEditRow, type ProfileSection } from '../api/personnel'
 
 const route = useRoute()
@@ -24,6 +25,7 @@ const columns = [
   { key: 'position_name', label: 'Должность' },
   { key: 'valid_from', label: 'С даты' },
   { key: 'valid_to', label: 'По дату' },
+  { key: 'basis_reference', label: 'Основание' },
 ]
 async function load() {
   const current = ++generation
@@ -69,6 +71,12 @@ onMounted(load)
           <template #cell-valid_to="{ value }">{{ value ?? 'По настоящее время' }}</template>
         </BaseDataTable>
         <BaseNotice v-if="profile.meta.assignments_truncated" tone="info">Отображены первые 100 назначений. Полная история требует отдельного просмотра.</BaseNotice>
+        <EmployeeAssignmentCreateForm
+          v-if="profile.meta.assignment_writes_enabled"
+          :company-id="String(route.params.company)"
+          :employee-id="String(route.params.employee)"
+          @saved="load"
+        />
       </BaseCard>
       <BaseCard v-if="profile.meta.profile_writes_enabled">
         <EmployeeProfileCreateForm :company-id="String(route.params.company)" :employee-id="String(route.params.employee)" @saved="load" />

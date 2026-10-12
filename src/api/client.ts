@@ -64,6 +64,7 @@ export async function requestJson<T>(
       const message = response.status === 401 ? 'Требуется вход в систему'
         : response.status === 403 ? 'Недостаточно прав доступа'
         : response.status === 404 ? 'Запрошенная функция пока недоступна'
+        : response.status === 409 ? 'Запись уже изменена. Обновите карточку перед сохранением'
         : response.status === 419 ? 'Сессия истекла или CSRF-токен устарел'
         : response.status === 422 ? 'Проверьте данные для входа'
         : response.status === 429 ? 'Слишком много попыток. Повторите позже'

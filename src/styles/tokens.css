@@ -1,2 +1,36 @@
-/* Adapted design values from sh-ansar/demo_bnt_dt/assets/css/tokens.css. */
-:root{font-family:'Golos Text','Segoe UI',Arial,sans-serif;color:#093044;background:#e8eff2;font-synthesis:none;--color-primary:#0697e0;--color-text:#093044;--color-muted:#7199ac;--color-page:#e8eff2;--color-surface:#fff;--color-soft:#f8fafb;--color-stroke:rgba(68,112,134,.16);--radius-sm:8px;--radius-md:12px;--radius-lg:16px;--space-1:4px;--space-2:8px;--space-3:12px;--space-4:16px;--space-5:24px;--space-6:32px;--shadow-card:0 2px 8px rgba(8,31,43,.045)}
+/* ITP HRM shared design contract. Source reference: sh-ansar/demo_bnt_dt/assets/css/tokens.css.
+   All reusable controls must use these semantic variables, not page-local colors. */
+@import url("https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600;700&display=swap");
+:root {
+  font-family:'Golos Text','Segoe UI',Arial,sans-serif;
+  color:#093044;
+  background:#e8eff2;
+  font-synthesis:none;
+  --color-primary:#0697e0;
+  --color-text:#093044;
+  --color-muted:#7199ac;
+  --color-page:#e8eff2;
+  --color-surface:#fff;
+  --color-soft:#f8fafb;
+  --color-stroke:rgba(68,112,134,.16);
+  --color-accent-soft:#e5f6ff;
+  --color-focus:#82b8f5;
+  --color-danger:#982c2c;
+  --color-danger-border:#be4747;
+  --color-danger-surface:#fff1f1;
+  --color-warning:#735218;
+  --color-warning-surface:#fff9e9;
+  --color-success:#245b46;
+  --color-success-surface:#edf8f1;
+  --radius-sm:8px;
+  --radius-md:12px;
+  --radius-lg:16px;
+  --control-height:44px;
+  --space-1:4px;
+  --space-2:8px;
+  --space-3:12px;
+  --space-4:16px;
+  --space-5:24px;
+  --space-6:32px;
+  --shadow-card:0 2px 8px rgba(8,31,43,.045);
+}

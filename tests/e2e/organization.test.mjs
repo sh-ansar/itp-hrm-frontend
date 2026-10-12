@@ -60,7 +60,7 @@ test('organization and employee registries remain usable at mobile tablet deskto
         await page.getByLabel('Компания').waitFor()
         await page.getByRole('button', { name: 'Обновить' }).waitFor()
         const horizontalOverflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1)
-        const overflows = horizontalOverflow ? await page.evaluate(() => Array.from(document.querySelectorAll('*')).filter(el => el.getBoundingClientRect().right > window.innerWidth + 1).slice(0, 8).map(el => ({ tag: el.tagName, className: typeof el.className === 'string' ? el.className : '', right: Math.round(el.getBoundingClientRect().right) }))) : []
+        const overflows = horizontalOverflow ? await page.evaluate(() => ({ size: [window.innerWidth, document.documentElement.scrollWidth], layout: ['.app-shell','.sidebar','.sidebar nav','.main','.topbar','.content','.organization-page'].map(sel => { const el = document.querySelector(sel); const r = el?.getBoundingClientRect(); return [sel,r?.x,r?.width,getComputedStyle(el ?? document.body).display,getComputedStyle(el ?? document.body).overflowX] }), nodes: Array.from(document.querySelectorAll('*')).filter(el => el.getBoundingClientRect().right > window.innerWidth + 1).slice(0, 8).map(el => ({ tag: el.tagName, className: typeof el.className === 'string' ? el.className : '', right: Math.round(el.getBoundingClientRect().right) })) })) : []
         assert.equal(horizontalOverflow, false, `${route} width ${width} should not overflow document; ${JSON.stringify(overflows)}`)
         const select = page.getByLabel('Компания')
         const bounds = await select.boundingBox()

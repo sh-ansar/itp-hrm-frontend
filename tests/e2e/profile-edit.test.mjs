@@ -35,6 +35,8 @@ test('HR creates and edits a training record, then sees stale revision conflict 
     await creator.getByLabel('Тема').fill('Плановый семинар HRM')
     await creator.getByLabel('Дата начала').fill('2026-03-01')
     await creator.getByRole('button', { name: 'Сохранить запись' }).click()
+    await page.getByRole('navigation', { name: 'Разделы карточки сотрудника' })
+      .getByRole('button', { name: 'Обучение' }).click()
 
     const trainingTable = page.getByRole('table', { name: 'Обучение сотрудника' })
     const created = trainingTable.getByRole('row', { name: /Плановый семинар HRM/ })

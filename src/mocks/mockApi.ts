@@ -14,6 +14,61 @@ const actions=employees.slice(0,18).map((e,i)=>({id:id(3000+i),employee_id:e.id,
 const training=employees.slice(0,16).map((e,i)=>({id:id(2000+i),employee_id:e.id,revision:1,personnel_number:e.personnel_number,first_name:e.first_name,last_name:e.last_name,middle_name:e.middle_name,development_status:i%4===0?'planned':i%3===0?'ongoing':'completed',training_type:i%2?'external':'internal',training_mode:i%3===0?'remote':i%3===1?'in_person':'on_the_job',topic:['Управление проектами','Excel и аналитика','Охрана труда','Лидерство'][i%4],provider:'ITP Academy',city:'Астана',started_on:'2026-09-10',ended_on:i%4===0?null:'2026-09-12',document_reference:i%4===0?null:`CERT-${202600+i}`}))
 const reserve=employees.slice(4,14).map((e,i)=>({id:id(2100+i),employee_id:e.id,revision:1,personnel_number:e.personnel_number,first_name:e.first_name,last_name:e.last_name,middle_name:e.middle_name,development_status:i>=8?'alumni':'active',target_position:positions[(i+1)%8].name,reserve_level:i%2?'Функциональный':'Корпоративный',reserve_type:i%3?'Среднесрочный':'Оперативный',joined_year:2024+i%3,left_year:i>=8?2026:null,notes:'Индивидуальный план развития'}))
 const documents=employees.slice(0,22).map((e,i)=>({id:id(5000+i),employee_id:e.id,personnel_action_id:i<actions.length?actions[i].id:null,document_type:['order','contract','basis','other'][i%4],document_number:`DOC-2026-${100+i}`,title:['Приказ о приёме','Трудовой договор','Дополнительное соглашение','Приказ о переводе'][i%4],issued_on:'2026-09-15',status:i%4===3?'draft':'active',revision:1,created_at:'2026-10-01T10:00:00+05:00',personnel_number:e.personnel_number,first_name:e.first_name,last_name:e.last_name,has_file:i%4!==3}))
+const referenceProfileFor=(e:any,i:number)=>({
+  personal:{
+    iin:`9${String(10000000000+i).padStart(11,'0')}`,
+    citizenship:'Республика Казахстан',
+    marital_status:i%3===0?'Женат / замужем':i%3===1?'Не женат / не замужем':'Семейное положение не указано',
+    registration_address:i%2?'г. Астана, район Есиль':'г. Алматы, Бостандыкский район',
+    residence_address:e.address,
+    emergency_contact_name:i%2?'Ибраева Алия Сериковна':'Садыков Арман Ерланович',
+    emergency_contact_phone:'+7 701 555 21 10',
+  },
+  identity_document:{
+    type:'Удостоверение личности РК',
+    number:`ID${String(450000+i).padStart(6,'0')}`,
+    issued_on:'2023-04-18',
+    expires_on:'2033-04-17',
+    issued_by:'МВД Республики Казахстан',
+  },
+  banking:{
+    bank_name:i%2?'Halyk Bank':'Kaspi Bank',
+    iban:`KZ${String(120000000000000000+i).padStart(18,'0')}`,
+    payroll_account:`Зарплатный счёт •••• ${String(1100+i).slice(-4)}`,
+  },
+  employment:{
+    contract_number:`TD-${2022+i%4}-${String(120+i).padStart(3,'0')}`,
+    contract_date:e.current_assignment_valid_from||'2024-01-15',
+    contract_type:i%4===0?'Срочный трудовой договор':'Бессрочный трудовой договор',
+    employment_type:i%3===0?'Полная занятость':'Основное место работы',
+    probation_until:i%5===0?'2026-12-01':null,
+    work_schedule:i%2?'5/2, 09:00–18:00':'Гибкий график, 40 часов в неделю',
+  },
+  payroll:{
+    salary:520000+i*15000,
+    currency:'KZT',
+    payment_frequency:'2 раза в месяц',
+    next_payment_date:'2026-10-25',
+  },
+  schedule:{
+    schedule_name:i%2?'Пятидневная рабочая неделя':'Гибкий график',
+    shift:i%3===0?'Смена 1':'Дневная',
+    hours_per_week:40,
+    timesheet_month:'Октябрь 2026',
+    planned_hours:176,
+    worked_hours:160-i%3*8,
+  },
+  documents:[
+    {id:id(9000+i*10),title:'Трудовой договор',number:`TD-${2022+i%4}-${120+i}`,issued_on:e.current_assignment_valid_from||'2024-01-15',status:'Действует'},
+    {id:id(9001+i*10),title:'Приказ о приёме',number:`HR-${120+i}`,issued_on:e.current_assignment_valid_from||'2024-01-15',status:'Подписан'},
+    {id:id(9002+i*10),title:'Согласие на обработку персональных данных',number:`PD-${210+i}`,issued_on:'2026-01-10',status:'Действует'},
+  ],
+  history:[
+    {id:id(9500+i*10),action:'Карточка сотрудника создана',actor:'HR-служба',created_at:'2024-01-15T09:20:00+05:00'},
+    {id:id(9501+i*10),action:'Обновлены контактные данные',actor:'HR-менеджер',created_at:'2026-06-03T14:10:00+05:00'},
+    {id:id(9502+i*10),action:'Обновлено организационное назначение',actor:'HR-служба',created_at:'2026-09-01T10:40:00+05:00'},
+  ],
+})
 const page=(rows:any[],p:number,per=25,extra={})=>({data:rows.slice((p-1)*per,p*per),meta:{current_page:p,last_page:Math.max(1,Math.ceil(rows.length/per)),per_page:per,total:rows.length,...extra}})
 const json=(o:any)=>JSON.stringify(o)
 export async function mockApiRequest<T>(path:string,options:RequestInit={}):Promise<T>{
@@ -28,7 +83,7 @@ export async function mockApiRequest<T>(path:string,options:RequestInit={}):Prom
     const extra:any=kind==='departments'?{department_writes_enabled:true}:kind==='positions'?{position_writes_enabled:true}:kind==='employees'?{employee_writes_enabled:true,status_filter:u.searchParams.get('status')||'all'}:kind==='personnel-actions'?{personnel_actions_writes_enabled:true}:{document_writes_enabled:true}
     return page(rows,pg,kind==='employees'||kind==='personnel-actions'||kind==='documents'?25:100,extra) as T}
   m=p.match(/^\/companies\/[^/]+\/employees\/([^/]+)$/)
-  if(m&&method==='GET'){const e:any=employees.find(x=>x.id===m![1]);if(!e)throw new Error('Сотрудник не найден');return {data:e,assignments:e.current_department_id?[{id:id(7000+employees.indexOf(e)),department_id:e.current_department_id,position_id:e.current_position_id,department_name:e.current_department_name,position_name:e.current_position_name,valid_from:e.current_assignment_valid_from,valid_to:null,basis_reference:'Приказ о приёме',revision:1}]:[],experience:[{id:id(8000),revision:1,experience_type:'Основное место работы',started_on:'2022-03-01',ended_on:null,basis_reference:'Трудовой договор'}],reserve:reserve.filter(x=>x.employee_id===e.id),training:training.filter(x=>x.employee_id===e.id),meta:{assignments_limit:50,assignments_truncated:false,extended_sections_visible:true,profile_writes_enabled:true,assignment_writes_enabled:true,employee_writes_enabled:true}} as T}
+  if(m&&method==='GET'){const e:any=employees.find(x=>x.id===m![1]);if(!e)throw new Error('Сотрудник не найден');const ei=employees.indexOf(e);return {data:e,assignments:e.current_department_id?[{id:id(7000+ei),department_id:e.current_department_id,position_id:e.current_position_id,department_name:e.current_department_name,position_name:e.current_position_name,valid_from:e.current_assignment_valid_from,valid_to:null,basis_reference:`Приказ № HR-${120+ei}`,revision:1}]:[],experience:[{id:id(8000+ei),revision:1,experience_type:'Основное место работы',started_on:'2022-03-01',ended_on:null,basis_reference:'Трудовой договор'}],reserve:reserve.filter(x=>x.employee_id===e.id),training:training.filter(x=>x.employee_id===e.id),reference_profile:referenceProfileFor(e,ei),meta:{assignments_limit:50,assignments_truncated:false,extended_sections_visible:true,profile_writes_enabled:true,assignment_writes_enabled:true,employee_writes_enabled:true}} as T}
   m=p.match(/^\/companies\/[^/]+\/staffing-plans(?:\/([^/]+))?$/)
   if(m){if(m[1])return {data:plan,lines:staffing,meta:{as_of:u.searchParams.get('as_of')||'2026-10-13',staffing_writes_enabled:true}} as T;return page([plan,{...plan,id:id(501),name:'Проект штатного расписания 2027',valid_from:'2027-01-01',status:'draft',revision:1}],1,25,{staffing_writes_enabled:true}) as T}
   if(p.includes('/staffing-history'))return page(Array.from({length:34},(_,i)=>({id:34-i,action:i%6===0?'staffing_plan.approved':i%4===0?'staffing_line.updated':'staffing_line.created',staffing_plan_id:plan.id,staffing_line_id:staffing[i%staffing.length].id,revision:1+i%3,created_at:'2026-10-01T10:30:00+05:00'})),Number(u.searchParams.get('page')||1),25) as T

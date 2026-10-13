@@ -7,6 +7,33 @@ const deps=[
   ['Обучение и развитие',3],['Отдел разработки',4],['Инфраструктура и поддержка',4],['Проектный офис',0],
 ].map(([name,p],i)=>({id:id(100+i),name,parent_id:p===null?null:id(100+Number(p)),revision:1}))
 const positions=['Генеральный директор','Операционный директор','Финансовый директор','HR-директор','IT-директор','Руководитель отдела','HR бизнес-партнёр','Рекрутер','Специалист по обучению','Главный бухгалтер','Экономист','Бизнес-аналитик','Frontend-разработчик','Backend-разработчик','DevOps-инженер','Системный администратор','Менеджер проекта','Инженер эксплуатации','Специалист поддержки','Офис-менеджер'].map((name,i)=>({id:id(300+i),name,revision:1}))
+
+const directoryStorageKey='hrm-demo-directories-v1'
+// Keep harmless demo directory edits through a refresh in the current tab.
+// The browser session is isolated from Laravel and production data.
+function restoreDemoDirectories(){
+  try {
+    const saved=JSON.parse(sessionStorage.getItem(directoryStorageKey)||'null')
+    if(!saved || !Array.isArray(saved.departments) || !Array.isArray(saved.positions))return
+    const valid=(record:any)=>record&&typeof record.id==='string'
+      &&/^[a-f0-9-]{36}$/i.test(record.id)
+      &&typeof record.name==='string'&&record.name.length>0
+      &&Number.isSafeInteger(record.revision)&&record.revision>=1
+    if(saved.departments.length>=14&&saved.departments.length<=500
+      &&saved.positions.length>=20&&saved.positions.length<=500
+      &&saved.departments.every((record:any)=>valid(record)
+        &&(record.parent_id===null||typeof record.parent_id==='string'))
+      &&saved.positions.every(valid)){
+      deps.splice(0,deps.length,...saved.departments)
+      positions.splice(0,positions.length,...saved.positions)
+    }
+  }catch{ /* A blocked storage or invalid session never breaks the demo. */ }
+}
+function saveDemoDirectories(){
+  try { sessionStorage.setItem(directoryStorageKey,JSON.stringify({departments:deps,positions})) }
+  catch{ /* A blocked storage falls back to page-lifetime demo state. */ }
+}
+restoreDemoDirectories()
 const names=[['Садыков','Арман','Ерланович'],['Ибраева','Алия','Сериковна'],['Ким','Даниил','Алексеевич'],['Ахметова','Мадина','Руслановна'],['Нуртаев','Асет','Маратович'],['Смирнова','Елена','Викторовна'],['Омаров','Тимур','Кайратович'],['Сейтова','Аружан','Нурлановна'],['Ли','Максим','Олегович'],['Жумабаева','Динара','Аскаровна'],['Касымов','Ринат','Булатович'],['Волкова','Анна','Игоревна'],['Тлеубаев','Адиль','Ермекович'],['Соколова','Мария','Андреевна'],['Беков','Нурсултан','Дауренович'],['Романова','Екатерина','Павловна'],['Абдрахманов','Ержан','Серикович'],['Кузнецова','Ольга','Дмитриевна'],['Мусин','Алихан','Талгатович'],['Морозова','Дарья','Сергеевна'],['Исаев','Руслан','Айдарович'],['Петрова','Виктория','Олеговна'],['Жанибеков','Данияр','Арманович'],['Орлова','Полина','Романовна'],['Сулейменов','Мирас','Канатович'],['Федорова','София','Ильинична'],['Калиев','Ерасыл','Бауыржанович'],['Новикова','Алина','Максимовна'],['Токтаров','Санжар','Ерланович'],['Попова','Ксения','Алексеевна'],['Ермеков','Айдос','Тимурович'],['Васильева','Наталья','Денисовна'],['Баймуханов','Алан','Рашидович'],['Захарова','Вероника','Олеговна'],['Серикбаев','Мади','Ерболович'],['Белова','Юлия','Антоновна'],['Кенжебек','Амир','Даулетович'],['Мельникова','Анастасия','Игоревна'],['Таиров','Ильяс','Муратович'],['Григорьева','Елизавета','Сергеевна']]
 const employees=names.map(([last_name,first_name,middle_name],i)=>{const d=deps[5+i%(deps.length-5)],p=positions[5+i%(positions.length-5)],arch=i>=37,planned=i>=34&&i<37,unassigned=i===33;return{id:id(1000+i),personnel_number:`EMP-${String(i+1).padStart(4,'0')}`,last_name,first_name,middle_name,revision:1,birth_date:`${1987+i%12}-0${i%9+1}-${String(i%20+5).padStart(2,'0')}`,gender:i%2?'female':'male',email:`employee${i+1}@demo.local`,phone:`+7 700 100 ${String(10+i).padStart(2,'0')} ${String(20+i).padStart(2,'0')}`,address:i%2?'г. Астана':'г. Алматы',work_site:i%2?'Астана, головной офис':'Алматы, офис',work_zone:i%3?'Гибрид':'Офис',work_team:`Команда ${String.fromCharCode(65+i%4)}`,supervisor_name:'Садыков Арман Ерланович',current_department_name:unassigned||arch?null:d.name,current_position_name:unassigned||arch?null:p.name,current_department_id:unassigned||arch?null:d.id,current_position_id:unassigned||arch?null:p.id,current_assignment_valid_from:unassigned||arch?null:`202${2+i%4}-0${i%8+1}-01`,employment_status:arch?'archived':planned?'planned':unassigned?'unassigned':'active'}})
 const plan:any={id:id(500),name:'Штатное расписание 2026',valid_from:'2026-01-01',valid_to:null,status:'approved',revision:3}
@@ -95,7 +122,7 @@ const referenceProfileFor=(e:any,i:number)=>({
     {id:id(9502+i*10),action:'Обновлено организационное назначение',actor:'HR-служба',created_at:'2026-09-01T10:40:00+05:00'},
   ],
 })
-const page=(rows:any[],p:number,per=25,extra={})=>({data:rows.slice((p-1)*per,p*per),meta:{current_page:p,last_page:Math.max(1,Math.ceil(rows.length/per)),per_page:per,total:rows.length,...extra}})
+const page=(rows:any[],p:number,per=25,extra={})=>({data:structuredClone(rows.slice((p-1)*per,p*per)),meta:{current_page:p,last_page:Math.max(1,Math.ceil(rows.length/per)),per_page:per,total:rows.length,...extra}})
 const json=(o:any)=>JSON.stringify(o)
 export async function mockApiRequest<T>(path:string,options:RequestInit={}):Promise<T>{
   await new Promise(r=>setTimeout(r,80))
@@ -180,7 +207,8 @@ export async function mockApiRequest<T>(path:string,options:RequestInit={}):Prom
         ? {id:crypto.randomUUID(),name,parent_id:parentId,revision:1}
         : {id:crypto.randomUUID(),name,revision:1}
       rows.push(created)
-      return {data:created} as T
+      saveDemoDirectories()
+      return {data:{...created}} as T
     }
     if((method==='PUT'||method==='DELETE')&&recordId){
       const record:any=rows.find(row=>row.id===recordId)
@@ -199,6 +227,7 @@ export async function mockApiRequest<T>(path:string,options:RequestInit={}):Prom
           ? 'Подразделение используется в структуре, назначениях или штатном расписании'
           : 'Должность используется в назначениях или штатном расписании')
         rows.splice(rows.indexOf(record),1)
+        saveDemoDirectories()
         return {data:{id:recordId}} as T
       }
       if(!name)throw new Error('Название не может быть пустым')
@@ -230,7 +259,8 @@ export async function mockApiRequest<T>(path:string,options:RequestInit={}):Prom
         if(kind==='departments'&&line.department_id===recordId)line.department_name=name
         if(kind==='positions'&&line.position_id===recordId)line.position_name=name
       }
-      return {data:record} as T
+      saveDemoDirectories()
+      return {data:{...record}} as T
     }
     throw new Error('Действие со справочником не поддерживается')
   }

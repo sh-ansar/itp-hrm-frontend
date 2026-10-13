@@ -32,8 +32,8 @@ withDefaults(defineProps<{
 <style scoped>
 .base-field{display:grid;gap:8px}
 .base-field label{color:var(--color-text);font-weight:600;font-size:14px}
-.base-field input{width:100%;min-height:44px;border:1px solid var(--color-stroke);background:#fff;border-radius:var(--radius-md);padding:11px 13px;color:var(--color-text)}
-.base-field input:focus-visible{outline:3px solid #82b8f5;outline-offset:1px}
-.base-field input[aria-invalid="true"]{border-color:#d01717}
+.base-field input{width:100%;min-height:44px;border:1px solid var(--color-stroke);background:var(--color-surface-raised);border-radius:var(--radius-md);padding:11px 13px;color:var(--color-text)}
+.base-field input:focus-visible{outline:3px solid var(--color-focus);outline-offset:1px}
+.base-field input[aria-invalid="true"]{border-color:var(--color-danger)}
 .base-field input:disabled{background:var(--color-soft);opacity:.65}
 </style>

@@ -35,7 +35,7 @@ onUnmounted(() => { if (panel.value?.open) panel.value.close() })
     <div class="drawer-sheet">
       <header class="drawer-header">
         <h2 :id="titleId">{{ title }}</h2>
-        <button type="button" class="drawer-close" aria-label="Закрыть панель" @click="close">
+        <button type="button" class="drawer-close" aria-label="Закрыть диалог" @click="close">
           <X :size="20" />
         </button>
       </header>

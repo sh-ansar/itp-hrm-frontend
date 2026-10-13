@@ -346,7 +346,7 @@ onMounted(loadCompanies)
         </div>
         <div class="registry-mobile-list">
           <EmployeeMobileList :rows="registryRows" :company-id="selectedCompany" :selected-ids="selectedIds"
-            :loading="employeeLoading" @select="toggleSelection" />
+            :loading="employeeLoading" :grouped="grouped" @select="toggleSelection" />
         </div>
         <BasePagination :page="page" :last-page="lastPage" :loading="employeeLoading"
           caption="Страницы реестра сотрудников" @previous="page--" @next="page++" />
@@ -368,7 +368,7 @@ onMounted(loadCompanies)
 .personnel-page :deep(th){font-weight:600;padding:11px 13px}
 .personnel-page :deep(td){vertical-align:middle;padding:10px 13px}
 .personnel-page :deep(.table-scroll){border-radius:6px;contain:layout paint}
-.registry-metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:var(--space-3)}
+.registry-metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:var(--space-3)}
 .registry-metric{display:grid;grid-template-columns:minmax(0,1fr) auto;align-content:start;gap:5px 9px;align-items:start;min-height:122px}
 .registry-metric span{font-size:12px;text-transform:uppercase;font-weight:700;letter-spacing:.01em;color:var(--color-muted);grid-column:1;grid-row:1;line-height:1.4}
 .registry-metric :deep(svg){color:var(--color-primary);grid-column:2;grid-row:1}
@@ -419,6 +419,7 @@ onMounted(loadCompanies)
 @media(max-width:700px){
   .registry-desktop-table{display:none}
   .registry-mobile-list{display:block}
+  .registry-toolbar :deep(.column-settings){display:none}
 }
 @media(max-width:650px){
   .registry-metrics{gap:8px}

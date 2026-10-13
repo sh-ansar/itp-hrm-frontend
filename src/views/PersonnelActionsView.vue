@@ -200,7 +200,8 @@ onMounted(loadCompanies)
 </template>
 
 <style scoped>
-.actions-page{display:grid;gap:var(--space-4);min-width:0}
+.actions-page{display:grid;grid-template-columns:minmax(0,1fr);gap:var(--space-4);min-width:0;max-width:100%;overflow-x:clip}
+.actions-page>*{min-width:0;max-width:100%}
 .toolbar{display:grid;grid-template-columns:minmax(220px,1fr) minmax(180px,.7fr) auto;gap:var(--space-4);align-items:end;min-width:0}
 .summary{display:grid;gap:2px;min-width:0;padding:10px 14px;border-radius:var(--radius-md);background:var(--color-soft)}
 .summary span,.summary small{font-size:11px;color:var(--color-muted)}
@@ -217,7 +218,9 @@ onMounted(loadCompanies)
 .action-pill--hire{background:var(--color-success-surface);color:var(--color-success)}
 .action-pill--transfer{background:var(--color-accent-soft);color:var(--color-primary)}
 .action-pill--termination{background:var(--color-warning-surface);color:var(--color-warning)}
-.employee-cell{display:grid;gap:2px}
+.employee-cell{display:grid;gap:2px;min-width:0;overflow-wrap:anywhere}
+.section-heading>div{min-width:0;overflow-wrap:anywhere}
+.summary{overflow-wrap:anywhere}
 .employee-cell span{font-size:11px;color:var(--color-muted)}
 @media(max-width:850px){.toolbar{grid-template-columns:1fr 1fr}.summary{grid-column:1/-1}.metrics{grid-template-columns:1fr}}
 @media(max-width:600px){.toolbar{grid-template-columns:1fr}.summary{grid-column:auto}}

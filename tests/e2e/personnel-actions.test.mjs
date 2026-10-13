@@ -11,7 +11,7 @@ async function login(page){
   await page.getByLabel('Электронная почта').fill('synthetic-e2e@example.test')
   await page.getByLabel('Пароль').fill('SyntheticE2E-Only!2026')
   await page.getByRole('button',{name:'Войти'}).click()
-  await page.getByRole('heading',{name:'Обзор системы'}).waitFor()
+  await page.getByRole('heading',{name:'Главная'}).waitFor()
 }
 
 async function openActionForSynthetic(page){
@@ -33,7 +33,7 @@ test('HR conducts transfer termination and rehire through personnel actions work
   try{
     await login(page)
     await page.goto('/personnel-actions')
-    await page.getByRole('heading',{name:'Кадровые действия',exact:true,level:1}).waitFor()
+    await page.getByRole('heading',{name:'Кадровые процессы',exact:true,level:1}).waitFor()
 
     let dialog=await openActionForSynthetic(page)
     await dialog.getByLabel('Кадровое действие').selectOption('transfer')
@@ -43,7 +43,7 @@ test('HR conducts transfer termination and rehire through personnel actions work
     await dialog.getByLabel('Должность').selectOption({label:'Test Engineer'})
     await dialog.getByRole('button',{name:/Провести: Перевод/}).click()
 
-    const transferRow=page.getByRole('row',{name:/ORDER-E2E-TRANSFER/})
+    const transferRow=page.locator('.action-mobile-card').filter({ hasText: 'ORDER-E2E-TRANSFER' })
     await Promise.race([
       transferRow.waitFor({timeout:10000}),
       dialog.getByRole('alert').waitFor({timeout:10000}).then(async()=>{throw new Error('Transfer rejected: '+await dialog.getByRole('alert').innerText())}),
@@ -57,17 +57,17 @@ test('HR conducts transfer termination and rehire through personnel actions work
     await dialog.getByLabel('Основание').fill('ORDER-E2E-TERM')
     await dialog.getByRole('button',{name:/Провести: Увольнение/}).click()
 
-    const terminationRow=page.getByRole('row',{name:/ORDER-E2E-TERM/})
+    const terminationRow=page.locator('.action-mobile-card').filter({ hasText: 'ORDER-E2E-TERM' })
     await terminationRow.waitFor()
     assert.match(await terminationRow.innerText(),/Увольнение/)
     assert.match(await terminationRow.innerText(),/прекращено/)
 
-    await page.goto('/employees')
-    await page.getByRole('row',{name:/E2E-001/}).getByRole('link',{name:'Открыть'}).click()
-    await page.getByRole('heading',{name:'Карточка сотрудника'}).waitFor()
+    await page.goto('/employees?status=archived')
+    await page.locator('.employee-mobile-card').filter({ hasText: 'E2E-001' }).getByRole('link', { name: /Открыть карточку/ }).click()
+    await page.locator('.employee-page-heading h1').waitFor()
     await page.getByText('Нет активного назначения',{exact:true}).waitFor()
     await page.goto('/personnel-actions')
-    await page.getByRole('heading',{name:'Кадровые действия',exact:true,level:1}).waitFor()
+    await page.getByRole('heading',{name:'Кадровые процессы',exact:true,level:1}).waitFor()
 
     dialog=await openActionForSynthetic(page)
     await dialog.getByLabel('Кадровое действие').selectOption('hire')
@@ -77,10 +77,10 @@ test('HR conducts transfer termination and rehire through personnel actions work
     await dialog.getByLabel('Должность').selectOption({label:'Test Engineer'})
     await dialog.getByRole('button',{name:/Провести: Приём на работу/}).click()
 
-    const hireRow=page.getByRole('row',{name:/ORDER-E2E-REHIRE/})
+    const hireRow=page.locator('.action-mobile-card').filter({ hasText: 'ORDER-E2E-REHIRE' })
     await hireRow.waitFor()
     assert.match(await hireRow.innerText(),/Приём/)
-    assert.equal(await page.getByRole('row',{name:/ORDER-E2E-/}).count(),3)
+    assert.equal(await page.locator('.action-mobile-card').filter({ hasText: 'ORDER-E2E-' }).count(),3)
     assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>window.innerWidth+1),false)
   }finally{
     await context.close()

@@ -18,11 +18,12 @@ test('HR creates edits and atomically transfers assignments at mobile width', as
     await page.getByLabel('Электронная почта').fill('synthetic-e2e@example.test')
     await page.getByLabel('Пароль').fill('SyntheticE2E-Only!2026')
     await page.getByRole('button', { name: 'Войти' }).click()
-    await page.getByRole('heading', { name: 'Обзор системы' }).waitFor()
+    await page.getByRole('heading', { name: 'Главная' }).waitFor()
 
     await page.goto('/employees')
-    await page.getByRole('row', { name: /E2E-001/ }).getByRole('link', { name: 'Открыть' }).click()
-    await page.getByRole('heading', { name: 'Карточка сотрудника' }).waitFor()
+    await page.locator('.employee-mobile-card').filter({ hasText: 'E2E-001' }).getByRole('link', { name: /Открыть карточку/ }).click()
+    await page.locator('.employee-page-heading h1').waitFor()
+    await page.getByRole('navigation', { name: 'Разделы карточки сотрудника' }).getByRole('button', { name: 'Трудовые данные' }).click()
 
     await page.getByRole('button', { name: 'Добавить назначение' }).click()
     const form = page.getByRole('region', { name: 'Новое назначение' })
@@ -39,7 +40,7 @@ test('HR creates edits and atomically transfers assignments at mobile width', as
     await row.waitFor()
     assert.match(await row.innerText(), /Visible Finance/)
     assert.match(await row.innerText(), /Test Engineer/)
-    assert.match(await row.innerText(), /2025-01-01/)
+    assert.match(await row.innerText(), /1 января 2025/)
 
     await row.getByRole('button', { name: 'Изменить' }).click()
     const editor = page.getByRole('region', { name: 'Редактирование назначения' })
@@ -61,7 +62,7 @@ test('HR creates edits and atomically transfers assignments at mobile width', as
     const transferred = table.getByRole('row', { name: /Приказ E2E-transfer/ })
     await transferred.waitFor()
     assert.match(await transferred.innerText(), /Visible Finance Child/)
-    const closedPrevious = table.getByRole('row', { name: /2026-06-30/ })
+    const closedPrevious = table.getByRole('row', { name: /30 июня 2026/ })
     await closedPrevious.waitFor()
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1), false)
   } finally {

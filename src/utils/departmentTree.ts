@@ -37,3 +37,17 @@ export function buildDepartmentForest(departments: DepartmentRecord[]): Departme
   sort(roots)
   return roots
 }
+
+/** Keep matching departments visible inside the diagram, retaining their ancestor chain. */
+export function filterDepartmentForest(nodes: DepartmentTreeItem[], search: string): DepartmentTreeItem[] {
+  const needle = search.trim().toLocaleLowerCase('ru')
+  if (!needle) return nodes
+
+  function visit(node: DepartmentTreeItem): DepartmentTreeItem | null {
+    if (node.name.toLocaleLowerCase('ru').includes(needle)) return node
+    const children = node.children.map(visit).filter((child): child is DepartmentTreeItem => child !== null)
+    return children.length ? { ...node, children } : null
+  }
+
+  return nodes.map(visit).filter((node): node is DepartmentTreeItem => node !== null)
+}

@@ -11,7 +11,7 @@ async function login(page) {
   await page.getByLabel('Электронная почта').fill('synthetic-e2e@example.test')
   await page.getByLabel('Пароль').fill('SyntheticE2E-Only!2026')
   await page.getByRole('button', { name: 'Войти' }).click()
-  await page.getByRole('heading', { name: 'Обзор системы' }).waitFor()
+  await page.getByRole('heading', { name: 'Главная' }).waitFor()
 }
 
 test('HR creates edits and deletes an unused position directory record', async () => {
@@ -32,24 +32,24 @@ test('HR creates edits and deletes an unused position directory record', async (
     await createDialog.getByLabel('Название должности').fill('E2E Analyst')
     await createDialog.getByRole('button', { name: 'Добавить должность' }).click()
 
-    const createdRow = page.getByRole('row', { name: /E2E Analyst/ })
+    const createdRow = page.locator('.position-card').filter({ hasText: 'E2E Analyst' })
     await createdRow.waitFor()
 
-    await createdRow.getByRole('button', { name: 'Изменить' }).click()
+    await createdRow.getByRole('button', { name: /Изменить должность/ }).click()
     const editDialog = page.getByRole('dialog', { name: 'Изменить должность' })
     await editDialog.waitFor()
     await editDialog.getByLabel('Название должности').fill('E2E Senior Analyst')
     await editDialog.getByRole('button', { name: 'Сохранить изменения' }).click()
 
-    const renamedRow = page.getByRole('row', { name: /E2E Senior Analyst/ })
+    const renamedRow = page.locator('.position-card').filter({ hasText: 'E2E Senior Analyst' })
     await renamedRow.waitFor()
 
-    await renamedRow.getByRole('button', { name: 'Удалить' }).click()
+    await renamedRow.getByRole('button', { name: /Удалить должность/ }).click()
     const deleteDialog = page.getByRole('dialog', { name: 'Удалить должность' })
     await deleteDialog.waitFor()
-    await deleteDialog.getByRole('button', { name: 'Удалить' }).click()
+    await deleteDialog.getByRole('button', { name: 'Удалить', exact: true }).click()
 
-    await page.getByRole('table', { name: 'Справочник должностей компании' }).getByRole('row', { name: /E2E Senior Analyst/ }).waitFor({ state: 'detached' })
+    await page.locator('.position-card').filter({ hasText: 'E2E Senior Analyst' }).waitFor({ state: 'detached' })
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1), false)
   } finally {
     await context.close()

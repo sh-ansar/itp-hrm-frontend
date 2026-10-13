@@ -425,6 +425,7 @@ onMounted(loadCompanies)
 .development-record-card dt{color:var(--color-muted);font-size:9px}
 .development-record-card dd{margin:0;color:var(--color-text);font-size:11px;font-weight:600;overflow-wrap:anywhere}
 .development-record-card footer{display:flex;justify-content:flex-end;padding-top:2px}
+.development-record-card footer :deep(.base-button){min-width:96px;white-space:nowrap}
 .mobile-empty{margin:0;padding:20px 10px;text-align:center;color:var(--color-muted);font-size:11px}
 .create-workflow{display:grid;gap:var(--space-5);min-width:0}
 @media(max-width:1120px){.development-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}}

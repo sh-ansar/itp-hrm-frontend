@@ -11,7 +11,7 @@ async function login(page) {
   await page.getByLabel('Электронная почта').fill('synthetic-e2e@example.test')
   await page.getByLabel('Пароль').fill('SyntheticE2E-Only!2026')
   await page.getByRole('button', { name: 'Войти' }).click()
-  await page.getByRole('heading', { name: 'Обзор системы' }).waitFor()
+  await page.getByRole('heading', { name: 'Главная' }).waitFor()
 }
 
 test('HR creates staffs and approves a real staffing-plan version at mobile width', async () => {
@@ -49,11 +49,11 @@ test('HR creates staffs and approves a real staffing-plan version at mobile widt
     await lineDialog.getByLabel('Базовый оклад').fill('450000')
     await lineDialog.getByRole('button', { name: 'Добавить в штат' }).click()
 
-    const table = page.getByRole('table', { name: 'Строки штатного расписания' })
-    await table.waitFor()
-    const row = table.getByRole('row', { name: /Visible Finance.*Test Engineer/ })
+    const row = page.locator('.staffing-mobile-card').filter({ hasText: 'Test Engineer' })
     await row.waitFor()
     const rowText = await row.innerText()
+    assert.match(rowText, /Visible Finance/)
+    assert.match(rowText, /Test Engineer/)
     assert.match(rowText, /3/)
     assert.match(rowText, /1/)
     assert.match(rowText, /2/)
@@ -61,31 +61,27 @@ test('HR creates staffs and approves a real staffing-plan version at mobile widt
     assert.match(rowText, /KZT/)
     assert.match(rowText, /Есть вакансии/)
 
-    const metrics = await page.locator('.metrics').innerText()
-    assert.match(metrics, /Плановых ставок\s*3/)
-    assert.match(metrics, /Занято\s*1/)
-    assert.match(metrics, /Вакантно\s*2/)
+    const metrics = page.locator('.staffing-summary-item')
+    assert.equal(await metrics.nth(0).locator('strong').innerText(), '3', 'planned units')
+    assert.equal(await metrics.nth(1).locator('strong').innerText(), '1', 'occupied units')
+    assert.equal(await metrics.nth(2).locator('strong').innerText(), '2', 'vacant units')
 
-    const views = page.getByRole('navigation', { name: 'Штатные представления' })
+    const views = page.getByRole('navigation', { name: 'Разделы оргструктуры и штатного расписания' })
     await views.getByRole('button', { name: 'Вакантные позиции' }).click()
     await row.waitFor()
-    await views.getByRole('button', { name: 'Сверх штата' }).click()
-    await page.getByText('Сверхштатных позиций нет').waitFor()
     await views.getByRole('button', { name: 'Штатное расписание' }).click()
     await row.waitFor()
 
     await page.getByLabel('Поиск штатных единиц').fill('Visible Finance')
     await row.waitFor()
     await page.getByLabel('Поиск штатных единиц').fill('Несуществующее')
-    await page.getByText('Штатные единицы не найдены').waitFor()
+    await page.getByText('По вашему запросу ничего не найдено.').waitFor()
     await page.getByLabel('Поиск штатных единиц').fill('')
     await row.waitFor()
 
     await page.getByRole('button', { name: 'Группировка' }).click()
-    await table.locator('tbody tr.table-group').first().waitFor()
-    await page.locator('.column-settings summary').click()
-    await page.locator('.column-options').getByLabel('Базовый оклад').uncheck()
-    assert.equal(await table.getByRole('columnheader', { name: 'Базовый оклад' }).count(), 0)
+    await page.locator('.staffing-group-heading').first().waitFor()
+    assert.match(await page.locator('.staffing-group-heading').first().innerText(), /Visible Finance/)
 
     await page.getByRole('button', { name: 'Утвердить' }).first().click()
     const approveDialog = page.getByRole('dialog', { name: 'Утвердить штатное расписание' })

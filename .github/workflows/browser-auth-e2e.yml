@@ -93,11 +93,28 @@ jobs:
           exit 1
       - name: Run Chromium browser integration tests
         run: |
+          set -euo pipefail
           if [ "$HRM_PERSONNEL_WRITES_ENABLED" = "true" ]; then
-            node --test --test-concurrency=1 tests/e2e/profile-edit.test.mjs tests/e2e/assignment-create.test.mjs tests/e2e/employee-master.test.mjs tests/e2e/staffing.test.mjs tests/e2e/department-tree.test.mjs tests/e2e/position-directory.test.mjs tests/e2e/personnel-actions.test.mjs tests/e2e/documents-write.test.mjs tests/e2e/development-write.test.mjs
+            tests="tests/e2e/profile-edit.test.mjs tests/e2e/assignment-create.test.mjs tests/e2e/employee-master.test.mjs tests/e2e/staffing.test.mjs tests/e2e/department-tree.test.mjs tests/e2e/position-directory.test.mjs tests/e2e/personnel-actions.test.mjs tests/e2e/documents-write.test.mjs tests/e2e/development-write.test.mjs"
           else
-            node --test --test-concurrency=1 tests/e2e/auth.test.mjs tests/e2e/components.test.mjs tests/e2e/organization.test.mjs tests/e2e/documents-readonly.test.mjs tests/e2e/prototype-shell.test.mjs tests/e2e/employee-registry-visual.test.mjs tests/e2e/organization-diagram.test.mjs tests/e2e/development-readonly.test.mjs
+            tests="tests/e2e/auth.test.mjs tests/e2e/components.test.mjs tests/e2e/organization.test.mjs tests/e2e/documents-readonly.test.mjs tests/e2e/prototype-shell.test.mjs tests/e2e/employee-registry-visual.test.mjs tests/e2e/organization-diagram.test.mjs tests/e2e/org-staffing-navigation.test.mjs tests/e2e/employee-tabs-scroll.test.mjs tests/e2e/development-readonly.test.mjs"
           fi
+          # Every test file must begin from a clean synthetic company/employee state.
+          # Otherwise personnel-action tests mutate the shared fixture and make subsequent
+          # screens appear broken even though their permissions and queries are correct.
+          failed=0
+          for test_file in $tests; do
+            echo "::group::Isolated browser test: $test_file"
+            (cd backend && php artisan migrate:fresh --force > /dev/null)
+            php tests/e2e/seed-synthetic-user.php > /dev/null
+            php tests/e2e/seed-synthetic-organization.php > /dev/null
+            if ! node --test --test-concurrency=1 "$test_file"; then
+              echo "::error file=$test_file::Browser test failed"
+              failed=1
+            fi
+            echo "::endgroup::"
+          done
+          exit "$failed"
       - name: Print server diagnostics on failure
         if: failure()
         run: |

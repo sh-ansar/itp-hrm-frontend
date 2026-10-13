@@ -11,7 +11,7 @@ async function login(page) {
   await page.getByLabel('Электронная почта').fill('synthetic-e2e@example.test')
   await page.getByLabel('Пароль').fill('SyntheticE2E-Only!2026')
   await page.getByRole('button', { name: 'Войти' }).click()
-  await page.getByRole('heading', { name: 'Обзор системы' }).waitFor()
+  await page.getByRole('heading', { name: 'Главная' }).waitFor()
 }
 
 test('HR creates and edits an employee master record from the redesigned UI', async () => {
@@ -35,23 +35,28 @@ test('HR creates and edits an employee master record from the redesigned UI', as
     await createDialog.getByLabel('Отчество').fill('Тестовый')
     await createDialog.getByRole('button', { name: 'Добавить сотрудника' }).click()
 
-    await page.getByRole('heading', { name: 'Карточка сотрудника' }).waitFor()
-    await page.getByText('Новый Сотрудник Тестовый').waitFor()
+    await page.locator('.employee-page-heading h1').waitFor()
+    await page.locator('.employee-page-heading h1').filter({ hasText: 'Новый Сотрудник Тестовый' }).waitFor()
 
     await page.getByRole('button', { name: 'Изменить карточку' }).click()
     const editDialog = page.getByRole('dialog', { name: 'Основные данные сотрудника' })
     await editDialog.waitFor()
     assert.equal(await editDialog.getByLabel('Табельный номер').inputValue(), 'E2E-NEW-01')
+    assert.equal(await editDialog.getByLabel('Дата рождения').count(), 0,
+      'Non-persisted demo fields must not appear in the production write form')
     await editDialog.getByLabel('Фамилия').fill('Обновлённый')
     await editDialog.getByRole('button', { name: 'Сохранить карточку' }).click()
 
-    await page.getByText('Обновлённый Сотрудник Тестовый').waitFor()
+    await page.locator('.employee-page-heading h1').filter({ hasText: 'Обновлённый Сотрудник Тестовый' }).waitFor()
 
     await page.goto('/employees')
     await page.getByRole('heading', { name: 'Реестр сотрудников' }).waitFor()
-    await page.getByRole('searchbox', { name: 'Поиск сотрудника' }).fill('E2E-NEW-01')
-    await page.getByRole('searchbox', { name: 'Поиск сотрудника' }).press('Enter')
-    const resultRow = page.getByRole('row', { name: /E2E-NEW-01/ })
+    // New employees have no active assignment and must not appear in the active-only view.
+    await page.getByRole('button', { name: 'Фильтры' }).click()
+    await page.getByLabel('Статус сотрудника').selectOption('unassigned')
+    await page.getByRole('searchbox', { name: 'Поиск в реестре' }).fill('E2E-NEW-01')
+    await page.getByRole('searchbox', { name: 'Поиск в реестре' }).press('Enter')
+    const resultRow = page.locator('.employee-mobile-card').filter({ hasText: 'E2E-NEW-01' })
     await resultRow.waitFor()
     assert.match(await resultRow.innerText(), /Обновлённый Сотрудник Тестовый/)
     assert.match(await resultRow.innerText(), /Без назначения/)

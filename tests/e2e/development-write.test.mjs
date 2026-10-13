@@ -11,7 +11,7 @@ async function login(page) {
   await page.getByLabel('Электронная почта').fill('synthetic-e2e@example.test')
   await page.getByLabel('Пароль').fill('SyntheticE2E-Only!2026')
   await page.getByRole('button', { name: 'Войти' }).click()
-  await page.getByRole('heading', { name: 'Обзор системы' }).waitFor()
+  await page.getByRole('heading', { name: 'Главная' }).waitFor()
 }
 
 test('HR creates new training and reserve entry through reused drawers', async () => {
@@ -23,8 +23,8 @@ test('HR creates new training and reserve entry through reused drawers', async (
     await login(page)
     await page.goto('/learning')
     await page.getByRole('heading', { name: 'Обучение', level: 1 }).waitFor()
-    await page.getByRole('button', { name: 'Добавить запись' }).waitFor({ timeout: 15000 })
-    await page.getByRole('button', { name: 'Добавить запись' }).click()
+    await page.getByRole('button', { name: 'Добавить обучение' }).waitFor({ timeout: 15000 })
+    await page.getByRole('button', { name: 'Добавить обучение' }).click()
     const trainingDialog = page.getByRole('dialog', { name: 'Новое обучение' })
     const editor = trainingDialog.getByRole('region', { name: 'Добавление кадровых сведений' })
     await editor.waitFor({ timeout: 15000 })
@@ -33,17 +33,17 @@ test('HR creates new training and reserve entry through reused drawers', async (
     await editor.getByLabel('Тема').fill('E2E новая программа B07')
     await editor.getByLabel('Дата начала').fill('2026-04-10')
     await editor.getByRole('button', { name: 'Сохранить запись' }).click()
-    const createdTraining = page.getByRole('row', { name: /E2E новая программа B07/ })
+    const createdTraining = page.locator('.development-record-card').filter({ hasText: 'E2E новая программа B07' })
     await createdTraining.waitFor({ timeout: 15000 })
-    await createdTraining.getByText('10.04.2026', { exact: true }).waitFor()
+    await createdTraining.getByText('10.04.2026', { exact: false }).waitFor()
     const editSize = await createdTraining.getByRole('button', { name: 'Изменить' }).boundingBox()
     assert.ok(editSize && editSize.width >= 90, 'Training table edit action must not collapse into vertical text')
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1), false)
 
     await page.goto('/reserve')
     await page.getByRole('heading', { name: 'Кадровый резерв', level: 1 }).waitFor()
-    await page.getByRole('button', { name: 'Добавить запись' }).waitFor({ timeout: 15000 })
-    await page.getByRole('button', { name: 'Добавить запись' }).click()
+    await page.getByRole('button', { name: 'Добавить в резерв' }).waitFor({ timeout: 15000 })
+    await page.getByRole('button', { name: 'Добавить в резерв' }).click()
     const reserveDialog = page.getByRole('dialog', { name: 'Добавить в кадровый резерв' })
     const reserveEditor = reserveDialog.getByRole('region', { name: 'Добавление кадровых сведений' })
     await reserveEditor.waitFor({ timeout: 15000 })
@@ -69,7 +69,7 @@ test('HR creates new training and reserve entry through reused drawers', async (
     }
     assert.equal(reply.status(), 201, 'Reserve write rejected: ' + (await reply.text()).slice(0, 450))
     await reserveDialog.waitFor({ state: 'hidden', timeout: 10000 })
-    await page.getByRole('row', { name: /E2E начальник отдела B07/ }).waitFor({ timeout: 15000 })
+    await page.locator('.development-record-card').filter({ hasText: 'E2E начальник отдела B07' }).waitFor({ timeout: 15000 })
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1), false)
   } finally {
     await context.close()

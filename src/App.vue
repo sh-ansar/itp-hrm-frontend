@@ -78,7 +78,7 @@ watch(() => route.query.q, q => {
       <nav class="sidebar-nav" aria-label="Главная навигация">
         <RouterLink v-for="link in navigation" :key="link.to" class="nav-item"
           :to="link.to" :aria-label="link.label" :title="ui.sidebarCollapsed ? link.label : undefined"
-          @click="closeMobileNav" :class="{ 'router-link-active': link.to === '/employees' && route.name === 'employee-detail' }">
+          @click="closeMobileNav" :class="{ 'router-link-active': (link.to === '/employees' && route.name === 'employee-detail') || (link.to === '/organization' && route.path === '/staffing') }">
           <img :src="link.icon" class="nav-svg-icon" alt="" aria-hidden="true" />
           <span class="nav-label">{{ link.label }}</span>
         </RouterLink>

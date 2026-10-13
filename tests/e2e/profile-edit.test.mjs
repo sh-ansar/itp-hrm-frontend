@@ -20,11 +20,12 @@ test('HR creates and edits a training record, then sees stale revision conflict 
     await page.getByLabel('Электронная почта').fill('synthetic-e2e@example.test')
     await page.getByLabel('Пароль').fill('SyntheticE2E-Only!2026')
     await page.getByRole('button', { name: 'Войти' }).click()
-    await page.getByRole('heading', { name: 'Обзор системы' }).waitFor()
+    await page.getByRole('heading', { name: 'Главная' }).waitFor()
 
     await page.goto('/employees')
-    await page.getByRole('row', { name: /E2E-001/ }).getByRole('link', { name: 'Открыть' }).click()
-    await page.getByRole('heading', { name: 'Карточка сотрудника' }).waitFor()
+    await page.locator('.employee-mobile-card').filter({ hasText: 'E2E-001' }).getByRole('link', { name: /Открыть карточку/ }).click()
+    await page.locator('.employee-page-heading h1').waitFor()
+    await page.getByRole('navigation', { name: 'Разделы карточки сотрудника' }).getByRole('button', { name: 'Кадровый резерв и обучение' }).click()
     await page.getByRole('button', { name: 'Добавить сведения' }).click()
     const creator = page.getByRole('region', { name: 'Добавление кадровых сведений' })
     await creator.waitFor()
@@ -35,13 +36,11 @@ test('HR creates and edits a training record, then sees stale revision conflict 
     await creator.getByLabel('Тема').fill('Плановый семинар HRM')
     await creator.getByLabel('Дата начала').fill('2026-03-01')
     await creator.getByRole('button', { name: 'Сохранить запись' }).click()
-    await page.getByRole('navigation', { name: 'Разделы карточки сотрудника' })
-      .getByRole('button', { name: 'Обучение' }).click()
 
     const trainingTable = page.getByRole('table', { name: 'Обучение сотрудника' })
     const created = trainingTable.getByRole('row', { name: /Плановый семинар HRM/ })
     await created.waitFor()
-    const trainingViewport = await page.locator('#training .table-scroll').evaluate(node => ({
+    const trainingViewport = await trainingTable.locator('xpath=..').evaluate(node => ({
       scrollsInsideCard: node.scrollWidth > node.clientWidth,
       pageOverflow: document.documentElement.scrollWidth > innerWidth + 1,
     }))

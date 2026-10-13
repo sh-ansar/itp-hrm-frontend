@@ -11,13 +11,13 @@ async function login(page) {
   await page.getByLabel('Электронная почта').fill('synthetic-e2e@example.test')
   await page.getByLabel('Пароль').fill('SyntheticE2E-Only!2026')
   await page.getByRole('button', { name: 'Войти' }).click()
-  await page.getByRole('heading', { name: 'Обзор системы' }).waitFor()
+  await page.getByRole('heading', { name: 'Главная' }).waitFor()
 }
 
 test('employee prototype register has real status filter, archive, grouping and column controls', async () => {
   const context = await browser.newContext({
     baseURL: 'http://127.0.0.1:5173',
-    viewport: { width: 375, height: 850 },
+    viewport: { width: 1440, height: 900 },
   })
   const page = await context.newPage()
   try {

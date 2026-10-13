@@ -1,0 +1,166 @@
+import { apiRequest } from './client'
+
+const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+const monthPattern = /^\d{4}-(0[1-9]|1[0-2])$/
+const datePattern = /^\d{4}-\d{2}-\d{2}$/
+
+function assertCompany(companyId: string) {
+  if (!uuid.test(companyId)) throw new Error('Некорректный идентификатор компании')
+}
+function assertMonth(month: string) {
+  if (!monthPattern.test(month)) throw new Error('Некорректный период')
+}
+function assertDate(value: string) {
+  if (!datePattern.test(value)) throw new Error('Некорректная дата')
+}
+
+export type WorktimeStatus = 'missing' | 'complete' | 'attention'
+
+export interface WorktimeTimesheetRow extends Record<string, unknown> {
+  employee_id: string
+  personnel_number: string
+  last_name: string
+  first_name: string
+  middle_name: string | null
+  department_name: string | null
+  position_name: string | null
+  schedule_name: string | null
+  days_recorded: number
+  planned_minutes: number | null
+  worked_minutes: number | null
+  absence_minutes: number | null
+  overtime_minutes: number | null
+  status: WorktimeStatus
+}
+
+export interface WorktimeTimesheetResponse {
+  data: WorktimeTimesheetRow[]
+  meta: {
+    month: string
+    summary: {
+      employees_with_entries: number
+      planned_minutes: number | null
+      worked_minutes: number | null
+      absence_minutes: number | null
+      overtime_minutes: number | null
+    }
+    worktime_writes_enabled: boolean
+    current_page: number
+    last_page: number
+    per_page: number
+    total: number
+  }
+}
+
+export interface WorkScheduleRow extends Record<string, unknown> {
+  id: string
+  code: string
+  name: string
+  schedule_type: string
+  work_time_label: string | null
+  weekly_minutes: number | null
+  employees: number
+}
+
+export interface WorkScheduleResponse {
+  data: WorkScheduleRow[]
+  meta: {
+    as_of: string
+    total: number
+    worktime_writes_enabled: boolean
+  }
+}
+
+export interface ProductionCalendarDay extends Record<string, unknown> {
+  id: string
+  date: string
+  day_type: string
+  planned_minutes: number | null
+  label: string | null
+  revision: number
+}
+
+export interface ProductionCalendarResponse {
+  data: ProductionCalendarDay[]
+  meta: {
+    month: string
+    recorded_days: number
+    expected_days: number
+    calendar_complete: boolean
+    worktime_writes_enabled: boolean
+  }
+}
+
+export interface WorktimeAbsenceRow extends Record<string, unknown> {
+  id: string
+  employee_id: string
+  personnel_number: string
+  last_name: string
+  first_name: string
+  middle_name: string | null
+  department_name: string | null
+  absence_type: string
+  reason: string
+  started_on: string
+  ended_on: string
+  days: number
+  absence_minutes: number | null
+  status: string
+  revision: number
+}
+
+export interface WorktimeAbsenceResponse {
+  data: WorktimeAbsenceRow[]
+  meta: {
+    month: string
+    worktime_writes_enabled: boolean
+    current_page: number
+    last_page: number
+    per_page: number
+    total: number
+  }
+}
+
+export function getWorktimeTimesheet(
+  companyId: string,
+  month: string,
+  page = 1,
+): Promise<WorktimeTimesheetResponse> {
+  assertCompany(companyId)
+  assertMonth(month)
+  if (!Number.isSafeInteger(page) || page < 1) throw new Error('Некорректная страница')
+  const params = new URLSearchParams({ month, page: String(page), per_page: '100' })
+  return apiRequest<WorktimeTimesheetResponse>(`/companies/${companyId}/worktime/timesheet?${params.toString()}`)
+}
+
+export function getWorkSchedules(
+  companyId: string,
+  asOf: string,
+): Promise<WorkScheduleResponse> {
+  assertCompany(companyId)
+  assertDate(asOf)
+  const params = new URLSearchParams({ as_of: asOf })
+  return apiRequest<WorkScheduleResponse>(`/companies/${companyId}/worktime/schedules?${params.toString()}`)
+}
+
+export function getProductionCalendar(
+  companyId: string,
+  month: string,
+): Promise<ProductionCalendarResponse> {
+  assertCompany(companyId)
+  assertMonth(month)
+  const params = new URLSearchParams({ month })
+  return apiRequest<ProductionCalendarResponse>(`/companies/${companyId}/worktime/calendar?${params.toString()}`)
+}
+
+export function getWorktimeAbsences(
+  companyId: string,
+  month: string,
+  page = 1,
+): Promise<WorktimeAbsenceResponse> {
+  assertCompany(companyId)
+  assertMonth(month)
+  if (!Number.isSafeInteger(page) || page < 1) throw new Error('Некорректная страница')
+  const params = new URLSearchParams({ month, page: String(page), per_page: '100' })
+  return apiRequest<WorktimeAbsenceResponse>(`/companies/${companyId}/worktime/absences?${params.toString()}`)
+}

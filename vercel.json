@@ -15,7 +15,8 @@
       "feat/personnel-processes-prototype": false,
       "fix/browser-qa-org-tabs": false,
       "feat/personnel-processes-prototype-v2": false,
-      "fix/org-diagram-horizontal-scroll-only": false
+      "fix/org-diagram-horizontal-scroll-only": false,
+      "feat/documents-prototype-v2": false
     }
   }
 }

@@ -2,7 +2,7 @@ import { apiRequest } from './client'
 
 export interface CompanyRecord extends Record<string, unknown> { id: string; name: string }
 export interface DepartmentRecord extends Record<string, unknown> { id: string; name: string; parent_id: string | null; revision: number }
-export interface PositionRecord extends Record<string, unknown> { id: string; name: string }
+export interface PositionRecord extends Record<string, unknown> { id: string; name: string; revision: number }
 export interface PagedResponse<T> {
   data: T[]
   meta: { current_page: number; last_page: number; per_page: number; total: number; [key: string]: unknown }
@@ -19,9 +19,50 @@ export const listDepartments = (companyId: string, page = 1) => {
   return apiRequest<DepartmentListResponse>(`/companies/${companyId}/departments?per_page=100&page=${encodeURIComponent(page)}`)
 }
 
+export interface PositionListResponse extends PagedResponse<PositionRecord> {
+  meta: PagedResponse<PositionRecord>['meta'] & { position_writes_enabled: boolean }
+}
+
 export const listPositions = (companyId: string, page = 1) => {
   assertCompanyId(companyId)
-  return apiRequest<PagedResponse<PositionRecord>>(`/companies/${companyId}/positions?per_page=100&page=${encodeURIComponent(page)}`)
+  return apiRequest<PositionListResponse>(`/companies/${companyId}/positions?per_page=100&page=${encodeURIComponent(page)}`)
+}
+
+export const createPosition = (companyId: string, name: string): Promise<{ data: PositionRecord }> => {
+  assertCompanyId(companyId)
+  return apiRequest<{ data: PositionRecord }>(`/companies/${companyId}/positions`, {
+    method: 'POST',
+    body: JSON.stringify({ name }),
+  })
+}
+
+export const updatePosition = (
+  companyId: string,
+  positionId: string,
+  revision: number,
+  name: string,
+): Promise<{ data: PositionRecord }> => {
+  assertCompanyId(companyId)
+  if (!/^[a-f0-9-]{36}$/i.test(positionId)) throw new Error('Некорректный идентификатор должности')
+  if (!Number.isSafeInteger(revision) || revision < 1) throw new Error('Неверная версия должности')
+  return apiRequest<{ data: PositionRecord }>(`/companies/${companyId}/positions/${positionId}`, {
+    method: 'PUT',
+    body: JSON.stringify({ name, revision }),
+  })
+}
+
+export const deletePosition = (
+  companyId: string,
+  positionId: string,
+  revision: number,
+): Promise<{ data: { id: string } }> => {
+  assertCompanyId(companyId)
+  if (!/^[a-f0-9-]{36}$/i.test(positionId)) throw new Error('Некорректный идентификатор должности')
+  if (!Number.isSafeInteger(revision) || revision < 1) throw new Error('Неверная версия должности')
+  return apiRequest<{ data: { id: string } }>(`/companies/${companyId}/positions/${positionId}`, {
+    method: 'DELETE',
+    body: JSON.stringify({ revision }),
+  })
 }
 
 

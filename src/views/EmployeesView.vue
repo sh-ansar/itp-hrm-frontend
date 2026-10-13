@@ -32,7 +32,7 @@ const employeeWritesEnabled = ref(false)
 const createOpen = ref(false)
 const search = ref('')
 const searchDraft = ref('')
-const statusFilter = ref<EmploymentFilter>('all')
+const statusFilter = ref<EmploymentFilter>('active')
 const grouped = ref(false)
 const filtersOpen = ref(false)
 const selectedIds = ref<string[]>([])
@@ -126,13 +126,13 @@ function setTab(next: string) {
     router.push({ name: 'employees-development' })
     return
   }
-  setStatus(next === 'archive' ? 'archived' : 'all')
+  setStatus(next === 'archive' ? 'archived' : 'active')
 }
 function setStatus(status: EmploymentFilter) {
   page.value = 1
   router.replace({
     name: 'employees',
-    query: { ...route.query, status: status === 'all' ? undefined : status },
+    query: { ...route.query, status: status === 'active' ? undefined : status },
   })
 }
 function applySearch() {
@@ -228,9 +228,9 @@ watch(() => route.query.q, value => {
   page.value = 1
 }, { immediate: true })
 watch(() => route.query.status, value => {
-  const candidate = typeof value === 'string' ? value : 'all'
+  const candidate = typeof value === 'string' ? value : 'active'
   statusFilter.value = ['all', 'active', 'planned', 'archived', 'unassigned'].includes(candidate)
-    ? candidate as EmploymentFilter : 'all'
+    ? candidate as EmploymentFilter : 'active'
   page.value = 1
 }, { immediate: true })
 watch([selectedCompany, page, search, statusFilter], loadEmployees)
@@ -307,7 +307,7 @@ onMounted(loadCompanies)
           <BaseSelectField v-if="activeTab !== 'archive'" class="status-select"
             :model-value="statusFilter" label="Статус сотрудника" :options="statusSelectOptions"
             @update:model-value="setStatus($event as EmploymentFilter)" />
-          <BaseButton v-if="statusFilter !== 'all'" variant="secondary" @click="setStatus('all')">Сбросить фильтр</BaseButton>
+          <BaseButton v-if="statusFilter !== 'active'" variant="secondary" @click="setStatus('active')">Сбросить фильтр</BaseButton>
         </div>
         <div class="registry-selection" aria-label="Выбор сотрудников текущей страницы">
           <label><input type="checkbox" :checked="allPageSelected" :disabled="!registryRows.length" @change="togglePageSelection(($event.target as HTMLInputElement).checked)" /> Выбрать страницу</label>

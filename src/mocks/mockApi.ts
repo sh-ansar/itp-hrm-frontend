@@ -7,10 +7,42 @@ const deps=[
   ['Обучение и развитие',3],['Отдел разработки',4],['Инфраструктура и поддержка',4],['Проектный офис',0],
 ].map(([name,p],i)=>({id:id(100+i),name,parent_id:p===null?null:id(100+Number(p)),revision:1}))
 const positions=['Генеральный директор','Операционный директор','Финансовый директор','HR-директор','IT-директор','Руководитель отдела','HR бизнес-партнёр','Рекрутер','Специалист по обучению','Главный бухгалтер','Экономист','Бизнес-аналитик','Frontend-разработчик','Backend-разработчик','DevOps-инженер','Системный администратор','Менеджер проекта','Инженер эксплуатации','Специалист поддержки','Офис-менеджер'].map((name,i)=>({id:id(300+i),name,revision:1}))
+
+const directoryStorageKey='hrm-demo-directories-v1'
+// Keep harmless demo directory edits through a refresh in the current tab.
+// The browser session is isolated from Laravel and production data.
+function restoreDemoDirectories(){
+  try {
+    const saved=JSON.parse(sessionStorage.getItem(directoryStorageKey)||'null')
+    if(!saved || !Array.isArray(saved.departments) || !Array.isArray(saved.positions))return
+    const valid=(record:any)=>record&&typeof record.id==='string'
+      &&/^[a-f0-9-]{36}$/i.test(record.id)
+      &&typeof record.name==='string'&&record.name.length>0
+      &&Number.isSafeInteger(record.revision)&&record.revision>=1
+    if(saved.departments.length>=14&&saved.departments.length<=500
+      &&saved.positions.length>=1&&saved.positions.length<=500
+      &&saved.departments.every((record:any)=>valid(record)
+        &&(record.parent_id===null||typeof record.parent_id==='string'))
+      &&saved.positions.every(valid)){
+      deps.splice(0,deps.length,...saved.departments)
+      positions.splice(0,positions.length,...saved.positions)
+    }
+  }catch{ /* A blocked storage or invalid session never breaks the demo. */ }
+}
+function saveDemoDirectories(){
+  try { sessionStorage.setItem(directoryStorageKey,JSON.stringify({departments:deps,positions})) }
+  catch{ /* A blocked storage falls back to page-lifetime demo state. */ }
+}
+// Reference fixtures remain stable when a user adds new demo directory rows.
+const fixtureDepartments=deps.map(dep=>({...dep}))
+const fixturePositions=positions.map(pos=>({...pos}))
+if(import.meta.env.VITE_DEMO_MODE==='true')restoreDemoDirectories()
+const seededDepartments=fixtureDepartments.map(original=>deps.find(dep=>dep.id===original.id)??original)
+const seededPositions=fixturePositions.map(original=>positions.find(pos=>pos.id===original.id)??original)
 const names=[['Садыков','Арман','Ерланович'],['Ибраева','Алия','Сериковна'],['Ким','Даниил','Алексеевич'],['Ахметова','Мадина','Руслановна'],['Нуртаев','Асет','Маратович'],['Смирнова','Елена','Викторовна'],['Омаров','Тимур','Кайратович'],['Сейтова','Аружан','Нурлановна'],['Ли','Максим','Олегович'],['Жумабаева','Динара','Аскаровна'],['Касымов','Ринат','Булатович'],['Волкова','Анна','Игоревна'],['Тлеубаев','Адиль','Ермекович'],['Соколова','Мария','Андреевна'],['Беков','Нурсултан','Дауренович'],['Романова','Екатерина','Павловна'],['Абдрахманов','Ержан','Серикович'],['Кузнецова','Ольга','Дмитриевна'],['Мусин','Алихан','Талгатович'],['Морозова','Дарья','Сергеевна'],['Исаев','Руслан','Айдарович'],['Петрова','Виктория','Олеговна'],['Жанибеков','Данияр','Арманович'],['Орлова','Полина','Романовна'],['Сулейменов','Мирас','Канатович'],['Федорова','София','Ильинична'],['Калиев','Ерасыл','Бауыржанович'],['Новикова','Алина','Максимовна'],['Токтаров','Санжар','Ерланович'],['Попова','Ксения','Алексеевна'],['Ермеков','Айдос','Тимурович'],['Васильева','Наталья','Денисовна'],['Баймуханов','Алан','Рашидович'],['Захарова','Вероника','Олеговна'],['Серикбаев','Мади','Ерболович'],['Белова','Юлия','Антоновна'],['Кенжебек','Амир','Даулетович'],['Мельникова','Анастасия','Игоревна'],['Таиров','Ильяс','Муратович'],['Григорьева','Елизавета','Сергеевна']]
-const employees=names.map(([last_name,first_name,middle_name],i)=>{const d=deps[5+i%(deps.length-5)],p=positions[5+i%(positions.length-5)],arch=i>=37,planned=i>=34&&i<37,unassigned=i===33;return{id:id(1000+i),personnel_number:`EMP-${String(i+1).padStart(4,'0')}`,last_name,first_name,middle_name,revision:1,birth_date:`${1987+i%12}-0${i%9+1}-${String(i%20+5).padStart(2,'0')}`,gender:i%2?'female':'male',email:`employee${i+1}@demo.local`,phone:`+7 700 100 ${String(10+i).padStart(2,'0')} ${String(20+i).padStart(2,'0')}`,address:i%2?'г. Астана':'г. Алматы',work_site:i%2?'Астана, головной офис':'Алматы, офис',work_zone:i%3?'Гибрид':'Офис',work_team:`Команда ${String.fromCharCode(65+i%4)}`,supervisor_name:'Садыков Арман Ерланович',current_department_name:unassigned||arch?null:d.name,current_position_name:unassigned||arch?null:p.name,current_department_id:unassigned||arch?null:d.id,current_position_id:unassigned||arch?null:p.id,current_assignment_valid_from:unassigned||arch?null:`202${2+i%4}-0${i%8+1}-01`,employment_status:arch?'archived':planned?'planned':unassigned?'unassigned':'active'}})
+const employees=names.map(([last_name,first_name,middle_name],i)=>{const d=seededDepartments[5+i%(seededDepartments.length-5)],p=seededPositions[5+i%(seededPositions.length-5)],arch=i>=37,planned=i>=34&&i<37,unassigned=i===33;return{id:id(1000+i),personnel_number:`EMP-${String(i+1).padStart(4,'0')}`,last_name,first_name,middle_name,revision:1,birth_date:`${1987+i%12}-0${i%9+1}-${String(i%20+5).padStart(2,'0')}`,gender:i%2?'female':'male',email:`employee${i+1}@demo.local`,phone:`+7 700 100 ${String(10+i).padStart(2,'0')} ${String(20+i).padStart(2,'0')}`,address:i%2?'г. Астана':'г. Алматы',work_site:i%2?'Астана, головной офис':'Алматы, офис',work_zone:i%3?'Гибрид':'Офис',work_team:`Команда ${String.fromCharCode(65+i%4)}`,supervisor_name:'Садыков Арман Ерланович',current_department_name:unassigned||arch?null:d.name,current_position_name:unassigned||arch?null:p.name,current_department_id:unassigned||arch?null:d.id,current_position_id:unassigned||arch?null:p.id,current_assignment_valid_from:unassigned||arch?null:`202${2+i%4}-0${i%8+1}-01`,employment_status:arch?'archived':planned?'planned':unassigned?'unassigned':'active'}})
 const plan:any={id:id(500),name:'Штатное расписание 2026',valid_from:'2026-01-01',valid_to:null,status:'approved',revision:3}
-const staffing=deps.slice(1).flatMap((d,di)=>Array.from({length:di%3===0?3:2},(_,ri)=>{const p=positions[(di*2+ri+4)%positions.length],planned=ri?2:4,occupied=Math.max(0,planned-((di+ri)%3===0?1:0));return{id:id(600+di*4+ri),department_id:d.id,position_id:p.id,department_name:d.name,position_name:p.name,planned_units:planned,occupied_units:occupied,vacant_units:planned-occupied,overstaffed_units:0,base_salary:420000+di*25000+ri*60000,currency:'KZT',notes:null,revision:1}}))
+const staffing=seededDepartments.slice(1).flatMap((d,di)=>Array.from({length:di%3===0?3:2},(_,ri)=>{const p=seededPositions[(di*2+ri+4)%seededPositions.length],planned=ri?2:4,occupied=Math.max(0,planned-((di+ri)%3===0?1:0));return{id:id(600+di*4+ri),department_id:d.id,position_id:p.id,department_name:d.name,position_name:p.name,planned_units:planned,occupied_units:occupied,vacant_units:planned-occupied,overstaffed_units:0,base_salary:420000+di*25000+ri*60000,currency:'KZT',notes:null,revision:1}}))
 const draftPlan:any={...plan,id:id(501),name:'Проект штатного расписания 2027',valid_from:'2027-01-01',status:'draft',revision:1}
 const staffingPlans:any[]=[plan,draftPlan]
 const staffingByPlan=new Map<string,any[]>([
@@ -19,7 +51,7 @@ const staffingByPlan=new Map<string,any[]>([
 ])
 const actions=employees.slice(0,18).map((e,i)=>({id:id(3000+i),employee_id:e.id,action_type:i%5===0?'transfer':'hire',effective_on:`2026-0${i%9+1}-0${i%8+1}`,basis_reference:`Приказ № HR-${120+i}`,notes:null,source_assignment_id:i%5===0?id(4000+i):null,target_assignment_id:id(4100+i),personnel_number:e.personnel_number,last_name:e.last_name,first_name:e.first_name,middle_name:e.middle_name,source_department_name:i%5===0?deps[9].name:null,source_position_name:i%5===0?positions[7].name:null,target_department_name:e.current_department_name,target_position_name:e.current_position_name,created_at:'2026-10-01T09:30:00+05:00'}))
 const training=employees.slice(0,16).map((e,i)=>({id:id(2000+i),employee_id:e.id,revision:1,personnel_number:e.personnel_number,first_name:e.first_name,last_name:e.last_name,middle_name:e.middle_name,development_status:i%4===0?'planned':i%3===0?'ongoing':'completed',training_type:i%2?'external':'internal',training_mode:i%3===0?'remote':i%3===1?'in_person':'on_the_job',topic:['Управление проектами','Excel и аналитика','Охрана труда','Лидерство'][i%4],provider:'ITP Academy',city:'Астана',started_on:'2026-09-10',ended_on:i%4===0?null:'2026-09-12',document_reference:i%4===0?null:`CERT-${202600+i}`}))
-const reserve=employees.slice(4,14).map((e,i)=>({id:id(2100+i),employee_id:e.id,revision:1,personnel_number:e.personnel_number,first_name:e.first_name,last_name:e.last_name,middle_name:e.middle_name,development_status:i>=8?'alumni':'active',target_position:positions[(i+1)%8].name,reserve_level:i%2?'Функциональный':'Корпоративный',reserve_type:i%3?'Среднесрочный':'Оперативный',joined_year:2024+i%3,left_year:i>=8?2026:null,notes:'Индивидуальный план развития'}))
+const reserve=employees.slice(4,14).map((e,i)=>({id:id(2100+i),employee_id:e.id,revision:1,personnel_number:e.personnel_number,first_name:e.first_name,last_name:e.last_name,middle_name:e.middle_name,development_status:i>=8?'alumni':'active',target_position:seededPositions[(i+1)%8].name,reserve_level:i%2?'Функциональный':'Корпоративный',reserve_type:i%3?'Среднесрочный':'Оперативный',joined_year:2024+i%3,left_year:i>=8?2026:null,notes:'Индивидуальный план развития'}))
 const documents=employees.slice(0,22).map((e,i)=>({id:id(5000+i),employee_id:e.id,personnel_action_id:i<actions.length?actions[i].id:null,document_type:['order','contract','basis','other'][i%4],document_number:`DOC-2026-${100+i}`,title:['Приказ о приёме','Трудовой договор','Дополнительное соглашение','Приказ о переводе'][i%4],issued_on:'2026-09-15',status:i%4===3?'draft':'active',revision:1,created_at:'2026-10-01T10:00:00+05:00',personnel_number:e.personnel_number,first_name:e.first_name,last_name:e.last_name,has_file:i%4!==3}))
 const employeeReserve=(e:any,i:number)=>reserve.filter(x=>x.employee_id===e.id).length
   ? reserve.filter(x=>x.employee_id===e.id)
@@ -95,7 +127,7 @@ const referenceProfileFor=(e:any,i:number)=>({
     {id:id(9502+i*10),action:'Обновлено организационное назначение',actor:'HR-служба',created_at:'2026-09-01T10:40:00+05:00'},
   ],
 })
-const page=(rows:any[],p:number,per=25,extra={})=>({data:rows.slice((p-1)*per,p*per),meta:{current_page:p,last_page:Math.max(1,Math.ceil(rows.length/per)),per_page:per,total:rows.length,...extra}})
+const page=(rows:any[],p:number,per=25,extra={})=>({data:structuredClone(rows.slice((p-1)*per,p*per)),meta:{current_page:p,last_page:Math.max(1,Math.ceil(rows.length/per)),per_page:per,total:rows.length,...extra}})
 const json=(o:any)=>JSON.stringify(o)
 export async function mockApiRequest<T>(path:string,options:RequestInit={}):Promise<T>{
   await new Promise(r=>setTimeout(r,80))
@@ -161,8 +193,84 @@ export async function mockApiRequest<T>(path:string,options:RequestInit={}):Prom
     return {data:{id:document.id,employee_id:document.employee_id,document_type:document.document_type,status:'draft',revision:1}} as T
   }
 
+// The demo must behave like a real CRUD flow. Never acknowledge a write unless
+  // the corresponding in-memory record was changed and can be read back.
+  m=p.match(/^\/companies\/[^/]+\/(departments|positions)(?:\/([^/]+))?$/)
+  if(m&&method!=='GET'){
+    const kind=m[1],recordId=m[2],body=options.body?JSON.parse(String(options.body)):{}
+    const rows:any[]=kind==='departments'?deps:positions
+    const name=typeof body.name==='string'?body.name.trim():''
+    if(method==='POST'&&!recordId){
+      if(!name)throw new Error(kind==='departments'?'Введите название подразделения':'Введите название должности')
+      const parentId=kind==='departments'?body.parent_id??null:null
+      if(kind==='departments'&&parentId!==null&&!deps.some(dep=>dep.id===parentId))
+        throw new Error('Родительское подразделение не найдено')
+      if(rows.some(row=>row.name.toLowerCase()===name.toLowerCase()&&
+        (kind==='positions'||row.parent_id===parentId)))
+        throw new Error('Такая запись уже существует')
+      const created:any=kind==='departments'
+        ? {id:crypto.randomUUID(),name,parent_id:parentId,revision:1}
+        : {id:crypto.randomUUID(),name,revision:1}
+      rows.push(created)
+      saveDemoDirectories()
+      return {data:{...created}} as T
+    }
+    if((method==='PUT'||method==='DELETE')&&recordId){
+      const record:any=rows.find(row=>row.id===recordId)
+      if(!record)throw new Error('Запись не найдена')
+      if(Number(body.revision)!==Number(record.revision))
+        throw new Error('Запись уже изменена. Обновите страницу')
+      if(method==='DELETE'){
+        const planLines=Array.from(staffingByPlan.values()).flat()
+        const referenced=kind==='departments'
+          ? deps.some(dep=>dep.parent_id===recordId)
+            || employees.some(employee=>employee.current_department_id===recordId)
+            || planLines.some(line=>line.department_id===recordId)
+          : employees.some(employee=>employee.current_position_id===recordId)
+            || planLines.some(line=>line.position_id===recordId)
+        if(referenced)throw new Error(kind==='departments'
+          ? 'Подразделение используется в структуре, назначениях или штатном расписании'
+          : 'Должность используется в назначениях или штатном расписании')
+        rows.splice(rows.indexOf(record),1)
+        saveDemoDirectories()
+        return {data:{id:recordId}} as T
+      }
+      if(!name)throw new Error('Название не может быть пустым')
+      const parentId=kind==='departments'?body.parent_id??null:null
+      if(kind==='departments'&&parentId!==null){
+        if(!deps.some(dep=>dep.id===parentId))throw new Error('Родительское подразделение не найдено')
+        const visited=new Set<string>([recordId])
+        let cursor:string|null=parentId
+        while(cursor!==null){
+          if(visited.has(cursor))throw new Error('Нельзя перенести подразделение в собственную ветку')
+          visited.add(cursor)
+          cursor=deps.find(dep=>dep.id===cursor)?.parent_id??null
+        }
+      }
+      if(rows.some(row=>row.id!==recordId&&row.name.toLowerCase()===name.toLowerCase()&&
+        (kind==='positions'||row.parent_id===parentId)))
+        throw new Error('Такая запись уже существует')
+      record.name=name
+      if(kind==='departments')record.parent_id=parentId
+      record.revision+=1
+      // Labels on assignments and staffing must match their directory records.
+      for(const employee of employees){
+        if(kind==='departments'&&employee.current_department_id===recordId)
+          employee.current_department_name=name
+        if(kind==='positions'&&employee.current_position_id===recordId)
+          employee.current_position_name=name
+      }
+      for(const lines of staffingByPlan.values())for(const line of lines){
+        if(kind==='departments'&&line.department_id===recordId)line.department_name=name
+        if(kind==='positions'&&line.position_id===recordId)line.position_name=name
+      }
+      saveDemoDirectories()
+      return {data:{...record}} as T
+    }
+    throw new Error('Действие со справочником не поддерживается')
+  }
   m=p.match(/^\/companies\/[^/]+\/(departments|positions|employees|personnel-actions|documents)$/)
-  if(m){const pg=Number(u.searchParams.get('page')||1),kind=m[1];let rows:any[]=kind==='departments'?deps:kind==='positions'?positions:kind==='employees'?employees:kind==='personnel-actions'?actions:documents
+  if(m&&method==='GET'){const pg=Number(u.searchParams.get('page')||1),kind=m[1];let rows:any[]=kind==='departments'?deps:kind==='positions'?positions:kind==='employees'?employees:kind==='personnel-actions'?actions:documents
     if(kind==='employees'){const q=(u.searchParams.get('search')||'').toLowerCase(),s=u.searchParams.get('status')||'all';rows=rows.filter((x:any)=>(s==='all'||x.employment_status===s)&&(!q||json(x).toLowerCase().includes(q)))}
     if(kind==='personnel-actions'&&u.searchParams.get('type'))rows=rows.filter((x:any)=>x.action_type===u.searchParams.get('type'))
     if(kind==='personnel-actions'&&u.searchParams.get('employee_id'))rows=rows.filter((x:any)=>x.employee_id===u.searchParams.get('employee_id'))

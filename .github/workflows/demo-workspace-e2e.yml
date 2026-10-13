@@ -1,0 +1,54 @@
+name: HRM Vercel Demo E2E
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  chromium-demo:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout current frontend
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install project and isolated Chromium runtime
+        run: |
+          npm ci --no-audit --no-fund
+          mkdir -p "$RUNNER_TEMP/hrm-demo-browser"
+          npm install --prefix "$RUNNER_TEMP/hrm-demo-browser" --no-save --no-audit --no-fund playwright@1.56.1
+          ln -s "$RUNNER_TEMP/hrm-demo-browser/node_modules/playwright" node_modules/playwright
+          ln -s "$RUNNER_TEMP/hrm-demo-browser/node_modules/playwright-core" node_modules/playwright-core
+          "$RUNNER_TEMP/hrm-demo-browser/node_modules/.bin/playwright" install --with-deps chromium
+
+      - name: Check TypeScript and build the exact Vercel demo mode
+        run: |
+          npm run typecheck
+          npm run build:demo
+
+      - name: Start the isolated demo without Laravel or live data
+        run: |
+          npm run dev -- --host 127.0.0.1 --mode demo > "$RUNNER_TEMP/hrm-demo-vite.log" 2>&1 &
+          for i in $(seq 1 60); do
+            if curl --silent --fail http://127.0.0.1:5173/ > /dev/null; then
+              echo "HRM demo available"
+              exit 0
+            fi
+            sleep 1
+          done
+          cat "$RUNNER_TEMP/hrm-demo-vite.log"
+          exit 1
+
+      - name: Test all demo routes and working department/position mutations
+        run: node --test --test-concurrency=1 tests/e2e/demo-current-functionality.test.mjs
+
+      - name: Print diagnostics on failure
+        if: failure()
+        run: tail -n 160 "$RUNNER_TEMP/hrm-demo-vite.log" || true

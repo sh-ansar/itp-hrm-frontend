@@ -86,7 +86,7 @@ export async function mockApiRequest<T>(path:string,options:RequestInit={}):Prom
   if(m){const pg=Number(u.searchParams.get('page')||1),kind=m[1];let rows:any[]=kind==='departments'?deps:kind==='positions'?positions:kind==='employees'?employees:kind==='personnel-actions'?actions:documents
     if(kind==='employees'){const q=(u.searchParams.get('search')||'').toLowerCase(),s=u.searchParams.get('status')||'all';rows=rows.filter((x:any)=>(s==='all'||x.employment_status===s)&&(!q||json(x).toLowerCase().includes(q)))}
     if(kind==='personnel-actions'&&u.searchParams.get('type'))rows=rows.filter((x:any)=>x.action_type===u.searchParams.get('type'))
-    const extra:any=kind==='departments'?{department_writes_enabled:true}:kind==='positions'?{position_writes_enabled:true}:kind==='employees'?{employee_writes_enabled:true,status_filter:u.searchParams.get('status')||'all'}:kind==='personnel-actions'?{personnel_actions_writes_enabled:true}:{document_writes_enabled:true}
+    const extra:any=kind==='departments'?{department_writes_enabled:true}:kind==='positions'?{position_writes_enabled:true}:kind==='employees'?{employee_writes_enabled:true,status_filter:u.searchParams.get('status')||'all',registry_summary:{vacancies:staffing.reduce((sum:any,row:any)=>sum+Number(row.vacant_units||0),0),expiring_contracts:6}}:kind==='personnel-actions'?{personnel_actions_writes_enabled:true}:{document_writes_enabled:true}
     return page(rows,pg,kind==='employees'||kind==='personnel-actions'||kind==='documents'?25:100,extra) as T}
   m=p.match(/^\/companies\/[^/]+\/employees\/([^/]+)$/)
   if(m&&method==='PUT'){

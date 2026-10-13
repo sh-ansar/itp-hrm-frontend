@@ -227,7 +227,7 @@ onMounted(loadCompanies)
 
         <div class="documents-mobile">
           <DocumentMobileList :rows="rows" :company-id="company" :writes-enabled="writesEnabled"
-            :loading="documentsBusy" @upload="uploadTarget = $event" />
+            :loading="documentsBusy" @upload="uploadTarget = $event" @open="openDocument" />
         </div>
 
         <BasePagination :page="page" :last-page="lastPage" :loading="documentsBusy"

@@ -39,6 +39,10 @@ test('all four organization and staffing tabs work at four viewport widths witho
         ))
         await page.getByRole('heading', { name: view.heading, level: 1 }).waitFor()
         assert.equal(await button.getAttribute('aria-current'), 'page', view.label)
+        const sidebar = page.getByRole('navigation', { name: 'Главная навигация' })
+          .getByRole('link', { name: 'Оргструктура и штатка' })
+        assert.equal(await sidebar.evaluate(el => el.classList.contains('router-link-active')), true,
+          'parent sidebar navigation must stay active on ' + view.label)
         const layout = await page.evaluate(() => {
           const strip = document.querySelector('.org-staffing-navigation .view-tabs')
           return {

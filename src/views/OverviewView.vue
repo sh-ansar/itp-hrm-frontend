@@ -40,6 +40,8 @@ async function loadSummary() {
       positions: values[2].status === 'fulfilled' ? values[2].value.meta.total : null,
       actions: values[3].status === 'fulfilled' ? values[3].value.meta.total : null,
     }
+  } catch {
+    companyName.value = ''
   } finally {
     loading.value = false
   }

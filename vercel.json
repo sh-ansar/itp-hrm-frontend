@@ -29,7 +29,8 @@
       "fix/shared-ui-semantic-tokens": false,
       "feat/worktime-api-integration": false,
       "feat/leave-api-integration": false,
-      "feat/access-projection-ui": false
+      "feat/access-projection-ui": false,
+      "fix/prototype-parity-verified": false
     }
   }
 }

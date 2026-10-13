@@ -86,7 +86,14 @@ async function load() {
   profile.value = null
   try {
     const result = await getEmployee(company, employee)
-    if (current === generation) profile.value = result
+    if (current === generation) {
+      profile.value = result
+      // Keep the user's active tab across record-save refreshes.
+      const target = route.query.tab
+      if (typeof target === 'string' && sectionTabs.value.some(item => item.id === target)) {
+        activeSection.value = target
+      }
+    }
   } catch (cause) {
     if (current === generation) error.value = cause instanceof Error ? cause.message : 'Не удалось открыть карточку сотрудника'
   } finally {
@@ -94,13 +101,15 @@ async function load() {
   }
 }
 
-watch(() => [route.params.company, route.params.employee], load)
-watch([() => route.query.tab, sectionTabs], () => {
+watch(() => [route.params.company, route.params.employee], () => {
+  activeSection.value = 'employment'
+  load()
+})
+watch(() => route.query.tab, () => {
   const requested = route.query.tab
   activeSection.value = typeof requested === 'string' && sectionTabs.value.some(tab => tab.id === requested)
-    ? requested
-    : 'employment'
-}, { immediate: true })
+    ? requested : 'employment'
+})
 onMounted(load)
 </script>
 

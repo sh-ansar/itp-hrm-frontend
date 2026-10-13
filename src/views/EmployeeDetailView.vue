@@ -447,7 +447,7 @@ onMounted(load)
   display:grid;grid-template-columns:minmax(0,1fr);gap:12px;
   max-width:100%;min-width:0;scroll-behavior:smooth
 }
-.employee-profile :deep(.view-tabs){margin:2px 0 4px}
+.employee-profile :deep(.view-tabs){margin:2px 0 4px}\n.employee-profile :deep(.view-tab){padding-inline:10px;font-size:11px;line-height:16px}
 .employee-profile :deep(.view-tab){padding-inline:10px;font-size:12px}\n.employee-profile :deep(.view-tab){padding-inline:11px}
 .employee-profile :deep(.view-tab){padding-inline:10px;font-size:11px}
 .employee-profile :deep(.table-scroll){border-radius:var(--radius-md)}

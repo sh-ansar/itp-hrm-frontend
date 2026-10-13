@@ -62,6 +62,13 @@ test('HR conducts transfer termination and rehire through personnel actions work
     assert.match(await terminationRow.innerText(),/Увольнение/)
     assert.match(await terminationRow.innerText(),/прекращено/)
 
+    await page.goto('/employees')
+    await page.getByRole('row',{name:/E2E-001/}).getByRole('link',{name:'Открыть'}).click()
+    await page.getByRole('heading',{name:'Карточка сотрудника'}).waitFor()
+    await page.getByText('Нет активного назначения',{exact:true}).waitFor()
+    await page.goto('/personnel-actions')
+    await page.getByRole('heading',{name:'Кадровые действия',exact:true}).waitFor()
+
     dialog=await openActionForSynthetic(page)
     await dialog.getByLabel('Кадровое действие').selectOption('hire')
     await dialog.getByLabel('Дата действия').fill('2026-10-15')

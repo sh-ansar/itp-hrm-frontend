@@ -41,7 +41,7 @@ const navigation = [
     { to: '/reports', label: 'Отчёты и аналитика', icon: BarChart3 },
     { to: '/settings', label: 'Администрирование', icon: Settings },
   ] },
-] as const
+]
 
 function storedCollapsed(): boolean {
   try { return window.localStorage.getItem('hrm-sidebar-collapsed') === 'true' }

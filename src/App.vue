@@ -4,23 +4,16 @@ import { Moon, Sun } from 'lucide-vue-next'
 import { useRoute, useRouter } from 'vue-router'
 import BaseNotice from './components/ui/BaseNotice.vue'
 import { useSessionStore } from './stores/session'
+import { useUiPreferencesStore } from './stores/uiPreferences'
 import { browserLoginEnabled } from './router'
 
 const router = useRouter()
 const route = useRoute()
 const session = useSessionStore()
+const ui = useUiPreferencesStore()
 const logoutError = ref('')
 const mobileNavOpen = ref(false)
 const searchTerm = ref('')
-type Theme = 'light' | 'dark'
-function storedTheme(): Theme {
-  try {
-    const saved = window.localStorage.getItem('hrm-theme')
-    if (saved === 'light' || saved === 'dark') return saved
-  } catch { /* Storage can be disabled. */ }
-  return window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
-}
-const theme = ref<Theme>(storedTheme())
 const navigation = [
   { to: '/', label: 'Главная', icon: '/prototype-icons/Home.svg' },
   { to: '/employees', label: 'Сотрудники', icon: '/prototype-icons/People-groupf.svg' },
@@ -33,27 +26,14 @@ const navigation = [
   { to: '/settings', label: 'Настройки', icon: '/prototype-icons/Settings.svg' },
 ]
 
-function storedCollapsed(): boolean {
-  try { return window.localStorage.getItem('hrm-sidebar-collapsed') === 'true' }
-  catch { return false }
-}
-const sidebarCollapsed = ref(storedCollapsed())
 const accountInitials = computed(() => {
   const words = session.user?.name?.trim().split(/\s+/) ?? []
   return words.slice(0, 2).map(word => word[0]?.toUpperCase() ?? '').join('') || 'HR'
 })
 
-function toggleSidebar() {
-  sidebarCollapsed.value = !sidebarCollapsed.value
-  try { window.localStorage.setItem('hrm-sidebar-collapsed', String(sidebarCollapsed.value)) }
-  catch { /* Privacy settings can disable local storage. */ }
-}
+function toggleSidebar() { ui.toggleSidebar() }
 function closeMobileNav() { mobileNavOpen.value = false }
-function applyTheme(value: Theme) {
-  document.documentElement.dataset.theme = value
-  document.documentElement.style.colorScheme = value
-}
-function toggleTheme() { theme.value = theme.value === 'dark' ? 'light' : 'dark' }
+function toggleTheme() { ui.toggleTheme() }
 function searchEmployees() {
   const q = searchTerm.value.trim()
   closeMobileNav()
@@ -69,11 +49,6 @@ async function logout() {
   }
 }
 
-applyTheme(theme.value)
-watch(theme, value => {
-  applyTheme(value)
-  try { window.localStorage.setItem('hrm-theme', value) } catch { /* Storage can be disabled. */ }
-})
 watch(() => route.fullPath, closeMobileNav)
 watch(() => route.query.q, q => {
   if (route.name === 'employees') searchTerm.value = typeof q === 'string' ? q : ''
@@ -82,7 +57,7 @@ watch(() => route.query.q, q => {
 
 <template>
   <RouterView v-if="$route.name === 'login'" />
-  <div v-else class="app-shell" :class="{ 'app-shell--collapsed': sidebarCollapsed }">
+  <div v-else class="app-shell" :class="{ 'app-shell--collapsed': ui.sidebarCollapsed }">
     <button v-if="mobileNavOpen" class="nav-backdrop" type="button"
       aria-label="Закрыть боковое меню" @click="closeMobileNav" />
     <aside class="sidebar" :class="{ 'sidebar--open': mobileNavOpen }" aria-label="Боковая панель">
@@ -92,16 +67,16 @@ watch(() => route.query.q, q => {
           <span class="brand-copy"><strong>HRM</strong></span>
         </RouterLink>
         <button class="sidebar-collapse" type="button"
-          :aria-label="sidebarCollapsed ? 'Развернуть меню' : 'Свернуть меню'"
-          :aria-expanded="!sidebarCollapsed" @click="toggleSidebar">
-          <img :src="sidebarCollapsed ? '/prototype-icons/Open-Side.svg' : '/prototype-icons/Collapsed-screen.svg'" class="header-svg-icon" alt="" />
+          :aria-label="ui.sidebarCollapsed ? 'Развернуть меню' : 'Свернуть меню'"
+          :aria-expanded="!ui.sidebarCollapsed" @click="toggleSidebar">
+          <img :src="ui.sidebarCollapsed ? '/prototype-icons/Open-Side.svg' : '/prototype-icons/Collapsed-screen.svg'" class="header-svg-icon" alt="" />
         </button>
         <button class="mobile-nav-close" type="button" aria-label="Закрыть меню"
           @click="closeMobileNav"><img class="header-svg-icon" src="/prototype-icons/Close.svg" alt="" /></button>
       </div>
       <nav class="sidebar-nav" aria-label="Главная навигация">
         <RouterLink v-for="link in navigation" :key="link.to" class="nav-item"
-          :to="link.to" :aria-label="link.label" :title="sidebarCollapsed ? link.label : undefined"
+          :to="link.to" :aria-label="link.label" :title="ui.sidebarCollapsed ? link.label : undefined"
           @click="closeMobileNav" :class="{ 'router-link-active': link.to === '/employees' && route.name === 'employee-detail' }">
           <img :src="link.icon" class="nav-svg-icon" alt="" aria-hidden="true" />
           <span class="nav-label">{{ link.label }}</span>
@@ -133,10 +108,10 @@ watch(() => route.query.q, q => {
         <div class="topbar-user">
           <span class="header-utility" title="Уведомления" aria-label="Уведомления"><img src="/prototype-icons/Notification.svg" alt="" /></span>
           <button class="header-utility theme-toggle" type="button"
-            :title="theme === 'dark' ? 'Светлая тема' : 'Тёмная тема'"
-            :aria-label="theme === 'dark' ? 'Включить светлую тему' : 'Включить тёмную тему'"
-            :aria-pressed="theme === 'dark'" @click="toggleTheme">
-            <Sun v-if="theme === 'dark'" :size="19" aria-hidden="true" />
+            :title="ui.theme === 'dark' ? 'Светлая тема' : 'Тёмная тема'"
+            :aria-label="ui.theme === 'dark' ? 'Включить светлую тему' : 'Включить тёмную тему'"
+            :aria-pressed="ui.theme === 'dark'" @click="toggleTheme">
+            <Sun v-if="ui.theme === 'dark'" :size="19" aria-hidden="true" />
             <Moon v-else :size="19" aria-hidden="true" />
           </button>
           <template v-if="browserLoginEnabled && session.user">

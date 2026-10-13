@@ -54,7 +54,7 @@ onUnmounted(() => { if (panel.value?.open) panel.value.close() })
   border-radius:18px 0 0 18px;background:transparent;color:var(--color-text);
   box-shadow:-18px 0 60px rgba(9,48,68,.15);
 }
-.base-drawer[open]{animation:drawer-enter .23s ease-out both}
+.base-drawer[open] .drawer-sheet{animation:drawer-enter .23s ease-out both}
 .base-drawer::backdrop{background:rgba(7,30,45,.45);animation:backdrop-enter .2s ease-out}
 .drawer-sheet{min-height:100%;width:100%;display:flex;flex-direction:column;background:var(--color-surface)}
 .drawer-header{position:sticky;top:0;z-index:1;display:flex;align-items:center;justify-content:space-between;gap:16px;min-height:74px;padding:17px 28px;background:var(--color-surface);border-bottom:1px solid var(--color-stroke)}
@@ -65,5 +65,5 @@ onUnmounted(() => { if (panel.value?.open) panel.value.close() })
 @keyframes drawer-enter{from{opacity:.9;transform:translateX(38px)}to{opacity:1;transform:translateX(0)}}
 @keyframes backdrop-enter{from{opacity:0}to{opacity:1}}
 @media(max-width:600px){.base-drawer{width:100vw;border-radius:0}.drawer-header{padding:14px 18px;min-height:64px}.drawer-content{padding:20px 18px 28px}}
-@media(prefers-reduced-motion:reduce){.base-drawer[open],.base-drawer::backdrop{animation:none}}
+@media(prefers-reduced-motion:reduce){.base-drawer[open] .drawer-sheet,.base-drawer::backdrop{animation:none}}
 </style>

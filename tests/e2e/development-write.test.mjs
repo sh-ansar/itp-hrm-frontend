@@ -33,7 +33,12 @@ test('HR creates new training and reserve entry through reused drawers', async (
     await editor.getByLabel('Тема').fill('E2E новая программа B07')
     await editor.getByLabel('Дата начала').fill('2026-04-10')
     await editor.getByRole('button', { name: 'Сохранить запись' }).click()
-    await page.getByRole('row', { name: /E2E новая программа B07/ }).waitFor({ timeout: 15000 })
+    const createdTraining = page.getByRole('row', { name: /E2E новая программа B07/ })
+    await createdTraining.waitFor({ timeout: 15000 })
+    await createdTraining.getByText('10.04.2026', { exact: true }).waitFor()
+    const editSize = await createdTraining.getByRole('button', { name: 'Изменить' }).boundingBox()
+    assert.ok(editSize && editSize.width >= 90, 'Training table edit action must not collapse into vertical text')
+    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1), false)
 
     await page.goto('/reserve')
     await page.getByRole('heading', { name: 'Кадровый резерв', level: 1 }).waitFor()

@@ -96,6 +96,19 @@ test('HR creates staffs and approves a real staffing-plan version at mobile widt
     assert.equal(await page.getByRole('button', { name: 'Добавить строку' }).count(), 0)
     assert.equal(await page.getByRole('button', { name: 'Изменить' }).count(), 0)
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1), false)
+
+    // A newer draft must not displace the effective approved plan after reload.
+    await page.getByRole('button', { name: 'Новая версия' }).click()
+    const nextVersion = page.getByRole('dialog', { name: 'Новая версия штатного расписания' })
+    await nextVersion.getByLabel('Название версии').fill('E2E черновик 2027')
+    await nextVersion.getByLabel('Действует с').fill('2027-01-01')
+    await nextVersion.getByLabel('Действует по').fill('2027-12-31')
+    await nextVersion.getByRole('button', { name: 'Создать версию' }).click()
+    await page.getByRole('heading', { name: 'E2E черновик 2027', exact: true }).waitFor()
+    await page.reload()
+    await page.getByRole('heading', { name: 'E2E штат 2026', exact: true }).waitFor({ timeout: 15000 })
+    const chosen = await page.getByLabel('Версия штатного расписания').locator('option:checked').innerText()
+    assert.match(chosen, /E2E штат 2026.*Утверждено/)
   } finally {
     await context.close()
   }

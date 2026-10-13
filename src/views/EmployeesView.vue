@@ -51,6 +51,7 @@ const statusOptions: Array<{ id: EmploymentFilter; label: string }> = [
   { id: 'planned', label: 'Приём запланирован' },
   { id: 'unassigned', label: 'Без назначения' },
 ]
+const statusSelectOptions = statusOptions.map(option => ({ id: option.id, name: option.label }))
 const statusLabels: Record<EmploymentStatus, string> = {
   active: 'Работает', planned: 'Запланирован', archived: 'В архиве', unassigned: 'Без назначения',
 }
@@ -220,13 +221,9 @@ onMounted(loadCompanies)
               placeholder="Поиск по ФИО или табельному номеру" />
             <BaseButton type="submit" variant="secondary">Найти</BaseButton>
           </form>
-          <label v-if="activeTab !== 'archive'" class="status-select">
-            <span class="sr-only">Фильтр статуса</span>
-            <select aria-label="Фильтр статуса" :value="statusFilter"
-              @change="setStatus(($event.target as HTMLSelectElement).value as EmploymentFilter)">
-              <option v-for="option in statusOptions" :key="option.id" :value="option.id">{{ option.label }}</option>
-            </select>
-          </label>
+          <BaseSelectField v-if="activeTab !== 'archive'" class="status-select"
+            :model-value="statusFilter" label="Фильтр статуса" :options="statusSelectOptions"
+            @update:model-value="setStatus($event as EmploymentFilter)" />
           <BaseButton variant="secondary" @click="grouped = !grouped">
             <FolderTree :size="16" /> {{ grouped ? 'Без группировки' : 'Группировка' }}
           </BaseButton>
@@ -296,7 +293,9 @@ onMounted(loadCompanies)
 .registry-search:focus-within{border-color:var(--color-primary)}
 .registry-search input{border:0;outline:0;flex:1;min-width:0;width:100%;font-size:13px;color:var(--color-text);background:transparent}
 .registry-search :deep(button){min-height:36px;padding:7px 12px}
-.status-select select{min-height:var(--control-height);min-width:145px;padding:0 11px;border:1px solid var(--color-stroke);border-radius:var(--radius-md);background:var(--color-surface);font-size:13px;color:var(--color-text)}
+.status-select{flex:0 1 175px;min-width:145px}
+.status-select :deep(label){position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}
+.status-select :deep(select){font-size:13px}
 .column-settings{position:relative}
 .column-settings summary{list-style:none;display:inline-flex;align-items:center;gap:8px;min-height:var(--control-height);padding:9px 14px;border:1px solid var(--color-stroke);border-radius:var(--radius-md);background:var(--color-surface);font-size:13px;font-weight:600;cursor:pointer}
 .column-settings summary::-webkit-details-marker{display:none}
@@ -324,7 +323,7 @@ onMounted(loadCompanies)
   .registry-metric strong{font-size:22px}
   .registry-search{min-width:100%;width:100%}
   .registry-toolbar>:deep(button){flex:1 1 auto}
-  .status-select{flex:1}.status-select select{width:100%}
+  .status-select{flex:1}.status-select :deep(select){width:100%}
   .company-select{max-width:none;width:100%}
 }
 </style>

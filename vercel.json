@@ -16,7 +16,8 @@
       "fix/browser-qa-org-tabs": false,
       "feat/personnel-processes-prototype-v2": false,
       "fix/org-diagram-horizontal-scroll-only": false,
-      "feat/documents-prototype-v2": false
+      "feat/documents-prototype-v2": false,
+      "feat/documents-ui-parity-final": false
     }
   }
 }

@@ -51,7 +51,7 @@ test('HR creates and edits an employee master record from the redesigned UI', as
     await page.getByRole('heading', { name: 'Реестр сотрудников' }).waitFor()
     await page.getByRole('searchbox', { name: 'Поиск сотрудника' }).fill('E2E-NEW-01')
     await page.getByRole('searchbox', { name: 'Поиск сотрудника' }).press('Enter')
-    const resultRow = page.getByRole('row', { name: /E2E-NEW-01/ })
+    const resultRow = page.locator('.employee-mobile-card').filter({ hasText: 'E2E-NEW-01' })
     await resultRow.waitFor()
     assert.match(await resultRow.innerText(), /Обновлённый Сотрудник Тестовый/)
     assert.match(await resultRow.innerText(), /Без назначения/)

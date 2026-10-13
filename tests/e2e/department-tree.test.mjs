@@ -25,6 +25,7 @@ test('HR creates moves renames and deletes an unused department at mobile width'
     await login(page)
     await page.goto('/organization')
     await page.getByRole('heading', { name: 'Организационная структура' }).waitFor()
+    await page.getByRole('navigation', { name: 'Представление организационной структуры' }).getByRole('button', { name: 'Таблица' }).click()
 
     await page.getByRole('button', { name: 'Добавить подразделение' }).click()
     const createDialog = page.getByRole('dialog', { name: 'Новое подразделение' })
@@ -33,7 +34,7 @@ test('HR creates moves renames and deletes an unused department at mobile width'
     await createDialog.getByLabel('Родительское подразделение').selectOption({ label: 'Visible Finance' })
     await createDialog.getByRole('button', { name: 'Добавить подразделение' }).click()
 
-    const createdRow = page.getByRole('row', { name: /E2E Team/ })
+    const createdRow = page.locator('.org-mobile-item').filter({ hasText: 'E2E Team' })
     await createdRow.waitFor()
     assert.match(await createdRow.innerText(), /Visible Finance/)
 
@@ -44,7 +45,7 @@ test('HR creates moves renames and deletes an unused department at mobile width'
     await editDialog.getByLabel('Родительское подразделение').selectOption({ label: 'Visible Finance Child' })
     await editDialog.getByRole('button', { name: 'Сохранить изменения' }).click()
 
-    const renamedRow = page.getByRole('row', { name: /E2E Team Renamed/ })
+    const renamedRow = page.locator('.org-mobile-item').filter({ hasText: 'E2E Team Renamed' })
     await renamedRow.waitFor()
     assert.match(await renamedRow.innerText(), /Visible Finance Child/)
 
@@ -53,7 +54,7 @@ test('HR creates moves renames and deletes an unused department at mobile width'
     await deleteDialog.waitFor()
     await deleteDialog.getByRole('button', { name: 'Удалить' }).click()
 
-    await page.getByRole('row', { name: /E2E Team Renamed/ }).waitFor({ state: 'detached' })
+    await page.locator('.org-mobile-item').filter({ hasText: 'E2E Team Renamed' }).waitFor({ state: 'detached' })
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1), false)
   } finally {
     await context.close()

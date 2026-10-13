@@ -32,7 +32,7 @@ test('HR creates edits and deletes an unused position directory record', async (
     await createDialog.getByLabel('Название должности').fill('E2E Analyst')
     await createDialog.getByRole('button', { name: 'Добавить должность' }).click()
 
-    const createdRow = page.getByRole('row', { name: /E2E Analyst/ })
+    const createdRow = page.locator('.position-card').filter({ hasText: 'E2E Analyst' })
     await createdRow.waitFor()
 
     await createdRow.getByRole('button', { name: 'Изменить' }).click()
@@ -41,7 +41,7 @@ test('HR creates edits and deletes an unused position directory record', async (
     await editDialog.getByLabel('Название должности').fill('E2E Senior Analyst')
     await editDialog.getByRole('button', { name: 'Сохранить изменения' }).click()
 
-    const renamedRow = page.getByRole('row', { name: /E2E Senior Analyst/ })
+    const renamedRow = page.locator('.position-card').filter({ hasText: 'E2E Senior Analyst' })
     await renamedRow.waitFor()
 
     await renamedRow.getByRole('button', { name: 'Удалить' }).click()
@@ -49,7 +49,7 @@ test('HR creates edits and deletes an unused position directory record', async (
     await deleteDialog.waitFor()
     await deleteDialog.getByRole('button', { name: 'Удалить' }).click()
 
-    await page.getByRole('table', { name: 'Справочник должностей компании' }).getByRole('row', { name: /E2E Senior Analyst/ }).waitFor({ state: 'detached' })
+    await page.locator('.position-card').filter({ hasText: 'E2E Senior Analyst' }).waitFor({ state: 'detached' })
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1), false)
   } finally {
     await context.close()

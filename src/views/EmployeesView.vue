@@ -1,11 +1,10 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
-import { Plus, Search, X } from 'lucide-vue-next'
-import { useRouter } from 'vue-router'
+import { Plus } from 'lucide-vue-next'
+import { useRoute, useRouter } from 'vue-router'
 import BaseCard from '../components/ui/BaseCard.vue'
 import BaseButton from '../components/ui/BaseButton.vue'
 import BaseSelectField from '../components/ui/BaseSelectField.vue'
-import BaseFormField from '../components/ui/BaseFormField.vue'
 import BasePagination from '../components/ui/BasePagination.vue'
 import BasePageHeading from '../components/ui/BasePageHeading.vue'
 import BaseNotice from '../components/ui/BaseNotice.vue'
@@ -18,6 +17,7 @@ import { listEmployees, type EmployeeRecord } from '../api/personnel'
 import { localTodayISO } from '../utils/localDate'
 
 const router = useRouter()
+const route = useRoute()
 const today = localTodayISO()
 const companies = ref<CompanyRecord[]>([])
 const employees = ref<EmployeeRecord[]>([])
@@ -26,7 +26,6 @@ const companyLoading = ref(false)
 const employeeLoading = ref(false)
 const employeeWritesEnabled = ref(false)
 const createOpen = ref(false)
-const searchInput = ref('')
 const search = ref('')
 const error = ref('')
 const page = ref(1)
@@ -94,35 +93,23 @@ async function loadEmployees() {
   }
 }
 
-function applySearch() {
-  page.value = 1
-  search.value = searchInput.value.trim()
-}
-
-function clearSearch() {
-  searchInput.value = ''
-  page.value = 1
-  search.value = ''
-}
-
 async function employeeCreated(employee: EmployeeRecord) {
   createOpen.value = false
   await router.push({ name: 'employee-detail', params: { company: selectedCompany.value, employee: employee.id } })
 }
 
-watch(selectedCompany, () => {
+watch(selectedCompany, () => { page.value = 1 })
+watch(() => route.query.q, q => {
+  search.value = typeof q === 'string' ? q.trim() : ''
   page.value = 1
-  searchInput.value = ''
-  search.value = ''
-})
+}, { immediate: true })
 watch([selectedCompany, page, search], loadEmployees)
 onMounted(loadCompanies)
 </script>
 
 <template>
   <section class="personnel-page">
-    <BasePageHeading title="Реестр сотрудников" description="Сотрудники компании, текущие назначения и единая кадровая карточка">
-      <BaseButton variant="secondary" :disabled="companyLoading" @click="loadCompanies">Обновить</BaseButton>
+    <BasePageHeading title="Реестр сотрудников" description="Сотрудники, назначения и кадровые карточки">
       <BaseButton v-if="employeeWritesEnabled" @click="createOpen = true"><Plus :size="17" /> Добавить сотрудника</BaseButton>
     </BasePageHeading>
 
@@ -132,11 +119,6 @@ onMounted(loadCompanies)
       <BaseLoadingState v-if="companyLoading" label="Загрузка доступных компаний" />
       <div v-else-if="companies.length" class="filters">
         <BaseSelectField v-model="selectedCompany" label="Компания" :options="companies" />
-        <form class="search-form" @submit.prevent="applySearch">
-          <BaseFormField v-model="searchInput" label="Поиск" placeholder="ФИО или табельный номер" :disabled="employeeLoading" />
-          <BaseButton type="submit" variant="secondary" :disabled="employeeLoading"><Search :size="16" /> Найти</BaseButton>
-          <BaseButton v-if="search" type="button" variant="secondary" :disabled="employeeLoading" @click="clearSearch"><X :size="16" /> Сбросить</BaseButton>
-        </form>
         <div class="registry-stat"><span>{{ search ? 'Найдено' : 'Сотрудников' }}</span><strong>{{ total }}</strong></div>
       </div>
       <BaseNotice v-else-if="!error" tone="info">Нет доступных компаний. Обратитесь к администратору доступа.</BaseNotice>
@@ -182,8 +164,8 @@ onMounted(loadCompanies)
 .section-heading h2{font-size:var(--font-section-heading);margin:0}
 .section-heading .muted{margin:5px 0 0}
 .section-kicker{margin:0 0 5px;color:var(--color-primary);font-size:11px;font-weight:700;letter-spacing:.055em;text-transform:uppercase}
-.filters{display:grid;grid-template-columns:minmax(220px,.7fr) minmax(380px,1.3fr) auto;align-items:end;gap:16px}
-.search-form{display:grid;grid-template-columns:minmax(220px,1fr) auto auto;align-items:end;gap:8px}
+.filters{display:flex;align-items:end;justify-content:space-between;gap:var(--space-4);flex-wrap:wrap;min-width:0}
+.filters :deep(.base-select-field){max-width:340px;flex:1}
 .registry-stat{display:grid;gap:2px;min-width:110px;padding:10px 14px;border-radius:var(--radius-md);background:var(--color-soft)}
 .registry-stat span{font-size:11px;color:var(--color-muted)}
 .registry-stat strong{font-size:20px}
@@ -192,6 +174,5 @@ onMounted(loadCompanies)
 .status-pill--planned{background:var(--color-accent-soft);color:var(--color-primary)}
 .employee-link{color:var(--color-primary);font-weight:600;text-decoration:underline;text-underline-offset:3px;white-space:nowrap}
 .employee-link:focus-visible{outline:3px solid var(--color-focus)}
-@media(max-width:980px){.filters{grid-template-columns:1fr}.search-form{grid-template-columns:minmax(0,1fr) auto auto}.registry-stat{width:max-content}}
-@media(max-width:600px){.search-form{grid-template-columns:1fr}.search-form :deep(button){width:100%}}
+@media(max-width:600px){.filters{align-items:stretch}.filters :deep(.base-select-field){max-width:none}.registry-stat{width:100%}}
 </style>

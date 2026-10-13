@@ -24,7 +24,7 @@ test('HR creates staffs and approves a real staffing-plan version at mobile widt
   try {
     await login(page)
     await page.goto('/staffing')
-    await page.getByRole('heading', { name: 'Штатное расписание' }).waitFor()
+    await page.getByRole('heading', { name: 'Штатное расписание', exact: true }).waitFor()
     await page.getByText('Штатное расписание ещё не создано').waitFor()
 
     await page.getByRole('button', { name: 'Новая версия' }).click()
@@ -35,7 +35,7 @@ test('HR creates staffs and approves a real staffing-plan version at mobile widt
     await planDialog.getByLabel('Действует по').fill('2026-12-31')
     await planDialog.getByRole('button', { name: 'Создать версию' }).click()
 
-    await page.getByText('E2E штат 2026').first().waitFor()
+    await page.getByRole('heading', { name: 'E2E штат 2026', exact: true }).waitFor()
     await page.getByText('Черновик').first().waitFor()
 
     await page.getByRole('button', { name: 'Добавить строку' }).click()

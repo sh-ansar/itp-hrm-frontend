@@ -37,6 +37,8 @@ test('HR creates staffs and approves a real staffing-plan version at mobile widt
 
     await page.getByRole('heading', { name: 'E2E штат 2026', exact: true }).waitFor()
     await page.locator('.plan-status', { hasText: 'Черновик' }).waitFor()
+    await page.getByLabel('Дата среза занятости').fill('2026-06-01')
+    await page.getByRole('button', { name: 'Показать на дату' }).click()
 
     await page.getByRole('button', { name: 'Добавить строку' }).click()
     const lineDialog = page.getByRole('dialog', { name: 'Новая штатная единица' })

@@ -206,10 +206,10 @@ onMounted(loadCompanies)
 </template>
 
 <style scoped>
-.directories-page{display:grid;gap:var(--space-4)}
-.toolbar{display:flex;align-items:end;justify-content:space-between;gap:20px;flex-wrap:wrap}
-.toolbar :deep(.base-select-field){flex:1;min-width:min(100%,320px)}
-.summary{display:grid;gap:2px;min-width:150px;padding:10px 14px;border-radius:var(--radius-md);background:var(--color-soft)}
+.directories-page{display:grid;gap:var(--space-4);min-width:0;max-width:100%}
+.toolbar{display:flex;align-items:end;justify-content:space-between;gap:20px;flex-wrap:wrap;min-width:0;max-width:100%}
+.toolbar :deep(.base-select-field){flex:1 1 280px;min-width:0;max-width:100%}
+.summary{display:grid;gap:2px;min-width:0;max-width:100%;padding:10px 14px;border-radius:var(--radius-md);background:var(--color-soft)}
 .summary span,.summary small{font-size:11px;color:var(--color-muted)}
 .summary strong{font-size:20px}
 .section-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;flex-wrap:wrap;margin-bottom:var(--space-4)}
@@ -222,5 +222,5 @@ h2{margin:0;font-size:var(--font-section-heading)}
 .delete-copy{display:grid;gap:var(--space-4)}
 .delete-copy p{margin:0}
 .delete-actions{display:flex;justify-content:flex-end;gap:var(--space-2)}
-@media(max-width:600px){.section-heading :deep(button){width:100%}.delete-actions :deep(button){flex:1}}
+@media(max-width:600px){.toolbar{display:grid;grid-template-columns:minmax(0,1fr)}.summary{width:100%}.section-heading :deep(button){width:100%}.delete-actions :deep(button){flex:1}}
 </style>

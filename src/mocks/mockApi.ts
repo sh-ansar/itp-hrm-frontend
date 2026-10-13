@@ -119,12 +119,54 @@ export async function mockApiRequest<T>(path:string,options:RequestInit={}):Prom
     return {data:employee} as T
   }
 
+  m=p.match(/^\/companies\/[^/]+\/documents$/)
+  if(m&&method==='POST'){
+    const body=options.body?JSON.parse(String(options.body)):{}
+    const employee:any=employees.find(x=>x.id===body.employee_id)
+    if(!employee)throw new Error('Сотрудник не найден')
+    if(body.personnel_action_id && !actions.some((x:any)=>x.id===body.personnel_action_id&&x.employee_id===employee.id))
+      throw new Error('Кадровое действие не относится к сотруднику')
+    const document:any={
+      id:id(5500+documents.length),
+      employee_id:employee.id,
+      personnel_action_id:body.personnel_action_id??null,
+      document_type:body.document_type,
+      document_number:body.document_number??null,
+      title:String(body.title||'Документ'),
+      issued_on:body.issued_on??null,
+      status:'draft',
+      revision:1,
+      created_at:new Date().toISOString(),
+      personnel_number:employee.personnel_number,
+      first_name:employee.first_name,
+      last_name:employee.last_name,
+      has_file:false,
+    }
+    documents.unshift(document)
+    return {data:{id:document.id,employee_id:document.employee_id,document_type:document.document_type,status:'draft',revision:1}} as T
+  }
+
   m=p.match(/^\/companies\/[^/]+\/(departments|positions|employees|personnel-actions|documents)$/)
   if(m){const pg=Number(u.searchParams.get('page')||1),kind=m[1];let rows:any[]=kind==='departments'?deps:kind==='positions'?positions:kind==='employees'?employees:kind==='personnel-actions'?actions:documents
     if(kind==='employees'){const q=(u.searchParams.get('search')||'').toLowerCase(),s=u.searchParams.get('status')||'all';rows=rows.filter((x:any)=>(s==='all'||x.employment_status===s)&&(!q||json(x).toLowerCase().includes(q)))}
     if(kind==='personnel-actions'&&u.searchParams.get('type'))rows=rows.filter((x:any)=>x.action_type===u.searchParams.get('type'))
+    if(kind==='personnel-actions'&&u.searchParams.get('employee_id'))rows=rows.filter((x:any)=>x.employee_id===u.searchParams.get('employee_id'))
+    if(kind==='documents'&&u.searchParams.get('document_type'))rows=rows.filter((x:any)=>x.document_type===u.searchParams.get('document_type'))
+    if(kind==='documents'&&u.searchParams.get('employee_id'))rows=rows.filter((x:any)=>x.employee_id===u.searchParams.get('employee_id'))
     const extra:any=kind==='departments'?{department_writes_enabled:true}:kind==='positions'?{position_writes_enabled:true}:kind==='employees'?{employee_writes_enabled:true,status_filter:u.searchParams.get('status')||'all',registry_summary:{vacancies:staffing.reduce((sum:any,row:any)=>sum+Number(row.vacant_units||0),0),expiring_contracts:6}}:kind==='personnel-actions'?{personnel_actions_writes_enabled:true,summary:{hire:actions.filter((x:any)=>x.action_type==='hire').length,transfer:actions.filter((x:any)=>x.action_type==='transfer').length,termination:actions.filter((x:any)=>x.action_type==='termination').length}}:{document_writes_enabled:true}
     return page(rows,pg,kind==='employees'||kind==='personnel-actions'||kind==='documents'?25:100,extra) as T}
+  m=p.match(/^\/companies\/[^/]+\/documents\/([^/]+)\/file$/)
+  if(m&&method==='POST'){
+    const document:any=documents.find(x=>x.id===m![1])
+    if(!document)throw new Error('Документ не найден')
+    const body=options.body?JSON.parse(String(options.body)):{}
+    if(document.status!=='draft'||document.has_file)throw new Error('PDF уже прикреплён или документ недоступен')
+    if(Number(body.revision)!==Number(document.revision))throw new Error('Документ уже изменён')
+    document.has_file=true
+    document.revision=Number(document.revision)+1
+    return {data:{id:document.id,has_file:true,revision:document.revision}} as T
+  }
+
   m=p.match(/^\/companies\/[^/]+\/employees\/([^/]+)$/)
   if(m&&method==='PUT'){
     const e:any=employees.find(x=>x.id===m![1])

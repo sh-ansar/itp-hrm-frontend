@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
-import { CheckCircle2, CircleDollarSign, Pencil, Plus, UsersRound } from 'lucide-vue-next'
+import { CheckCircle2, CircleDollarSign, FolderTree, Pencil, Plus, UsersRound } from 'lucide-vue-next'
 import BaseButton from '../components/ui/BaseButton.vue'
 import BaseCard from '../components/ui/BaseCard.vue'
 import BaseDataTable from '../components/ui/BaseDataTable.vue'
@@ -10,8 +10,11 @@ import BaseLoadingState from '../components/ui/BaseLoadingState.vue'
 import BaseNotice from '../components/ui/BaseNotice.vue'
 import BasePageHeading from '../components/ui/BasePageHeading.vue'
 import BaseSelectField from '../components/ui/BaseSelectField.vue'
+import BaseViewTabs from '../components/ui/BaseViewTabs.vue'
+import BaseColumnPicker from '../components/ui/BaseColumnPicker.vue'
 import StaffingLineForm from '../components/StaffingLineForm.vue'
 import StaffingPlanForm from '../components/StaffingPlanForm.vue'
+import { localTodayISO } from '../utils/localDate'
 import { listCompanies, type CompanyRecord } from '../api/organization'
 import {
   approveStaffingPlan,
@@ -36,9 +39,16 @@ const lineEditorOpen = ref(false)
 const approveOpen = ref(false)
 const editingLine = ref<StaffingPlanLine | null>(null)
 const staffingWritesEnabled = ref(false)
-const asOf = ref(new Date().toISOString().slice(0, 10))
+const asOf = ref(localTodayISO())
+const activeView = ref('all')
+const searchLines = ref('')
+const grouped = ref(false)
+const viewTabs = [
+  { id: 'all', label: 'Штатное расписание' },
+  { id: 'vacant', label: 'Вакантные позиции' },
+  { id: 'overstaffed', label: 'Сверх штата' },
+]
 
-const selectedCompany = computed(() => companies.value.find(item => item.id === company.value) ?? null)
 const selectedPlan = computed(() => detail.value?.data ?? plans.value.find(item => item.id === selectedPlanId.value) ?? null)
 const canEdit = computed(() => !!detail.value?.meta.staffing_writes_enabled)
 const totals = computed(() => {
@@ -50,6 +60,17 @@ const totals = computed(() => {
     overstaffed: sum.overstaffed + Number(line.overstaffed_units),
   }), { planned: 0, occupied: 0, vacant: 0, overstaffed: 0 })
 })
+
+const filteredLines = computed(() => {
+  const term = searchLines.value.trim().toLocaleLowerCase('ru')
+  return (detail.value?.lines ?? []).filter(line => {
+    if (activeView.value === 'vacant' && Number(line.vacant_units) <= 0) return false
+    if (activeView.value === 'overstaffed' && Number(line.overstaffed_units) <= 0) return false
+    if (!term) return true
+    return (line.department_name + ' ' + line.position_name).toLocaleLowerCase('ru').includes(term)
+  })
+})
+const groupLines = (row: StaffingPlanLine): string => row.department_name || 'Без подразделения'
 
 const planOptions = computed(() => plans.value.map(item => ({
   id: item.id,
@@ -66,6 +87,27 @@ const lineColumns = [
   { key: 'status', label: 'Состояние' },
   { key: 'actions', label: '' },
 ]
+
+const optionalLineColumns = lineColumns.filter(column => !['department_name', 'position_name', 'actions'].includes(column.key))
+const staffColumnKeys = optionalLineColumns.map(column => column.key)
+function columnPreferences(): Record<string, boolean> {
+  const initial = Object.fromEntries(staffColumnKeys.map(key => [key, true]))
+  try {
+    const saved = JSON.parse(localStorage.getItem('hrm-staffing-columns-v1') || '{}') as Record<string, unknown>
+    for (const key of staffColumnKeys) {
+      if (typeof saved[key] === 'boolean') initial[key] = saved[key]
+    }
+  } catch { /* Storage may be disabled or contain an invalid value. */ }
+  return initial
+}
+const shownColumns = ref<Record<string, boolean>>(columnPreferences())
+const visibleLineColumns = computed(() => lineColumns.filter(column =>
+  (column.key !== 'actions' || canEdit.value) && shownColumns.value[column.key] !== false,
+))
+watch(shownColumns, value => {
+  try { localStorage.setItem('hrm-staffing-columns-v1', JSON.stringify(value)) }
+  catch { /* Keep preferences in current session. */ }
+}, { deep: true })
 
 function formatUnits(value: unknown) {
   return Number(value).toLocaleString('ru-RU', { maximumFractionDigits: 2 })
@@ -174,11 +216,13 @@ async function approvePlan() {
 
 watch(company, async () => {
   selectedPlanId.value = ''
+  activeView.value = 'all'
+  searchLines.value = ''
   plans.value = []
   detail.value = null
   await loadPlans()
 })
-watch(selectedPlanId, loadDetail)
+watch(selectedPlanId, () => { searchLines.value = ''; loadDetail() })
 onMounted(refreshCompanies)
 </script>
 

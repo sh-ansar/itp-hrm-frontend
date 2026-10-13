@@ -46,7 +46,12 @@ test('HR creates new training and reserve entry through reused drawers', async (
     await reserveEditor.getByLabel('Уровень резерва').fill('senior')
     await reserveEditor.getByLabel('Вид резерва').fill('internal')
     await reserveEditor.getByLabel('Год зачисления').fill('2026')
+    const reserveResponse = page.waitForResponse(response =>
+      response.url().includes('/profile/reserve') && response.request().method() === 'POST')
     await reserveEditor.getByRole('button', { name: 'Сохранить запись' }).click()
+    const reply = await reserveResponse
+    assert.equal(reply.status(), 201, 'Reserve write rejected: ' + (await reply.text()).slice(0, 450))
+    await reserveDialog.waitFor({ state: 'hidden', timeout: 10000 })
     await page.getByRole('row', { name: /E2E начальник отдела B07/ }).waitFor({ timeout: 15000 })
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1), false)
   } finally {

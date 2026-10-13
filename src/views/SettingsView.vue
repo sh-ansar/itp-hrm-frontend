@@ -21,6 +21,7 @@ const company = ref('')
 const busy = ref(false)
 const error = ref('')
 const success = ref('')
+const roleManagementEnabled = ref(false)
 const browserLoginEnabled = import.meta.env.VITE_ENABLE_BROWSER_LOGIN === 'true'
 const demoMode = import.meta.env.VITE_DEMO_MODE === 'true'
 
@@ -59,6 +60,19 @@ const themeModel = computed({
   get: () => ui.theme,
   set: value => ui.setTheme(value as UiTheme),
 })
+function roleLabel(role: CompanyRecord['role_code']): string {
+  if (role === 'company_admin') return 'Администратор компании'
+  if (role === 'hr_specialist') return 'HR-специалист'
+  if (role === 'department_manager') return 'Руководитель подразделения'
+  return demoMode ? 'Демонстрационный HR-доступ' : 'Роль не определена'
+}
+
+function accessScopeLabel(item: CompanyRecord): string {
+  if (item.role_code !== 'department_manager') return 'Вся доступная область компании'
+  const scopes = item.department_scopes ?? []
+  return scopes.length ? scopes.map(scope => scope.name).join(', ') : 'Разрешённые подразделения не назначены'
+}
+
 const sidebarModel = computed({
   get: () => ui.sidebarCollapsed ? 'collapsed' : 'expanded',
   set: value => ui.setSidebarCollapsed(value === 'collapsed'),
@@ -78,6 +92,7 @@ async function reload() {
     const [companyResult] = await Promise.all(tasks)
     const result = companyResult as Awaited<ReturnType<typeof listCompanies>>
     companies.value = result.data
+    roleManagementEnabled.value = Boolean(result.meta.role_management_enabled)
     if (!companies.value.some(item => item.id === company.value)) company.value = result.data[0]?.id ?? ''
   } catch (cause) {
     error.value = cause instanceof Error ? cause.message : 'Не удалось обновить настройки'
@@ -153,7 +168,7 @@ onMounted(reload)
           <div v-if="selectedCompany" class="company-summary">
             <span>Текущий контур</span>
             <strong>{{ selectedCompany.name }}</strong>
-            <small>Идентификатор компании не отображается в пользовательском интерфейсе.</small>
+            <small>{{ roleLabel(selectedCompany.role_code) }} · {{ accessScopeLabel(selectedCompany) }}</small>
           </div>
         </BaseCard>
       </div>
@@ -205,7 +220,10 @@ onMounted(reload)
           </div>
           <div v-if="companies.length" class="company-list">
             <article v-for="item in companies" :key="item.id" :class="{ 'company-list-item--active': item.id === company }">
-              <div><strong>{{ item.name }}</strong><span>{{ item.id === company ? 'Выбранный контур' : 'Доступен' }}</span></div>
+              <div>
+                <strong>{{ item.name }}</strong>
+                <span>{{ roleLabel(item.role_code) }} · {{ item.id === company ? 'выбранный контур' : 'доступен' }}</span>
+              </div>
               <BaseButton v-if="item.id !== company" variant="secondary" @click="company = item.id">Выбрать</BaseButton>
             </article>
           </div>
@@ -217,14 +235,35 @@ onMounted(reload)
             <ShieldCheck :size="19" aria-hidden="true" />
             <div><h2>Роли и права</h2><p>Управление доступом защищено серверным контуром.</p></div>
           </div>
-          <BaseNotice tone="warning">
-            Назначение и отзыв ролей не доступны в текущем пользовательском интерфейсе.
-            Административные изменения включаются только после утверждения матрицы доступа и серверного флага управления ролями.
+          <div v-if="selectedCompany" class="access-projection">
+            <div>
+              <span>Текущая роль</span>
+              <strong>{{ roleLabel(selectedCompany.role_code) }}</strong>
+            </div>
+            <div>
+              <span>Область доступа</span>
+              <strong>{{ accessScopeLabel(selectedCompany) }}</strong>
+            </div>
+            <div v-if="selectedCompany.role_code === 'department_manager'" class="access-scope-list">
+              <span>Разрешённые подразделения</span>
+              <ul v-if="selectedCompany.department_scopes?.length">
+                <li v-for="scope in selectedCompany.department_scopes" :key="scope.id">{{ scope.name }}</li>
+              </ul>
+              <strong v-else>Не назначены</strong>
+            </div>
+          </div>
+          <BaseNotice :tone="roleManagementEnabled ? 'info' : 'warning'">
+            <template v-if="roleManagementEnabled">
+              Серверный контур управления ролями включён, но этот экран остаётся read-only до отдельного административного интерфейса.
+            </template>
+            <template v-else>
+              Назначение и отзыв ролей закрыты серверным флагом. Интерфейс показывает только фактические права текущей сессии.
+            </template>
           </BaseNotice>
           <ul class="plain-list">
             <li>Frontend не пытается обходить серверные ограничения роли.</li>
-            <li>Доступ к кадровым данным определяется сервером для выбранной компании.</li>
-            <li>Служебные идентификаторы и секреты не выводятся на экран.</li>
+            <li>Роль и область доступа поступают из серверной membership-модели выбранной компании.</li>
+            <li>Служебные идентификаторы, пароли и токены не выводятся на экран.</li>
           </ul>
         </BaseCard>
       </div>
@@ -278,6 +317,12 @@ onMounted(reload)
 .company-list strong{color:var(--color-text);font-size:12px;overflow-wrap:anywhere}
 .company-list span{color:var(--color-muted);font-size:9px}
 .company-list-item--active{border-color:var(--color-primary)!important;background:var(--color-accent-soft)!important}
+.access-projection{display:grid;gap:8px;margin-bottom:12px}
+.access-projection>div{display:grid;gap:4px;padding:10px 12px;border-radius:var(--radius-sm);background:var(--color-soft)}
+.access-projection span{color:var(--color-muted);font-size:9px}
+.access-projection strong{color:var(--color-text);font-size:11px;line-height:1.45;font-weight:600}
+.access-scope-list ul{display:flex;flex-wrap:wrap;gap:6px;margin:2px 0 0;padding:0;list-style:none}
+.access-scope-list li{padding:5px 8px;border:1px solid var(--color-stroke);border-radius:999px;background:var(--color-surface);color:var(--color-text);font-size:10px}
 .company-list :deep(.base-button){height:32px;min-height:32px;font-size:10px}
 @media(max-width:900px){.settings-grid,.settings-grid--profile{grid-template-columns:1fr}}
 @media(max-width:600px){

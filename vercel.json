@@ -20,7 +20,8 @@
       "feat/documents-ui-parity-final": false,
       "feat/timesheets-prototype": false,
       "feat/reports-analytics-prototype": false,
-      "fix/directories-prototype-parity": false
+      "fix/directories-prototype-parity": false,
+      "feat/settings-workspace": false
     }
   }
 }

@@ -13,7 +13,8 @@
     "deploymentEnabled": {
       "feat/frontend-perfect-mock": false,
       "feat/personnel-processes-prototype": false,
-      "fix/browser-qa-org-tabs": false
+      "fix/browser-qa-org-tabs": false,
+      "feat/personnel-processes-prototype-v2": false
     }
   }
 }

@@ -209,7 +209,7 @@ watch(() => route.query.q, q => {
 @media(max-width:860px){
 .sidebar{position:fixed;inset:0 auto 0 0;width:min(280px,88vw);z-index:40;transform:translateX(-105%);transition:transform .2s ease;box-shadow:var(--shadow-float)}
 .sidebar.sidebar--open{transform:translateX(0)}
-.nav-backdrop{display:block;position:fixed;inset:0;z-index:35;border:0;background:rgba(9,35,52,.38)}
+.nav-backdrop{display:block;position:fixed;inset:0;z-index:35;border:0;background:var(--color-overlay)}
 .mobile-nav-trigger,.mobile-nav-close{display:grid}
 .sidebar-collapse{display:none}
 .app-shell--collapsed .brand-link{display:flex}

@@ -77,6 +77,11 @@ const columns = computed(() => isTraining.value
   ])
 const editing = ref<TrainingRow | null>(null)
 
+function displayDate(value: unknown): string {
+  if (typeof value !== 'string' || !/^\\d{4}-\\d{2}-\\d{2}$/.test(value)) return '—'
+  return value.slice(8, 10) + '.' + value.slice(5, 7) + '.' + value.slice(0, 4)
+}
+
 function nameOf(row: DevelopmentRow): string {
   return [row.last_name, row.first_name, row.middle_name].filter(Boolean).join(' ')
 }
@@ -183,7 +188,7 @@ onMounted(loadCompanies)
 </script>
 
 <template>
-  <section class="development-page">
+  <section class="development-page" :class="{ 'development-page--training': isTraining }">
     <BasePageHeading :title="title" :description="description">
       <BaseButton v-if="writesEnabled" @click="openCreate"><Plus :size="16" /> Добавить запись</BaseButton>
     </BasePageHeading>
@@ -236,7 +241,8 @@ onMounted(loadCompanies)
           </template>
           <template #cell-training_mode="{ value }">{{ trainingModeName(String(value)) }}</template>
           <template #cell-provider="{ value }">{{ value || '—' }}</template>
-          <template #cell-ended_on="{ value }">{{ value || '—' }}</template>
+          <template #cell-started_on="{ value }">{{ displayDate(value) }}</template>
+          <template #cell-ended_on="{ value }">{{ displayDate(value) }}</template>
           <template #cell-document_reference="{ value }">{{ value || '—' }}</template>
           <template #cell-left_year="{ value }">{{ value || '—' }}</template>
           <template #cell-development_status="{ row }">
@@ -280,6 +286,12 @@ onMounted(loadCompanies)
 .metric span{grid-column:1;grid-row:1;font-size:12px;color:var(--color-muted);line-height:1.4}
 .metric strong{grid-column:1/-1;font-size:26px;line-height:1.15;color:var(--color-text)}
 .records-card{min-width:0;overflow:visible}
+/* Wide HR tables scroll inside the card; never squash date cells or actions. */
+.development-page--training .records-card :deep(table){min-width:1290px}
+.development-page--training .records-card :deep(td:nth-last-child(3)),
+.development-page--training .records-card :deep(td:nth-last-child(4)){white-space:nowrap}
+.records-card :deep(td button){white-space:nowrap;min-width:94px}
+.records-card :deep(.table-scroll){max-width:100%;overflow-x:auto}
 .records-toolbar{display:grid;grid-template-columns:minmax(185px,.8fr) minmax(0,1.8fr);align-items:end;gap:var(--space-4);margin-bottom:var(--space-4)}
 .records-search{display:flex;align-items:end;gap:var(--space-2);min-width:0}
 .records-search :deep(.field){flex:1}

@@ -368,7 +368,7 @@ onMounted(load)
           <EmployeeProfileSection title="Обучение и повышение квалификации">
             <BaseDataTable :rows="profile.training" row-key="id" caption="Обучение сотрудника"
               :columns="[{key:'training_type',label:'Вид'},{key:'training_mode',label:'Формат'},{key:'topic',label:'Тема'},{key:'provider',label:'Центр обучения'},{key:'city',label:'Город'},{key:'started_on',label:'Начало'},{key:'ended_on',label:'Окончание'},{key:'document_reference',label:'Документ'}, ...(profile.meta.profile_writes_enabled ? [{key:'edit',label:'Действия'}] : [])]"
-              empty-title="Обучение не зарегистрировано" empty-description="Данные об обучении пока не внесены.">
+              empty-title="Обучение не зарегистрировано" empty-description="Добавьте сведения об обучении сотрудника.">
               <template #cell-training_mode="{ value }">{{ trainingModeLabel(value) }}</template>
               <template #cell-started_on="{ value }">{{ formatDate(typeof value === 'string' ? value : null) }}</template>
               <template #cell-ended_on="{ value }">{{ formatDate(typeof value === 'string' ? value : null) }}</template>

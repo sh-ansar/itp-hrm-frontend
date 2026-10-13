@@ -35,7 +35,7 @@ test('HR creates new training and reserve entry through reused drawers', async (
     await editor.getByRole('button', { name: 'Сохранить запись' }).click()
     const createdTraining = page.locator('.development-record-card').filter({ hasText: 'E2E новая программа B07' })
     await createdTraining.waitFor({ timeout: 15000 })
-    await createdTraining.getByText(/10\\.04\\.2026/).waitFor()
+    await createdTraining.getByText('10.04.2026', { exact: false }).waitFor()
     const editSize = await createdTraining.getByRole('button', { name: 'Изменить' }).boundingBox()
     assert.ok(editSize && editSize.width >= 90, 'Training table edit action must not collapse into vertical text')
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1), false)

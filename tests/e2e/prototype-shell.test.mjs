@@ -31,10 +31,9 @@ test('BNT-style shell supports collapse, navigation groups and topbar employee s
     await page.getByRole('navigation', { name: 'Главная навигация' }).getByRole('link', { name: 'Сотрудники' }).click()
     await page.getByRole('heading', { name: 'Реестр сотрудников' }).waitFor()
     await page.getByRole('button', { name: 'Развернуть меню' }).click()
-    await page.getByRole('button', { name: 'Кадровый учёт' }).click()
-    assert.equal(await page.getByRole('navigation', { name: 'Главная навигация' })
-      .getByRole('link', { name: 'Сотрудники' }).isVisible(), false)
-    await page.getByRole('button', { name: 'Кадровый учёт' }).click()
+    const primaryNavigation = page.getByRole('navigation', { name: 'Главная навигация' })
+    assert.equal(await primaryNavigation.getByRole('link', { name: 'Сотрудники' }).isVisible(), true)
+    assert.equal(await primaryNavigation.getByRole('link', { name: 'Оргструктура и штатка' }).isVisible(), true)
 
     const search = page.getByRole('searchbox', { name: 'Поиск сотрудника' })
     await search.fill('E2E-001')

@@ -291,7 +291,7 @@ onMounted(loadCompanies)
 .documents-heading-controls{display:flex;align-items:end;justify-content:flex-end;gap:10px;flex-wrap:wrap}
 .documents-heading-controls :deep(.base-select-field){width:220px;max-width:220px}
 .documents-filter-row{display:flex;align-items:end;justify-content:flex-end;min-width:0}
-.documents-filter-row :deep(.employee-lookup){width:min(420px,100%)}
+.documents-filter-row :deep(.lookup){width:min(420px,100%)}
 .summary-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
 .summary-card{display:grid;grid-template-columns:auto minmax(0,1fr);align-content:start;gap:5px 9px;min-height:104px}
 .summary-card svg{grid-column:2;grid-row:1;color:var(--color-primary);justify-self:end}
@@ -328,7 +328,7 @@ onMounted(loadCompanies)
   .documents-heading-controls :deep(.base-select-field){width:100%;max-width:none}
   .documents-heading-controls :deep(.base-button){width:100%}
   .documents-filter-row{justify-content:stretch}
-  .documents-filter-row :deep(.employee-lookup){width:100%}
-  .summary-grid{grid-template-columns:1fr}
+  .documents-filter-row :deep(.lookup){width:100%}
+  .summary-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
 }
 </style>

@@ -26,7 +26,7 @@ The frontend-only Vercel demo may render isolated deterministic mock values to r
 4. **Contract expiration, hiring dates, demographics and earnings** in register/dashboard screenshots: no reliable scoped APIs for these values. Do not hardcode reference screenshot numbers (340 employees, 18 departments, etc.).
 5. **Employee management actions**: mass editing, deletion, moving to archive, 1C sync, template creation and exports in mockups are not approved endpoints or lifecycle operations. Keep out of active UI until contracts exist.
 6. **Payroll, tariffs, time attendance, personal settings, notifications** shown in screenshots: require domain stages and authorization; current placeholder routes are not acceptance-complete.
-7. **Documents**: current C02 supports drafts and private PDF attachments; templates, signing, approval and document lifecycle remain separate work.
+7. **Documents**: the prototype-aligned register now exposes only supported capabilities — draft creation, employee/type filters, optional personnel-action relation, private PDF attachment/download, responsive mobile cards and dark mode. Templates, signing, approval and extended lifecycle remain separate work and are not faked.
 
 ## Visual rules for subsequent stages
 
@@ -41,6 +41,7 @@ The frontend-only Vercel demo may render isolated deterministic mock values to r
 
 1. Final visual QA of the completed Employees workspace: register, grouped register, archive, combined reserve/training workspace and employee card tabs.
 2. Visual QA of personnel actions journal and drawer after the next control preview.
+3. Documents and orders browser QA complete: desktop/mobile/dark, type filtering, draft drawer and PDF upload drawer verified in Chrome.
 2. Expand employee identity fields via approved sensitive-data schema before implementing reference photo/personal tabs.
 3. Add org-tree visualization and unified staffing/vacancies tabs.
 4. Add company-level training/reserve views and authenticated report exports.

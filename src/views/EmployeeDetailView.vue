@@ -95,6 +95,12 @@ async function load() {
 }
 
 watch(() => [route.params.company, route.params.employee], load)
+watch([() => route.query.tab, sectionTabs], () => {
+  const requested = route.query.tab
+  activeSection.value = typeof requested === 'string' && sectionTabs.value.some(tab => tab.id === requested)
+    ? requested
+    : 'employment'
+}, { immediate: true })
 onMounted(load)
 </script>
 

@@ -15,6 +15,7 @@ import BaseColumnPicker from '../components/ui/BaseColumnPicker.vue'
 import StaffingLineForm from '../components/StaffingLineForm.vue'
 import StaffingPlanForm from '../components/StaffingPlanForm.vue'
 import { localTodayISO } from '../utils/localDate'
+import { preferredStaffingPlan } from '../utils/staffingPlanChoice'
 import { listCompanies, type CompanyRecord } from '../api/organization'
 import {
   approveStaffingPlan,
@@ -146,7 +147,7 @@ async function loadPlans() {
     plans.value = response.data
     staffingWritesEnabled.value = response.meta.staffing_writes_enabled
     if (!plans.value.some(item => item.id === selectedPlanId.value)) {
-      selectedPlanId.value = plans.value[0]?.id ?? ''
+      selectedPlanId.value = preferredStaffingPlan(plans.value, asOf.value)?.id ?? ''
     }
     if (!selectedPlanId.value) detail.value = null
   } catch (cause) {

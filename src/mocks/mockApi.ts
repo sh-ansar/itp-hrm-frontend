@@ -87,7 +87,7 @@ export async function mockApiRequest<T>(path:string,options:RequestInit={}):Prom
   await new Promise(r=>setTimeout(r,80))
   const method=(options.method||'GET').toUpperCase(),u=new URL(path,'https://demo.local'),p=u.pathname
   if(p==='/health') return {status:'ok',service:'itp-hrm-api'} as T
-  if(p==='/companies') return page([{id:companyId,name:'ITP HRM Demo'}],1,100) as T
+  if(p==='/companies') return page([{id:companyId,name:'ITP HRM Demo',role_code:'hr_specialist',department_scopes:[]}],1,100,{role_management_enabled:false}) as T
   let m=p.match(/^\/companies\/[^/]+\/employees$/)
   if(m&&method==='POST'){
     const body=options.body?JSON.parse(String(options.body)):{}

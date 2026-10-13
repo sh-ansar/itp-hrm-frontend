@@ -15,10 +15,10 @@ Reference: user's ZIP containing **67 images** (44 PNG layouts/fragments, 23 JPG
 | Personnel actions | Unified journal for hire/transfer/termination, real backend contracts, responsive mobile cards, frontend demo mutations that update employee state and journal | Browser QA + demo build |
 | Documents and orders | Flat HRM register, employee/type filters, draft drawer, optional personnel-action linkage, protected PDF attachment, desktop/mobile views and persistent demo mutations | Browser QA + demo build |
 | Worktime / timesheets | Shared-tab workspace for timesheet, work schedules, production calendar and absences; production reads use scoped backend APIs, while deterministic mocks remain isolated to demo mode | Browser QA + production/demo builds |
-| Reports and analytics | Company-scoped views for headcount, personnel movement, staffing/vacancies, training and worktime; production-backed HR metrics where contracts exist, demo-only worktime aggregation where they do not | Browser QA + demo build |
+| Reports and analytics | Company-scoped views for headcount, personnel movement, staffing/vacancies, training and worktime; worktime analytics use the same scoped production read contract as the timesheet | Browser QA + production/demo builds |
 | Development / reserve / training | Combined employee workspace plus full training and reserve registries, responsive mobile cards, search/status filtering and employee drill-down | Browser QA + demo build |
-| Settings workspace | Session/profile state, accessible companies and persistent interface preferences; role mutation remains disabled until the backend administrative contract is enabled | Browser QA + demo build |
-| Leave schedule demo | Read-only annual leave schedule, monthly distribution and leave categories derived from available employees; no production leave writes until a backend domain exists | Browser QA + demo build |
+| Settings workspace | Session/profile state, server-projected company role and department scope, accessible companies and persistent interface preferences; role mutation remains server-gated | Browser QA + production/demo builds |
+| Leave schedule | Read-only annual leave schedule backed by scoped production APIs with planned/actual dates, monthly distribution and leave categories; deterministic mocks remain demo-only | Browser QA + production/demo builds |
 | Directories | Company-scoped position directory with real create/edit/delete permissions, shared drawer form and responsive desktop/mobile register; departments remain managed only in organization structure | Browser QA + demo build |
 
 ## Backend gaps and demo-mode rule
@@ -53,12 +53,10 @@ The frontend-only Vercel demo may render isolated deterministic mock values to r
 5. Reports/analytics is browser-checked across all five tabs; worktime analytics now use the same production read contract as the timesheet workspace. Do not add payroll or other unsourced metrics until scoped contracts exist.
 6. Development registries are browser-checked on desktop/mobile/dark; training and reserve stay inside the Employees domain rather than duplicating main navigation.
 7. Leave schedule is browser-checked on desktop/mobile/dark; production reads preserve planned vs actual dates and never infer completion from the plan.
-6. Settings workspace is browser-checked on a clean preview; theme/sidebar preferences persist locally and role management remains server-gated.
-7. Leave schedule demo is browser-checked across schedule/month/category tabs and year switching; all mutations remain disabled until the backend domain exists.
-6. Directories is browser-checked on desktop/mobile/dark and create/edit/delete dialogs; do not duplicate departments or invent unsupported classifier CRUD.
-2. Expand employee identity fields via approved sensitive-data schema before implementing reference photo/personal tabs.
-3. Add org-tree visualization and unified staffing/vacancies tabs.
-4. Add company-level training/reserve views and authenticated report exports.
+8. Settings workspace is browser-checked on desktop/mobile/dark; company role and department scope are read from the backend while role mutation remains server-gated.
+9. Directories is browser-checked on desktop/mobile/dark and create/edit/delete dialogs; do not duplicate departments or invent unsupported classifier CRUD.
+10. Expand the remaining employee-card production fields only through approved sensitive-data contracts; never fall back to demo values outside demo mode.
+11. Keep report exports and any administrative role editor separate until their server contracts and approval rules are released.
 
 ## Backend gap review for full personal cards (B08)
 

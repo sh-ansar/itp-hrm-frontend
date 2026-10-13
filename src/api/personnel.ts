@@ -29,7 +29,14 @@ export interface EmployeeRecord extends Record<string, unknown> {
 }
 
 export interface EmployeeListResponse extends PagedResponse<EmployeeRecord> {
-  meta: PagedResponse<EmployeeRecord>['meta'] & { employee_writes_enabled: boolean; status_filter?: EmploymentFilter }
+  meta: PagedResponse<EmployeeRecord>['meta'] & {
+    employee_writes_enabled: boolean
+    status_filter?: EmploymentFilter
+    registry_summary?: {
+      vacancies?: number | null
+      expiring_contracts?: number | null
+    }
+  }
 }
 
 export function listEmployees(

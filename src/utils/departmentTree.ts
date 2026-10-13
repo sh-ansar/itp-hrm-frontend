@@ -3,6 +3,7 @@ import type { DepartmentRecord } from '../api/organization'
 export interface DepartmentTreeItem extends DepartmentRecord {
   children: DepartmentTreeItem[]
   hiddenParent: boolean
+  members?: Array<{ id: string; name: string; position: string | null }>
 }
 
 /** Build a display-only forest of visible departments; never infer missing parent identities. */

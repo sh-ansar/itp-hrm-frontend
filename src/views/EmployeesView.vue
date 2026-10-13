@@ -64,16 +64,20 @@ const columns = [
   { key: 'selection', label: 'Выбор' },
   { key: 'full_name', label: 'ФИО / Отдел' },
   { key: 'personnel_number', label: 'Таб. №' },
+  { key: 'birth_date', label: 'Дата рождения' },
+  { key: 'gender', label: 'Пол' },
   { key: 'current_position_name', label: 'Должность' },
   { key: 'current_department_name', label: 'Подразделение' },
   { key: 'current_assignment_valid_from', label: 'Дата назначения' },
   { key: 'status_label', label: 'Статус' },
   { key: 'details', label: 'Действие' },
 ]
-const optionalColumns = columns.filter(column => !['full_name', 'details'].includes(column.key))
-const columnKeys = ['personnel_number', 'current_position_name', 'current_department_name', 'current_assignment_valid_from', 'status_label']
+const extendedRegistry = computed(() => ['company_admin', 'hr_specialist'].includes(currentCompany.value?.role_code ?? ''))
+const privateColumns = ['birth_date', 'gender']
+const optionalColumns = computed(() => columns.filter(column => !['selection', 'full_name', 'details'].includes(column.key) && (extendedRegistry.value || !privateColumns.includes(column.key))))
+const columnKeys = ['birth_date', 'gender', 'personnel_number', 'current_position_name', 'current_department_name', 'current_assignment_valid_from', 'status_label']
 function savedColumnPreferences(): Record<string, boolean> {
-  const initial = Object.fromEntries(columnKeys.map(key => [key, true]))
+  const initial = Object.fromEntries(columnKeys.map(key => [key, !['current_position_name', 'current_department_name'].includes(key)]))
   try {
     const saved = JSON.parse(localStorage.getItem('hrm-employee-columns-v1') || '{}') as Record<string, unknown>
     for (const key of columnKeys) if (typeof saved[key] === 'boolean') initial[key] = saved[key]
@@ -82,7 +86,7 @@ function savedColumnPreferences(): Record<string, boolean> {
 }
 const visibleFields = ref<Record<string, boolean>>(savedColumnPreferences())
 const visibleColumns = computed(() =>
-  columns.filter(column => ['selection', 'full_name', 'details'].includes(column.key) || visibleFields.value[column.key] !== false))
+  columns.filter(column => (extendedRegistry.value || !privateColumns.includes(column.key)) && (['selection', 'full_name', 'details'].includes(column.key) || visibleFields.value[column.key] !== false)))
 const currentCompany = computed(() => companies.value.find(item => item.id === selectedCompany.value))
 const registryRows = computed<EmployeeRow[]>(() => employees.value.map(employee => {
   const state: EmploymentStatus = employee.employment_status
@@ -332,6 +336,8 @@ onMounted(loadCompanies)
               <span>{{ row.current_department_name || 'Подразделение не назначено' }}</span>
             </div>
           </template>
+          <template #cell-birth_date="{ value }">{{ displayDate(value) }}</template>
+          <template #cell-gender="{ value }">{{ value === 'male' ? 'М' : value === 'female' ? 'Ж' : '—' }}</template>
           <template #cell-current_position_name="{ value }">{{ value ?? '—' }}</template>
           <template #cell-current_department_name="{ value }">{{ value ?? '—' }}</template>
           <template #cell-current_assignment_valid_from="{ value }">{{ displayDate(value) }}</template>
@@ -433,4 +439,11 @@ onMounted(loadCompanies)
   .register-actions{width:100%;justify-content:stretch}
   .register-actions :deep(button){flex:1}
 }
+</style>
+
+<style scoped>
+.registry-metric>span,.registry-metric strong{font-weight:500}
+.name-cell a{font-weight:400}
+.register-heading h1{font-weight:600}
+.registry-metrics{gap:20px}
 </style>

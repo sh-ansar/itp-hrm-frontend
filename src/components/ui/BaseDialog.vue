@@ -47,7 +47,7 @@ onUnmounted(() => { if (panel.value?.open) panel.value.close() })
 <style scoped>
 .base-drawer{
   position:fixed;inset:0 0 0 auto;margin:0 0 0 auto;
-  width:min(660px,100vw);max-width:100vw;height:100vh;height:100dvh;max-height:100dvh;
+  width:min(500px,100vw);max-width:100vw;height:100vh;height:100dvh;max-height:100dvh;
   overflow:hidden;padding:0;border:0;border-left:1px solid var(--color-stroke);
   border-radius:var(--space-3) 0 0 var(--space-3);background:transparent;color:var(--color-text);
   box-shadow:var(--shadow-float);

@@ -1,84 +1,66 @@
 <script setup lang="ts">
-import { ref } from 'vue'
-import { Building2, ChevronDown, FolderTree } from 'lucide-vue-next'
+import { computed, ref, watch } from 'vue'
+import { ChevronDown, Users } from 'lucide-vue-next'
 import type { DepartmentTreeItem } from '../utils/departmentTree'
 import BaseButton from './ui/BaseButton.vue'
-
 defineOptions({ name: 'DepartmentTreeNode' })
-withDefaults(defineProps<{ node: DepartmentTreeItem; depth?: number }>(), { depth: 0 })
-const expanded = ref(true)
+const props = withDefaults(defineProps<{ node: DepartmentTreeItem; depth?: number; companyId: string; expandAll?: boolean; tone?: number }>(), { depth: 0, expandAll: true, tone: 0 })
+const expanded = ref(props.expandAll)
+const allMembers = ref(false)
+watch(() => props.expandAll, value => { expanded.value = value })
+const members = computed(() => props.node.members ?? [])
+const visibleMembers = computed(() => allMembers.value ? members.value : members.value.slice(0, 3))
+function initials(name: string) { return name.split(' ').slice(0,2).map(word=>word[0] ?? '').join('') }
 </script>
-
 <template>
-  <div class="tree-branch" :class="`tree-branch--level-${depth}`">
-    <div class="tree-card">
-      <span class="tree-icon" aria-hidden="true"><Building2 :size="18" /></span>
+  <div class="tree-branch" :class="[`tree-branch--level-${depth}`, tone % 2 ? 'tree-branch--green' : 'tree-branch--blue']">
+    <div class="tree-card" :class="{ 'tree-card--department': depth > 0 }">
       <div class="tree-copy">
-        <strong>{{ node.name }}</strong>
+        <strong><i v-if="depth > 0" class="department-dot" aria-hidden="true" />{{ node.name }}</strong>
+        <template v-if="depth === 0 && members.length">
+          <RouterLink class="root-person" :to="{ name:'employee-detail',params:{company:companyId,employee:members[0]!.id} }"><span class="person-avatar">{{ initials(members[0]!.name) }}</span>{{ members[0]!.name }}</RouterLink>
+        </template>
         <span v-if="node.hiddenParent">Родитель вне доступного списка</span>
-        <span v-else-if="node.children.length">
-          <FolderTree :size="13" /> {{ node.children.length }} подчинённых подразделений
-        </span>
-        <span v-else>Подразделение</span>
+        <span v-else class="department-count"><Users :size="15" /> {{ members.length }} сотрудников<span v-if="node.children.length"> · {{ node.children.length }} подразделений</span></span>
       </div>
-      <BaseButton v-if="node.children.length" icon-only variant="secondary"
-        :aria-label="expanded ? 'Свернуть ' + node.name : 'Развернуть ' + node.name"
-        :aria-expanded="expanded" @click="expanded = !expanded">
-        <ChevronDown :size="18" :class="{ closed: !expanded }" />
+      <BaseButton v-if="node.children.length || members.length" icon-only variant="secondary"
+        :aria-label="expanded ? 'Свернуть ' + node.name : 'Развернуть ' + node.name" :aria-expanded="expanded" @click="expanded = !expanded">
+        <ChevronDown :size="16" :class="{ closed: !expanded }" />
       </BaseButton>
     </div>
+    <div v-if="expanded && depth > 0 && members.length" class="tree-members">
+      <RouterLink v-for="member in visibleMembers" :key="member.id" class="person-card" :to="{name:'employee-detail',params:{company:companyId,employee:member.id}}">
+        <strong>{{ member.position || 'Сотрудник' }}</strong><div class="person-row"><span class="person-avatar">{{ initials(member.name) }}</span><span>{{ member.name }}</span></div>
+      </RouterLink>
+      <BaseButton v-if="members.length > 3" variant="secondary" @click="allMembers = !allMembers">{{ allMembers ? 'Свернуть сотрудников' : 'Ещё ' + (members.length - 3) }}</BaseButton>
+    </div>
     <div v-if="expanded && node.children.length" class="tree-children">
-      <DepartmentTreeNode v-for="child in node.children" :key="child.id" :node="child" :depth="depth + 1" />
+      <DepartmentTreeNode v-for="(child,index) in node.children" :key="child.id" :node="child" :depth="depth + 1" :company-id="companyId" :expand-all="expandAll" :tone="depth === 0 ? index : tone" />
     </div>
   </div>
 </template>
-
 <style scoped>
-.tree-branch{position:relative;display:grid;align-content:start;gap:12px;min-width:0}
-.tree-card{
-  display:flex;align-items:center;gap:9px;width:100%;min-width:0;max-width:580px;min-height:70px;
-  padding:11px 12px;background:var(--color-surface);border:1px solid var(--color-stroke);
-  border-radius:var(--radius-md);box-shadow:var(--shadow-card)
-}
-.tree-icon{
-  display:grid;place-items:center;flex:0 0 34px;width:34px;height:34px;
-  color:var(--color-primary);background:var(--color-accent-soft);border-radius:11px
-}
-.tree-copy{display:grid;gap:5px;min-width:0;flex:1}
-.tree-copy strong{font-size:12px;line-height:1.35;font-weight:600;overflow-wrap:normal;word-break:normal;hyphens:none}
-.tree-copy span{display:inline-flex;align-items:center;gap:5px;font-size:11px;color:var(--color-muted);line-height:1.45}
-.tree-card :deep(.base-button){flex:0 0 30px;width:30px;min-width:30px;height:30px;min-height:30px;color:var(--color-muted);background:var(--color-soft)}
-.tree-card :deep(.base-button:hover){color:var(--color-primary)}
-.tree-card :deep(.base-button svg){transition:transform .15s ease}
-.tree-card :deep(.base-button svg.closed){transform:rotate(-90deg)}
-.tree-children{
-  position:relative;display:grid;gap:12px;padding-left:clamp(15px,3vw,28px);
-  border-left:1px solid var(--color-primary-stroke);margin-left:19px
-}
+.tree-branch{--branch-color:var(--color-primary-stroke);position:relative;display:grid;align-content:start;gap:24px;min-width:0}
+.tree-branch--green{--branch-color:color-mix(in srgb,var(--color-success) 55%,var(--color-stroke))}
+.tree-card{position:relative;display:flex;align-items:start;gap:12px;width:320px;min-width:0;max-width:100%;padding:18px 16px;background:var(--color-surface);border:1px solid var(--color-stroke);border-radius:var(--radius-md);box-shadow:var(--shadow-card)}
+.tree-card--department{background:color-mix(in srgb,var(--color-primary) 12%,var(--color-surface));border-color:color-mix(in srgb,var(--color-primary) 18%,var(--color-stroke))}
+.tree-branch--green>.tree-card--department{background:color-mix(in srgb,var(--color-success) 12%,var(--color-surface));border-color:color-mix(in srgb,var(--color-success) 18%,var(--color-stroke))}
+.tree-copy{display:grid;gap:12px;min-width:0;flex:1}.tree-copy strong{font-size:15px;line-height:1.45;font-weight:500;overflow-wrap:normal;word-break:normal;hyphens:none}
+.department-dot{display:inline-block;width:10px;height:10px;margin-right:8px;background:var(--color-primary);border-radius:50%}.tree-branch--green .department-dot{background:var(--color-success)}
+.department-count{display:flex;flex-wrap:wrap;align-items:center;gap:5px;color:var(--color-muted);font-size:13px;line-height:1.5}.department-count svg{color:var(--color-primary)}
+.tree-card :deep(.base-button){position:absolute;bottom:-10px;right:12px;width:24px;min-width:24px;height:24px;min-height:24px;border-radius:50%;padding:0;color:var(--color-muted)}
+.closed{transform:rotate(-90deg)}
+.tree-members{display:grid;gap:14px;margin-left:14px;padding-left:18px;border-left:1px solid var(--branch-color)}
+.person-card{position:relative;display:grid;gap:10px;width:290px;max-width:100%;padding:16px;background:var(--color-surface);border:1px solid var(--color-stroke);border-radius:var(--radius-md);box-shadow:var(--shadow-card)}
+.person-card::before{content:'';position:absolute;left:-19px;top:50%;width:18px;border-top:1px solid var(--branch-color)}
+.person-card>strong{font-size:14px;font-weight:500;line-height:1.5}.person-row,.root-person{display:flex;align-items:center;gap:10px;font-size:13px;line-height:1.4}
+.person-avatar{display:grid;place-items:center;width:36px;height:36px;flex:0 0 36px;background:var(--color-accent-soft);color:var(--color-muted);border:1px solid var(--color-stroke);border-radius:50%;font-size:17px}
+.tree-children{position:relative;display:grid;gap:24px;padding-left:18px;border-left:1px solid var(--branch-color);margin-left:14px}
 .tree-branch--level-0>.tree-card{margin-inline:auto}
-.tree-branch--level-0>.tree-children{
-  grid-template-columns:repeat(5,minmax(0,1fr));gap:18px;
-  margin-left:0;padding:30px 0 0;border-left:0
-}
-.tree-branch--level-0>.tree-children::before{
-  content:'';position:absolute;top:14px;left:9%;right:9%;height:1px;background:var(--color-primary-stroke)
-}
-.tree-branch--level-0>.tree-children>.tree-branch--level-1::before{
-  content:'';position:absolute;top:-16px;left:50%;width:1px;height:16px;background:var(--color-primary-stroke)
-}
-.tree-branch--level-0>.tree-children>.tree-branch--level-1>.tree-card{max-width:none;min-height:104px;align-self:start}
-@media(max-width:1100px){
-  .tree-branch--level-0>.tree-children{grid-template-columns:repeat(2,minmax(0,1fr))}
-  .tree-branch--level-0>.tree-children::before,
-  .tree-branch--level-0>.tree-children>.tree-branch--level-1::before{display:none}
-}
-@media(max-width:600px){
-  .tree-card{padding:11px 12px;min-height:66px}
-  .tree-icon{flex-basis:32px;width:32px;height:32px;border-radius:8px}
-  .tree-children{margin-left:12px;padding-left:12px}
-  .tree-branch--level-0>.tree-children{
-    grid-template-columns:1fr;gap:12px;margin-left:12px;padding:12px 0 0 12px;border-left:1px solid var(--color-primary-stroke)
-  }
-}
-@media(prefers-reduced-motion:reduce){.tree-card button svg{transition:none}}
+.tree-branch--level-0>.tree-children{display:flex;align-items:flex-start;gap:48px;margin-left:0;padding:38px 0 0;border-left:0}
+.tree-branch--level-0>.tree-children::before{content:'';position:absolute;top:14px;left:160px;right:160px;height:1px;background:var(--color-primary-stroke)}
+.tree-branch--level-0>.tree-children>.tree-branch{width:320px;flex:0 0 320px}
+.tree-branch--level-0>.tree-children>.tree-branch::before{content:'';position:absolute;top:-24px;left:160px;width:1px;height:24px;background:var(--branch-color)}
+@media(max-width:900px){.tree-card{width:100%}.tree-branch--level-0>.tree-children{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}.tree-branch--level-0>.tree-children>.tree-branch{width:auto}.tree-branch--level-0>.tree-children::before,.tree-branch--level-0>.tree-children>.tree-branch::before{display:none}.person-card{width:100%}}
+@media(max-width:600px){.tree-branch--level-0>.tree-children{grid-template-columns:1fr;padding-top:10px}.tree-card{padding:14px}.tree-members,.tree-children{margin-left:10px;padding-left:12px}.person-card{padding:14px}.tree-copy strong{font-size:14px}}
 </style>

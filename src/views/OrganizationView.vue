@@ -11,6 +11,7 @@ import BaseDialog from '../components/ui/BaseDialog.vue'
 import BaseViewTabs from '../components/ui/BaseViewTabs.vue'
 import BaseColumnPicker from '../components/ui/BaseColumnPicker.vue'
 import DepartmentTreeNode from '../components/DepartmentTreeNode.vue'
+import { listEmployees, type EmployeeRecord } from '../api/personnel'
 import { downloadCsv } from '../utils/exportCsv'
 import OrgStaffingNav from '../components/OrgStaffingNav.vue'
 import { buildDepartmentForest, filterDepartmentForest } from '../utils/departmentTree'
@@ -41,11 +42,25 @@ const viewMode = ref('diagram')
 const searchQuery = ref('')
 const chartZoom = ref(100)
 const viewModes = [{ id: 'table', label: 'Таблица' }, { id: 'diagram', label: 'Схема' }]
+const diagramEmployees = ref<EmployeeRecord[]>([])
+const expandedLevels = ref(true)
 const diagramDepartments = ref<DepartmentRecord[]>([])
 const diagramLoading = ref(false)
 const diagramError = ref('')
 const diagramPartial = ref(false)
-const departmentForest = computed(() => buildDepartmentForest(diagramDepartments.value))
+const departmentForest = computed(() => {
+  const forest = buildDepartmentForest(diagramDepartments.value)
+  function enrich(nodes: typeof forest): void {
+    for (const node of nodes) {
+      node.members = diagramEmployees.value.filter(employee => employee.current_department_id === node.id).map(employee => ({
+        id: employee.id, name: [employee.last_name, employee.first_name, employee.middle_name].filter(Boolean).join(' '), position: employee.current_position_name ?? null,
+      }))
+      enrich(node.children)
+    }
+  }
+  enrich(forest)
+  return forest
+})
 const visibleDepartmentForest = computed(() => filterDepartmentForest(departmentForest.value, searchQuery.value))
 
 const departmentNames = computed(() => new Map(departments.value.map(item => [item.id, item.name])))
@@ -187,12 +202,22 @@ async function loadDiagram() {
   const current = ++diagramGeneration
   const companyId = selectedCompany.value
   diagramDepartments.value = []
+  diagramEmployees.value = []
   diagramError.value = ''
   diagramPartial.value = false
   diagramLoading.value = Boolean(companyId && viewMode.value === 'diagram')
   if (!companyId || viewMode.value !== 'diagram') return
   try {
-    const first = await listDepartments(companyId, 1)
+    const [first, people] = await Promise.all([listDepartments(companyId, 1), listEmployees(companyId, 1, '', 'active')])
+    const employees = [...people.data]
+    const maxPeoplePage = Math.min(people.meta.last_page, 40)
+    for (let start = 2; start <= maxPeoplePage; start += 4) {
+      const end = Math.min(start + 3, maxPeoplePage)
+      const pages = await Promise.all(Array.from({ length: end - start + 1 }, (_, index) => listEmployees(companyId, start + index, '', 'active')))
+      if (current !== diagramGeneration || companyId !== selectedCompany.value) return
+      for (const result of pages) employees.push(...result.data)
+    }
+    diagramEmployees.value = employees
     if (current !== diagramGeneration || companyId !== selectedCompany.value) return
     const rows = [...first.data]
     const maxPage = Math.min(first.meta.last_page, 100)
@@ -204,7 +229,7 @@ async function loadDiagram() {
       for (const pageResult of pages) rows.push(...pageResult.data)
     }
     diagramDepartments.value = rows
-    diagramPartial.value = maxPage < first.meta.last_page
+    diagramPartial.value = maxPage < first.meta.last_page || maxPeoplePage < people.meta.last_page
   } catch (cause) {
     if (current === diagramGeneration) {
       diagramError.value = cause instanceof Error ? cause.message : 'Не удалось загрузить схему подразделений'
@@ -293,6 +318,7 @@ onMounted(loadCompanies)
           <BaseButton icon-only variant="secondary" aria-label="Увеличить схему"
             :disabled="chartZoom >= 130" @click="chartZoom = Math.min(130, chartZoom + 10)"><Plus :size="16" /></BaseButton>
         </div>
+        <label v-if="viewMode === 'diagram'" class="expand-levels"><input v-model="expandedLevels" type="checkbox" /> Раскрыть нижестоящий уровень</label>
       </div>
       <BaseNotice v-if="viewMode === 'table' && total > departments.length" tone="info">
         Показана текущая страница. Невидимые подразделения и родительские связи не раскрываются.
@@ -305,13 +331,8 @@ onMounted(loadCompanies)
       <div v-if="viewMode === 'diagram'" class="structure-diagram" role="region" tabindex="0" aria-label="Схема подразделений компании">
         <BaseLoadingState v-if="diagramLoading" label="Загрузка полной структуры" />
         <div v-else-if="visibleDepartmentForest.length" class="organization-chart" :style="{ zoom: chartZoom + '%' }">
-          <div class="chart-company">
-            <span class="chart-company-label">Компания</span>
-            <strong>{{ currentCompany?.name }}</strong>
-            <span class="chart-company-count">{{ total }} подразделений</span>
-          </div>
           <div class="chart-branches">
-            <DepartmentTreeNode v-for="node in visibleDepartmentForest" :key="node.id + ':' + searchQuery" :node="node" />
+            <DepartmentTreeNode v-for="node in visibleDepartmentForest" :key="node.id + ':' + searchQuery" :node="node" :company-id="selectedCompany" :expand-all="expandedLevels" />
           </div>
         </div>
         <p v-else class="diagram-empty">{{ searchQuery.trim() ? 'Подразделения по запросу не найдены.' : 'Подразделений для отображения пока нет.' }}</p>
@@ -431,16 +452,16 @@ onMounted(loadCompanies)
 .chart-zoom :deep(.base-button){width:32px;min-width:32px;height:32px;min-height:32px;color:var(--color-primary)}
 .chart-zoom input{width:90px;accent-color:var(--color-primary)}
 .structure-diagram:focus-visible{outline:2px solid var(--color-focus);outline-offset:2px}
-.structure-diagram{min-height:320px;padding:28px 24px 36px;background:var(--color-table-heading);border:1px solid var(--color-stroke);border-radius:var(--radius-md);overflow-x:auto;overflow-y:clip;overscroll-behavior-inline:contain}
-.organization-chart{display:grid;justify-items:center;gap:42px;min-width:1120px;padding:4px 10px 12px}
+.structure-diagram{min-height:320px;padding:28px 24px 36px;background:color-mix(in srgb,var(--color-primary) 4%,var(--color-page));border:1px solid var(--color-stroke);border-radius:var(--radius-md);overflow-x:auto;overflow-y:clip;overscroll-behavior-inline:contain}
+.organization-chart{display:grid;justify-items:center;gap:42px;min-width:1320px;padding:4px 10px 12px}
 .chart-company{position:relative;display:grid;justify-items:center;gap:6px;width:300px;padding:16px 18px;background:var(--color-surface);border:1px solid var(--color-stroke-strong);border-radius:var(--radius-md);box-shadow:var(--shadow-card);text-align:center}
 .chart-company::after{content:'';position:absolute;left:50%;bottom:-37px;width:1px;height:36px;background:var(--color-primary-stroke)}
 .chart-company-label{font-size:10px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--color-muted)}
 .chart-company strong{font-size:14px;line-height:1.35}
 .chart-company-count{font-size:12px;color:var(--color-primary)}
 .chart-branches{position:relative;display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));align-items:start;gap:28px;width:100%}
-.chart-branches::before{content:'';position:absolute;left:8%;right:8%;top:-18px;height:1px;background:var(--color-primary-stroke)}
-.chart-branches :deep(.tree-branch)::before{content:'';position:absolute;top:-24px;left:50%;height:24px;width:1px;background:var(--color-primary-stroke)}
+.chart-branches::before{display:none;content:'';position:absolute;left:8%;right:8%;top:-18px;height:1px;background:var(--color-primary-stroke)}
+.chart-branches :deep(.tree-branch)::before{display:none;content:'';position:absolute;top:-24px;left:50%;height:24px;width:1px;background:var(--color-primary-stroke)}
 @media(max-width:900px){
  .organization-chart{min-width:0;width:100%;gap:30px}
  .chart-branches{grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:18px}
@@ -487,4 +508,8 @@ onMounted(loadCompanies)
  .delete-actions :deep(button){flex:1}
 }
 
+</style>
+
+<style scoped>
+.expand-levels{display:flex;align-items:center;gap:8px;font-size:13px;white-space:nowrap}.expand-levels input{accent-color:var(--color-primary)}
 </style>

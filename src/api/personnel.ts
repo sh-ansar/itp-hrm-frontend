@@ -14,6 +14,7 @@ export interface EmployeeRecord extends Record<string, unknown> {
   first_name: string
   middle_name: string | null
   revision: number
+  has_photo?: boolean
   birth_date?: string | null
   gender?: 'male' | 'female' | null
   email?: string | null
@@ -23,6 +24,8 @@ export interface EmployeeRecord extends Record<string, unknown> {
   work_zone?: string | null
   work_team?: string | null
   supervisor_name?: string | null
+  current_department_id?: string | null
+  current_position_id?: string | null
   current_department_name?: string | null
   current_position_name?: string | null
   current_assignment_valid_from?: string | null

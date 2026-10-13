@@ -69,7 +69,7 @@ The frontend-only Vercel demo may render isolated deterministic mock values to r
 
 ## Backend gap review for full personal cards (B08)
 
-The real `employees` contract now includes core identity/contact/workplace fields such as birth date, gender, email, phone, address, work site, work zone, team and supervisor. The reference card still contains additional sensitive domains (IIN, identity-document details, family/emergency contacts, banking/payroll, contract details and photo) that are not yet fully backed by approved production storage and field-level authorization. Those values remain isolated to demo/reference presentation until the sensitive-data schema, retention, redaction and role rules are approved.
+The real `employees` contract now includes core identity/contact/workplace fields such as birth date, gender, email, phone, address, work site, work zone, team and supervisor. The reference card still contains additional sensitive domains (IIN, identity-document details, family/emergency contacts, banking/payroll, contract details) that are not yet fully backed by approved production storage and field-level authorization. Those values remain isolated to demo/reference presentation until the sensitive-data schema, retention, redaction and role rules are approved.
 
 The development aggregate API is implemented separately because training and reserve tables already exist. Reserve free-text notes are intentionally omitted from aggregate lists; full notes remain available only in the appropriately authorized employee card. Existing create/edit endpoints are reused and have optimistic revision checks.
 
@@ -81,4 +81,8 @@ The development aggregate API is implemented separately because training and res
 - The history tab reads a protected backend projection of the last 100 employee events. Company/employee boundaries and HR-only access are tested; raw event context is never exposed.
 - New development record mutations carry employee IDs in their audit events. Older development events without employee IDs are not retroactively fabricated into the card history.
 - Browser verification: all 16 demo workspaces plus employee creation/edit/history passed at 375, 768, 1280 and 1440 px without JavaScript exceptions or document overflow. Actual Vue → Laravel → SQLite creation, editing, reload persistence, single-contact clearing and history rendering also passed in Chromium at 375 px.
-- Backend/browser CI now pins the paired backend revision rather than the earlier backend without these fields. Sensitive fields, photo and document approval are still separate unfinished contracts.
+- Backend/browser CI now pins the paired backend revision rather than the earlier backend without these fields. Sensitive fields and document approval remain unfinished. Photo is implemented in the paired follow-up.
+
+## Photo and full-reference follow-up (14 October 2026)
+
+Photo upload/replacement/removal and protected persistence are implemented and tested. See [the complete 67-row comparison](PROTOTYPE-COMPARISON-2026-10-14.md) for actual status; earlier aligned descriptions are not 1:1 acceptance.

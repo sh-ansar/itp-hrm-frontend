@@ -594,3 +594,18 @@ onMounted(refreshCompanies)
  .staffing-heading-actions :deep(.base-button){width:100%}
  .line-toolbar .line-search{min-width:100%;flex-basis:100%}.staffing-summary-item{padding:11px 12px}.staffing-summary-item strong{font-size:18px}.snapshot-row{display:grid;grid-template-columns:1fr}.snapshot-row :deep(.field){width:100%}.snapshot-row :deep(button){width:100%}.plan-actions{width:100%}.plan-actions :deep(button){flex:1}.approve-actions :deep(button){flex:1}}
 </style>
+
+<style scoped>
+.plan-header{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;padding:10px 0;border:0;background:transparent;box-shadow:none}
+.plan-header .snapshot-row{margin:0;order:2;display:flex;gap:10px;align-items:end}
+.plan-header .snapshot-row :deep(.field){max-width:165px}
+.plan-header .plan-title{flex:1;min-width:280px;margin:0}
+.plan-header .plan-title h2{font-size:15px;font-weight:500}
+.plan-header .plan-title p{font-size:12px;margin:6px 0 0}
+.staffing-summary-strip{gap:14px;background:transparent;border:0;box-shadow:none;overflow:visible}
+.staffing-summary-item{min-height:104px;align-content:start;gap:10px;padding:16px;background:var(--color-surface);border:1px solid var(--color-stroke);border-radius:var(--radius-md);box-shadow:var(--shadow-card)}
+.staffing-summary-item:last-child{border-right:1px solid var(--color-stroke)}
+.staffing-summary-item strong{font-size:24px;font-weight:600;color:var(--color-primary)}
+.staffing-summary-item span{font-size:13px;text-transform:uppercase;color:var(--color-text)}
+@media(max-width:700px){.plan-header .plan-title{min-width:0}.plan-header .snapshot-row{width:100%;justify-content:space-between}.staffing-summary-strip{gap:10px}.staffing-summary-item{min-height:94px;padding:13px}}
+</style>

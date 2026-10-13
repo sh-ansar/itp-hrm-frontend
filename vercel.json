@@ -25,7 +25,8 @@
       "feat/leaves-prototype": false,
       "chore/remove-dead-placeholders": false,
       "refactor/development-registry-parity-final": false,
-      "fix/login-design-system-parity": false
+      "fix/login-design-system-parity": false,
+      "fix/shared-ui-semantic-tokens": false
     }
   }
 }

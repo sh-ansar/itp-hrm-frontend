@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { RouterLink, useRoute } from 'vue-router'
+import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { House } from 'lucide-vue-next'
+import BaseViewTabs from './ui/BaseViewTabs.vue'
 
 const route = useRoute()
+const router = useRouter()
 const current = computed(() => {
   if (route.path === '/organization') return 'organization'
   const view = String(route.query.view ?? 'all')
@@ -18,6 +20,11 @@ const tabs = [
   { id: 'changes', label: 'Изменения штатного расписания', to: '/staffing?view=changes' },
 ]
 const currentLabel = computed(() => tabs.find(item => item.id === current.value)?.label ?? tabs[0].label)
+const tabOptions = tabs.map(({ id, label }) => ({ id, label }))
+function selectTab(id: string) {
+  const target = tabs.find(item => item.id === id)
+  if (target) router.push(target.to)
+}
 </script>
 
 <template>
@@ -29,13 +36,9 @@ const currentLabel = computed(() => tabs.find(item => item.id === current.value)
       <span aria-hidden="true">/</span>
       <span aria-current="page">{{ currentLabel }}</span>
     </nav>
-    <nav class="org-staffing-tabs" aria-label="Разделы оргструктуры и штатного расписания">
-      <RouterLink v-for="tab in tabs" :key="tab.id" :to="tab.to"
-        class="org-staffing-tab" :class="{ 'org-staffing-tab--active': current === tab.id }"
-        :aria-current="current === tab.id ? 'page' : undefined">
-        {{ tab.label }}
-      </RouterLink>
-    </nav>
+    <BaseViewTabs :model-value="current" :options="tabOptions"
+      label="Разделы оргструктуры и штатного расписания"
+      @update:model-value="selectTab" />
   </div>
 </template>
 
@@ -45,10 +48,5 @@ const currentLabel = computed(() => tabs.find(item => item.id === current.value)
 .org-breadcrumbs a{display:inline-flex;align-items:center;gap:6px}
 .org-breadcrumbs a:hover{color:var(--color-primary)}
 .org-breadcrumbs span[aria-current]{overflow:hidden;text-overflow:ellipsis;color:var(--color-text)}
-.org-staffing-tabs{display:flex;align-items:center;gap:4px;max-width:100%;overflow-x:auto;border-bottom:1px solid var(--color-stroke);scrollbar-width:thin}
-.org-staffing-tab{position:relative;display:inline-flex;align-items:center;min-height:39px;padding:11px 16px;color:var(--color-text);font-size:var(--font-label-size);font-weight:500;white-space:nowrap;border-radius:8px 8px 0 0;transition:color .15s,background .15s}
-.org-staffing-tab:hover{color:var(--color-primary);background:var(--color-soft)}
-.org-staffing-tab--active{color:var(--color-primary);background:var(--color-surface)}
-.org-staffing-tab--active::after{content:'';position:absolute;left:0;right:0;bottom:0;height:2px;background:var(--color-primary)}
-@media(max-width:720px){.org-staffing-navigation{gap:7px}.org-breadcrumbs{display:none}.org-staffing-tab{padding:10px 13px;font-size:12px}}
+@media(max-width:720px){.org-staffing-navigation{gap:7px}.org-breadcrumbs{display:none}}
 </style>

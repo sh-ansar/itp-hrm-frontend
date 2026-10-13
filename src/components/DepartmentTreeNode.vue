@@ -2,6 +2,7 @@
 import { ref } from 'vue'
 import { Building2, ChevronDown, FolderTree } from 'lucide-vue-next'
 import type { DepartmentTreeItem } from '../utils/departmentTree'
+import BaseButton from './ui/BaseButton.vue'
 
 defineOptions({ name: 'DepartmentTreeNode' })
 defineProps<{ node: DepartmentTreeItem }>()
@@ -20,11 +21,11 @@ const expanded = ref(true)
         </span>
         <span v-else>Подразделение</span>
       </div>
-      <button v-if="node.children.length" type="button"
+      <BaseButton v-if="node.children.length" icon-only variant="secondary"
         :aria-label="expanded ? 'Свернуть ' + node.name : 'Развернуть ' + node.name"
         :aria-expanded="expanded" @click="expanded = !expanded">
         <ChevronDown :size="18" :class="{ closed: !expanded }" />
-      </button>
+      </BaseButton>
     </div>
     <div v-if="expanded && node.children.length" class="tree-children">
       <DepartmentTreeNode v-for="child in node.children" :key="child.id" :node="child" />
@@ -46,14 +47,10 @@ const expanded = ref(true)
 .tree-copy{display:grid;gap:5px;min-width:0;flex:1}
 .tree-copy strong{font-size:13px;line-height:1.35;font-weight:600;overflow-wrap:anywhere}
 .tree-copy span{display:inline-flex;align-items:center;gap:5px;font-size:11px;color:var(--color-muted);line-height:1.45}
-.tree-card button{
-  display:grid;place-items:center;flex:0 0 34px;width:34px;height:34px;background:var(--color-soft);
-  border:1px solid var(--color-stroke);border-radius:8px;color:var(--color-muted);cursor:pointer
-}
-.tree-card button:hover{background:var(--color-hover);color:var(--color-primary)}
-.tree-card button:focus-visible{outline:2px solid var(--color-primary);outline-offset:2px}
-.tree-card button svg{transition:transform .15s ease}
-.tree-card button svg.closed{transform:rotate(-90deg)}
+.tree-card :deep(.base-button){flex:0 0 34px;width:34px;min-width:34px;height:34px;min-height:34px;color:var(--color-muted);background:var(--color-soft)}
+.tree-card :deep(.base-button:hover){color:var(--color-primary)}
+.tree-card :deep(.base-button svg){transition:transform .15s ease}
+.tree-card :deep(.base-button svg.closed){transform:rotate(-90deg)}
 .tree-children{
   position:relative;display:grid;gap:12px;padding-left:clamp(15px,3vw,28px);
   border-left:1px solid var(--color-primary-stroke);margin-left:19px

@@ -10,7 +10,7 @@ Reference: user's ZIP containing **67 images** (44 PNG layouts/fragments, 23 JPG
 | Employee card labour data / closed tabs | Compact employee summary and real tabs for assignments, experience, training, reserve; preserve drawer-based guarded edit flow | Chromium write tests |
 | Right-side creation drawer | Shared BaseDialog, one-column identity form, sticky actions; supports actual employee master fields | Browser create/edit |
 | Collapsed/expanded navigation | Shared desktop sidebar, compact rail and mobile overlay | Shell E2E |
-| HR overview | Factual company statistics, short employee and personnel action tables; no developer/project-status cards | Browser and API |
+| HR overview | Главная with factual company statistics, short employee register, recent personnel actions and document entry point; no developer/project-status cards | Control preview pending |
 | Archive employees | Effective-dated, company-scoped backend status; cannot classify never-hired people as former employees | Backend SQLite/PostgreSQL tests |
 
 ## Backend gaps and demo-mode rule

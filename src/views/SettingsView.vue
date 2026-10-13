@@ -43,18 +43,9 @@ const accountInitials = computed(() => {
   const words = session.user?.name?.trim().split(/\s+/) ?? []
   return words.slice(0, 2).map(word => word[0]?.toUpperCase() ?? '').join('') || 'HR'
 })
-const accountTitle = computed(() => session.user?.name
-  || (demoMode ? 'Демонстрационный контур' : 'Пользователь не определён'))
-const accountSubtitle = computed(() => {
-  if (browserLoginEnabled && session.user) return 'Авторизованная браузерная сессия'
-  if (demoMode) return 'Изолированный frontend-demo режим'
-  return 'Браузерная авторизация отключена для этого контура'
-})
-const authStatus = computed(() => {
-  if (browserLoginEnabled && session.user) return 'Сессия активна'
-  if (demoMode) return 'Демо-режим'
-  return 'Авторизация отключена'
-})
+const accountTitle = computed(() => session.user?.name || 'HR-пользователь')
+const accountSubtitle = computed(() => demoMode ? 'Рабочий профиль ITP HRM Demo' : 'Профиль текущего пользователя')
+const authStatus = computed(() => browserLoginEnabled && session.user ? 'Сессия активна' : 'Доступ активен')
 const themeModel = computed({
   get: () => ui.theme,
   set: value => ui.setTheme(value as UiTheme),
@@ -153,7 +144,7 @@ onMounted(reload)
           <div v-if="selectedCompany" class="company-summary">
             <span>Текущий контур</span>
             <strong>{{ selectedCompany.name }}</strong>
-            <small>Идентификатор компании не отображается в пользовательском интерфейсе.</small>
+            <small>Компания используется как текущий рабочий контур.</small>
           </div>
         </BaseCard>
       </div>
@@ -187,12 +178,12 @@ onMounted(reload)
         <BaseCard class="preference-card">
           <div class="card-heading">
             <ShieldCheck :size="19" aria-hidden="true" />
-            <div><h2>Хранение настроек</h2><p>Только визуальные предпочтения браузера.</p></div>
+            <div><h2>Настройки интерфейса</h2><p>Персональные параметры внешнего вида.</p></div>
           </div>
           <ul class="plain-list">
-            <li>Тема и состояние бокового меню сохраняются только в localStorage браузера.</li>
-            <li>Пароли, токены доступа и персональные данные в локальные настройки не записываются.</li>
-            <li>Изменение темы не влияет на серверные данные и права пользователя.</li>
+            <li>Тема и вид бокового меню сохраняются для этого браузера.</li>
+            <li>Настройки интерфейса не меняют данные сотрудников и рабочие процессы.</li>
+            <li>В любой момент можно вернуть стандартный внешний вид.</li>
           </ul>
         </BaseCard>
       </div>
@@ -215,16 +206,15 @@ onMounted(reload)
         <BaseCard class="access-card">
           <div class="card-heading">
             <ShieldCheck :size="19" aria-hidden="true" />
-            <div><h2>Роли и права</h2><p>Управление доступом защищено серверным контуром.</p></div>
+            <div><h2>Роли и права</h2><p>Права определяют доступ к разделам и данным компании.</p></div>
           </div>
-          <BaseNotice tone="warning">
-            Назначение и отзыв ролей не доступны в текущем пользовательском интерфейсе.
-            Административные изменения включаются только после утверждения матрицы доступа и серверного флага управления ролями.
+          <BaseNotice tone="info">
+            Изменение ролей выполняется администратором системы.
           </BaseNotice>
           <ul class="plain-list">
-            <li>Frontend не пытается обходить серверные ограничения роли.</li>
-            <li>Доступ к кадровым данным определяется сервером для выбранной компании.</li>
-            <li>Служебные идентификаторы и секреты не выводятся на экран.</li>
+            <li>Доступ к кадровым разделам зависит от назначенной роли.</li>
+            <li>Права задаются отдельно для каждой доступной компании.</li>
+            <li>В профиле отображаются только доступные пользователю рабочие контуры.</li>
           </ul>
         </BaseCard>
       </div>

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import BaseButton from './ui/BaseButton.vue'
 import BaseFormField from './ui/BaseFormField.vue'
 import BaseNotice from './ui/BaseNotice.vue'
@@ -18,17 +18,17 @@ const props = defineProps<{
 const emit = defineEmits<{ saved: []; cancelled: [] }>()
 
 const name = ref(props.edit?.name ?? '')
-const parentId = ref(props.edit?.parent_id ?? '')
+const parentId = ref(props.edit?.parent_id ?? '__root__')
 const saving = ref(false)
 const error = ref('')
 
 const rootOption = { id: '__root__', name: 'Верхний уровень' }
-const parentOptions = [
+const parentOptions = computed(() => [
   rootOption,
   ...props.departments
     .filter(item => item.id !== props.edit?.id)
     .map(item => ({ id: item.id, name: item.name })),
-]
+])
 
 async function submit() {
   error.value = ''

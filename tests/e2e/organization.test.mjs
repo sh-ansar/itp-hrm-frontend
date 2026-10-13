@@ -166,3 +166,21 @@ test('position directory is visible but write controls stay hidden in read-only 
     await context.close()
   }
 })
+
+
+test('personnel action journal is readable but writes stay hidden in read-only mode', async () => {
+  const context = await browser.newContext({ baseURL:'http://127.0.0.1:5173', viewport:{ width:375,height:850 } })
+  const page = await context.newPage()
+  try {
+    await page.goto('/login')
+    await page.getByLabel('Электронная почта').fill('synthetic-e2e@example.test')
+    await page.getByLabel('Пароль').fill('SyntheticE2E-Only!2026')
+    await page.getByRole('button', { name:'Войти' }).click()
+    await page.getByRole('heading', { name:'Обзор системы' }).waitFor()
+    await page.goto('/personnel-actions')
+    await page.getByRole('heading', { name:'Кадровые действия', exact:true }).waitFor()
+    await page.getByText('Кадровых действий пока нет').waitFor()
+    assert.equal(await page.getByRole('button', { name:'Новое действие' }).count(), 0)
+    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1), false)
+  } finally { await context.close() }
+})

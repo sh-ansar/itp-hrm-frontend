@@ -11,6 +11,7 @@ import EmployeeDetailView from '../views/EmployeeDetailView.vue'
 import EmployeeDevelopmentView from '../views/EmployeeDevelopmentView.vue'
 import TimesheetsView from '../views/TimesheetsView.vue'
 import ReportsView from '../views/ReportsView.vue'
+import SettingsView from '../views/SettingsView.vue'
 import ModulePendingView from '../views/ModulePendingView.vue'
 import NotFoundView from '../views/NotFoundView.vue'
 import LoginView from '../views/LoginView.vue'
@@ -43,7 +44,7 @@ export const router = createRouter({
     pending('/leaves', 'leaves', 'Отпуска', 'Графики отпусков, категории, остатки, исполнения и кадровые документы будут реализованы отдельным модулем.'),
     { path: '/timesheets', name: 'timesheets', component: TimesheetsView },
     { path: '/reports', name: 'reports', component: ReportsView },
-    pending('/settings', 'settings', 'Администрирование', 'Управление доступом, системными настройками и служебными параметрами будет доступно администраторам.'),
+    { path: '/settings', name: 'settings', component: SettingsView },
     { path: '/:pathMatch(.*)*', name: 'not-found', component: NotFoundView },
   ],
 })

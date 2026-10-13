@@ -120,7 +120,6 @@ onMounted(loadCompanies)
       title="Справочники"
       description="Кадровые классификаторы, которые используются в карточках сотрудников и штатном расписании."
     >
-      <BaseButton variant="secondary" :disabled="companyBusy || busy" @click="loadCompanies">Обновить</BaseButton>
     </BasePageHeading>
 
     <BaseNotice v-if="error" tone="error">{{ error }}</BaseNotice>

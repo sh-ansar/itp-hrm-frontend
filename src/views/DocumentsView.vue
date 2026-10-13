@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
-import { FileCheck2, FilePlus2, FileText, Paperclip, RefreshCw } from 'lucide-vue-next'
+import { FileCheck2, FilePlus2, FileText, Paperclip } from 'lucide-vue-next'
 import BaseButton from '../components/ui/BaseButton.vue'
 import BaseCard from '../components/ui/BaseCard.vue'
 import BaseDataTable from '../components/ui/BaseDataTable.vue'
@@ -128,9 +128,6 @@ onMounted(loadCompanies)
   <section class="documents-page">
     <BasePageHeading title="Документы и приказы"
       description="Защищённый реестр кадровых документов, черновиков приказов и приложенных PDF.">
-      <BaseButton variant="secondary" :disabled="companiesBusy || documentsBusy" @click="loadDocuments">
-        <RefreshCw :size="16" /> Обновить
-      </BaseButton>
       <BaseButton v-if="writesEnabled" @click="createOpen = true"><FilePlus2 :size="17" /> Новый черновик</BaseButton>
     </BasePageHeading>
 

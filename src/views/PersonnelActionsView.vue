@@ -117,7 +117,6 @@ onMounted(loadCompanies)
       title="Кадровые действия"
       description="Проведённые операции приёма, перевода и увольнения с основаниями и неизменяемым журналом."
     >
-      <BaseButton variant="secondary" :disabled="companyBusy||busy" @click="loadCompanies">Обновить</BaseButton>
       <BaseButton v-if="writesEnabled" @click="createOpen=true"><Plus :size="17" /> Новое действие</BaseButton>
     </BasePageHeading>
 

@@ -188,7 +188,6 @@ onMounted(refreshCompanies)
       title="Штатное расписание"
       description="Версии штатной структуры, плановые ставки, занятость и вакансии по подразделениям."
     >
-      <BaseButton variant="secondary" :disabled="companyBusy || planBusy" @click="refreshCompanies">Обновить</BaseButton>
       <BaseButton v-if="staffingWritesEnabled" @click="createPlanOpen = true">
         <Plus :size="17" /> Новая версия
       </BaseButton>

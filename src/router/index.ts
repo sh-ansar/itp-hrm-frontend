@@ -8,6 +8,7 @@ import PersonnelActionsView from '../views/PersonnelActionsView.vue'
 import DocumentsView from '../views/DocumentsView.vue'
 import DevelopmentView from '../views/DevelopmentView.vue'
 import EmployeeDetailView from '../views/EmployeeDetailView.vue'
+import EmployeeDevelopmentView from '../views/EmployeeDevelopmentView.vue'
 import ModulePendingView from '../views/ModulePendingView.vue'
 import NotFoundView from '../views/NotFoundView.vue'
 import LoginView from '../views/LoginView.vue'
@@ -29,6 +30,7 @@ export const router = createRouter({
     { path: '/login', name: 'login', component: LoginView },
     { path: '/employees', name: 'employees', component: EmployeesView },
     { path: '/employees/:company/:employee', name: 'employee-detail', component: EmployeeDetailView },
+    { path: '/employees-development', name: 'employees-development', component: EmployeeDevelopmentView },
     { path: '/organization', name: 'organization', component: OrganizationView },
     { path: '/staffing', name: 'staffing', component: StaffingView },
     { path: '/personnel-actions', name: 'personnel-actions', component: PersonnelActionsView },

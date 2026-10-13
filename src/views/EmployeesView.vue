@@ -15,8 +15,10 @@ import BaseDialog from '../components/ui/BaseDialog.vue'
 import EmployeeRecordForm from '../components/EmployeeRecordForm.vue'
 import { listCompanies, type CompanyRecord } from '../api/organization'
 import { listEmployees, type EmployeeRecord } from '../api/personnel'
+import { localTodayISO } from '../utils/localDate'
 
 const router = useRouter()
+const today = localTodayISO()
 const companies = ref<CompanyRecord[]>([])
 const employees = ref<EmployeeRecord[]>([])
 const selectedCompany = ref('')
@@ -44,7 +46,9 @@ const currentCompany = computed(() => companies.value.find(x => x.id === selecte
 const registryRows = computed(() => employees.value.map(employee => ({
   ...employee,
   full_name: [employee.last_name, employee.first_name, employee.middle_name].filter(Boolean).join(' '),
-  status: employee.current_position_name ? 'Активный' : 'Без назначения',
+  status: employee.current_position_name
+    ? (employee.current_assignment_valid_from && employee.current_assignment_valid_from > today ? 'Запланирован' : 'Активный')
+    : 'Без назначения',
 })))
 
 async function loadCompanies() {
@@ -155,7 +159,7 @@ onMounted(loadCompanies)
         <template #cell-current_position_name="{ value }">{{ value ?? '—' }}</template>
         <template #cell-current_department_name="{ value }">{{ value ?? '—' }}</template>
         <template #cell-status="{ row }">
-          <span class="status-pill" :class="{ 'status-pill--inactive': !row.current_position_name }">{{ row.status }}</span>
+          <span class="status-pill" :class="{ 'status-pill--inactive': row.status !== 'Активный', 'status-pill--planned': row.status === 'Запланирован' }">{{ row.status }}</span>
         </template>
         <template #cell-details="{ row }">
           <RouterLink class="employee-link" :to="{ name: 'employee-detail', params: { company: selectedCompany, employee: row.id } }">Открыть</RouterLink>
@@ -185,6 +189,7 @@ onMounted(loadCompanies)
 .registry-stat strong{font-size:20px}
 .status-pill{display:inline-flex;padding:5px 8px;border-radius:999px;background:var(--color-success-surface);color:var(--color-success);font-size:11px;font-weight:700;white-space:nowrap}
 .status-pill--inactive{background:var(--color-warning-surface);color:var(--color-warning)}
+.status-pill--planned{background:var(--color-accent-soft);color:var(--color-primary)}
 .employee-link{color:var(--color-primary);font-weight:600;text-decoration:underline;text-underline-offset:3px;white-space:nowrap}
 .employee-link:focus-visible{outline:3px solid var(--color-focus)}
 @media(max-width:980px){.filters{grid-template-columns:1fr}.search-form{grid-template-columns:minmax(0,1fr) auto auto}.registry-stat{width:max-content}}

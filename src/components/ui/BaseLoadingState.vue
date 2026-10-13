@@ -20,7 +20,7 @@ withDefaults(defineProps<{
 <style scoped>
 .loading-state{display:grid;gap:var(--space-3);width:100%;padding:var(--space-2) 0}
 .skeleton-head,.skeleton-row{
-  background:linear-gradient(90deg,#e8eff2 25%,#f8fafb 50%,#e8eff2 75%);
+  background:linear-gradient(90deg,var(--color-soft) 25%,var(--color-surface-raised) 50%,var(--color-soft) 75%);
   background-size:200% 100%;animation:shimmer 1.6s linear infinite;border-radius:var(--space-2)
 }
 .skeleton-head{width:32%;height:20px;min-width:110px}

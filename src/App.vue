@@ -20,6 +20,7 @@ const navigation = [
   { to: '/organization', label: 'Оргструктура и штатка', icon: '/prototype-icons/Structure.svg' },
   { to: '/personnel-actions', label: 'Кадровые процессы', icon: '/prototype-icons/processf.svg' },
   { to: '/timesheets', label: 'Графики и табель', icon: '/prototype-icons/Calendar.svg' },
+  { to: '/leaves', label: 'Отпуска', icon: '/prototype-icons/Clock.svg' },
   { to: '/documents', label: 'Документы и приказы', icon: '/prototype-icons/Document.svg' },
   { to: '/reports', label: 'Отчёты и аналитика', icon: '/prototype-icons/Report.svg' },
   { to: '/directories', label: 'Справочники', icon: '/prototype-icons/Storagef.svg' },

@@ -19,18 +19,21 @@ jobs:
     timeout-minutes: 12
     steps:
       - name: Checkout
-        uses: actions/checkout@11bd71901bbe5b1630ceae2ca01a69b4ce741b9a8 # v4.2.2
+        uses: actions/checkout@v4
         with:
           persist-credentials: false
 
       - name: Setup Node
-        uses: actions/setup-node@1e60f620b9541d1617c4883b111b73d210cc5a5e # v4.0.4
+        uses: actions/setup-node@v4
         with:
           node-version: '22'
           cache: npm
 
       - name: Install dependencies
         run: npm ci
+
+      - name: Shared design-system checks
+        run: node --test tests/design-consistency.test.mjs
 
       - name: Typecheck
         run: npm run typecheck

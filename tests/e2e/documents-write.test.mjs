@@ -18,7 +18,7 @@ test('HR creates a document draft, uploads private PDF and downloads it at mobil
     await page.getByLabel('Электронная почта').fill('synthetic-e2e@example.test')
     await page.getByLabel('Пароль').fill('SyntheticE2E-Only!2026')
     await page.getByRole('button', { name: 'Войти' }).click()
-    await page.getByRole('heading', { name: 'Обзор системы' }).waitFor()
+    await page.getByRole('heading', { name: 'Главная' }).waitFor()
 
     await page.goto('/documents')
     await page.getByRole('heading', { name: 'Документы и приказы', level: 1 }).waitFor()

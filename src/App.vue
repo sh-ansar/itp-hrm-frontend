@@ -4,23 +4,18 @@ import { Moon, Sun } from 'lucide-vue-next'
 import { useRoute, useRouter } from 'vue-router'
 import BaseNotice from './components/ui/BaseNotice.vue'
 import { useSessionStore } from './stores/session'
+import { useUiPreferencesStore } from './stores/uiPreferences'
 import { browserLoginEnabled } from './router'
 
 const router = useRouter()
 const route = useRoute()
 const session = useSessionStore()
+const uiPreferences = useUiPreferencesStore()
 const logoutError = ref('')
 const mobileNavOpen = ref(false)
 const searchTerm = ref('')
-type Theme = 'light' | 'dark'
-function storedTheme(): Theme {
-  try {
-    const saved = window.localStorage.getItem('hrm-theme')
-    if (saved === 'light' || saved === 'dark') return saved
-  } catch { /* Storage can be disabled. */ }
-  return window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
-}
-const theme = ref<Theme>(storedTheme())
+const theme = computed(() => uiPreferences.theme)
+const sidebarCollapsed = computed(() => uiPreferences.sidebarCollapsed)
 const navigation = [
   { to: '/', label: 'Главная', icon: '/prototype-icons/Home.svg' },
   { to: '/employees', label: 'Сотрудники', icon: '/prototype-icons/People-groupf.svg' },
@@ -33,27 +28,14 @@ const navigation = [
   { to: '/settings', label: 'Настройки', icon: '/prototype-icons/Settings.svg' },
 ]
 
-function storedCollapsed(): boolean {
-  try { return window.localStorage.getItem('hrm-sidebar-collapsed') === 'true' }
-  catch { return false }
-}
-const sidebarCollapsed = ref(storedCollapsed())
 const accountInitials = computed(() => {
   const words = session.user?.name?.trim().split(/\s+/) ?? []
   return words.slice(0, 2).map(word => word[0]?.toUpperCase() ?? '').join('') || 'HR'
 })
 
-function toggleSidebar() {
-  sidebarCollapsed.value = !sidebarCollapsed.value
-  try { window.localStorage.setItem('hrm-sidebar-collapsed', String(sidebarCollapsed.value)) }
-  catch { /* Privacy settings can disable local storage. */ }
-}
+function toggleSidebar() { uiPreferences.toggleSidebar() }
 function closeMobileNav() { mobileNavOpen.value = false }
-function applyTheme(value: Theme) {
-  document.documentElement.dataset.theme = value
-  document.documentElement.style.colorScheme = value
-}
-function toggleTheme() { theme.value = theme.value === 'dark' ? 'light' : 'dark' }
+function toggleTheme() { uiPreferences.toggleTheme() }
 function searchEmployees() {
   const q = searchTerm.value.trim()
   closeMobileNav()
@@ -69,11 +51,6 @@ async function logout() {
   }
 }
 
-applyTheme(theme.value)
-watch(theme, value => {
-  applyTheme(value)
-  try { window.localStorage.setItem('hrm-theme', value) } catch { /* Storage can be disabled. */ }
-})
 watch(() => route.fullPath, closeMobileNav)
 watch(() => route.query.q, q => {
   if (route.name === 'employees') searchTerm.value = typeof q === 'string' ? q : ''

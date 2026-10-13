@@ -37,6 +37,12 @@ const sectionTabs = computed(() => [
     ] : []),
 ])
 
+function trainingModeLabel(value: unknown): string {
+  const labels: Record<string, string> = {
+    in_person: 'Очное', remote: 'Дистанционное', on_the_job: 'На рабочем месте',
+  }
+  return labels[String(value)] ?? String(value ?? '—')
+}
 const today = localTodayISO()
 const currentAssignment = computed(() => profile.value?.assignments.find(item =>
   item.valid_from <= today && (item.valid_to === null || item.valid_to >= today)) ?? null)
@@ -182,6 +188,7 @@ onMounted(load)
           <BaseDataTable :rows="profile.training" row-key="id" caption="Обучение сотрудника"
             :columns="[{key:'training_type',label:'Вид'},{key:'training_mode',label:'Способ'},{key:'topic',label:'Тема'},{key:'provider',label:'Центр обучения'},{key:'city',label:'Город'},{key:'started_on',label:'С даты'},{key:'ended_on',label:'По дату'},{key:'document_reference',label:'Документ'}, ...(profile.meta.profile_writes_enabled ? [{key:'edit',label:'Действия'}] : [])]"
             empty-title="Обучение не зарегистрировано" empty-description="Данных о дополнительном обучении пока нет.">
+            <template #cell-training_mode="{ value }">{{ trainingModeLabel(value) }}</template>
             <template #cell-edit="{ row }"><BaseButton variant="secondary" @click="beginEdit('training', row)">Изменить</BaseButton></template>
           </BaseDataTable>
 

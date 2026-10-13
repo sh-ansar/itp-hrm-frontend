@@ -111,7 +111,7 @@ test('staffing route stays company-scoped and write controls stay hidden in read
     await page.getByRole('button', { name: 'Войти' }).click()
     await page.getByRole('heading', { name: 'Обзор системы' }).waitFor()
     await page.goto('/staffing')
-    await page.getByRole('heading', { name: 'Штатное расписание' }).waitFor()
+    await page.getByRole('heading', { name: 'Штатное расписание', exact: true }).waitFor()
     await page.getByText('Штатное расписание ещё не создано').waitFor()
     assert.equal(await page.getByRole('button', { name: /Новая версия|Создать первую версию/ }).count(), 0)
     assert.equal(await page.getByText('Test Company Hidden').count(), 0)

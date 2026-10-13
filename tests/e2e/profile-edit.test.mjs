@@ -20,11 +20,11 @@ test('HR creates and edits a training record, then sees stale revision conflict 
     await page.getByLabel('Электронная почта').fill('synthetic-e2e@example.test')
     await page.getByLabel('Пароль').fill('SyntheticE2E-Only!2026')
     await page.getByRole('button', { name: 'Войти' }).click()
-    await page.getByRole('heading', { name: 'Обзор системы' }).waitFor()
+    await page.getByRole('heading', { name: 'Главная' }).waitFor()
 
     await page.goto('/employees')
     await page.getByRole('row', { name: /E2E-001/ }).getByRole('link', { name: 'Открыть' }).click()
-    await page.getByRole('heading', { name: 'Карточка сотрудника' }).waitFor()
+    await page.locator('.employee-page-heading h1').waitFor()
     await page.getByRole('button', { name: 'Добавить сведения' }).click()
     const creator = page.getByRole('region', { name: 'Добавление кадровых сведений' })
     await creator.waitFor()

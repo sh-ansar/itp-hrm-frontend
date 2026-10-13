@@ -11,7 +11,7 @@ async function login(page){
   await page.getByLabel('Электронная почта').fill('synthetic-e2e@example.test')
   await page.getByLabel('Пароль').fill('SyntheticE2E-Only!2026')
   await page.getByRole('button',{name:'Войти'}).click()
-  await page.getByRole('heading',{name:'Обзор системы'}).waitFor()
+  await page.getByRole('heading',{name:'Главная'}).waitFor()
 }
 
 async function openActionForSynthetic(page){
@@ -64,7 +64,7 @@ test('HR conducts transfer termination and rehire through personnel actions work
 
     await page.goto('/employees')
     await page.getByRole('row',{name:/E2E-001/}).getByRole('link',{name:'Открыть'}).click()
-    await page.getByRole('heading',{name:'Карточка сотрудника'}).waitFor()
+    await page.locator('.employee-page-heading h1').waitFor()
     await page.getByText('Нет активного назначения',{exact:true}).waitFor()
     await page.goto('/personnel-actions')
     await page.getByRole('heading',{name:'Кадровые действия',exact:true,level:1}).waitFor()

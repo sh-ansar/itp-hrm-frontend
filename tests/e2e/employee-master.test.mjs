@@ -11,7 +11,7 @@ async function login(page) {
   await page.getByLabel('Электронная почта').fill('synthetic-e2e@example.test')
   await page.getByLabel('Пароль').fill('SyntheticE2E-Only!2026')
   await page.getByRole('button', { name: 'Войти' }).click()
-  await page.getByRole('heading', { name: 'Обзор системы' }).waitFor()
+  await page.getByRole('heading', { name: 'Главная' }).waitFor()
 }
 
 test('HR creates and edits an employee master record from the redesigned UI', async () => {
@@ -35,7 +35,7 @@ test('HR creates and edits an employee master record from the redesigned UI', as
     await createDialog.getByLabel('Отчество').fill('Тестовый')
     await createDialog.getByRole('button', { name: 'Добавить сотрудника' }).click()
 
-    await page.getByRole('heading', { name: 'Карточка сотрудника' }).waitFor()
+    await page.locator('.employee-page-heading h1').waitFor()
     await page.getByText('Новый Сотрудник Тестовый').waitFor()
 
     await page.getByRole('button', { name: 'Изменить карточку' }).click()

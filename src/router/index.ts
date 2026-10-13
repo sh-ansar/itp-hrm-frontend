@@ -10,6 +10,7 @@ import DevelopmentView from '../views/DevelopmentView.vue'
 import EmployeeDetailView from '../views/EmployeeDetailView.vue'
 import EmployeeDevelopmentView from '../views/EmployeeDevelopmentView.vue'
 import TimesheetsView from '../views/TimesheetsView.vue'
+import LeavesView from '../views/LeavesView.vue'
 import ReportsView from '../views/ReportsView.vue'
 import SettingsView from '../views/SettingsView.vue'
 import ModulePendingView from '../views/ModulePendingView.vue'
@@ -41,7 +42,7 @@ export const router = createRouter({
     { path: '/directories', name: 'directories', component: DirectoriesView },
     { path: '/learning', name: 'learning', component: DevelopmentView, props: { section: 'training' } },
     { path: '/reserve', name: 'reserve', component: DevelopmentView, props: { section: 'reserve' } },
-    pending('/leaves', 'leaves', 'Отпуска', 'Графики отпусков, категории, остатки, исполнения и кадровые документы будут реализованы отдельным модулем.'),
+    { path: '/leaves', name: 'leaves', component: LeavesView },
     { path: '/timesheets', name: 'timesheets', component: TimesheetsView },
     { path: '/reports', name: 'reports', component: ReportsView },
     { path: '/settings', name: 'settings', component: SettingsView },

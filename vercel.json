@@ -21,7 +21,8 @@
       "feat/timesheets-prototype": false,
       "feat/reports-analytics-prototype": false,
       "fix/directories-prototype-parity": false,
-      "feat/settings-workspace": false
+      "feat/settings-workspace": false,
+      "feat/leaves-prototype": false
     }
   }
 }

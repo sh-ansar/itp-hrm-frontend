@@ -18,7 +18,8 @@
       "fix/org-diagram-horizontal-scroll-only": false,
       "feat/documents-prototype-v2": false,
       "feat/documents-ui-parity-final": false,
-      "feat/timesheets-prototype": false
+      "feat/timesheets-prototype": false,
+      "feat/reports-analytics-prototype": false
     }
   }
 }

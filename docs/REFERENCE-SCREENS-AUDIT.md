@@ -15,6 +15,7 @@ Reference: user's ZIP containing **67 images** (44 PNG layouts/fragments, 23 JPG
 | Personnel actions | Unified journal for hire/transfer/termination, real backend contracts, responsive mobile cards, frontend demo mutations that update employee state and journal | Browser QA + demo build |
 | Documents and orders | Flat HRM register, employee/type filters, draft drawer, optional personnel-action linkage, protected PDF attachment, desktop/mobile views and persistent demo mutations | Browser QA + demo build |
 | Worktime / timesheets demo | Shared-tab workspace for timesheet, work schedules, production calendar and absences; deterministic demo values derived from visible employees only, with no production writes | Browser QA + demo build |
+| Reports and analytics | Company-scoped views for headcount, personnel movement, staffing/vacancies, training and worktime; production-backed HR metrics where contracts exist, demo-only worktime aggregation where they do not | Browser QA + demo build |
 
 ## Backend gaps and demo-mode rule
 
@@ -45,6 +46,7 @@ The frontend-only Vercel demo may render isolated deterministic mock values to r
 2. Personnel actions journal and drawer are browser-checked on desktop/mobile.
 3. Documents and orders register/drawers are browser-checked on desktop/mobile; keep signing/approval out until backend contracts exist.
 4. Worktime/timesheet demo is browser-checked on desktop/mobile/dark; keep all attendance edits and production totals out until backend contracts exist.
+5. Reports/analytics is browser-checked across all five tabs; do not add payroll, IFRS or sickness metrics until scoped contracts exist.
 2. Expand employee identity fields via approved sensitive-data schema before implementing reference photo/personal tabs.
 3. Add org-tree visualization and unified staffing/vacancies tabs.
 4. Add company-level training/reserve views and authenticated report exports.

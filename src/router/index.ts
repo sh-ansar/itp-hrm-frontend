@@ -6,6 +6,7 @@ import StaffingView from '../views/StaffingView.vue'
 import DirectoriesView from '../views/DirectoriesView.vue'
 import PersonnelActionsView from '../views/PersonnelActionsView.vue'
 import DocumentsView from '../views/DocumentsView.vue'
+import TimeAttendanceView from '../views/TimeAttendanceView.vue'
 import DevelopmentView from '../views/DevelopmentView.vue'
 import EmployeeDetailView from '../views/EmployeeDetailView.vue'
 import EmployeeDevelopmentView from '../views/EmployeeDevelopmentView.vue'
@@ -39,7 +40,7 @@ export const router = createRouter({
     { path: '/learning', name: 'learning', component: DevelopmentView, props: { section: 'training' } },
     { path: '/reserve', name: 'reserve', component: DevelopmentView, props: { section: 'reserve' } },
     pending('/leaves', 'leaves', 'Отпуска', 'Графики отпусков, категории, остатки, исполнения и кадровые документы будут реализованы отдельным модулем.'),
-    pending('/timesheets', 'timesheets', 'Табельный учёт', 'Производственный календарь, графики, отсутствия, смены и табель будут реализованы здесь.'),
+    { path: '/timesheets', name: 'timesheets', component: TimeAttendanceView },
     pending('/reports', 'reports', 'Отчёты и аналитика', 'Численность, движения, текучесть, обучение, вакансии и срезы на дату будут собраны на аналитических страницах.'),
     pending('/settings', 'settings', 'Администрирование', 'Управление доступом, системными настройками и служебными параметрами будет доступно администраторам.'),
     { path: '/:pathMatch(.*)*', name: 'not-found', component: NotFoundView },

@@ -101,7 +101,7 @@ test('employee register opens scoped detail and assignment history', async () =>
 })
 
 
-test('staffing route reads actual authorized positions without leaking other-company data', async () => {
+test('staffing route stays company-scoped and write controls stay hidden in read-only mode', async () => {
   const context = await browser.newContext({ baseURL: 'http://127.0.0.1:5173', viewport: { width: 375, height: 850 } })
   const page = await context.newPage()
   try {
@@ -111,13 +111,12 @@ test('staffing route reads actual authorized positions without leaking other-com
     await page.getByRole('button', { name: 'Войти' }).click()
     await page.getByRole('heading', { name: 'Обзор системы' }).waitFor()
     await page.goto('/staffing')
-    await page.getByRole('heading', { name: 'Должности и штатное расписание' }).waitFor()
-    const table = page.getByRole('table', { name: 'Справочник должностей компании' })
-    await table.waitFor()
-    assert.match(await table.innerText(), /Test Engineer/)
+    await page.getByRole('heading', { name: 'Штатное расписание' }).waitFor()
+    await page.getByText('Штатное расписание ещё не создано').waitFor()
+    assert.equal(await page.getByRole('button', { name: /Новая версия|Создать первую версию/ }).count(), 0)
     assert.equal(await page.getByText('Test Company Hidden').count(), 0)
     const denied = await page.evaluate(async () => {
-      const response = await fetch('/api/v1/companies/22222222-2222-4222-8222-222222222222/positions', { headers: { Accept: 'application/json' } })
+      const response = await fetch('/api/v1/companies/22222222-2222-4222-8222-222222222222/staffing-plans', { headers: { Accept: 'application/json' } })
       return response.status
     })
     assert.equal(denied, 403)

@@ -3,7 +3,7 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { Plus } from 'lucide-vue-next'
 import { useRoute } from 'vue-router'
 import EmployeeProfileSection from '../components/EmployeeProfileSection.vue'
-import EmployeeDataGrid, { type EmployeeDisplayField } from '../components/EmployeeDataGrid.vue'
+import EmployeeDataGrid from '../components/EmployeeDataGrid.vue'
 import BaseButton from '../components/ui/BaseButton.vue'
 import BaseDataTable from '../components/ui/BaseDataTable.vue'
 import BaseNotice from '../components/ui/BaseNotice.vue'
@@ -15,6 +15,8 @@ import BaseDialog from '../components/ui/BaseDialog.vue'
 import BaseViewTabs from '../components/ui/BaseViewTabs.vue'
 import { getEmployee, type EmployeeAssignment, type EmployeeDetail, type ProfileEditRow, type ProfileSection } from '../api/personnel'
 import { localTodayISO } from '../utils/localDate'
+
+type EmployeeDisplayField = { label: string; value: string | number | null | undefined; wide?: boolean; muted?: boolean }
 
 const route = useRoute()
 const profile = ref<EmployeeDetail | null>(null)

@@ -44,18 +44,9 @@ const accountInitials = computed(() => {
   const words = session.user?.name?.trim().split(/\s+/) ?? []
   return words.slice(0, 2).map(word => word[0]?.toUpperCase() ?? '').join('') || 'HR'
 })
-const accountTitle = computed(() => session.user?.name
-  || (demoMode ? 'Демонстрационный контур' : 'Пользователь не определён'))
-const accountSubtitle = computed(() => {
-  if (browserLoginEnabled && session.user) return 'Авторизованная браузерная сессия'
-  if (demoMode) return 'Изолированный frontend-demo режим'
-  return 'Браузерная авторизация отключена для этого контура'
-})
-const authStatus = computed(() => {
-  if (browserLoginEnabled && session.user) return 'Сессия активна'
-  if (demoMode) return 'Демо-режим'
-  return 'Авторизация отключена'
-})
+const accountTitle = computed(() => session.user?.name || 'HR-пользователь')
+const accountSubtitle = computed(() => demoMode ? 'Рабочий профиль ITP HRM Demo' : 'Профиль текущего пользователя')
+const authStatus = computed(() => browserLoginEnabled && session.user ? 'Сессия активна' : 'Доступ активен')
 const themeModel = computed({
   get: () => ui.theme,
   set: value => ui.setTheme(value as UiTheme),
@@ -64,7 +55,7 @@ function roleLabel(role: CompanyRecord['role_code']): string {
   if (role === 'company_admin') return 'Администратор компании'
   if (role === 'hr_specialist') return 'HR-специалист'
   if (role === 'department_manager') return 'Руководитель подразделения'
-  return demoMode ? 'Демонстрационный HR-доступ' : 'Роль не определена'
+  return 'Роль не определена'
 }
 
 function accessScopeLabel(item: CompanyRecord): string {
@@ -119,7 +110,7 @@ onMounted(reload)
     <div class="settings-heading">
       <div>
         <h1>Настройки</h1>
-        <p>Профиль, интерфейс и доступ к рабочему контуру.</p>
+        <p>Профиль, внешний вид и права доступа.</p>
       </div>
       <BaseButton variant="secondary" :disabled="busy" @click="reload">
         <RefreshCw :size="16" aria-hidden="true" /> {{ busy ? 'Обновление…' : 'Обновить' }}
@@ -161,7 +152,7 @@ onMounted(reload)
         <BaseCard class="company-card">
           <div class="card-heading">
             <Building2 :size="19" aria-hidden="true" />
-            <div><h2>Рабочая компания</h2><p>Контур, доступный текущей сессии.</p></div>
+            <div><h2>Рабочая компания</h2><p>Компания, выбранная для текущей работы.</p></div>
           </div>
           <BaseSelectField v-if="companies.length" v-model="company" label="Компания" :options="companies" />
           <BaseNotice v-else tone="info">Для текущей сессии нет доступных компаний.</BaseNotice>
@@ -202,12 +193,12 @@ onMounted(reload)
         <BaseCard class="preference-card">
           <div class="card-heading">
             <ShieldCheck :size="19" aria-hidden="true" />
-            <div><h2>Хранение настроек</h2><p>Только визуальные предпочтения браузера.</p></div>
+            <div><h2>Настройки интерфейса</h2><p>Персональные параметры внешнего вида.</p></div>
           </div>
           <ul class="plain-list">
-            <li>Тема и состояние бокового меню сохраняются только в localStorage браузера.</li>
-            <li>Пароли, токены доступа и персональные данные в локальные настройки не записываются.</li>
-            <li>Изменение темы не влияет на серверные данные и права пользователя.</li>
+            <li>Тема и вид бокового меню сохраняются для этого браузера.</li>
+            <li>Настройки внешнего вида не меняют кадровые данные и рабочие процессы.</li>
+            <li>В любой момент можно вернуть стандартный вид интерфейса.</li>
           </ul>
         </BaseCard>
       </div>
@@ -216,7 +207,7 @@ onMounted(reload)
         <BaseCard class="access-card">
           <div class="card-heading">
             <UserRound :size="19" aria-hidden="true" />
-            <div><h2>Доступные компании</h2><p>Список формируется сервером из доступов текущего пользователя.</p></div>
+            <div><h2>Доступные компании</h2><p>Компании, доступные текущему пользователю.</p></div>
           </div>
           <div v-if="companies.length" class="company-list">
             <article v-for="item in companies" :key="item.id" :class="{ 'company-list-item--active': item.id === company }">
@@ -233,7 +224,7 @@ onMounted(reload)
         <BaseCard class="access-card">
           <div class="card-heading">
             <ShieldCheck :size="19" aria-hidden="true" />
-            <div><h2>Роли и права</h2><p>Управление доступом защищено серверным контуром.</p></div>
+            <div><h2>Роли и права</h2><p>Права определяют доступ к разделам и данным компании.</p></div>
           </div>
           <div v-if="selectedCompany" class="access-projection">
             <div>
@@ -252,18 +243,15 @@ onMounted(reload)
               <strong v-else>Не назначены</strong>
             </div>
           </div>
-          <BaseNotice :tone="roleManagementEnabled ? 'info' : 'warning'">
-            <template v-if="roleManagementEnabled">
-              Серверный контур управления ролями включён, но этот экран остаётся read-only до отдельного административного интерфейса.
-            </template>
-            <template v-else>
-              Назначение и отзыв ролей закрыты серверным флагом. Интерфейс показывает только фактические права текущей сессии.
-            </template>
+          <BaseNotice tone="info">
+            {{ roleManagementEnabled
+              ? 'Управление ролями доступно только администраторам системы.'
+              : 'Изменение ролей недоступно для текущего профиля.' }}
           </BaseNotice>
           <ul class="plain-list">
-            <li>Frontend не пытается обходить серверные ограничения роли.</li>
-            <li>Роль и область доступа поступают из серверной membership-модели выбранной компании.</li>
-            <li>Служебные идентификаторы, пароли и токены не выводятся на экран.</li>
+            <li>Роль и область доступа определяют доступные кадровые разделы.</li>
+            <li>Права задаются отдельно для каждой компании.</li>
+            <li>В профиле отображаются только доступные рабочие области.</li>
           </ul>
         </BaseCard>
       </div>

@@ -59,7 +59,10 @@ async function submit() {
   success.value = ''
   const body: Record<string, string | number | null> = {}
   for (const field of visible.value) {
-    const value = (form[field.key] ?? '').trim()
+    // Vue v-model automatically casts input[type=number] to a number even when
+    // the form state was declared as strings; never call trim() on that number.
+    const raw = form[field.key]
+    const value = raw == null ? '' : String(raw).trim()
     if (field.required && !value) {
       error.value = 'Заполните обязательные поля.'
       return

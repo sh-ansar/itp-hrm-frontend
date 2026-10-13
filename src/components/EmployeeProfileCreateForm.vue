@@ -4,9 +4,9 @@ import BaseButton from './ui/BaseButton.vue'
 import BaseNotice from './ui/BaseNotice.vue'
 import { createEmployeeProfileRecord, updateEmployeeProfileRecord, type ProfileEditRow, type ProfileSection } from '../api/personnel'
 
-const props = defineProps<{ companyId: string; employeeId: string; edit?: { section: ProfileSection; record: ProfileEditRow } }>()
+const props = defineProps<{ companyId: string; employeeId: string; edit?: { section: ProfileSection; record: ProfileEditRow }; initialSection?: ProfileSection }>()
 const emit = defineEmits<{ saved: []; cancelled: [] }>()
-const section = ref<ProfileSection>(props.edit?.section ?? 'experience')
+const section = ref<ProfileSection>(props.edit?.section ?? props.initialSection ?? 'experience')
 const saving = ref(false)
 const error = ref('')
 const success = ref('')
@@ -59,7 +59,10 @@ async function submit() {
   success.value = ''
   const body: Record<string, string | number | null> = {}
   for (const field of visible.value) {
-    const value = (form[field.key] ?? '').trim()
+    // Vue v-model automatically casts input[type=number] to a number even when
+    // the form state was declared as strings; never call trim() on that number.
+    const raw = form[field.key]
+    const value = raw == null ? '' : String(raw).trim()
     if (field.required && !value) {
       error.value = 'Заполните обязательные поля.'
       return
@@ -101,7 +104,7 @@ async function submit() {
   <section class="create-form" :aria-label="edit ? 'Редактирование кадровых сведений' : 'Добавление кадровых сведений'">
     <h2>{{ edit ? 'Редактировать кадровые сведения' : 'Добавить кадровые сведения' }}</h2>
     <p class="form-hint">Изменения сохраняются с проверкой прав и журналом аудита.</p>
-    <div v-if="!edit" class="section-tabs" role="group" aria-label="Раздел карточки">
+    <div v-if="!edit && !initialSection" class="section-tabs" role="group" aria-label="Раздел карточки">
       <BaseButton v-for="item in sections" :key="item.value" variant="secondary"
         :disabled="saving" @click="selectSection(item.value)">{{ item.label }}{{ section === item.value ? ' ✓' : '' }}</BaseButton>
     </div>

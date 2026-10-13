@@ -6,6 +6,7 @@ import StaffingView from '../views/StaffingView.vue'
 import DirectoriesView from '../views/DirectoriesView.vue'
 import PersonnelActionsView from '../views/PersonnelActionsView.vue'
 import DocumentsView from '../views/DocumentsView.vue'
+import DevelopmentView from '../views/DevelopmentView.vue'
 import EmployeeDetailView from '../views/EmployeeDetailView.vue'
 import ModulePendingView from '../views/ModulePendingView.vue'
 import NotFoundView from '../views/NotFoundView.vue'
@@ -33,8 +34,8 @@ export const router = createRouter({
     { path: '/personnel-actions', name: 'personnel-actions', component: PersonnelActionsView },
     { path: '/documents', name: 'documents', component: DocumentsView },
     { path: '/directories', name: 'directories', component: DirectoriesView },
-    pending('/learning', 'learning', 'Обучение', 'Общий реестр программ, сотрудников, сроков и подтверждающих документов будет вынесен из карточек сотрудников в отдельный модуль.'),
-    pending('/reserve', 'reserve', 'Кадровый резерв', 'Сводный реестр кадрового резерва, движение кандидатов и решения по резерву будут доступны в этом разделе.'),
+    { path: '/learning', name: 'learning', component: DevelopmentView, props: { section: 'training' } },
+    { path: '/reserve', name: 'reserve', component: DevelopmentView, props: { section: 'reserve' } },
     pending('/leaves', 'leaves', 'Отпуска', 'Графики отпусков, категории, остатки, исполнения и кадровые документы будут реализованы отдельным модулем.'),
     pending('/timesheets', 'timesheets', 'Табельный учёт', 'Производственный календарь, графики, отсутствия, смены и табель будут реализованы здесь.'),
     pending('/reports', 'reports', 'Отчёты и аналитика', 'Численность, движения, текучесть, обучение, вакансии и срезы на дату будут собраны на аналитических страницах.'),

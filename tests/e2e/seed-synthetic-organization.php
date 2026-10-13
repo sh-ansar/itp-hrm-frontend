@@ -23,4 +23,20 @@ if (\Illuminate\Support\Facades\DB::table('departments')->where('company_id', $a
 \Illuminate\Support\Facades\DB::table('positions')->insert(['id'=>'66666666-6666-4666-8666-666666666666','company_id'=>$a,'name'=>'Test Engineer']);
 \Illuminate\Support\Facades\DB::table('employees')->insert(['id'=>'77777777-7777-4777-8777-777777777777','company_id'=>$a,'personnel_number'=>'E2E-001','last_name'=>'Synthetic','first_name'=>'Employee']);
 \Illuminate\Support\Facades\DB::table('employee_assignments')->insert(['id'=>'88888888-8888-4888-8888-888888888888','employee_id'=>'77777777-7777-4777-8777-777777777777','department_id'=>'33333333-3333-4333-8333-333333333333','position_id'=>'66666666-6666-4666-8666-666666666666','valid_from'=>'2026-01-01']);
+\Illuminate\Support\Facades\DB::table('employee_training')->insert([
+    ['id'=>'9a111111-1111-4111-8111-111111111111','employee_id'=>'77777777-7777-4777-8777-777777777777',
+        'training_type'=>'seminar','training_mode'=>'remote','topic'=>'E2E Completed Safety','started_on'=>'2026-01-05','ended_on'=>'2026-01-08'],
+    ['id'=>'9a222222-2222-4222-8222-222222222222','employee_id'=>'77777777-7777-4777-8777-777777777777',
+        'training_type'=>'seminar','training_mode'=>'in_person','topic'=>'E2E Ongoing Leadership','started_on'=>'2026-01-01','ended_on'=>null],
+    ['id'=>'9a333333-3333-4333-8333-333333333333','employee_id'=>'77777777-7777-4777-8777-777777777777',
+        'training_type'=>'seminar','training_mode'=>'on_the_job','topic'=>'E2E Future Training','started_on'=>'2035-07-01','ended_on'=>null],
+]);
+\Illuminate\Support\Facades\DB::table('employee_reserve')->insert([
+    ['id'=>'9b111111-1111-4111-8111-111111111111','employee_id'=>'77777777-7777-4777-8777-777777777777',
+        'target_position'=>'E2E Lead Specialist','reserve_level'=>'senior','reserve_type'=>'internal',
+        'joined_year'=>2026,'left_year'=>null,'notes'=>'PRIVATE E2E reserve assessment'],
+    ['id'=>'9b222222-2222-4222-8222-222222222222','employee_id'=>'77777777-7777-4777-8777-777777777777',
+        'target_position'=>'E2E Former Candidate','reserve_level'=>'middle','reserve_type'=>'internal',
+        'joined_year'=>2024,'left_year'=>2025,'notes'=>null],
+]);
 echo "Synthetic isolated organizational fixtures provisioned.\n";

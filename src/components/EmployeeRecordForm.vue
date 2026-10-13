@@ -55,7 +55,6 @@ async function submit() {
       <BaseFormField v-model="firstName" label="Имя" :disabled="saving" required />
       <BaseFormField v-model="middleName" label="Отчество" :disabled="saving" />
     </div>
-    <p class="hint">Табельный номер уникален внутри выбранной компании. При одновременном редактировании система не перезапишет более свежую версию.</p>
     <div class="actions">
       <BaseButton type="button" variant="secondary" :disabled="saving" @click="emit('cancelled')">Отмена</BaseButton>
       <BaseButton type="submit" :disabled="saving">{{ saving ? 'Сохранение…' : edit ? 'Сохранить карточку' : 'Добавить сотрудника' }}</BaseButton>
@@ -64,9 +63,8 @@ async function submit() {
 </template>
 
 <style scoped>
-.employee-record-form{display:grid;gap:var(--space-4)}
-.form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--space-4)}
-.hint{margin:0;color:var(--color-muted);font-size:12px;line-height:1.5}
-.actions{display:flex;justify-content:flex-end;gap:var(--space-2);flex-wrap:wrap}
-@media(max-width:600px){.form-grid{grid-template-columns:1fr}.actions :deep(button){flex:1}}
+.employee-record-form{display:flex;flex-direction:column;gap:var(--space-4);min-height:calc(100dvh - 158px)}
+.form-grid{display:grid;grid-template-columns:1fr;gap:18px}
+.actions{position:sticky;bottom:-34px;z-index:2;display:flex;justify-content:flex-end;gap:var(--space-2);flex-wrap:wrap;margin-top:auto;padding:16px 0;background:var(--color-surface);border-top:1px solid var(--color-stroke)}
+@media(max-width:600px){.employee-record-form{min-height:calc(100dvh - 128px)}.actions{bottom:-28px}.actions :deep(button){flex:1}}
 </style>

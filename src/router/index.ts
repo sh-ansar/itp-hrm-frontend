@@ -4,6 +4,7 @@ import OrganizationView from '../views/OrganizationView.vue'
 import EmployeesView from '../views/EmployeesView.vue'
 import StaffingView from '../views/StaffingView.vue'
 import DirectoriesView from '../views/DirectoriesView.vue'
+import PersonnelActionsView from '../views/PersonnelActionsView.vue'
 import EmployeeDetailView from '../views/EmployeeDetailView.vue'
 import ModulePendingView from '../views/ModulePendingView.vue'
 import NotFoundView from '../views/NotFoundView.vue'
@@ -28,7 +29,7 @@ export const router = createRouter({
     { path: '/employees/:company/:employee', name: 'employee-detail', component: EmployeeDetailView },
     { path: '/organization', name: 'organization', component: OrganizationView },
     { path: '/staffing', name: 'staffing', component: StaffingView },
-    pending('/personnel-actions', 'personnel-actions', 'Кадровые действия', 'Приём, перевод, увольнение и связанные кадровые события будут оформляться здесь как отдельные бизнес-операции с основаниями и аудитом.'),
+    { path: '/personnel-actions', name: 'personnel-actions', component: PersonnelActionsView },
     pending('/documents', 'documents', 'Документы и приказы', 'Трудовые договоры, приказы, основания и защищённые кадровые документы будут собраны в едином реестре.'),
     { path: '/directories', name: 'directories', component: DirectoriesView },
     pending('/learning', 'learning', 'Обучение', 'Общий реестр программ, сотрудников, сроков и подтверждающих документов будет вынесен из карточек сотрудников в отдельный модуль.'),

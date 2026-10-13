@@ -97,7 +97,7 @@ jobs:
           if [ "$HRM_PERSONNEL_WRITES_ENABLED" = "true" ]; then
             tests="tests/e2e/profile-edit.test.mjs tests/e2e/assignment-create.test.mjs tests/e2e/employee-master.test.mjs tests/e2e/staffing.test.mjs tests/e2e/department-tree.test.mjs tests/e2e/position-directory.test.mjs tests/e2e/personnel-actions.test.mjs tests/e2e/documents-write.test.mjs tests/e2e/development-write.test.mjs"
           else
-            tests="tests/e2e/auth.test.mjs tests/e2e/components.test.mjs tests/e2e/organization.test.mjs tests/e2e/documents-readonly.test.mjs tests/e2e/prototype-shell.test.mjs tests/e2e/employee-registry-visual.test.mjs tests/e2e/organization-diagram.test.mjs tests/e2e/org-staffing-navigation.test.mjs tests/e2e/development-readonly.test.mjs"
+            tests="tests/e2e/auth.test.mjs tests/e2e/components.test.mjs tests/e2e/organization.test.mjs tests/e2e/documents-readonly.test.mjs tests/e2e/prototype-shell.test.mjs tests/e2e/employee-registry-visual.test.mjs tests/e2e/organization-diagram.test.mjs tests/e2e/org-staffing-navigation.test.mjs tests/e2e/employee-tabs-scroll.test.mjs tests/e2e/development-readonly.test.mjs"
           fi
           # Every test file must begin from a clean synthetic company/employee state.
           # Otherwise personnel-action tests mutate the shared fixture and make subsequent

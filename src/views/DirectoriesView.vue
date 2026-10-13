@@ -206,14 +206,17 @@ onMounted(loadCompanies)
 </template>
 
 <style scoped>
-.directories-page{display:grid;gap:var(--space-4);min-width:0;max-width:100%}
+.directories-page{display:grid;gap:var(--space-4);min-width:0;max-width:100%;overflow-x:clip}
+.directories-page>*{min-width:0;max-width:100%}
 .toolbar{display:flex;align-items:end;justify-content:space-between;gap:20px;flex-wrap:wrap;min-width:0;max-width:100%}
 .toolbar :deep(.base-select-field){flex:1 1 280px;min-width:0;max-width:100%}
 .summary{display:grid;gap:2px;min-width:0;max-width:100%;padding:10px 14px;border-radius:var(--radius-md);background:var(--color-soft)}
 .summary span,.summary small{font-size:11px;color:var(--color-muted)}
 .summary strong{font-size:20px}
 .section-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;flex-wrap:wrap;margin-bottom:var(--space-4)}
-.title-block{display:flex;gap:12px;align-items:flex-start}
+.title-block{display:flex;gap:12px;align-items:flex-start;min-width:0;max-width:100%}
+.title-block>div:last-child{min-width:0;max-width:100%}
+.title-block .muted{overflow-wrap:anywhere}
 .section-icon{display:grid;place-items:center;width:42px;height:42px;border-radius:12px;background:var(--color-accent-soft);color:var(--color-primary)}
 .kicker{margin:0 0 4px;color:var(--color-primary);font-size:11px;font-weight:700;letter-spacing:.055em;text-transform:uppercase}
 h2{margin:0;font-size:var(--font-section-heading)}

@@ -15,10 +15,10 @@ Reference: user's ZIP containing **67 images** (44 PNG layouts/fragments, 23 JPG
 | Personnel actions | Unified journal for hire/transfer/termination, real backend contracts, responsive mobile cards, frontend demo mutations that update employee state and journal | Browser QA + demo build |
 | Documents and orders | Flat HRM register, employee/type filters, draft drawer, optional personnel-action linkage, protected PDF attachment, desktop/mobile views and persistent demo mutations | Browser QA + demo build |
 | Worktime / timesheets | Shared-tab workspace for timesheet, work schedules, production calendar and absences; production reads use scoped backend APIs, while deterministic mocks remain isolated to demo mode | Browser QA + production/demo builds |
-| Reports and analytics | Company-scoped views for headcount, personnel movement, staffing/vacancies, training and worktime; worktime analytics use the same scoped production read contract as the timesheet | Browser QA + production/demo builds |
+| Reports and analytics | Company-scoped views for headcount, personnel movement, staffing/vacancies, training and worktime; worktime analytics use the same scoped production read contract as the timesheet workspace | Browser QA + production/demo builds |
 | Development / reserve / training | Combined employee workspace plus full training and reserve registries, responsive mobile cards, search/status filtering and employee drill-down | Browser QA + demo build |
-| Settings workspace | Session/profile state, server-projected company role and department scope, accessible companies and persistent interface preferences; role mutation remains server-gated | Browser QA + production/demo builds |
-| Leave schedule | Read-only annual leave schedule backed by scoped production APIs with planned/actual dates, monthly distribution and leave categories; deterministic mocks remain demo-only | Browser QA + production/demo builds |
+| Settings workspace | Session/profile state, backend-projected company role and department scope, accessible companies and persistent interface preferences; role mutation remains gated | Browser QA + production/demo builds |
+| Leave schedule | Annual leave schedule, monthly distribution and leave categories; production reads use the scoped leave API while deterministic prototype values remain isolated to demo mode | Browser QA + production/demo builds |
 | Directories | Company-scoped position directory with real create/edit/delete permissions, shared drawer form and responsive desktop/mobile register; departments remain managed only in organization structure | Browser QA + demo build |
 
 ## Backend gaps and demo-mode rule
@@ -32,7 +32,7 @@ The frontend-only Vercel demo may render isolated deterministic mock values to r
 3. **Staffing explorer** `Desktop_Оргструктура_и_штатка_схема_open_Организационная_структура.png` and four staffing table screenshots: department chart, staffing, vacancy view, authorized staffing history and CSV export are implemented against real scoped data. Approval queue and staffing version comparison remain separate future contracts; do not fake them.
 4. **Contract expiration, hiring dates, demographics and earnings** in register/dashboard screenshots: no reliable scoped APIs for these values. Do not hardcode reference screenshot numbers (340 employees, 18 departments, etc.).
 5. **Employee management actions**: mass editing, deletion, moving to archive, 1C sync, template creation and exports in mockups are not approved endpoints or lifecycle operations. Keep out of active UI until contracts exist.
-6. **Payroll, tariffs, personal settings, notifications and production time-attendance writes** still require domain stages and authorization. The frontend-only demo now reproduces the approved worktime areas (timesheet, schedules, production calendar and absences) with isolated deterministic data; it must not be treated as a production attendance source.
+6. **Payroll, tariffs, notifications and mutation workflows for worktime/leaves** still require approved domain stages and authorization. Worktime and leave reads are production-backed; deterministic mock values are used only in `VITE_DEMO_MODE` for visual parity.
 7. **Documents**: current C02 supports drafts, optional personnel-action linkage and private PDF attachments. The frontend register now matches that contract in desktop/mobile demo. Templates, signing, approval and broader document lifecycle remain separate work and are intentionally not fabricated.
 
 ## Visual rules for subsequent stages
@@ -44,22 +44,31 @@ The frontend-only Vercel demo may render isolated deterministic mock values to r
 - Compare 375px, 768px, 1280px, 1440px layouts; no horizontal **document** overflow. Tables may scroll within their own region.
 - Read-only modes and department-scoped employee visibility must remain intact.
 
-## Next parity milestones
+## Final parity verification status
 
-1. Final visual QA of the completed Employees workspace: register, grouped register, archive, combined reserve/training workspace and employee card tabs.
-2. Personnel actions journal and drawer are browser-checked on desktop/mobile.
-3. Documents and orders register/drawers are browser-checked on desktop/mobile; keep signing/approval out until backend contracts exist.
-4. Worktime/timesheet is browser-checked on desktop/mobile/dark. Production reads now use the scoped backend contract; mutation controls remain out until approved write workflows exist.
-5. Reports/analytics is browser-checked across all five tabs; worktime analytics now use the same production read contract as the timesheet workspace. Do not add payroll or other unsourced metrics until scoped contracts exist.
-6. Development registries are browser-checked on desktop/mobile/dark; training and reserve stay inside the Employees domain rather than duplicating main navigation.
-7. Leave schedule is browser-checked on desktop/mobile/dark; production reads preserve planned vs actual dates and never infer completion from the plan.
-8. Settings workspace is browser-checked on desktop/mobile/dark; company role and department scope are read from the backend while role mutation remains server-gated.
-9. Directories is browser-checked on desktop/mobile/dark and create/edit/delete dialogs; do not duplicate departments or invent unsupported classifier CRUD.
-10. Expand the remaining employee-card production fields only through approved sensitive-data contracts; never fall back to demo values outside demo mode.
-11. Keep report exports and any administrative role editor separate until their server contracts and approval rules are released.
+1. **Shell/navigation**: expanded/collapsed sidebar, top search, desktop and mobile navigation use the shared design system; no developer/status slogans are shown in normal product pages.
+2. **Employees**: primary register defaults to active employees, archive remains a separate tab, grouping/search/columns/mobile cards are preserved, and overview headcount matches the active register.
+3. **Employee card**: all eight prototype tabs fit on desktop and remain horizontally scrollable only on narrower viewports; profile sections use the shared card/table components.
+4. **Organization/staffing**: hierarchy labels no longer break inside words, the diagram keeps horizontal scrolling inside the canvas only, and approved staffing versions are strictly read-only while drafts expose edit/approve actions.
+5. **Development**: combined reserve/training workspace plus full registries are browser-checked; training type/mode enums are rendered as user-facing Russian labels.
+6. **Personnel actions/documents**: journal, drawers, document register and protected attachment flow remain aligned with the shared responsive components.
+7. **Worktime/reports**: timesheet, schedules, production calendar, absences and report aggregation use the scoped production read contract outside demo mode; missing values are never converted into false zeroes.
+8. **Leaves**: production reads use the scoped leave API; demo-only implementation notices were removed from the product surface.
+9. **Directories/settings**: directory CRUD stays company-scoped; settings show the real company role and department scope while using product language rather than implementation terminology.
+10. **Responsive/theme verification**: 375px mobile and 1440px desktop were rechecked during the final sweep; prior 768/1280 checks remain part of the shared component audit. No document-level horizontal overflow is allowed.
+
+### Corrections made in the final prototype sweep
+
+- Active employee totals on Главная and Реестр сотрудников now use the same server status scope.
+- Organization cards were compacted so long Russian department names wrap only at word boundaries.
+- Employee card tabs were tightened so all prototype tabs remain visible at 1440px.
+- Raw `internal/external` training values were replaced with human-readable labels.
+- Demo/production implementation copy was removed from user-facing Leaves and Settings surfaces.
+- Staffing demo state now follows the real contract: approved versions are immutable; draft versions can add/edit lines and be approved.
+- Direct `/learning` and `/reserve` routes were revalidated on a clean preview after an earlier stale-preview false failure.
 
 ## Backend gap review for full personal cards (B08)
 
-The existing `employees` data contract contains only personnel number, names and revisions. The reference screenshot also includes passport/ID numbers, contact information, birth date, family and bank details, employee photo, and employment contract details. These fields cannot be fabricated in the UI or put into an unscoped JSON blob. Before B08 implementation, the team must agree on field-level purposes, validation, data retention, encryption/redaction, employee consent/legal basis, access by role and audit behaviour.
+The real `employees` contract now includes core identity/contact/workplace fields such as birth date, gender, email, phone, address, work site, work zone, team and supervisor. The reference card still contains additional sensitive domains (IIN, identity-document details, family/emergency contacts, banking/payroll, contract details and photo) that are not yet fully backed by approved production storage and field-level authorization. Those values remain isolated to demo/reference presentation until the sensitive-data schema, retention, redaction and role rules are approved.
 
 The development aggregate API is implemented separately because training and reserve tables already exist. Reserve free-text notes are intentionally omitted from aggregate lists; full notes remain available only in the appropriately authorized employee card. Existing create/edit endpoints are reused and have optimistic revision checks.

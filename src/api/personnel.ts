@@ -127,8 +127,11 @@ export interface EmployeeDetail {
   experience: Array<{ id: string; revision: number; experience_type: string; started_on: string; ended_on: string | null; basis_reference: string | null }>
   reserve: Array<{ id: string; revision: number; target_position: string; reserve_level: string; reserve_type: string; joined_year: number; left_year: number | null; notes: string | null }>
   training: Array<{ id: string; revision: number; training_type: string; training_mode: string; topic: string; provider: string | null; city: string | null; started_on: string; ended_on: string | null; document_reference: string | null }>
+  history?: EmployeeReferenceProfile['history']
   reference_profile?: EmployeeReferenceProfile
   meta: {
+    history_limit?: number
+    history_truncated?: boolean
     assignments_limit: number
     assignments_truncated: boolean
     extended_sections_visible: boolean

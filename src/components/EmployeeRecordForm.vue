@@ -6,8 +6,6 @@ import BaseNotice from './ui/BaseNotice.vue'
 import BaseSelectField from './ui/BaseSelectField.vue'
 import { createEmployee, updateEmployee, type EmployeeRecord } from '../api/personnel'
 
-const demoMode = import.meta.env.VITE_DEMO_MODE === 'true'
-
 const props = defineProps<{
   companyId: string
   edit?: EmployeeRecord | null
@@ -37,6 +35,7 @@ const saving = ref(false)
 const error = ref('')
 
 async function submit() {
+  if (saving.value) return
   error.value = ''
   if (!personnelNumber.value.trim() || !lastName.value.trim() || !firstName.value.trim()) {
     error.value = 'Заполните табельный номер, фамилию и имя'
@@ -50,9 +49,6 @@ async function submit() {
       last_name: lastName.value.trim(),
       first_name: firstName.value.trim(),
       middle_name: middleName.value.trim() || null,
-      // The approved production employee-write API accepts only the four identity fields.
-      // Expanded prototype fields are persisted only through isolated demo mocks.
-      ...(demoMode ? {
       birth_date: birthDate.value || null,
       gender: gender.value || null,
       email: email.value.trim() || null,
@@ -62,7 +58,6 @@ async function submit() {
       work_zone: work_zone.value.trim() || null,
       work_team: work_team.value.trim() || null,
       supervisor_name: supervisor_name.value.trim() || null,
-      } : {}),
     }
     const response = props.edit
       ? await updateEmployee(props.companyId, props.edit.id, props.edit.revision, payload)
@@ -79,23 +74,30 @@ async function submit() {
 <template>
   <form class="employee-record-form" @submit.prevent="submit">
     <BaseNotice v-if="error" tone="error">{{ error }}</BaseNotice>
-    <div class="form-grid">
+    <fieldset class="form-grid">
+      <legend>Личные данные</legend>
       <BaseFormField v-model="personnelNumber" label="Табельный номер" placeholder="Например: 001245" :disabled="saving" required />
       <BaseFormField v-model="lastName" label="Фамилия" :disabled="saving" required />
       <BaseFormField v-model="firstName" label="Имя" :disabled="saving" required />
       <BaseFormField v-model="middleName" label="Отчество" :disabled="saving" />
-      <template v-if="demoMode">
+
       <BaseFormField v-model="birthDate" label="Дата рождения" type="date" :disabled="saving" />
       <BaseSelectField v-model="gender" label="Пол" :options="genderOptions" :disabled="saving" />
+    </fieldset>
+    <fieldset class="form-grid">
+      <legend>Контактные данные</legend>
       <BaseFormField v-model="email" label="Email" type="email" :disabled="saving" autocomplete="email" />
       <BaseFormField v-model="phone" label="Телефон" :disabled="saving" />
       <BaseFormField v-model="address" label="Адрес" :disabled="saving" />
+    </fieldset>
+    <fieldset class="form-grid">
+      <legend>Рабочие данные</legend>
       <BaseFormField v-model="work_site" label="Объект" :disabled="saving" />
       <BaseFormField v-model="work_zone" label="Рабочая зона" :disabled="saving" />
       <BaseFormField v-model="work_team" label="Бригада" :disabled="saving" />
       <BaseFormField v-model="supervisor_name" label="Непосредственный руководитель" :disabled="saving" />
-      </template>
-    </div>
+
+    </fieldset>
     <div class="actions">
       <BaseButton type="button" variant="secondary" :disabled="saving" @click="emit('cancelled')">Отмена</BaseButton>
       <BaseButton type="submit" :disabled="saving">{{ saving ? 'Сохранение…' : edit ? 'Сохранить карточку' : 'Добавить сотрудника' }}</BaseButton>
@@ -105,7 +107,8 @@ async function submit() {
 
 <style scoped>
 .employee-record-form{display:flex;flex-direction:column;gap:var(--space-4);min-height:calc(100dvh - 158px)}
-.form-grid{display:grid;grid-template-columns:1fr;gap:18px}
+.form-grid{display:grid;grid-template-columns:1fr;gap:18px;border:0;padding:0;margin:0;min-width:0}
+legend{padding:0 0 16px;font-size:var(--font-section-heading);font-weight:600}
 .actions{position:sticky;bottom:-34px;z-index:2;display:flex;justify-content:flex-end;gap:var(--space-2);flex-wrap:wrap;margin-top:auto;padding:16px 0;background:var(--color-surface);border-top:1px solid var(--color-stroke)}
 @media(max-width:600px){.employee-record-form{min-height:calc(100dvh - 128px)}.actions{bottom:-28px}.actions :deep(button){flex:1}}
 </style>

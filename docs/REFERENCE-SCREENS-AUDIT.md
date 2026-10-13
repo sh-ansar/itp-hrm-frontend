@@ -72,3 +72,13 @@ The frontend-only Vercel demo may render isolated deterministic mock values to r
 The real `employees` contract now includes core identity/contact/workplace fields such as birth date, gender, email, phone, address, work site, work zone, team and supervisor. The reference card still contains additional sensitive domains (IIN, identity-document details, family/emergency contacts, banking/payroll, contract details and photo) that are not yet fully backed by approved production storage and field-level authorization. Those values remain isolated to demo/reference presentation until the sensitive-data schema, retention, redaction and role rules are approved.
 
 The development aggregate API is implemented separately because training and reserve tables already exist. Reserve free-text notes are intentionally omitted from aggregate lists; full notes remain available only in the appropriately authorized employee card. Existing create/edit endpoints are reused and have optimistic revision checks.
+
+## Core employee form and history follow-up (13 October 2026)
+
+- The original ZIP bytes (67 images) are now available for visual inspection; employee references and the creation drawer were inspected. This does not certify full pixel parity for every screen.
+- The normal employee create/edit drawer now sends the backend-supported birth date, gender, contacts and workplace fields. Shared field controls are grouped into personal, contact and workplace sections.
+- Omitted optional fields remain unchanged for legacy API clients. Explicit null clears one field, with revision checking and transactional audit.
+- The history tab reads a protected backend projection of the last 100 employee events. Company/employee boundaries and HR-only access are tested; raw event context is never exposed.
+- New development record mutations carry employee IDs in their audit events. Older development events without employee IDs are not retroactively fabricated into the card history.
+- Browser verification: all 16 demo workspaces plus employee creation/edit/history passed at 375, 768, 1280 and 1440 px without JavaScript exceptions or document overflow. Actual Vue → Laravel → SQLite creation, editing, reload persistence, single-contact clearing and history rendering also passed in Chromium at 375 px.
+- Backend/browser CI now pins the paired backend revision rather than the earlier backend without these fields. Sensitive fields, photo and document approval are still separate unfinished contracts.

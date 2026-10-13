@@ -17,7 +17,7 @@ async function login(page) {
 test('employee prototype register has real status filter, archive, grouping and column controls', async () => {
   const context = await browser.newContext({
     baseURL: 'http://127.0.0.1:5173',
-    viewport: { width: 375, height: 850 },
+    viewport: { width: 1440, height: 900 },
   })
   const page = await context.newPage()
   try {

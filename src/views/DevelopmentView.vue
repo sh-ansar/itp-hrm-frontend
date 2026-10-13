@@ -78,7 +78,7 @@ const columns = computed(() => isTraining.value
 const editing = ref<TrainingRow | null>(null)
 
 function displayDate(value: unknown): string {
-  if (typeof value !== 'string' || !/^\\d{4}-\\d{2}-\\d{2}$/.test(value)) return '—'
+  if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return '—'
   return value.slice(8, 10) + '.' + value.slice(5, 7) + '.' + value.slice(0, 4)
 }
 
@@ -288,8 +288,8 @@ onMounted(loadCompanies)
 .records-card{min-width:0;overflow:visible}
 /* Wide HR tables scroll inside the card; never squash date cells or actions. */
 .development-page--training .records-card :deep(table){min-width:1290px}
-.development-page--training .records-card :deep(td:nth-last-child(3)),
-.development-page--training .records-card :deep(td:nth-last-child(4)){white-space:nowrap}
+.development-page--training .records-card :deep(td:nth-child(5)),
+.development-page--training .records-card :deep(td:nth-child(6)){white-space:nowrap}
 .records-card :deep(td button){white-space:nowrap;min-width:94px}
 .records-card :deep(.table-scroll){max-width:100%;overflow-x:auto}
 .records-toolbar{display:grid;grid-template-columns:minmax(185px,.8fr) minmax(0,1.8fr);align-items:end;gap:var(--space-4);margin-bottom:var(--space-4)}

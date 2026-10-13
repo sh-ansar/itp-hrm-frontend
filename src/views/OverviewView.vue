@@ -6,8 +6,8 @@ import BasePageHeading from '../components/ui/BasePageHeading.vue'
 const focusModules = [
   { to: '/employees', title: 'Сотрудники', description: 'Реестр, карточки, назначения и история кадровых данных', icon: Users, status: 'Подключено' },
   { to: '/organization', title: 'Оргструктура', description: 'Компании и доступная иерархия подразделений', icon: Network, status: 'Подключено' },
-  { to: '/staffing', title: 'Штатное расписание', description: 'Справочник должностей подключён, версии штатного расписания развиваются', icon: BriefcaseBusiness, status: 'В работе' },
-  { to: '/personnel-actions', title: 'Кадровые действия', description: 'Приём, перевод и увольнение как единые бизнес-операции', icon: UserRoundCheck, status: 'Следующий этап' },
+  { to: '/staffing', title: 'Штатное расписание', description: 'Утверждённые версии, плановые ставки, занятость и вакансии', icon: BriefcaseBusiness, status: 'Подключено' },
+  { to: '/personnel-actions', title: 'Кадровые действия', description: 'Атомарные операции приёма, перевода и увольнения с журналом', icon: UserRoundCheck, status: 'Подключено' },
 ]
 
 const nextModules = [
@@ -28,7 +28,7 @@ const nextModules = [
       <BaseCard class="hero-card">
         <p class="eyebrow">Текущий контур</p>
         <h2>Кадровый учёт уже подключён к реальным API</h2>
-        <p class="muted">Реестр сотрудников, карточка, история назначений, стаж, обучение и кадровый резерв работают на защищённом backend. Следующий шаг — бизнес-процессы и документы.</p>
+        <p class="muted">Реестр сотрудников, назначения, стаж, обучение, кадровый резерв, штатное расписание и журнал кадровых действий подключены к backend. Следующий этап — защищённые документы, приказы и согласования.</p>
         <RouterLink class="primary-link" to="/employees">Перейти к сотрудникам <ArrowRight :size="17" /></RouterLink>
       </BaseCard>
       <BaseCard>
@@ -36,7 +36,7 @@ const nextModules = [
         <div class="focus-list">
           <div><strong>1</strong><span>Полная карточка сотрудника</span></div>
           <div><strong>2</strong><span>Штатное расписание и вакансии</span></div>
-          <div><strong>3</strong><span>Приказы и кадровые действия</span></div>
+          <div><strong>3</strong><span>Приказы и защищённые документы</span></div>
         </div>
       </BaseCard>
     </div>

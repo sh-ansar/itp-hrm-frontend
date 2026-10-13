@@ -12,6 +12,7 @@ Reference: user's ZIP containing **67 images** (44 PNG layouts/fragments, 23 JPG
 | Collapsed/expanded navigation | Shared desktop sidebar, compact rail and mobile overlay | Shell E2E |
 | HR overview | Главная with factual company statistics, short employee register, recent personnel actions and document entry point; no developer/project-status cards | Control preview pending |
 | Archive employees | Effective-dated, company-scoped backend status; cannot classify never-hired people as former employees | Backend SQLite/PostgreSQL tests |
+| Personnel actions | Unified journal for hire/transfer/termination, real backend contracts, responsive mobile cards, frontend demo mutations that update employee state and journal | PR CI pending |
 
 ## Backend gaps and demo-mode rule
 
@@ -39,6 +40,7 @@ The frontend-only Vercel demo may render isolated deterministic mock values to r
 ## Next parity milestones
 
 1. Final visual QA of the completed Employees workspace: register, grouped register, archive, combined reserve/training workspace and employee card tabs.
+2. Visual QA of personnel actions journal and drawer after the next control preview.
 2. Expand employee identity fields via approved sensitive-data schema before implementing reference photo/personal tabs.
 3. Add org-tree visualization and unified staffing/vacancies tabs.
 4. Add company-level training/reserve views and authenticated report exports.

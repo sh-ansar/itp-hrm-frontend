@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import BaseNotice from './components/ui/BaseNotice.vue'
 import { useSessionStore } from './stores/session'
@@ -11,6 +11,7 @@ const session = useSessionStore()
 const logoutError = ref('')
 const mobileNavOpen = ref(false)
 const searchTerm = ref('')
+const contextbarHidden = ref(false)
 
 type NavigationItem = { to: string; label: string; icon: string; detail?: boolean }
 type ShellGroup = { id: 'enterprise' | 'management'; label: string; defaultTo: string; icon: string; items: NavigationItem[] }
@@ -51,6 +52,23 @@ const currentGroupId = computed<ShellGroup['id']>(() => {
 })
 const currentGroup = computed(() => shellGroups.find(group => group.id === currentGroupId.value) ?? shellGroups[0])
 const navigation = computed(() => currentGroup.value.items)
+
+const routeLabels: Record<string, string> = {
+  overview: 'Главная',
+  employees: 'Сотрудники',
+  'employee-detail': 'Карточка сотрудника',
+  organization: 'Организационная структура',
+  staffing: 'Штатное расписание',
+  'personnel-actions': 'Кадровые процессы',
+  timesheets: 'Графики и табель',
+  documents: 'Документы и приказы',
+  learning: 'Обучение',
+  reserve: 'Кадровый резерв',
+  reports: 'Отчёты и аналитика',
+  directories: 'Справочники',
+  settings: 'Настройки',
+}
+const currentPageLabel = computed(() => routeLabels[String(route.name ?? '')] ?? 'Кадры')
 
 function storedCollapsed(): boolean {
   try { return window.localStorage.getItem('hrm-sidebar-collapsed') === 'true' }
@@ -98,6 +116,36 @@ watch(() => route.fullPath, closeMobileNav)
 watch(() => route.query.q, q => {
   if (route.name === 'employees') searchTerm.value = typeof q === 'string' ? q : ''
 }, { immediate: true })
+
+let lastScrollY = 0
+let scrollDistance = 0
+let scrollDirection = 0
+function updateContextbar() {
+  const next = Math.max(0, window.scrollY)
+  const delta = next - lastScrollY
+  const direction = Math.sign(delta)
+  if (direction && direction !== scrollDirection) {
+    scrollDirection = direction
+    scrollDistance = 0
+  }
+  scrollDistance += delta
+  if (next <= 8) {
+    contextbarHidden.value = false
+    scrollDistance = 0
+  } else if (scrollDistance >= 8) {
+    contextbarHidden.value = true
+    scrollDistance = 0
+  } else if (scrollDistance <= -4) {
+    contextbarHidden.value = false
+    scrollDistance = 0
+  }
+  lastScrollY = next
+}
+onMounted(() => {
+  lastScrollY = Math.max(0, window.scrollY)
+  window.addEventListener('scroll', updateContextbar, { passive: true })
+})
+onUnmounted(() => window.removeEventListener('scroll', updateContextbar))
 </script>
 
 <template>
@@ -185,6 +233,18 @@ watch(() => route.query.q, q => {
           </button>
         </div>
       </header>
+
+      <div class="contextbar" :class="{ 'contextbar--hidden': contextbarHidden }">
+        <nav class="shell-breadcrumbs" aria-label="Хлебные крошки">
+          <RouterLink class="context-home" to="/" aria-label="Главная">
+            <img src="/prototype-icons/Home.svg" alt="" />
+          </RouterLink>
+          <span class="context-separator" aria-hidden="true">/</span>
+          <RouterLink :to="currentGroup.defaultTo">{{ currentGroup.label }}</RouterLink>
+          <span class="context-separator" aria-hidden="true">/</span>
+          <span aria-current="page">{{ currentPageLabel }}</span>
+        </nav>
+      </div>
 
       <BaseNotice v-if="logoutError" class="shell-error" tone="error">{{ logoutError }}</BaseNotice>
       <main id="main-content" class="content"><RouterView /></main>
@@ -286,6 +346,22 @@ watch(() => route.query.q, q => {
 }
 .search-submit img{width:18px;height:18px;filter:brightness(0) invert(1)}
 .topbar-tools{min-width:0;display:flex;align-items:center;justify-content:flex-end;gap:var(--space-2)}
+.contextbar{
+  position:sticky;top:var(--shell-topbar);z-index:35;width:100%;height:clamp(40px,2.777778vw,53.333333px);
+  min-height:clamp(40px,2.777778vw,53.333333px);display:flex;align-items:center;padding:0 var(--shell-gutter);
+  background:var(--color-page);border:0;border-radius:var(--space-3) var(--space-3) 0 0;color:var(--color-text);
+  transform:translateY(0);opacity:1;transition:transform .2s ease,opacity .15s ease
+}
+.contextbar--hidden{transform:translateY(-100%);opacity:0;pointer-events:none}
+.shell-breadcrumbs{
+  width:max-content;max-width:100%;display:flex;align-items:center;gap:4px;min-width:0;
+  font-size:var(--font-body-size);line-height:var(--line-body);font-weight:400;color:var(--color-text);white-space:nowrap
+}
+.shell-breadcrumbs a:hover{color:var(--color-primary)}
+.shell-breadcrumbs span[aria-current="page"]{min-width:0;overflow:hidden;text-overflow:ellipsis}
+.context-home{width:16px;height:16px;flex:0 0 16px;display:grid;place-items:center;color:var(--color-muted)}
+.context-home img{width:16px;height:16px;display:block}
+.context-separator{width:18px;display:grid;place-items:center;color:var(--color-muted)}
 .topbar-tool{color:var(--color-primary)}
 .profile{min-width:0;display:flex;align-items:center;gap:var(--space-2);margin-left:var(--space-1)}
 .user-avatar{
@@ -314,6 +390,8 @@ watch(() => route.query.q, q => {
   .shell-section{padding-inline:24px}
 }
 @media(max-width:959px){
+  .contextbar{height:40px;min-height:40px}
+  .shell-breadcrumbs{font-size:12px;line-height:16px}
   .app-shell,.app-shell--collapsed{display:block;min-height:100vh;max-width:100%}
   .sidebar,.app-shell--collapsed .sidebar{
     position:fixed;inset:0 auto 0 0;width:264px;height:100dvh;z-index:50;

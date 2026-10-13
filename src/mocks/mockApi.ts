@@ -70,6 +70,12 @@ const referenceProfileFor=(e:any,i:number)=>({
     {id:id(9002+i*10),title:'Согласие на обработку персональных данных',number:`PD-${210+i}`,issued_on:'2026-01-10',status:'Действует'},
   ],
   history:[
+    ...actions.filter((a:any)=>a.employee_id===e.id).slice(0,8).map((a:any)=>({
+      id:a.id,
+      action:a.action_type==='hire'?'Оформлен приём на работу':a.action_type==='transfer'?'Оформлен перевод':'Оформлено увольнение',
+      actor:'HR-служба',
+      created_at:a.created_at,
+    })),
     {id:id(9500+i*10),action:'Карточка сотрудника создана',actor:'HR-служба',created_at:'2024-01-15T09:20:00+05:00'},
     {id:id(9501+i*10),action:'Обновлены контактные данные',actor:'HR-менеджер',created_at:'2026-06-03T14:10:00+05:00'},
     {id:id(9502+i*10),action:'Обновлено организационное назначение',actor:'HR-служба',created_at:'2026-09-01T10:40:00+05:00'},

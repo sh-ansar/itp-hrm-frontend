@@ -121,6 +121,7 @@ function exportSelected() {
 }
 
 function setTab(next: string) {
+  filtersOpen.value = false
   if (next === 'reserve') {
     router.push({ name: 'reserve' })
     return
@@ -292,7 +293,7 @@ onMounted(loadCompanies)
               placeholder="Поиск по ФИО или табельному номеру" />
             <BaseButton type="submit" variant="secondary">Найти</BaseButton>
           </form>
-          <BaseButton variant="secondary" @click="filtersOpen = !filtersOpen" :aria-expanded="filtersOpen">
+          <BaseButton v-if="activeTab !== 'archive'" variant="secondary" @click="filtersOpen = !filtersOpen" :aria-expanded="filtersOpen">
             <img src="/prototype-icons/Filter.svg" alt="" class="toolbar-icon" /> Фильтры
           </BaseButton>
           <BaseButton variant="secondary" @click="grouped = !grouped">

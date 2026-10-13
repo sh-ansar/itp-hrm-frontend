@@ -85,7 +85,7 @@ const displayRows = computed<Entry[]>(() => {
 table{border-collapse:separate;border-spacing:0;width:100%;min-width:540px;text-align:left;font-size:var(--font-table-size);line-height:var(--line-caption)}
 th{
   position:sticky;top:0;z-index:1;padding:10px 12px;
-  background:var(--color-page);color:var(--color-text);
+  background:var(--color-table-heading);color:var(--color-table-heading-text);
   font-size:var(--font-caption-size);font-weight:600;white-space:nowrap;
   border-bottom:1px solid var(--color-stroke);
 }

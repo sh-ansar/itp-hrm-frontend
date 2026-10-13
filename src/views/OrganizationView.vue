@@ -13,7 +13,7 @@ import BaseColumnPicker from '../components/ui/BaseColumnPicker.vue'
 import DepartmentTreeNode from '../components/DepartmentTreeNode.vue'
 import { downloadCsv } from '../utils/exportCsv'
 import OrgStaffingNav from '../components/OrgStaffingNav.vue'
-import { buildDepartmentForest } from '../utils/departmentTree'
+import { buildDepartmentForest, filterDepartmentForest } from '../utils/departmentTree'
 import DepartmentForm from '../components/DepartmentForm.vue'
 import {
   deleteDepartment,
@@ -42,6 +42,7 @@ const searchQuery = ref('')
 const chartZoom = ref(100)
 const viewModes = [{ id: 'table', label: 'Таблица' }, { id: 'diagram', label: 'Схема' }]
 const departmentForest = computed(() => buildDepartmentForest(departments.value))
+const visibleDepartmentForest = computed(() => filterDepartmentForest(departmentForest.value, searchQuery.value))
 
 const departmentNames = computed(() => new Map(departments.value.map(item => [item.id, item.name])))
 const currentCompany = computed(() => companies.value.find(item => item.id === selectedCompany.value) ?? null)
@@ -261,17 +262,17 @@ onMounted(loadCompanies)
 
       <div v-if="viewMode === 'diagram'" class="structure-diagram" aria-label="Схема подразделений компании">
         <BaseLoadingState v-if="loadingDepartments" label="Загрузка структуры" />
-        <div v-else-if="departmentForest.length && !searchQuery.trim()" class="organization-chart" :style="{ zoom: chartZoom + '%' }">
+        <div v-else-if="visibleDepartmentForest.length" class="organization-chart" :style="{ zoom: chartZoom + '%' }">
           <div class="chart-company">
             <span class="chart-company-label">Компания</span>
             <strong>{{ currentCompany?.name }}</strong>
             <span class="chart-company-count">{{ total }} подразделений</span>
           </div>
           <div class="chart-branches">
-            <DepartmentTreeNode v-for="node in departmentForest" :key="node.id" :node="node" />
+            <DepartmentTreeNode v-for="node in visibleDepartmentForest" :key="node.id" :node="node" />
           </div>
         </div>
-        <p v-else class="diagram-empty">{{ searchQuery.trim() ? 'Для поиска используйте режим «Таблица».' : 'Подразделений для отображения пока нет.' }}</p>
+        <p v-else class="diagram-empty">{{ searchQuery.trim() ? 'Подразделения по запросу не найдены на текущей странице.' : 'Подразделений для отображения пока нет.' }}</p>
       </div>
 
       <div v-else class="org-table-view">

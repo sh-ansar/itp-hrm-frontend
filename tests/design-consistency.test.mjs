@@ -32,12 +32,13 @@ test('HR views do not introduce duplicated local primary buttons or dialog tags'
 test('organization and personnel views reuse shared page controls and typography', () => {
   for (const name of ['OrganizationView.vue', 'EmployeesView.vue']) {
     const content = readFileSync(new URL('views/' + name, root), 'utf8')
-    for (const tag of ['BaseSelectField', 'BasePagination', 'BasePageHeading']) {
+    for (const tag of ['BaseSelectField', 'BasePagination']) {
       assert.match(content, new RegExp('<' + tag + '\\b'), name + ' should use ' + tag)
     }
+    assert.match(content, /<h1[\s>]/i, name + ' must preserve a semantic page heading')
     assert.doesNotMatch(content, /<select[\s>]/i, name + ' should not duplicate select')
   }
-  for (const token of ['--font-label-size', '--font-body-size', '--font-caption-size', '--font-section-heading']) {
+  for (const token of ['--font-page-heading', '--font-label-size', '--font-body-size', '--font-caption-size', '--font-section-heading']) {
     assert.match(tokens, new RegExp(token + ':'))
   }
 })

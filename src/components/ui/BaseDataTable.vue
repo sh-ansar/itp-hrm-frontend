@@ -89,7 +89,7 @@ th{
   font-size:var(--font-caption-size);font-weight:600;white-space:nowrap;
   border-bottom:1px solid var(--color-stroke);
 }
-td{padding:10px 12px;border-bottom:1px solid var(--color-stroke);color:var(--color-text);overflow-wrap:anywhere;vertical-align:middle}
+td{padding:10px 12px;border-bottom:1px solid var(--color-stroke);color:var(--color-text);overflow-wrap:break-word;word-break:normal;vertical-align:middle}
 tbody tr:last-child td{border-bottom:0}
 .table-group th{
   position:static;padding:8px 12px;background:var(--color-soft);color:var(--color-text);

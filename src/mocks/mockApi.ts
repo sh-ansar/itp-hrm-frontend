@@ -26,6 +26,12 @@ const employeeReserve=(e:any,i:number)=>reserve.filter(x=>x.employee_id===e.id).
 const employeeTraining=(e:any,i:number)=>training.filter(x=>x.employee_id===e.id).length
   ? training.filter(x=>x.employee_id===e.id)
   : [{id:id(2000+i),employee_id:e.id,revision:1,personnel_number:e.personnel_number,first_name:e.first_name,last_name:e.last_name,middle_name:e.middle_name,development_status:'ongoing',training_type:'internal',training_mode:'in_person',topic:'Развитие профессиональных компетенций',provider:'Корпоративный университет',city:'Астана',started_on:'2026-10-05',ended_on:'2026-10-07',document_reference:`CERT-${202600+i}`}]
+const employeeChanges = new Map<string, Array<{id: string; action: string; actor: string; created_at: string}>>()
+function recordEmployeeChange(employeeId: string, action: string) {
+  const changes = employeeChanges.get(employeeId) ?? []
+  changes.unshift({id: crypto.randomUUID(), action, actor: 'HR-служба', created_at: new Date().toISOString()})
+  employeeChanges.set(employeeId, changes)
+}
 const referenceProfileFor=(e:any,i:number)=>({
   personal:{
     iin:`9${String(10000000000+i).padStart(11,'0')}`,
@@ -76,6 +82,7 @@ const referenceProfileFor=(e:any,i:number)=>({
     {id:id(9002+i*10),title:'Согласие на обработку персональных данных',number:`PD-${210+i}`,issued_on:'2026-01-10',status:'Действует'},
   ],
   history:[
+    ...(employeeChanges.get(e.id) ?? []),
     ...actions.filter((a:any)=>a.employee_id===e.id).slice(0,8).map((a:any)=>({
       id:a.id,
       action:a.action_type==='hire'?'Оформлен приём на работу':a.action_type==='transfer'?'Оформлен перевод':'Оформлено увольнение',
@@ -122,6 +129,7 @@ export async function mockApiRequest<T>(path:string,options:RequestInit={}):Prom
       employment_status:'unassigned',
     }
     employees.unshift(employee)
+    recordEmployeeChange(employee.id, 'personnel.employee_created')
     return {data:employee} as T
   }
 
@@ -178,7 +186,9 @@ export async function mockApiRequest<T>(path:string,options:RequestInit={}):Prom
     const e:any=employees.find(x=>x.id===m![1])
     if(!e)throw new Error('Сотрудник не найден')
     const body=options.body?JSON.parse(String(options.body)):{}
+    if (body.revision !== e.revision) throw new Error('Запись уже изменена. Обновите карточку перед сохранением')
     Object.assign(e,body,{revision:Number(e.revision||1)+1})
+    recordEmployeeChange(e.id, 'personnel.employee_updated')
     return {data:e} as T
   }
   if(m&&method==='GET'){const e:any=employees.find(x=>x.id===m![1]);if(!e)throw new Error('Сотрудник не найден');const ei=employees.indexOf(e);return {data:e,assignments:e.current_department_id?[{id:id(7000+ei),department_id:e.current_department_id,position_id:e.current_position_id,department_name:e.current_department_name,position_name:e.current_position_name,valid_from:e.current_assignment_valid_from,valid_to:null,basis_reference:`Приказ № HR-${120+ei}`,revision:1}]:[],experience:[{id:id(8000+ei),revision:1,experience_type:'Основное место работы',started_on:'2022-03-01',ended_on:null,basis_reference:'Трудовой договор'}],reserve:employeeReserve(e,ei),training:employeeTraining(e,ei),reference_profile:referenceProfileFor(e,ei),meta:{assignments_limit:50,assignments_truncated:false,extended_sections_visible:true,profile_writes_enabled:true,assignment_writes_enabled:true,employee_writes_enabled:true}} as T}

@@ -167,6 +167,18 @@ const documentColumns = [
   { key: 'issued_on', label: 'Дата' },
   { key: 'status', label: 'Статус' },
 ]
+function historyActionLabel(action: string): string {
+  const labels: Record<string, string> = {
+    'personnel.employee_created': 'Создана карточка сотрудника',
+    'personnel.employee_updated': 'Изменены данные сотрудника',
+    'personnel.profile_record_created': 'Добавлены кадровые сведения',
+    'personnel.profile_record_updated': 'Изменены кадровые сведения',
+    'personnel.assignment_created': 'Добавлено назначение',
+    'personnel.assignment_updated': 'Изменено назначение',
+    'personnel.assignment_transitioned': 'Изменено место работы',
+  }
+  return labels[action] ?? action
+}
 const historyColumns = [
   { key: 'action', label: 'Изменение' },
   { key: 'actor', label: 'Кто изменил' },
@@ -385,12 +397,14 @@ onMounted(load)
         </template>
 
         <EmployeeProfileSection v-if="activeSection === 'history'" title="История изменений">
-          <BaseDataTable :rows="reference?.history ?? []" :columns="historyColumns" row-key="id"
+          <BaseDataTable :rows="profile.history ?? reference?.history ?? []" :columns="historyColumns" row-key="id"
             caption="История изменений карточки сотрудника"
             empty-title="История изменений пуста"
             empty-description="Для карточки ещё нет доступных событий.">
+            <template #cell-action="{ value }">{{ historyActionLabel(String(value)) }}</template>
             <template #cell-created_at="{ value }">{{ new Date(String(value)).toLocaleString('ru-RU') }}</template>
           </BaseDataTable>
+          <BaseNotice v-if="profile.meta.history_truncated" tone="info">Показаны последние {{ profile.meta.history_limit ?? 100 }} изменений.</BaseNotice>
         </EmployeeProfileSection>
       </template>
     </template>

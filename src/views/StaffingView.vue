@@ -34,6 +34,7 @@ const createPlanOpen = ref(false)
 const lineEditorOpen = ref(false)
 const approveOpen = ref(false)
 const editingLine = ref<StaffingPlanLine | null>(null)
+const staffingWritesEnabled = ref(false)
 
 const selectedCompany = computed(() => companies.value.find(item => item.id === company.value) ?? null)
 const selectedPlan = computed(() => detail.value?.data ?? plans.value.find(item => item.id === selectedPlanId.value) ?? null)
@@ -99,6 +100,7 @@ async function loadPlans() {
   try {
     const response = await listStaffingPlans(company.value)
     plans.value = response.data
+    staffingWritesEnabled.value = response.meta.staffing_writes_enabled
     if (!plans.value.some(item => item.id === selectedPlanId.value)) {
       selectedPlanId.value = plans.value[0]?.id ?? ''
     }
@@ -106,6 +108,7 @@ async function loadPlans() {
   } catch (cause) {
     error.value = cause instanceof Error ? cause.message : 'Не удалось загрузить версии штатного расписания'
     plans.value = []
+    staffingWritesEnabled.value = false
     selectedPlanId.value = ''
   } finally {
     planBusy.value = false
@@ -184,7 +187,7 @@ onMounted(refreshCompanies)
       description="Версии штатной структуры, плановые ставки, занятость и вакансии по подразделениям."
     >
       <BaseButton variant="secondary" :disabled="companyBusy || planBusy" @click="refreshCompanies">Обновить</BaseButton>
-      <BaseButton v-if="detail?.meta.staffing_writes_enabled || (!selectedPlanId && plans.length === 0)" @click="createPlanOpen = true">
+      <BaseButton v-if="staffingWritesEnabled" @click="createPlanOpen = true">
         <Plus :size="17" /> Новая версия
       </BaseButton>
     </BasePageHeading>
@@ -217,7 +220,7 @@ onMounted(refreshCompanies)
         <UsersRound :size="30" />
         <h2>Штатное расписание ещё не создано</h2>
         <p>Создайте первую версию, затем добавьте подразделения, должности и количество ставок.</p>
-        <BaseButton @click="createPlanOpen = true"><Plus :size="17" /> Создать первую версию</BaseButton>
+        <BaseButton v-if="staffingWritesEnabled" @click="createPlanOpen = true"><Plus :size="17" /> Создать первую версию</BaseButton>
       </div>
     </BaseCard>
 

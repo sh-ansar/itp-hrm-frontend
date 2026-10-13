@@ -3,6 +3,7 @@ import { ref, useId } from 'vue'
 import BaseButton from './ui/BaseButton.vue'
 import BaseNotice from './ui/BaseNotice.vue'
 import { uploadDocumentPdf, type DocumentRow } from '../api/documents'
+const demoMode = import.meta.env.VITE_DEMO_MODE === 'true'
 
 const props = defineProps<{ companyId: string; document: DocumentRow }>()
 const emit = defineEmits<{ saved: []; cancelled: [] }>()
@@ -34,7 +35,9 @@ async function upload() {
 
 <template>
   <form class="upload-form" @submit.prevent="upload">
-    <BaseNotice tone="info">Файл останется в приватном хранилище. Доступ предоставляется только авторизованным сотрудникам кадровой службы этой компании.</BaseNotice>
+    <BaseNotice tone="info">{{ demoMode
+      ? 'Демоверсия: PDF можно открыть только в этой вкладке до обновления страницы. На сервер файл не загружается.'
+      : 'Файл останется в приватном хранилище. Доступ предоставляется только авторизованным сотрудникам кадровой службы этой компании.' }}</BaseNotice>
     <div class="document-summary">
       <strong>{{ document.title }}</strong>
       <span>{{ document.document_number || 'Без номера' }}</span>

@@ -46,8 +46,8 @@ jobs:
           cat "$RUNNER_TEMP/hrm-demo-vite.log"
           exit 1
 
-      - name: Test all demo routes and working department/position mutations
-        run: node --test --test-concurrency=1 tests/e2e/demo-current-functionality.test.mjs
+      - name: Test demo routes, actions, directories and PDF attachment preview
+        run: node --test --test-concurrency=1 tests/e2e/demo-current-functionality.test.mjs tests/e2e/demo-documents-pdf.test.mjs
 
       - name: Print diagnostics on failure
         if: failure()

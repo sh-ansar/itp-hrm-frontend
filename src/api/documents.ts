@@ -1,5 +1,6 @@
 import { apiRequest, ApiError } from './client'
 import { readXsrfCookie } from './csrf'
+import { getDemoDocumentUrl, rememberDemoDocumentFile } from '../mocks/demoDocumentFiles'
 
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 const base = (import.meta.env.VITE_API_BASE_URL || '/api/v1').replace(/\/$/, '')
@@ -90,7 +91,7 @@ export function createDocumentDraft(companyId: string, data: DocumentDraft): Pro
 export function documentFileUrl(companyId: string, documentId: string): string {
   validateId(companyId)
   validateId(documentId)
-  if (import.meta.env.VITE_DEMO_MODE === 'true') return '#demo-document'
+  if (import.meta.env.VITE_DEMO_MODE === 'true') return getDemoDocumentUrl(documentId) ?? '#demo-document'
   // Same-origin authenticated download; never expose physical storage paths.
   return `${base}/companies/${companyId}/documents/${documentId}/file`
 }
@@ -108,10 +109,15 @@ export async function uploadDocumentPdf(
     throw new Error('Выберите PDF-файл размером до 5 МБ')
   }
   if (import.meta.env.VITE_DEMO_MODE === 'true') {
-    return apiRequest(`/companies/${companyId}/documents/${documentId}/file`, {
-      method: 'POST',
-      body: JSON.stringify({ revision }),
-    })
+    const response = await apiRequest<{ data: { id: string; has_file: true; revision: number } }>(
+      `/companies/${companyId}/documents/${documentId}/file`, {
+        method: 'POST',
+        body: JSON.stringify({ revision }),
+      },
+    )
+    // Only show a preview when the mock accepted the revision-safe upload.
+    rememberDemoDocumentFile(documentId, file)
+    return response
   }
   const csrf = readXsrfCookie()
   if (!csrf) throw new ApiError('invalid-response', 419, 'Сессия истекла. Обновите страницу.')

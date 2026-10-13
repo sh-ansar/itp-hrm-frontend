@@ -14,6 +14,7 @@ import DocumentMobileList from '../components/DocumentMobileList.vue'
 import EmployeeLookupField from '../components/EmployeeLookupField.vue'
 import DocumentDraftForm from '../components/DocumentDraftForm.vue'
 import DocumentUploadForm from '../components/DocumentUploadForm.vue'
+import { getDemoDocumentUrl } from '../mocks/demoDocumentFiles'
 import { listCompanies, type CompanyRecord } from '../api/organization'
 import {
   documentFileUrl,
@@ -134,7 +135,9 @@ async function documentSaved() {
 }
 async function fileSaved() {
   uploadTarget.value = null
-  success.value = 'PDF прикреплён к документу.'
+  success.value = demoMode
+    ? 'PDF добавлен в демоверсию. Открыть его можно до обновления страницы; на сервер файл не отправляется.'
+    : 'PDF прикреплён к документу.'
   await loadDocuments()
 }
 
@@ -244,7 +247,13 @@ onMounted(loadCompanies)
               </span>
             </template>
             <template #cell-file="{ row }">
-              <span v-if="row.has_file && demoMode" class="file-ready"><FileCheck2 :size="15" /> PDF прикреплён</span>
+              <a v-if="row.has_file && demoMode && getDemoDocumentUrl(row.id)" class="download-link"
+                :href="documentFileUrl(company, row.id)" target="_blank" rel="noopener">
+                <FileCheck2 :size="15" /> Открыть PDF
+              </a>
+              <span v-else-if="row.has_file && demoMode" class="file-ready">
+                <FileCheck2 :size="15" /> Демо: файл недоступен
+              </span>
               <a v-else-if="row.has_file" class="download-link" :href="documentFileUrl(company, row.id)" target="_blank" rel="noopener">
                 Открыть PDF
               </a>
@@ -265,7 +274,9 @@ onMounted(loadCompanies)
       </BaseCard>
 
       <BaseNotice tone="info">
-        Реестр доступен только кадровым ролям. PDF хранится приватно и скачивается через авторизованный API.
+        {{ demoMode
+          ? 'Демонстрация: PDF хранится только в текущем окне браузера до перезагрузки. Образцы без загруженного файла не открываются.'
+          : 'Реестр доступен только кадровым ролям. PDF хранится приватно и скачивается через авторизованный API.' }}
       </BaseNotice>
     </template>
 

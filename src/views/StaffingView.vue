@@ -9,7 +9,6 @@ import BaseDialog from '../components/ui/BaseDialog.vue'
 import BaseFormField from '../components/ui/BaseFormField.vue'
 import BaseLoadingState from '../components/ui/BaseLoadingState.vue'
 import BaseNotice from '../components/ui/BaseNotice.vue'
-import BasePageHeading from '../components/ui/BasePageHeading.vue'
 import BaseSelectField from '../components/ui/BaseSelectField.vue'
 import BaseColumnPicker from '../components/ui/BaseColumnPicker.vue'
 import BasePagination from '../components/ui/BasePagination.vue'
@@ -316,34 +315,31 @@ onMounted(refreshCompanies)
 <template>
   <section class="staffing-page">
     <OrgStaffingNav />
-    <BasePageHeading
-       :title="activeView === 'vacant' ? 'Вакантные позиции' : activeView === 'changes' ? 'Изменения штатного расписания' : 'Штатное расписание'"
-       :description="activeView === 'vacant' ? 'Открытые штатные единицы по подразделениям.' : activeView === 'changes' ? 'Версии и периоды действия штатного расписания.' : 'Штатные единицы, ставки и занятость.'"
-    >
-      <BaseButton v-if="activeView === 'changes' ? historyRows.length : filteredLines.length" variant="secondary" @click="exportCurrentRows">Экспорт CSV</BaseButton>
-      <BaseButton v-if="staffingWritesEnabled && activeView === 'all'" @click="createPlanOpen = true">
-        <Plus :size="17" /> Новая версия
-      </BaseButton>
-    </BasePageHeading>
-
-
     <BaseNotice v-if="error" tone="error">{{ error }}</BaseNotice>
 
-    <BaseCard>
-      <BaseLoadingState v-if="companyBusy" label="Загрузка компаний" />
-      <div v-else-if="companies.length" class="toolbar">
+    <BaseLoadingState v-if="companyBusy" label="Загрузка компаний" />
+    <BaseNotice v-else-if="!companies.length && !error" tone="info">Нет доступных компаний.</BaseNotice>
+
+    <div v-else class="staffing-heading">
+      <h1>
+        {{ activeView === 'vacant' ? 'Вакантные позиции' : activeView === 'changes' ? 'Изменения штатного расписания' : 'Штатное расписание' }}
+      </h1>
+      <div class="staffing-heading-actions">
         <BaseSelectField v-model="company" label="Компания" :options="companies" />
         <BaseSelectField
-          v-if="plans.length"
+          v-if="activeView !== 'changes' && plans.length"
           v-model="selectedPlanId"
           label="Версия штатного расписания"
           :options="planOptions"
           :disabled="planBusy"
         />
-
+        <BaseButton v-if="activeView === 'changes' ? historyRows.length : filteredLines.length"
+          variant="secondary" @click="exportCurrentRows">Экспорт CSV</BaseButton>
+        <BaseButton v-if="staffingWritesEnabled && activeView === 'all'" @click="createPlanOpen = true">
+          <Plus :size="17" /> Новая версия
+        </BaseButton>
       </div>
-      <BaseNotice v-else-if="!error" tone="info">Нет доступных компаний.</BaseNotice>
-    </BaseCard>
+    </div>
 
     <BaseCard v-if="activeView === 'changes' && company">
       <div class="section-heading">
@@ -540,8 +536,10 @@ onMounted(refreshCompanies)
  .line-toolbar :deep(.column-settings){display:none}
 }
 .staffing-page :deep(.base-card){box-shadow:var(--shadow-card)}
-.staffing-page :deep(.page-heading){margin-bottom:0}
-.toolbar{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-items:end;gap:var(--space-4)}
+.staffing-heading{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:end;gap:16px}
+.staffing-heading h1{margin:0;color:var(--color-text);font-size:24px;line-height:1.2;font-weight:700}
+.staffing-heading-actions{display:flex;align-items:end;justify-content:flex-end;gap:10px;min-width:0;flex-wrap:wrap}
+.staffing-heading-actions :deep(.base-select-field){width:210px;max-width:210px}
 .empty-state{display:grid;justify-items:center;text-align:center;gap:10px;padding:40px 20px;color:var(--color-muted)}
 .empty-state h2{margin:0;color:var(--color-text);font-size:var(--font-section-heading)}
 .empty-state p{max-width:620px;margin:0 0 8px;line-height:1.5}
@@ -567,6 +565,8 @@ onMounted(refreshCompanies)
 .section-copy{margin:5px 0 0;color:var(--color-muted);font-size:12px;line-height:1.45}
 .line-toolbar{display:flex;align-items:end;gap:var(--space-2);flex-wrap:wrap;margin-bottom:var(--space-3)}
 .line-toolbar .line-search{min-width:230px;flex:1}
+.line-search :deep(label){position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap}
+.line-search :deep(input){font-size:13px}
 .staffing-page :deep(.table-scroll){border-radius:var(--radius-md)}
 .staffing-page :deep(.table-scroll th){padding:11px 12px;background:var(--color-table-heading)}
 .staffing-page :deep(.table-scroll td){padding:10px 12px}
@@ -583,5 +583,14 @@ onMounted(refreshCompanies)
 .approve-copy p{margin:0}
 .approve-actions{display:flex;justify-content:flex-end;gap:var(--space-2)}
 @media(max-width:1000px){.staffing-summary-strip{grid-template-columns:repeat(2,minmax(0,1fr))}.staffing-summary-item:nth-child(2){border-right:0}.staffing-summary-item:nth-child(-n+2){border-bottom:1px solid var(--color-stroke)}}
-@media(max-width:650px){.toolbar{grid-template-columns:1fr}.line-toolbar .line-search{min-width:100%;flex-basis:100%}.staffing-summary-item{padding:11px 12px}.staffing-summary-item strong{font-size:18px}.snapshot-row{display:grid;grid-template-columns:1fr}.snapshot-row :deep(.field){width:100%}.snapshot-row :deep(button){width:100%}.plan-actions{width:100%}.plan-actions :deep(button){flex:1}.approve-actions :deep(button){flex:1}}
+@media(max-width:900px){
+ .staffing-heading{grid-template-columns:1fr}
+ .staffing-heading-actions{justify-content:flex-start}
+}
+@media(max-width:650px){
+ .staffing-heading h1{font-size:20px}
+ .staffing-heading-actions{width:100%;display:grid;grid-template-columns:1fr}
+ .staffing-heading-actions :deep(.base-select-field){width:100%;max-width:none}
+ .staffing-heading-actions :deep(.base-button){width:100%}
+ .line-toolbar .line-search{min-width:100%;flex-basis:100%}.staffing-summary-item{padding:11px 12px}.staffing-summary-item strong{font-size:18px}.snapshot-row{display:grid;grid-template-columns:1fr}.snapshot-row :deep(.field){width:100%}.snapshot-row :deep(button){width:100%}.plan-actions{width:100%}.plan-actions :deep(button){flex:1}.approve-actions :deep(button){flex:1}}
 </style>

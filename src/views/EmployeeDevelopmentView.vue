@@ -10,8 +10,11 @@ import BaseSelectField from '../components/ui/BaseSelectField.vue'
 import BaseViewTabs from '../components/ui/BaseViewTabs.vue'
 import { listCompanies, type CompanyRecord } from '../api/organization'
 import {
-  getCompanyDevelopment, trainingModeName, developmentStatusName,
-  type TrainingRow, type ReserveRow,
+  developmentStatusName,
+  getCompanyDevelopment,
+  trainingModeName,
+  type ReserveRow,
+  type TrainingRow,
 } from '../api/development'
 
 const router = useRouter()
@@ -31,22 +34,28 @@ const employeeTabs = [
   { id: 'development', label: 'Кадровый резерв и обучение' },
   { id: 'archive', label: 'Архив сотрудников' },
 ]
-const selectedCompany = computed(() => companies.value.find(item => item.id === company.value))
+const selectedCompany = computed(() => companies.value.find(item => item.id === company.value) ?? null)
 
 function setEmployeeTab(next: string) {
   if (next === 'register') router.push({ name: 'employees' })
   else if (next === 'archive') router.push({ name: 'employees', query: { status: 'archived' } })
 }
-
 function employeeRoute(employeeId: string) {
-  return { name: 'employee-detail', params: { company: company.value, employee: employeeId }, query: { tab: 'development' } }
+  return {
+    name: 'employee-detail',
+    params: { company: company.value, employee: employeeId },
+    query: { tab: 'development' },
+  }
 }
 function personName(row: { last_name: string; first_name: string; middle_name: string | null }) {
   return [row.last_name, row.first_name, row.middle_name].filter(Boolean).join(' ')
 }
 function displayDate(value: unknown): string {
   if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return '—'
-  return value.slice(8,10) + '.' + value.slice(5,7) + '.' + value.slice(0,4)
+  return value.slice(8,10)+'.'+value.slice(5,7)+'.'+value.slice(0,4)
+}
+function trainingPeriod(row: TrainingRow): string {
+  return displayDate(row.started_on) + ' — ' + (row.ended_on ? displayDate(row.ended_on) : 'по н.в.')
 }
 
 async function loadCompanies() {
@@ -55,7 +64,9 @@ async function loadCompanies() {
   try {
     const result = await listCompanies()
     companies.value = result.data
-    company.value = result.data[0]?.id ?? ''
+    if (!companies.value.some(item => item.id === company.value)) {
+      company.value = result.data[0]?.id ?? ''
+    }
   } catch (cause) {
     error.value = cause instanceof Error ? cause.message : 'Не удалось загрузить компании'
     companies.value = []
@@ -86,8 +97,9 @@ async function loadWorkspace() {
     trainingSummary.value = trainingResult.meta.summary
     reserveSummary.value = reserveResult.meta.summary
   } catch (cause) {
-    if (current === generation)
+    if (current === generation) {
       error.value = cause instanceof Error ? cause.message : 'Не удалось загрузить кадровый резерв и обучение'
+    }
   } finally {
     if (current === generation) loading.value = false
   }
@@ -114,7 +126,7 @@ onMounted(loadCompanies)
       <div class="development-heading">
         <div>
           <h1>Кадровый резерв и обучение</h1>
-          <p>{{ selectedCompany?.name }}</p>
+          <p>{{ selectedCompany?.name }} · развитие и кадровый потенциал сотрудников.</p>
         </div>
         <div class="company-select">
           <BaseSelectField v-model="company" label="Компания" :options="companies" />
@@ -126,86 +138,138 @@ onMounted(loadCompanies)
           <ShieldCheck :size="19" aria-hidden="true" />
           <span>В кадровом резерве</span>
           <strong>{{ loading ? '…' : reserveSummary.active ?? 0 }}</strong>
+          <small>активных записей</small>
         </BaseCard>
         <BaseCard class="summary-block">
           <ShieldCheck :size="19" aria-hidden="true" />
           <span>Всего записей резерва</span>
           <strong>{{ loading ? '…' : reserveSummary.total ?? 0 }}</strong>
+          <small>за весь период</small>
         </BaseCard>
         <BaseCard class="summary-block">
           <BookOpenCheck :size="19" aria-hidden="true" />
           <span>Обучение в процессе</span>
           <strong>{{ loading ? '…' : trainingSummary.ongoing ?? 0 }}</strong>
+          <small>активных программ</small>
         </BaseCard>
         <BaseCard class="summary-block">
           <BookOpenCheck :size="19" aria-hidden="true" />
-          <span>Запланировано обучение</span>
+          <span>Запланировано</span>
           <strong>{{ loading ? '…' : trainingSummary.planned ?? 0 }}</strong>
+          <small>программ обучения</small>
         </BaseCard>
       </div>
 
       <div class="development-grid">
         <BaseCard class="workspace-card">
           <div class="workspace-title">
-            <div><h2>Кадровый резерв</h2><p>{{ reserveSummary.total ?? reserve.length }} записей</p></div>
+            <div>
+              <h2>Кадровый резерв</h2>
+              <p>{{ reserveSummary.total ?? reserve.length }} записей · показаны последние доступные</p>
+            </div>
             <RouterLink to="/reserve">Открыть реестр <ArrowRight :size="15" /></RouterLink>
           </div>
-          <BaseDataTable :rows="reserve.slice(0, 8)" row-key="id" :loading="loading"
-            caption="Кадровый резерв сотрудников"
-            :columns="[
-              { key:'employee', label:'Сотрудник' },
-              { key:'target_position', label:'Резервируемая должность' },
-              { key:'reserve_level', label:'Уровень' },
-              { key:'development_status', label:'Статус' },
-            ]"
-            empty-title="Кадровый резерв пуст"
-            empty-description="Записи появятся после добавления сотрудников в резерв.">
-            <template #cell-employee="{ row }">
-              <div class="employee-cell">
-                <RouterLink :to="employeeRoute(row.employee_id)">{{ personName(row) }}</RouterLink>
-                <span>{{ row.personnel_number }}</span>
-              </div>
-            </template>
-            <template #cell-development_status="{ row }">
-              <span class="status-pill" :class="'status-pill--' + row.development_status">
-                {{ developmentStatusName('reserve', row.development_status) }}
-              </span>
-            </template>
-          </BaseDataTable>
+
+          <div class="workspace-desktop">
+            <BaseDataTable :rows="reserve.slice(0,8)" row-key="id" :loading="loading"
+              caption="Кадровый резерв сотрудников"
+              :columns="[
+                { key:'employee', label:'Сотрудник' },
+                { key:'target_position', label:'Резервируемая должность' },
+                { key:'reserve_level', label:'Уровень' },
+                { key:'development_status', label:'Статус' },
+              ]"
+              empty-title="Кадровый резерв пуст"
+              empty-description="Записи появятся после добавления сотрудников в резерв.">
+              <template #cell-employee="{ row }">
+                <div class="employee-cell">
+                  <RouterLink :to="employeeRoute(row.employee_id)">{{ personName(row) }}</RouterLink>
+                  <span>{{ row.personnel_number }}</span>
+                </div>
+              </template>
+              <template #cell-development_status="{ row }">
+                <span class="status-pill" :class="'status-pill--'+row.development_status">
+                  {{ developmentStatusName('reserve',row.development_status) }}
+                </span>
+              </template>
+            </BaseDataTable>
+          </div>
+
+          <div class="workspace-mobile">
+            <article v-for="row in reserve.slice(0,8)" :key="row.id" class="workspace-mobile-card">
+              <header>
+                <div class="employee-cell">
+                  <RouterLink :to="employeeRoute(row.employee_id)">{{ personName(row) }}</RouterLink>
+                  <span>{{ row.personnel_number }}</span>
+                </div>
+                <span class="status-pill" :class="'status-pill--'+row.development_status">
+                  {{ developmentStatusName('reserve',row.development_status) }}
+                </span>
+              </header>
+              <strong>{{ row.target_position }}</strong>
+              <dl>
+                <div><dt>Уровень</dt><dd>{{ row.reserve_level }}</dd></div>
+                <div><dt>Вид</dt><dd>{{ row.reserve_type }}</dd></div>
+              </dl>
+            </article>
+          </div>
         </BaseCard>
 
         <BaseCard class="workspace-card">
           <div class="workspace-title">
-            <div><h2>Обучение</h2><p>{{ trainingSummary.total ?? training.length }} записей</p></div>
+            <div>
+              <h2>Обучение</h2>
+              <p>{{ trainingSummary.total ?? training.length }} записей · показаны последние доступные</p>
+            </div>
             <RouterLink to="/learning">Открыть реестр <ArrowRight :size="15" /></RouterLink>
           </div>
-          <BaseDataTable :rows="training.slice(0, 8)" row-key="id" :loading="loading"
-            caption="Обучение сотрудников"
-            :columns="[
-              { key:'employee', label:'Сотрудник' },
-              { key:'topic', label:'Тема' },
-              { key:'training_mode', label:'Формат' },
-              { key:'started_on', label:'Период' },
-              { key:'development_status', label:'Статус' },
-            ]"
-            empty-title="Обучение не зарегистрировано"
-            empty-description="Записи появятся после добавления обучения сотрудникам.">
-            <template #cell-employee="{ row }">
-              <div class="employee-cell">
-                <RouterLink :to="employeeRoute(row.employee_id)">{{ personName(row) }}</RouterLink>
-                <span>{{ row.personnel_number }}</span>
-              </div>
-            </template>
-            <template #cell-training_mode="{ value }">{{ trainingModeName(String(value)) }}</template>
-            <template #cell-started_on="{ row }">
-              {{ displayDate(row.started_on) }} — {{ row.ended_on ? displayDate(row.ended_on) : 'по н.в.' }}
-            </template>
-            <template #cell-development_status="{ row }">
-              <span class="status-pill" :class="'status-pill--' + row.development_status">
-                {{ developmentStatusName('training', row.development_status) }}
-              </span>
-            </template>
-          </BaseDataTable>
+
+          <div class="workspace-desktop">
+            <BaseDataTable :rows="training.slice(0,8)" row-key="id" :loading="loading"
+              caption="Обучение сотрудников"
+              :columns="[
+                { key:'employee', label:'Сотрудник' },
+                { key:'topic', label:'Тема' },
+                { key:'training_mode', label:'Формат' },
+                { key:'started_on', label:'Период' },
+                { key:'development_status', label:'Статус' },
+              ]"
+              empty-title="Обучение не зарегистрировано"
+              empty-description="Записи появятся после добавления обучения сотрудникам.">
+              <template #cell-employee="{ row }">
+                <div class="employee-cell">
+                  <RouterLink :to="employeeRoute(row.employee_id)">{{ personName(row) }}</RouterLink>
+                  <span>{{ row.personnel_number }}</span>
+                </div>
+              </template>
+              <template #cell-training_mode="{ value }">{{ trainingModeName(String(value)) }}</template>
+              <template #cell-started_on="{ row }">{{ trainingPeriod(row) }}</template>
+              <template #cell-development_status="{ row }">
+                <span class="status-pill" :class="'status-pill--'+row.development_status">
+                  {{ developmentStatusName('training',row.development_status) }}
+                </span>
+              </template>
+            </BaseDataTable>
+          </div>
+
+          <div class="workspace-mobile">
+            <article v-for="row in training.slice(0,8)" :key="row.id" class="workspace-mobile-card">
+              <header>
+                <div class="employee-cell">
+                  <RouterLink :to="employeeRoute(row.employee_id)">{{ personName(row) }}</RouterLink>
+                  <span>{{ row.personnel_number }}</span>
+                </div>
+                <span class="status-pill" :class="'status-pill--'+row.development_status">
+                  {{ developmentStatusName('training',row.development_status) }}
+                </span>
+              </header>
+              <strong>{{ row.topic }}</strong>
+              <dl>
+                <div><dt>Формат</dt><dd>{{ trainingModeName(row.training_mode) }}</dd></div>
+                <div><dt>Период</dt><dd>{{ trainingPeriod(row) }}</dd></div>
+              </dl>
+            </article>
+          </div>
         </BaseCard>
       </div>
     </template>
@@ -215,39 +279,59 @@ onMounted(loadCompanies)
 </template>
 
 <style scoped>
-.employee-development-page{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;min-width:0;max-width:100%}
+.employee-development-page{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;min-width:0;max-width:100%;overflow-x:clip}
 .registry-breadcrumb{display:flex;align-items:center;gap:10px;min-height:24px;color:var(--color-muted);font-size:12px}
 .registry-breadcrumb img{width:15px;height:15px}
 .registry-breadcrumb strong{font-weight:500;color:var(--color-text)}
 .development-heading{display:flex;align-items:end;justify-content:space-between;gap:16px;flex-wrap:wrap}
 .development-heading h1{margin:0;color:var(--color-text);font-size:21px;line-height:1.25;font-weight:700;letter-spacing:-.025em}
 .development-heading p{margin:6px 0 0;color:var(--color-muted);font-size:12px}
-.company-select{min-width:190px;max-width:280px;flex:1}
+.company-select{width:220px;max-width:220px}
 .development-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
-.summary-block{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px 9px;min-height:112px}
+.summary-block{display:grid;grid-template-columns:minmax(0,1fr) auto;align-content:start;gap:5px 9px;min-height:104px}
 .summary-block svg{grid-column:2;grid-row:1;color:var(--color-primary)}
-.summary-block span{grid-column:1;grid-row:1;color:var(--color-muted);font-size:12px;line-height:1.4}
-.summary-block strong{grid-column:1/-1;color:var(--color-primary);font-size:25px;line-height:1.15}
+.summary-block span{grid-column:1;grid-row:1;color:var(--color-muted);font-size:12px;font-weight:600}
+.summary-block strong{grid-column:1/-1;color:var(--color-primary);font-size:24px;line-height:1.1}
+.summary-block small{grid-column:1/-1;color:var(--color-muted);font-size:10px;line-height:1.4}
 .development-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:start}
 .workspace-card{min-width:0}
 .workspace-title{display:flex;align-items:end;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:14px}
 .workspace-title h2{margin:0;color:var(--color-text);font-size:16px;line-height:1.35;font-weight:600}
-.workspace-title p{margin:4px 0 0;color:var(--color-muted);font-size:11px}
-.workspace-title a{display:inline-flex;align-items:center;gap:5px;color:var(--color-primary);font-size:12px;font-weight:600}
-.employee-cell{display:grid;gap:3px;min-width:160px}
-.employee-cell a{color:var(--color-text);font-weight:600}
+.workspace-title p{margin:4px 0 0;color:var(--color-muted);font-size:10px}
+.workspace-title a{display:inline-flex;align-items:center;gap:5px;color:var(--color-primary);font-size:11px;font-weight:700}
+.workspace-desktop{min-width:0}
+.workspace-desktop :deep(.table-scroll){overflow-x:auto;overflow-y:hidden}
+.workspace-desktop :deep(table){min-width:620px}
+.employee-cell{display:grid;gap:3px;min-width:0}
+.employee-cell a{color:var(--color-text);font-weight:600;overflow-wrap:anywhere}
 .employee-cell a:hover{color:var(--color-primary)}
-.employee-cell span{color:var(--color-muted);font-size:11px}
-.status-pill{display:inline-flex;padding:5px 9px;border-radius:999px;background:var(--color-soft);font-size:10px;font-weight:700;white-space:nowrap}
+.employee-cell span{color:var(--color-muted);font-size:10px}
+.status-pill{display:inline-flex;padding:5px 8px;border-radius:999px;background:var(--color-soft);font-size:10px;font-weight:700;white-space:nowrap}
 .status-pill--active,.status-pill--ongoing{background:var(--color-success-surface);color:var(--color-success)}
 .status-pill--planned{background:var(--color-accent-soft);color:var(--color-primary)}
 .status-pill--completed{background:var(--color-soft);color:var(--color-muted)}
 .status-pill--alumni{background:var(--color-warning-surface);color:var(--color-warning)}
-@media(max-width:1120px){.development-summary{grid-template-columns:repeat(2,minmax(0,1fr))}.development-grid{grid-template-columns:1fr}}
+.workspace-mobile{display:none}
+.workspace-mobile-card{display:grid;gap:10px;padding:12px;border:1px solid var(--color-stroke);border-radius:var(--radius-md);background:var(--color-surface)}
+.workspace-mobile-card header{display:flex;align-items:start;justify-content:space-between;gap:10px}
+.workspace-mobile-card>strong{color:var(--color-text);font-size:12px;line-height:1.4}
+.workspace-mobile-card dl{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin:0}
+.workspace-mobile-card dl div{display:grid;gap:3px;padding:8px;background:var(--color-soft);border-radius:var(--radius-sm)}
+.workspace-mobile-card dt{color:var(--color-muted);font-size:9px}
+.workspace-mobile-card dd{margin:0;color:var(--color-text);font-size:10px;font-weight:600;overflow-wrap:anywhere}
+@media(max-width:1120px){
+  .development-summary{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .development-grid{grid-template-columns:1fr}
+}
+@media(max-width:760px){
+  .workspace-desktop{display:none}
+  .workspace-mobile{display:grid;gap:8px}
+}
 @media(max-width:650px){
   .development-summary{gap:8px}
-  .summary-block{min-height:100px}
-  .summary-block strong{font-size:22px}
   .company-select{max-width:none;width:100%}
+  .summary-block{min-height:94px}
+  .summary-block strong{font-size:21px}
 }
+@media(max-width:420px){.workspace-mobile-card dl{grid-template-columns:1fr}}
 </style>

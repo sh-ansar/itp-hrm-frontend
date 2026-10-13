@@ -23,7 +23,8 @@
       "fix/directories-prototype-parity": false,
       "feat/settings-workspace": false,
       "feat/leaves-prototype": false,
-      "chore/remove-dead-placeholders": false
+      "chore/remove-dead-placeholders": false,
+      "refactor/development-registry-parity-final": false
     }
   }
 }

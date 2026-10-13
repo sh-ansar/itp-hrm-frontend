@@ -3,7 +3,11 @@ import type { PagedResponse } from './organization'
 
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
+export type EmploymentStatus = 'active' | 'planned' | 'archived' | 'unassigned'
+export type EmploymentFilter = EmploymentStatus | 'all'
+
 export interface EmployeeRecord extends Record<string, unknown> {
+  employment_status?: EmploymentStatus
   id: string
   personnel_number: string
   last_name: string
@@ -16,14 +20,17 @@ export interface EmployeeRecord extends Record<string, unknown> {
 }
 
 export interface EmployeeListResponse extends PagedResponse<EmployeeRecord> {
-  meta: PagedResponse<EmployeeRecord>['meta'] & { employee_writes_enabled: boolean }
+  meta: PagedResponse<EmployeeRecord>['meta'] & { employee_writes_enabled: boolean; status_filter?: EmploymentFilter }
 }
 
-export function listEmployees(companyId: string, page = 1, search = ''): Promise<EmployeeListResponse> {
+export function listEmployees(
+  companyId: string, page = 1, search = '', status: EmploymentFilter = 'all',
+): Promise<EmployeeListResponse> {
   if (!uuid.test(companyId)) throw new Error('Некорректный идентификатор компании')
   if (!Number.isSafeInteger(page) || page < 1) throw new Error('Некорректная страница')
   const params = new URLSearchParams({ per_page: '25', page: String(page) })
   if (search.trim()) params.set('search', search.trim())
+  if (status !== 'all') params.set('status', status)
   return apiRequest<EmployeeListResponse>(`/companies/${companyId}/employees?${params.toString()}`)
 }
 

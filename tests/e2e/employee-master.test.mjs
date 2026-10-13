@@ -27,7 +27,7 @@ test('HR creates and edits an employee master record from the redesigned UI', as
     await page.getByRole('heading', { name: 'Реестр сотрудников' }).waitFor()
 
     await page.getByRole('button', { name: 'Добавить сотрудника' }).click()
-    const createDialog = page.getByRole('dialog', { name: 'Новый сотрудник' })
+    const createDialog = page.getByRole('dialog', { name: 'Добавить сотрудника' })
     await createDialog.waitFor()
     await createDialog.getByLabel('Табельный номер').fill('E2E-NEW-01')
     await createDialog.getByLabel('Фамилия').fill('Новый')

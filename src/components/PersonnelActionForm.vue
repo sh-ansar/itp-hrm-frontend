@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
+import { localTodayISO } from '../utils/localDate'
 import BaseButton from './ui/BaseButton.vue'
 import BaseFormField from './ui/BaseFormField.vue'
 import BaseNotice from './ui/BaseNotice.vue'
@@ -31,7 +32,7 @@ const detailBusy=ref(false)
 const operation=ref<PersonnelActionType>('hire')
 const departmentId=ref('')
 const positionId=ref('')
-const effectiveOn=ref(new Date().toISOString().slice(0,10))
+const effectiveOn=ref(localTodayISO())
 const basisReference=ref('')
 const notes=ref('')
 const departments=ref<DepartmentRecord[]>([])

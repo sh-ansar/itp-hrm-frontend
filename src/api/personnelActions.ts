@@ -32,6 +32,11 @@ export interface PersonnelActionListResponse{
     last_page:number
     per_page:number
     total:number
+    summary?: {
+      hire:number
+      transfer:number
+      termination:number
+    }
   }
 }
 

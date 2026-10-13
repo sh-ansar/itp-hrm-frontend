@@ -44,7 +44,10 @@ test('HR conducts transfer termination and rehire through personnel actions work
     await dialog.getByRole('button',{name:/Провести: Перевод/}).click()
 
     const transferRow=page.getByRole('row',{name:/ORDER-E2E-TRANSFER/})
-    await transferRow.waitFor()
+    await Promise.race([
+      transferRow.waitFor({timeout:10000}),
+      dialog.getByRole('alert').waitFor({timeout:10000}).then(async()=>{throw new Error('Transfer rejected: '+await dialog.getByRole('alert').innerText())}),
+    ])
     assert.match(await transferRow.innerText(),/Перевод/)
     assert.match(await transferRow.innerText(),/Visible Finance.*Visible Finance Child/)
 

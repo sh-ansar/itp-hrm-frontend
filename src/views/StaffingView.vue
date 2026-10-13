@@ -237,6 +237,8 @@ onMounted(refreshCompanies)
       </BaseButton>
     </BasePageHeading>
 
+    <BaseViewTabs v-model="activeView" :options="viewTabs" label="Штатные представления" />
+
     <BaseNotice v-if="error" tone="error">{{ error }}</BaseNotice>
 
     <BaseCard>
@@ -250,10 +252,7 @@ onMounted(refreshCompanies)
           :options="planOptions"
           :disabled="planBusy"
         />
-        <div class="company-summary">
-          <span>Компания</span>
-          <strong>{{ selectedCompany?.name ?? '—' }}</strong>
-        </div>
+
       </div>
       <BaseNotice v-else-if="!error" tone="info">Нет доступных компаний.</BaseNotice>
     </BaseCard>
@@ -319,18 +318,29 @@ onMounted(refreshCompanies)
         <div class="section-heading">
           <div>
             <p class="kicker">Структура штата</p>
-            <h2>Штатные единицы</h2>
+            <h2>{{ activeView === 'vacant' ? 'Вакантные позиции' : activeView === 'overstaffed' ? 'Сверхштатные позиции' : 'Штатные единицы' }}</h2>
           </div>
-          <span class="muted">{{ detail.lines.length }} строк</span>
+          <span class="muted">{{ filteredLines.length }} из {{ detail.lines.length }} строк</span>
         </div>
 
+        <div class="line-toolbar" aria-label="Фильтры штатного расписания">
+          <BaseFormField v-model="searchLines" class="line-search" label="Поиск штатных единиц"
+            placeholder="Подразделение или должность" />
+          <BaseButton variant="secondary" @click="grouped = !grouped">
+            <FolderTree :size="16" /> {{ grouped ? 'Без группировки' : 'Группировка' }}
+          </BaseButton>
+          <BaseColumnPicker v-model="shownColumns" :columns="optionalLineColumns" />
+        </div>
+        <p v-if="grouped" class="line-hint">Группировка по подразделениям выбранной версии штатного расписания.</p>
+
         <BaseDataTable
-          :rows="detail.lines"
-          :columns="lineColumns"
+          :rows="filteredLines"
+          :columns="visibleLineColumns"
+          :group-by="grouped ? groupLines : undefined"
           row-key="id"
           caption="Строки штатного расписания"
-          empty-title="Штатные единицы не добавлены"
-          empty-description="Добавьте подразделение, должность и плановое количество ставок."
+          :empty-title="activeView === 'vacant' ? 'Вакансий нет' : activeView === 'overstaffed' ? 'Сверхштатных позиций нет' : 'Штатные единицы не найдены'"
+          :empty-description="searchLines ? 'Уточните поисковый запрос.' : 'Для выбранного представления нет записей.'"
         >
           <template #cell-planned_units="{ value }">{{ formatUnits(value) }}</template>
           <template #cell-occupied_units="{ value }">{{ formatUnits(value) }}</template>
@@ -382,10 +392,7 @@ onMounted(refreshCompanies)
 
 <style scoped>
 .staffing-page{display:grid;grid-template-columns:minmax(0,1fr);gap:var(--space-4)}
-.toolbar{display:grid;grid-template-columns:minmax(240px,1fr) minmax(280px,1fr) auto;align-items:end;gap:var(--space-4)}
-.company-summary{display:grid;gap:4px;min-width:180px;padding:10px 14px;border-radius:var(--radius-md);background:var(--color-soft)}
-.company-summary span{font-size:11px;color:var(--color-muted)}
-.company-summary strong{font-size:13px}
+.toolbar{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-items:end;gap:var(--space-4)}
 .empty-state{display:grid;justify-items:center;text-align:center;gap:10px;padding:40px 20px;color:var(--color-muted)}
 .empty-state h2{margin:0;color:var(--color-text);font-size:var(--font-section-heading)}
 .empty-state p{max-width:620px;margin:0 0 8px;line-height:1.5}
@@ -407,6 +414,10 @@ onMounted(refreshCompanies)
 .metrics strong{font-size:26px;line-height:1}
 .section-heading{display:flex;align-items:end;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:var(--space-4)}
 .section-heading h2{margin:0;font-size:var(--font-section-heading)}
+.line-toolbar{display:flex;align-items:end;gap:var(--space-2);flex-wrap:wrap;margin-bottom:var(--space-3)}
+.line-toolbar .line-search{min-width:230px;flex:1}
+.line-toolbar :deep(button){display:inline-flex;gap:7px;align-items:center;justify-content:center}
+.line-hint{color:var(--color-muted);font-size:12px;line-height:1.5;margin:0 0 var(--space-3)}
 .salary{display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
 .line-status{padding:5px 8px}
 .line-status.success{background:var(--color-success-surface);color:var(--color-success)}
@@ -415,6 +426,6 @@ onMounted(refreshCompanies)
 .approve-copy{display:grid;gap:var(--space-4)}
 .approve-copy p{margin:0}
 .approve-actions{display:flex;justify-content:flex-end;gap:var(--space-2)}
-@media(max-width:1000px){.toolbar{grid-template-columns:1fr 1fr}.company-summary{grid-column:1/-1;width:max-content}.metrics{grid-template-columns:repeat(2,minmax(0,1fr))}}
-@media(max-width:650px){.toolbar{grid-template-columns:1fr}.company-summary{grid-column:auto}.metrics{grid-template-columns:1fr 1fr}.snapshot-row{display:grid;grid-template-columns:1fr}.snapshot-row :deep(.field){width:100%}.snapshot-row :deep(button){width:100%}.plan-actions{width:100%}.plan-actions :deep(button){flex:1}.approve-actions :deep(button){flex:1}}
+@media(max-width:1000px){.metrics{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:650px){.toolbar{grid-template-columns:1fr}.line-toolbar .line-search{min-width:100%;flex-basis:100%}.metrics{grid-template-columns:1fr 1fr}.snapshot-row{display:grid;grid-template-columns:1fr}.snapshot-row :deep(.field){width:100%}.snapshot-row :deep(button){width:100%}.plan-actions{width:100%}.plan-actions :deep(button){flex:1}.approve-actions :deep(button){flex:1}}
 </style>

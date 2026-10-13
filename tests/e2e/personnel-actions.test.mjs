@@ -62,7 +62,7 @@ test('HR conducts transfer termination and rehire through personnel actions work
     assert.match(await terminationRow.innerText(),/Увольнение/)
     assert.match(await terminationRow.innerText(),/прекращено/)
 
-    await page.goto('/employees')
+    await page.goto('/employees?status=archived')
     await page.locator('.employee-mobile-card').filter({ hasText: 'E2E-001' }).getByRole('link', { name: /Открыть карточку/ }).click()
     await page.locator('.employee-page-heading h1').waitFor()
     await page.getByText('Нет активного назначения',{exact:true}).waitFor()

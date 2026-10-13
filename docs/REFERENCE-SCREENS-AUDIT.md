@@ -13,9 +13,13 @@ Reference: user's ZIP containing **67 images** (44 PNG layouts/fragments, 23 JPG
 | HR overview | Factual company statistics, short employee and personnel action tables; no developer/project-status cards | Browser and API |
 | Archive employees | Effective-dated, company-scoped backend status; cannot classify never-hired people as former employees | Backend SQLite/PostgreSQL tests |
 
-## Not implemented — do **not** render fictitious data or dead controls
+## Backend gaps and demo-mode rule
 
-1. **Employee master**: photo, gender, date of birth, identity document, e-mail, phone, payroll account, contract and personal IDs shown in `Desktop_Employees_Карточка_сотрудника_Трудовые_данные.png` and `Drawer__Добавить сотрудника Png.png`. Requires approved field definitions, validation and role-specific privacy access on backend before adding forms.
+The frontend-only Vercel demo may render isolated deterministic mock values to reproduce approved prototype states. Those values must never be written to or mixed with the real backend. Outside `VITE_DEMO_MODE`, unavailable backend fields remain unavailable.
+
+## Not implemented in the real backend — do **not** present mock values as production data
+
+1. **Employee master**: the demo card now reproduces the approved prototype groups for identity, contacts, bank details and employment contract using isolated mock data. The real backend still requires approved field definitions, validation and role-specific privacy access before those extra fields become writable production data.
 2. **Development combined display** `Desktop_Employees_full_screen_Кадровый_резерв_и_обучение.png`: separate HR-protected company training and reserve registries with status counters, search and drawer creation now exist. A combined timeline, workflows, approvals and training certificates remain pending.
 3. **Staffing explorer** `Desktop_Оргструктура_и_штатка_схема_open_Организационная_структура.png` and four staffing table screenshots: department chart, staffing, vacancy view, authorized staffing history and CSV export are implemented against real scoped data. Approval queue and staffing version comparison remain separate future contracts; do not fake them.
 4. **Contract expiration, hiring dates, demographics and earnings** in register/dashboard screenshots: no reliable scoped APIs for these values. Do not hardcode reference screenshot numbers (340 employees, 18 departments, etc.).

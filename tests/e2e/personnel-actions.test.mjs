@@ -33,7 +33,7 @@ test('HR conducts transfer termination and rehire through personnel actions work
   try{
     await login(page)
     await page.goto('/personnel-actions')
-    await page.getByRole('heading',{name:'Кадровые действия',exact:true}).waitFor()
+    await page.getByRole('heading',{name:'Кадровые действия',exact:true,level:1}).waitFor()
 
     let dialog=await openActionForSynthetic(page)
     await dialog.getByLabel('Кадровое действие').selectOption('transfer')
@@ -67,7 +67,7 @@ test('HR conducts transfer termination and rehire through personnel actions work
     await page.getByRole('heading',{name:'Карточка сотрудника'}).waitFor()
     await page.getByText('Нет активного назначения',{exact:true}).waitFor()
     await page.goto('/personnel-actions')
-    await page.getByRole('heading',{name:'Кадровые действия',exact:true}).waitFor()
+    await page.getByRole('heading',{name:'Кадровые действия',exact:true,level:1}).waitFor()
 
     dialog=await openActionForSynthetic(page)
     await dialog.getByLabel('Кадровое действие').selectOption('hire')

@@ -143,3 +143,26 @@ test('personnel editor stays hidden while server write flag is disabled', async 
     assert.equal(await page.getByRole('button', { name:'Сохранить запись' }).count(), 0)
   } finally { await context.close() }
 })
+
+
+test('position directory is visible but write controls stay hidden in read-only mode', async () => {
+  const context = await browser.newContext({ baseURL: 'http://127.0.0.1:5173', viewport: { width: 375, height: 850 } })
+  const page = await context.newPage()
+  try {
+    await page.goto('/login')
+    await page.getByLabel('Электронная почта').fill('synthetic-e2e@example.test')
+    await page.getByLabel('Пароль').fill('SyntheticE2E-Only!2026')
+    await page.getByRole('button', { name: 'Войти' }).click()
+    await page.getByRole('heading', { name: 'Обзор системы' }).waitFor()
+    await page.goto('/directories')
+    await page.getByRole('heading', { name: 'Справочники' }).waitFor()
+    const table = page.getByRole('table', { name: 'Справочник должностей компании' })
+    await table.waitFor()
+    assert.match(await table.innerText(), /Test Engineer/)
+    assert.equal(await page.getByRole('button', { name: 'Добавить должность' }).count(), 0)
+    assert.equal(await page.getByText('Test Company Hidden').count(), 0)
+    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1), false)
+  } finally {
+    await context.close()
+  }
+})

@@ -39,7 +39,7 @@ const referenceProfileFor=(e:any,i:number)=>({
   },
   banking:{
     bank_name:i%2?'Halyk Bank':'Kaspi Bank',
-    iban:`KZ${String(120000000000000000+i).padStart(18,'0')}`,
+    iban:`KZ${String(1200+i).padStart(18,'0')}`,
     payroll_account:`Зарплатный счёт •••• ${String(1100+i).slice(-4)}`,
   },
   employment:{

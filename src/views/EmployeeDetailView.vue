@@ -69,6 +69,10 @@ function trainingModeLabel(value: unknown): string {
   }
   return labels[String(value)] ?? String(value ?? '—')
 }
+function trainingTypeLabel(value: unknown): string {
+  const labels: Record<string, string> = { internal: 'Внутреннее', external: 'Внешнее' }
+  return labels[String(value)] ?? String(value ?? '—')
+}
 const today = localTodayISO()
 const currentAssignment = computed(() => profile.value?.assignments.find(item =>
   item.valid_from <= today && (item.valid_to === null || item.valid_to >= today)) ?? null)
@@ -371,6 +375,7 @@ onMounted(load)
             <BaseDataTable :rows="profile.training" row-key="id" caption="Обучение сотрудника"
               :columns="[{key:'training_type',label:'Вид'},{key:'training_mode',label:'Формат'},{key:'topic',label:'Тема'},{key:'provider',label:'Центр обучения'},{key:'city',label:'Город'},{key:'started_on',label:'Начало'},{key:'ended_on',label:'Окончание'},{key:'document_reference',label:'Документ'}, ...(profile.meta.profile_writes_enabled ? [{key:'edit',label:'Действия'}] : [])]"
               empty-title="Обучение не зарегистрировано" empty-description="Добавьте сведения об обучении сотрудника.">
+              <template #cell-training_type="{ value }">{{ trainingTypeLabel(value) }}</template>
               <template #cell-training_mode="{ value }">{{ trainingModeLabel(value) }}</template>
               <template #cell-started_on="{ value }">{{ formatDate(typeof value === 'string' ? value : null) }}</template>
               <template #cell-ended_on="{ value }">{{ formatDate(typeof value === 'string' ? value : null) }}</template>

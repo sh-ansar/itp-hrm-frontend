@@ -42,6 +42,8 @@ test('HR creates and edits an employee master record from the redesigned UI', as
     const editDialog = page.getByRole('dialog', { name: 'Основные данные сотрудника' })
     await editDialog.waitFor()
     assert.equal(await editDialog.getByLabel('Табельный номер').inputValue(), 'E2E-NEW-01')
+    assert.equal(await editDialog.getByLabel('Дата рождения').count(), 0,
+      'Non-persisted demo fields must not appear in the production write form')
     await editDialog.getByLabel('Фамилия').fill('Обновлённый')
     await editDialog.getByRole('button', { name: 'Сохранить карточку' }).click()
 

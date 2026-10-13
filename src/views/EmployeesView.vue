@@ -64,10 +64,16 @@ const columns = [
   { key: 'details', label: 'Действие' },
 ]
 const optionalColumns = columns.filter(column => !['full_name', 'details'].includes(column.key))
-const visibleFields = ref<Record<string, boolean>>({
-  personnel_number: true, current_position_name: true,
-  current_department_name: true, status_label: true,
-})
+const columnKeys = ['personnel_number', 'current_position_name', 'current_department_name', 'status_label']
+function savedColumnPreferences(): Record<string, boolean> {
+  const initial = Object.fromEntries(columnKeys.map(key => [key, true]))
+  try {
+    const saved = JSON.parse(localStorage.getItem('hrm-employee-columns-v1') || '{}') as Record<string, unknown>
+    for (const key of columnKeys) if (typeof saved[key] === 'boolean') initial[key] = saved[key]
+  } catch { /* A blocked or corrupt storage entry must not affect the register. */ }
+  return initial
+}
+const visibleFields = ref<Record<string, boolean>>(savedColumnPreferences())
 const visibleColumns = computed(() =>
   columns.filter(column => column.key === 'full_name' || column.key === 'details' || visibleFields.value[column.key] !== false))
 const currentCompany = computed(() => companies.value.find(item => item.id === selectedCompany.value))
@@ -167,6 +173,10 @@ async function employeeCreated(employee: EmployeeRecord) {
   await router.push({ name: 'employee-detail', params: { company: selectedCompany.value, employee: employee.id } })
 }
 
+watch(visibleFields, next => {
+  try { localStorage.setItem('hrm-employee-columns-v1', JSON.stringify(next)) }
+  catch { /* Preferences can remain in memory. */ }
+}, { deep: true })
 watch(selectedCompany, () => {
   page.value = 1
   loadCounters()

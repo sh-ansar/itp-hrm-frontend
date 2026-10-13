@@ -21,6 +21,7 @@ test('organization page displays authorized company and department only', async 
     await select.waitFor()
     assert.match(await select.textContent(), /Test Company Visible/)
     assert.doesNotMatch(await select.textContent(), /Test Company Hidden/)
+    assert.equal(await page.getByRole('button', { name: 'Добавить подразделение' }).count(), 0)
     const table = page.getByRole('table', { name: 'Подразделения компании' })
     try { await table.waitFor({ timeout: 8000 }) } catch {
       const diagnostics = await page.locator('body').innerText()

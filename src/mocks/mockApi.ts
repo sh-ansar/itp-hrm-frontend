@@ -119,10 +119,53 @@ export async function mockApiRequest<T>(path:string,options:RequestInit={}):Prom
     return {data:employee} as T
   }
 
+  m=p.match(/^\/companies\/[^/]+\/documents$/)
+  if(m&&method==='POST'){
+    const body=options.body?JSON.parse(String(options.body)):{}
+    const employee:any=employees.find(x=>x.id===body.employee_id)
+    if(!employee)throw new Error('Сотрудник не найден')
+    const action=body.personnel_action_id?actions.find((x:any)=>x.id===body.personnel_action_id&&x.employee_id===employee.id):null
+    if(body.personnel_action_id&&!action)throw new Error('Кадровое действие не найдено')
+    const row:any={
+      id:id(5600+documents.length),
+      employee_id:employee.id,
+      personnel_action_id:action?.id??null,
+      document_type:body.document_type,
+      document_number:body.document_number??null,
+      title:String(body.title||'Документ'),
+      issued_on:body.issued_on??null,
+      status:'draft',
+      revision:1,
+      created_at:new Date().toISOString(),
+      personnel_number:employee.personnel_number,
+      first_name:employee.first_name,
+      last_name:employee.last_name,
+      has_file:false,
+    }
+    documents.unshift(row)
+    return {data:{id:row.id,employee_id:row.employee_id,document_type:row.document_type,status:'draft',revision:1}} as T
+  }
+
+  m=p.match(/^\/companies\/[^/]+\/documents\/([^/]+)\/file$/)
+  if(m&&method==='POST'){
+    const row:any=documents.find(x=>x.id===m![1])
+    if(!row)throw new Error('Документ не найден')
+    const body=options.body?JSON.parse(String(options.body)):{}
+    if(row.status!=='draft'||row.has_file)throw new Error('PDF уже прикреплён')
+    if(Number(body.revision)!==Number(row.revision))throw new Error('Документ уже изменён')
+    row.has_file=true
+    row.revision=Number(row.revision)+1
+    return {data:{id:row.id,has_file:true,revision:row.revision}} as T
+  }
+
   m=p.match(/^\/companies\/[^/]+\/(departments|positions|employees|personnel-actions|documents)$/)
   if(m){const pg=Number(u.searchParams.get('page')||1),kind=m[1];let rows:any[]=kind==='departments'?deps:kind==='positions'?positions:kind==='employees'?employees:kind==='personnel-actions'?actions:documents
     if(kind==='employees'){const q=(u.searchParams.get('search')||'').toLowerCase(),s=u.searchParams.get('status')||'all';rows=rows.filter((x:any)=>(s==='all'||x.employment_status===s)&&(!q||json(x).toLowerCase().includes(q)))}
     if(kind==='personnel-actions'&&u.searchParams.get('type'))rows=rows.filter((x:any)=>x.action_type===u.searchParams.get('type'))
+    if(kind==='documents'){
+      const type=u.searchParams.get('document_type')||'',employee=u.searchParams.get('employee_id')||''
+      rows=rows.filter((x:any)=>(!type||x.document_type===type)&&(!employee||x.employee_id===employee))
+    }
     const extra:any=kind==='departments'?{department_writes_enabled:true}:kind==='positions'?{position_writes_enabled:true}:kind==='employees'?{employee_writes_enabled:true,status_filter:u.searchParams.get('status')||'all',registry_summary:{vacancies:staffing.reduce((sum:any,row:any)=>sum+Number(row.vacant_units||0),0),expiring_contracts:6}}:kind==='personnel-actions'?{personnel_actions_writes_enabled:true,summary:{hire:actions.filter((x:any)=>x.action_type==='hire').length,transfer:actions.filter((x:any)=>x.action_type==='transfer').length,termination:actions.filter((x:any)=>x.action_type==='termination').length}}:{document_writes_enabled:true}
     return page(rows,pg,kind==='employees'||kind==='personnel-actions'||kind==='documents'?25:100,extra) as T}
   m=p.match(/^\/companies\/[^/]+\/employees\/([^/]+)$/)

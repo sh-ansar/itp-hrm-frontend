@@ -2,7 +2,10 @@ import { apiRequest, ApiError } from './client'
 import { readXsrfCookie } from './csrf'
 
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
-const base = '/api/v1'
+const base = (import.meta.env.VITE_API_BASE_URL || '/api/v1').replace(/\\/$/, '')
+if (!base.startsWith('/') || base.startsWith('//')) {
+  throw new Error('API base path must be same-origin')
+}
 export type DocumentType = 'order' | 'contract' | 'basis' | 'other'
 export const documentTypes: { id: DocumentType; name: string }[] = [
   { id: 'order', name: 'Приказ' },

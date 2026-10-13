@@ -37,7 +37,7 @@ test('HR conducts transfer termination and rehire through personnel actions work
 
     let dialog=await openActionForSynthetic(page)
     await dialog.getByLabel('Кадровое действие').selectOption('transfer')
-    await dialog.getByLabel('Дата действия').fill('2026-06-01')
+    await dialog.getByLabel('Дата действия').fill('2026-10-01')
     await dialog.getByLabel('Основание').fill('ORDER-E2E-TRANSFER')
     await dialog.getByLabel('Подразделение').selectOption({label:'Visible Finance Child'})
     await dialog.getByLabel('Должность').selectOption({label:'Test Engineer'})
@@ -53,7 +53,7 @@ test('HR conducts transfer termination and rehire through personnel actions work
 
     dialog=await openActionForSynthetic(page)
     await dialog.getByLabel('Кадровое действие').selectOption('termination')
-    await dialog.getByLabel('Дата действия').fill('2026-09-30')
+    await dialog.getByLabel('Дата действия').fill('2026-10-10')
     await dialog.getByLabel('Основание').fill('ORDER-E2E-TERM')
     await dialog.getByRole('button',{name:/Провести: Увольнение/}).click()
 

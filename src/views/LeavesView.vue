@@ -231,10 +231,7 @@ onMounted(loadCompanies)
         </div>
       </div>
 
-      <BaseNotice v-if="demoMode" tone="info">
-        Демонстрационный график формируется из доступных сотрудников и не записывается в production.
-      </BaseNotice>
-      <BaseNotice v-else-if="productionMeta && productionMeta.total === 0" tone="info">
+      <BaseNotice v-if="!demoMode && productionMeta && productionMeta.total === 0" tone="info">
         На {{ year }} год записи графика отпусков ещё не загружены. Система не формирует плановые даты автоматически.
       </BaseNotice>
 

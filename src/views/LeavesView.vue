@@ -163,10 +163,7 @@ onMounted(loadCompanies)
       </div>
 
       <BaseNotice v-if="!demoMode" tone="info">
-        Production-источник отпусков ещё не подключён. До появления backend-контракта раздел работает без данных и без операций записи.
-      </BaseNotice>
-      <BaseNotice v-else tone="info">
-        Демонстрационный график формируется из доступных сотрудников и не записывается в production.
+        Для выбранной компании данные об отпусках пока недоступны.
       </BaseNotice>
 
       <BaseViewTabs :model-value="activeTab" :options="tabs" label="Разделы графика отпусков"

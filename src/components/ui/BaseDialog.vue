@@ -53,7 +53,7 @@ onUnmounted(() => { if (panel.value?.open) panel.value.close() })
   box-shadow:var(--shadow-float);
 }
 .base-drawer[open] .drawer-sheet{animation:drawer-enter .2s ease-out both}
-.base-drawer::backdrop{background:rgba(0,34,51,.32);animation:backdrop-enter .16s ease-out}
+.base-drawer::backdrop{background:var(--color-overlay);animation:backdrop-enter .16s ease-out}
 .drawer-sheet{min-height:100%;height:100%;width:100%;display:flex;flex-direction:column;background:var(--color-surface)}
 .drawer-header{
   position:sticky;top:0;z-index:2;display:flex;align-items:center;justify-content:space-between;gap:var(--space-4);

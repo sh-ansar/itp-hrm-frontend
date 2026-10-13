@@ -14,7 +14,7 @@ Reference: user's ZIP containing **67 images** (44 PNG layouts/fragments, 23 JPG
 | Archive employees | Effective-dated, company-scoped backend status; cannot classify never-hired people as former employees | Backend SQLite/PostgreSQL tests |
 | Personnel actions | Unified journal for hire/transfer/termination, real backend contracts, responsive mobile cards, frontend demo mutations that update employee state and journal | Browser QA + demo build |
 | Documents and orders | Flat HRM register, employee/type filters, draft drawer, optional personnel-action linkage, protected PDF attachment, desktop/mobile views and persistent demo mutations | Browser QA + demo build |
-| Worktime / timesheets demo | Shared-tab workspace for timesheet, work schedules, production calendar and absences; deterministic demo values derived from visible employees only, with no production writes | Browser QA + demo build |
+| Worktime / timesheets | Shared-tab workspace for timesheet, work schedules, production calendar and absences; production reads use scoped backend APIs, while deterministic mocks remain isolated to demo mode | Browser QA + production/demo builds |
 | Reports and analytics | Company-scoped views for headcount, personnel movement, staffing/vacancies, training and worktime; production-backed HR metrics where contracts exist, demo-only worktime aggregation where they do not | Browser QA + demo build |
 | Development / reserve / training | Combined employee workspace plus full training and reserve registries, responsive mobile cards, search/status filtering and employee drill-down | Browser QA + demo build |
 | Settings workspace | Session/profile state, accessible companies and persistent interface preferences; role mutation remains disabled until the backend administrative contract is enabled | Browser QA + demo build |
@@ -49,8 +49,8 @@ The frontend-only Vercel demo may render isolated deterministic mock values to r
 1. Final visual QA of the completed Employees workspace: register, grouped register, archive, combined reserve/training workspace and employee card tabs.
 2. Personnel actions journal and drawer are browser-checked on desktop/mobile.
 3. Documents and orders register/drawers are browser-checked on desktop/mobile; keep signing/approval out until backend contracts exist.
-4. Worktime/timesheet demo is browser-checked on desktop/mobile/dark; keep all attendance edits and production totals out until backend contracts exist.
-5. Reports/analytics is browser-checked across all five tabs; do not add payroll, IFRS or sickness metrics until scoped contracts exist.
+4. Worktime/timesheet is browser-checked on desktop/mobile/dark. Production reads now use the scoped backend contract; mutation controls remain out until approved write workflows exist.
+5. Reports/analytics is browser-checked across all five tabs; worktime analytics now use the same production read contract as the timesheet workspace. Do not add payroll or other unsourced metrics until scoped contracts exist.
 6. Development registries are browser-checked on desktop/mobile/dark; training and reserve stay inside the Employees domain rather than duplicating main navigation.
 6. Settings workspace is browser-checked on a clean preview; theme/sidebar preferences persist locally and role management remains server-gated.
 7. Leave schedule demo is browser-checked across schedule/month/category tabs and year switching; all mutations remain disabled until the backend domain exists.

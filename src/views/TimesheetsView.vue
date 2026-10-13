@@ -10,6 +10,17 @@ import BaseSelectField from '../components/ui/BaseSelectField.vue'
 import BaseViewTabs from '../components/ui/BaseViewTabs.vue'
 import { listCompanies, type CompanyRecord } from '../api/organization'
 import { listEmployees, type EmployeeRecord } from '../api/personnel'
+import {
+  getProductionCalendar,
+  getWorkSchedules,
+  getWorktimeAbsences,
+  getWorktimeTimesheet,
+  type ProductionCalendarDay,
+  type WorkScheduleRow,
+  type WorktimeAbsenceRow,
+  type WorktimeTimesheetResponse,
+  type WorktimeTimesheetRow,
+} from '../api/worktime'
 import { localTodayISO } from '../utils/localDate'
 import {
   buildDemoAbsences,
@@ -17,10 +28,56 @@ import {
   buildDemoSchedules,
   buildDemoTimesheet,
   demoTimesheetSummary,
-  type DemoAbsenceRow,
   type DemoTimesheetRow,
   type WorktimeTab,
 } from '../mocks/timesheetDemo'
+
+type RowStatus = 'missing' | 'complete' | 'attention'
+
+interface TimesheetViewRow extends Record<string, unknown> {
+  employee_id: string
+  personnel_number: string
+  full_name: string
+  department: string
+  position: string
+  schedule: string
+  planned_hours: number | null
+  worked_hours: number | null
+  absence_hours: number | null
+  overtime_hours: number | null
+  status: RowStatus
+}
+
+interface ScheduleViewRow extends Record<string, unknown> {
+  id: string
+  name: string
+  type: string
+  work_time: string
+  week_hours: number | null
+  employees: number
+}
+
+interface AbsenceViewRow extends Record<string, unknown> {
+  id: string
+  employee_id: string
+  personnel_number: string
+  full_name: string
+  department: string
+  reason: string
+  from: string
+  to: string
+  days: number
+  hours: number | null
+  status: string
+}
+
+interface CalendarViewDay {
+  date: string
+  day: number
+  weekday: string
+  type: string
+  label: string | null
+}
 
 const demoMode = import.meta.env.VITE_DEMO_MODE === 'true'
 const companies = ref<CompanyRecord[]>([])
@@ -28,9 +85,17 @@ const company = ref('')
 const month = ref(localTodayISO().slice(0, 7))
 const activeTab = ref<WorktimeTab>('timesheet')
 const employees = ref<EmployeeRecord[]>([])
+const productionTimesheet = ref<WorktimeTimesheetRow[]>([])
+const productionSchedules = ref<WorkScheduleRow[]>([])
+const productionCalendar = ref<ProductionCalendarDay[]>([])
+const productionAbsences = ref<WorktimeAbsenceRow[]>([])
+const productionTimesheetMeta = ref<WorktimeTimesheetResponse['meta'] | null>(null)
+const productionCalendarMeta = ref<{ recorded_days: number; expected_days: number; calendar_complete: boolean } | null>(null)
 const loadingCompanies = ref(false)
 const loading = ref(false)
 const error = ref('')
+const warning = ref('')
+let generation = 0
 
 const tabs = [
   { id: 'timesheet', label: 'Табель учёта' },
@@ -39,11 +104,85 @@ const tabs = [
   { id: 'absences', label: 'Невыходы' },
 ]
 
-const timesheetRows = computed(() => demoMode ? buildDemoTimesheet(employees.value, month.value) : [])
-const scheduleRows = computed(() => buildDemoSchedules(timesheetRows.value))
-const absenceRows = computed(() => demoMode ? buildDemoAbsences(employees.value, month.value) : [])
-const calendarDays = computed(() => demoMode ? buildDemoCalendar(month.value) : [])
-const summary = computed(() => demoTimesheetSummary(timesheetRows.value))
+const demoTimesheetRows = computed(() => demoMode ? buildDemoTimesheet(employees.value, month.value) : [])
+const demoAbsenceRows = computed(() => demoMode ? buildDemoAbsences(employees.value, month.value) : [])
+const demoCalendarRows = computed(() => demoMode ? buildDemoCalendar(month.value) : [])
+
+const timesheetRows = computed<TimesheetViewRow[]>(() => {
+  if (demoMode) {
+    return demoTimesheetRows.value.map(row => ({
+      ...row,
+      status: row.status,
+    }))
+  }
+  return productionTimesheet.value.map(row => ({
+    employee_id: row.employee_id,
+    personnel_number: row.personnel_number,
+    full_name: personName(row),
+    department: row.department_name || 'Без подразделения',
+    position: row.position_name || 'Без должности',
+    schedule: row.schedule_name || '—',
+    planned_hours: hoursFromMinutes(row.planned_minutes),
+    worked_hours: hoursFromMinutes(row.worked_minutes),
+    absence_hours: hoursFromMinutes(row.absence_minutes),
+    overtime_hours: hoursFromMinutes(row.overtime_minutes),
+    status: row.status,
+  }))
+})
+
+const scheduleRows = computed<ScheduleViewRow[]>(() => {
+  if (demoMode) return buildDemoSchedules(demoTimesheetRows.value)
+  return productionSchedules.value.map(row => ({
+    id: row.id,
+    name: row.name,
+    type: scheduleTypeLabel(row.schedule_type),
+    work_time: row.work_time_label || '—',
+    week_hours: hoursFromMinutes(row.weekly_minutes),
+    employees: row.employees,
+  }))
+})
+
+const absenceRows = computed<AbsenceViewRow[]>(() => {
+  if (demoMode) return demoAbsenceRows.value
+  return productionAbsences.value.map(row => ({
+    id: row.id,
+    employee_id: row.employee_id,
+    personnel_number: row.personnel_number,
+    full_name: personName(row),
+    department: row.department_name || 'Без подразделения',
+    reason: row.reason,
+    from: row.started_on,
+    to: row.ended_on,
+    days: row.days,
+    hours: hoursFromMinutes(row.absence_minutes),
+    status: row.status,
+  }))
+})
+
+const calendarDays = computed<CalendarViewDay[]>(() => {
+  if (demoMode) {
+    return demoCalendarRows.value.map(day => ({
+      date: day.date,
+      day: day.day,
+      weekday: day.weekday,
+      type: day.type,
+      label: null,
+    }))
+  }
+
+  const byDate = new Map(productionCalendar.value.map(day => [day.date, day]))
+  return monthDateStrings(month.value).map(date => {
+    const recorded = byDate.get(date)
+    return {
+      date,
+      day: Number(date.slice(8, 10)),
+      weekday: weekdayLabel(date),
+      type: recorded?.day_type ?? 'missing',
+      label: recorded?.label ?? null,
+    }
+  })
+})
+
 const selectedCompany = computed(() => companies.value.find(item => item.id === company.value) ?? null)
 const monthLabel = computed(() => {
   const [year, monthNumber] = month.value.split('-').map(Number)
@@ -55,14 +194,42 @@ const monthLabel = computed(() => {
   }).format(new Date(Date.UTC(year, monthNumber - 1, 1)))
   return value.charAt(0).toUpperCase() + value.slice(1)
 })
+
+const summary = computed(() => {
+  if (demoMode) {
+    const value = demoTimesheetSummary(demoTimesheetRows.value)
+    return {
+      planned: value.planned,
+      worked: value.worked,
+      absence: value.absence,
+      overtime: value.overtime,
+    }
+  }
+  const value = productionTimesheetMeta.value?.summary
+  return {
+    planned: hoursFromMinutes(value?.planned_minutes ?? null),
+    worked: hoursFromMinutes(value?.worked_minutes ?? null),
+    absence: hoursFromMinutes(value?.absence_minutes ?? null),
+    overtime: hoursFromMinutes(value?.overtime_minutes ?? null),
+  }
+})
+
+const employeeCount = computed(() => demoMode
+  ? timesheetRows.value.length
+  : (productionTimesheetMeta.value?.total ?? timesheetRows.value.length))
+const employeesWithEntries = computed(() => demoMode
+  ? timesheetRows.value.length
+  : (productionTimesheetMeta.value?.summary.employees_with_entries ?? 0))
+
 const calendarOffset = computed(() => {
   const first = calendarDays.value[0]
   if (!first) return 0
   const weekday = new Date(first.date + 'T00:00:00Z').getUTCDay()
   return (weekday + 6) % 7
 })
-const workdayCount = computed(() => calendarDays.value.filter(day => day.type === 'workday').length)
-const weekendCount = computed(() => calendarDays.value.filter(day => day.type === 'weekend').length)
+const workdayCount = computed(() => calendarDays.value.filter(day => ['workday', 'shortened'].includes(day.type)).length)
+const weekendCount = computed(() => calendarDays.value.filter(day => ['weekend', 'holiday'].includes(day.type)).length)
+const missingCalendarCount = computed(() => calendarDays.value.filter(day => day.type === 'missing').length)
 
 const timesheetColumns = [
   { key: 'employee', label: 'Сотрудник' },
@@ -94,18 +261,84 @@ function setTab(value: string) {
     activeTab.value = value as WorktimeTab
   }
 }
+
+function personName(row: { last_name: string; first_name: string; middle_name: string | null }): string {
+  return [row.last_name, row.first_name, row.middle_name].filter(Boolean).join(' ')
+}
+
+function hoursFromMinutes(minutes: number | null | undefined): number | null {
+  if (minutes === null || minutes === undefined) return null
+  return Math.round((minutes / 60) * 100) / 100
+}
+
+function hoursLabel(value: unknown): string {
+  if (typeof value !== 'number' || !Number.isFinite(value)) return '—'
+  return new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 2 }).format(value)
+}
+
 function displayDate(value: string): string {
   if (!/^\d{4}-\d{2}-\d{2}/.test(value)) return value
   return value.slice(8, 10) + '.' + value.slice(5, 7) + '.' + value.slice(0, 4)
 }
-function absencePeriod(row: DemoAbsenceRow): string {
+
+function absencePeriod(row: AbsenceViewRow): string {
   return row.from === row.to ? displayDate(row.from) : displayDate(row.from) + ' — ' + displayDate(row.to)
 }
-function statusLabel(row: DemoTimesheetRow): string {
+
+function statusLabel(row: TimesheetViewRow): string {
+  if (row.status === 'missing') return 'Нет данных'
   return row.status === 'complete' ? 'Заполнено' : 'Требует внимания'
 }
-function absenceStatusLabel(status: DemoAbsenceRow['status']): string {
-  return status === 'planned' ? 'Запланировано' : 'Учтено'
+
+function absenceStatusLabel(status: string): string {
+  if (status === 'planned') return 'Запланировано'
+  if (status === 'recorded') return 'Учтено'
+  return status
+}
+
+function scheduleTypeLabel(type: string): string {
+  return ({
+    standard: 'Основной',
+    shift: 'Сменный',
+    individual: 'Индивидуальный',
+    summarized: 'Суммированный',
+  } as Record<string, string>)[type] ?? type
+}
+
+function calendarTypeLabel(day: CalendarViewDay): string {
+  if (day.label) return day.label
+  return ({
+    workday: 'Рабочий день',
+    shortened: 'Сокращённый день',
+    weekend: 'Выходной',
+    holiday: 'Праздничный день',
+    missing: 'Нет данных',
+  } as Record<string, string>)[day.type] ?? day.type
+}
+
+function weekdayLabel(date: string): string {
+  return ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'][new Date(date + 'T00:00:00Z').getUTCDay()] ?? ''
+}
+
+function monthDateStrings(value: string): string[] {
+  const [year, monthNumber] = value.split('-').map(Number)
+  if (!year || !monthNumber) return []
+  const days = new Date(Date.UTC(year, monthNumber, 0)).getUTCDate()
+  return Array.from({ length: days }, (_, index) =>
+    `${year}-${String(monthNumber).padStart(2, '0')}-${String(index + 1).padStart(2, '0')}`)
+}
+
+function monthEnd(value: string): string {
+  return monthDateStrings(value).at(-1) ?? localTodayISO()
+}
+
+function resetProductionData() {
+  productionTimesheet.value = []
+  productionSchedules.value = []
+  productionCalendar.value = []
+  productionAbsences.value = []
+  productionTimesheetMeta.value = null
+  productionCalendarMeta.value = null
 }
 
 async function loadCompanies() {
@@ -124,33 +357,74 @@ async function loadCompanies() {
   }
 }
 
-let generation = 0
-async function loadEmployees() {
+async function loadWorkspace() {
   const companyId = company.value
   const current = ++generation
   employees.value = []
+  resetProductionData()
+  warning.value = ''
   if (!companyId) return
+
   loading.value = true
   error.value = ''
   try {
-    const first = await listEmployees(companyId, 1, '', 'active')
-    if (current !== generation) return
-    const rows = [...first.data]
-    for (let page = 2; page <= Math.min(first.meta.last_page, 10); page += 1) {
-      const result = await listEmployees(companyId, page, '', 'active')
+    if (demoMode) {
+      const first = await listEmployees(companyId, 1, '', 'active')
       if (current !== generation) return
-      rows.push(...result.data)
+      const rows = [...first.data]
+      const lastPage = Math.min(first.meta.last_page, 20)
+      for (let index = 2; index <= lastPage; index += 5) {
+        const batch = Array.from({ length: Math.min(5, lastPage - index + 1) }, (_, offset) => index + offset)
+        const results = await Promise.all(batch.map(page => listEmployees(companyId, page, '', 'active')))
+        if (current !== generation) return
+        for (const result of results) rows.push(...result.data)
+      }
+      employees.value = rows
+      return
     }
-    employees.value = rows
+
+    const [timesheet, schedules, calendar, absences] = await Promise.allSettled([
+      getWorktimeTimesheet(companyId, month.value),
+      getWorkSchedules(companyId, monthEnd(month.value)),
+      getProductionCalendar(companyId, month.value),
+      getWorktimeAbsences(companyId, month.value),
+    ])
+    if (current !== generation) return
+
+    const unavailable: string[] = []
+    if (timesheet.status === 'fulfilled') {
+      productionTimesheet.value = timesheet.value.data
+      productionTimesheetMeta.value = timesheet.value.meta
+    } else unavailable.push('табель')
+
+    if (schedules.status === 'fulfilled') {
+      productionSchedules.value = schedules.value.data
+    } else unavailable.push('графики работы')
+
+    if (calendar.status === 'fulfilled') {
+      productionCalendar.value = calendar.value.data
+      productionCalendarMeta.value = calendar.value.meta
+    } else unavailable.push('производственный календарь')
+
+    if (absences.status === 'fulfilled') {
+      productionAbsences.value = absences.value.data
+    } else unavailable.push('невыходы')
+
+    if (unavailable.length === 4) {
+      throw new Error('Не удалось загрузить данные рабочего времени')
+    }
+    if (unavailable.length) {
+      warning.value = 'Часть данных временно недоступна: ' + unavailable.join(', ') + '.'
+    }
   } catch (cause) {
     if (current !== generation) return
-    error.value = cause instanceof Error ? cause.message : 'Не удалось загрузить сотрудников'
+    error.value = cause instanceof Error ? cause.message : 'Не удалось загрузить данные рабочего времени'
   } finally {
     if (current === generation) loading.value = false
   }
 }
 
-watch(company, loadEmployees)
+watch([company, month], loadWorkspace)
 onMounted(loadCompanies)
 </script>
 
@@ -162,6 +436,7 @@ onMounted(loadCompanies)
     </div>
 
     <BaseNotice v-if="error" tone="error">{{ error }}</BaseNotice>
+    <BaseNotice v-if="warning" tone="warning">{{ warning }}</BaseNotice>
     <BaseLoadingState v-if="loadingCompanies" label="Загрузка компаний" />
     <BaseNotice v-else-if="!companies.length && !error" tone="info">Нет доступных компаний.</BaseNotice>
 
@@ -177,6 +452,10 @@ onMounted(loadCompanies)
         </div>
       </div>
 
+      <BaseNotice v-if="!demoMode && productionTimesheetMeta && employeesWithEntries === 0" tone="info">
+        За выбранный период табельные записи ещё не загружены. Сотрудники показаны без подстановки нулевых часов.
+      </BaseNotice>
+
       <BaseViewTabs :model-value="activeTab" :options="tabs" label="Разделы табельного учёта"
         @update:model-value="setTab" />
 
@@ -184,25 +463,25 @@ onMounted(loadCompanies)
         <BaseCard class="summary-card">
           <UsersRound :size="19" aria-hidden="true" />
           <span>Сотрудники</span>
-          <strong>{{ loading ? '…' : timesheetRows.length }}</strong>
-          <small>в табеле периода</small>
+          <strong>{{ loading ? '…' : employeeCount }}</strong>
+          <small>{{ demoMode ? 'в табеле периода' : employeesWithEntries + ' с табельными данными' }}</small>
         </BaseCard>
         <BaseCard class="summary-card">
           <CalendarDays :size="19" aria-hidden="true" />
           <span>Плановые часы</span>
-          <strong>{{ loading ? '…' : summary.planned.toLocaleString('ru-RU') }}</strong>
-          <small>по графикам работы</small>
+          <strong>{{ loading ? '…' : hoursLabel(summary.planned) }}</strong>
+          <small>{{ demoMode ? 'по графикам работы' : 'по загруженным данным' }}</small>
         </BaseCard>
         <BaseCard class="summary-card">
           <Clock3 :size="19" aria-hidden="true" />
           <span>Отработано</span>
-          <strong>{{ loading ? '…' : summary.worked.toLocaleString('ru-RU') }}</strong>
+          <strong>{{ loading ? '…' : hoursLabel(summary.worked) }}</strong>
           <small>часов за период</small>
         </BaseCard>
         <BaseCard class="summary-card">
           <TriangleAlert :size="19" aria-hidden="true" />
           <span>Неявки</span>
-          <strong>{{ loading ? '…' : summary.absence.toLocaleString('ru-RU') }}</strong>
+          <strong>{{ loading ? '…' : hoursLabel(summary.absence) }}</strong>
           <small>часов учтено</small>
         </BaseCard>
       </div>
@@ -213,7 +492,7 @@ onMounted(loadCompanies)
             <h2>Табель учёта рабочего времени</h2>
             <p>Плановые и фактически отработанные часы сотрудников.</p>
           </div>
-          <span>{{ timesheetRows.length }} сотрудников</span>
+          <span>{{ employeeCount }} сотрудников</span>
         </div>
 
         <div class="worktime-desktop">
@@ -228,12 +507,13 @@ onMounted(loadCompanies)
                 <span>{{ row.personnel_number }} · {{ row.department }}</span>
               </div>
             </template>
-            <template #cell-planned_hours="{ value }">{{ value }} ч</template>
-            <template #cell-worked_hours="{ value }">{{ value }} ч</template>
-            <template #cell-absence_hours="{ value }">{{ value }} ч</template>
-            <template #cell-overtime_hours="{ value }">{{ value }} ч</template>
+            <template #cell-planned_hours="{ value }">{{ hoursLabel(value) }}<template v-if="typeof value === 'number'"> ч</template></template>
+            <template #cell-worked_hours="{ value }">{{ hoursLabel(value) }}<template v-if="typeof value === 'number'"> ч</template></template>
+            <template #cell-absence_hours="{ value }">{{ hoursLabel(value) }}<template v-if="typeof value === 'number'"> ч</template></template>
+            <template #cell-overtime_hours="{ value }">{{ hoursLabel(value) }}<template v-if="typeof value === 'number'"> ч</template></template>
             <template #cell-status="{ row }">
-              <span class="status-pill" :class="{ 'status-pill--attention': row.status === 'attention' }">
+              <span class="status-pill"
+                :class="{ 'status-pill--attention': row.status === 'attention', 'status-pill--missing': row.status === 'missing' }">
                 {{ statusLabel(row) }}
               </span>
             </template>
@@ -249,16 +529,17 @@ onMounted(loadCompanies)
                 </RouterLink>
                 <span>{{ row.personnel_number }} · {{ row.position }}</span>
               </div>
-              <span class="status-pill" :class="{ 'status-pill--attention': row.status === 'attention' }">
+              <span class="status-pill"
+                :class="{ 'status-pill--attention': row.status === 'attention', 'status-pill--missing': row.status === 'missing' }">
                 {{ statusLabel(row) }}
               </span>
             </header>
             <p>{{ row.schedule }} · {{ row.department }}</p>
             <dl>
-              <div><dt>План</dt><dd>{{ row.planned_hours }} ч</dd></div>
-              <div><dt>Отработано</dt><dd>{{ row.worked_hours }} ч</dd></div>
-              <div><dt>Неявки</dt><dd>{{ row.absence_hours }} ч</dd></div>
-              <div><dt>Сверхурочно</dt><dd>{{ row.overtime_hours }} ч</dd></div>
+              <div><dt>План</dt><dd>{{ hoursLabel(row.planned_hours) }}<template v-if="row.planned_hours !== null"> ч</template></dd></div>
+              <div><dt>Отработано</dt><dd>{{ hoursLabel(row.worked_hours) }}<template v-if="row.worked_hours !== null"> ч</template></dd></div>
+              <div><dt>Неявки</dt><dd>{{ hoursLabel(row.absence_hours) }}<template v-if="row.absence_hours !== null"> ч</template></dd></div>
+              <div><dt>Сверхурочно</dt><dd>{{ hoursLabel(row.overtime_hours) }}<template v-if="row.overtime_hours !== null"> ч</template></dd></div>
             </dl>
           </article>
         </div>
@@ -276,7 +557,7 @@ onMounted(loadCompanies)
           <BaseDataTable :rows="scheduleRows" :columns="scheduleColumns" row-key="id"
             :loading="loading" caption="Графики работы"
             empty-title="Графики не найдены" empty-description="Для выбранной компании графики отсутствуют.">
-            <template #cell-week_hours="{ value }">{{ value }} ч</template>
+            <template #cell-week_hours="{ value }">{{ hoursLabel(value) }}<template v-if="typeof value === 'number'"> ч</template></template>
           </BaseDataTable>
         </div>
         <div class="worktime-mobile">
@@ -284,7 +565,7 @@ onMounted(loadCompanies)
             <header><strong>{{ row.name }}</strong><span>{{ row.type }}</span></header>
             <dl>
               <div><dt>Рабочее время</dt><dd>{{ row.work_time }}</dd></div>
-              <div><dt>Неделя</dt><dd>{{ row.week_hours }} ч</dd></div>
+              <div><dt>Неделя</dt><dd>{{ hoursLabel(row.week_hours) }}<template v-if="row.week_hours !== null"> ч</template></dd></div>
               <div><dt>Сотрудники</dt><dd>{{ row.employees }}</dd></div>
             </dl>
           </article>
@@ -297,18 +578,28 @@ onMounted(loadCompanies)
             <h2>Производственный календарь</h2>
             <p>{{ monthLabel }} · рабочие и выходные дни периода.</p>
           </div>
-          <span>{{ workdayCount }} рабочих · {{ weekendCount }} выходных</span>
+          <span>
+            {{ workdayCount }} рабочих · {{ weekendCount }} выходных
+            <template v-if="missingCalendarCount"> · {{ missingCalendarCount }} без данных</template>
+          </span>
         </div>
+        <BaseNotice v-if="!demoMode && productionCalendarMeta && !productionCalendarMeta.calendar_complete" tone="warning">
+          Календарь заполнен частично: {{ productionCalendarMeta.recorded_days }} из {{ productionCalendarMeta.expected_days }} дней.
+          Незагруженные даты не классифицируются автоматически.
+        </BaseNotice>
         <div class="calendar-weekdays" aria-hidden="true">
           <span v-for="label in ['Пн','Вт','Ср','Чт','Пт','Сб','Вс']" :key="label">{{ label }}</span>
         </div>
         <div class="calendar-grid" :aria-label="'Производственный календарь: ' + monthLabel">
           <span v-for="blank in calendarOffset" :key="'blank-' + blank" class="calendar-blank" aria-hidden="true" />
           <article v-for="day in calendarDays" :key="day.date" class="calendar-day"
-            :class="{ 'calendar-day--weekend': day.type === 'weekend' }">
+            :class="{
+              'calendar-day--weekend': ['weekend','holiday'].includes(day.type),
+              'calendar-day--missing': day.type === 'missing',
+            }">
             <strong>{{ day.day }}</strong>
             <span>{{ day.weekday }}</span>
-            <small>{{ day.type === 'weekend' ? 'Выходной' : 'Рабочий день' }}</small>
+            <small>{{ calendarTypeLabel(day) }}</small>
           </article>
         </div>
       </BaseCard>
@@ -335,7 +626,7 @@ onMounted(loadCompanies)
             </template>
             <template #cell-period="{ row }">{{ absencePeriod(row) }}</template>
             <template #cell-days="{ value }">{{ value }} дн.</template>
-            <template #cell-hours="{ value }">{{ value }} ч</template>
+            <template #cell-hours="{ value }">{{ hoursLabel(value) }}<template v-if="typeof value === 'number'"> ч</template></template>
             <template #cell-status="{ row }">
               <span class="status-pill" :class="{ 'status-pill--planned': row.status === 'planned' }">
                 {{ absenceStatusLabel(row.status) }}
@@ -357,7 +648,7 @@ onMounted(loadCompanies)
             <dl>
               <div><dt>Период</dt><dd>{{ absencePeriod(row) }}</dd></div>
               <div><dt>Дней</dt><dd>{{ row.days }}</dd></div>
-              <div><dt>Часов</dt><dd>{{ row.hours }}</dd></div>
+              <div><dt>Часов</dt><dd>{{ hoursLabel(row.hours) }}<template v-if="row.hours !== null"> ч</template></dd></div>
             </dl>
           </article>
         </div>
@@ -393,7 +684,7 @@ onMounted(loadCompanies)
 .employee-cell span{color:var(--color-muted);font-size:10px}
 .status-pill{display:inline-flex;align-items:center;padding:5px 8px;border-radius:999px;background:var(--color-success-surface);color:var(--color-success);font-size:10px;font-weight:700;white-space:nowrap}
 .status-pill--attention{background:var(--color-warning-surface);color:var(--color-warning)}
-.status-pill--planned{background:var(--color-accent-soft);color:var(--color-primary)}
+.status-pill--planned{background:var(--color-accent-soft);color:var(--color-primary)}\n.status-pill--missing{background:var(--color-soft);color:var(--color-muted)}
 .worktime-mobile{display:none}
 .worktime-card,.schedule-card,.absence-card{
   display:grid;gap:10px;padding:13px;border:1px solid var(--color-stroke);
@@ -420,7 +711,7 @@ onMounted(loadCompanies)
 .calendar-day span{color:var(--color-muted);font-size:10px}
 .calendar-day small{align-self:end;color:var(--color-success);font-size:9px;font-weight:600}
 .calendar-day--weekend{background:var(--color-soft)}
-.calendar-day--weekend small{color:var(--color-muted)}
+.calendar-day--weekend small{color:var(--color-muted)}\n.calendar-day--missing{border-style:dashed;background:transparent}\n.calendar-day--missing strong,.calendar-day--missing span,.calendar-day--missing small{color:var(--color-muted)}
 .calendar-blank{min-height:1px}
 @media(max-width:1000px){.worktime-summary{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:760px){

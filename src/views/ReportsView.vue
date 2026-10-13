@@ -29,6 +29,7 @@ import {
 } from '../api/development'
 import { preferredApprovedStaffingPlan } from '../utils/staffingPlanChoice'
 import { localTodayISO } from '../utils/localDate'
+import { getWorktimeTimesheet, type WorktimeTimesheetResponse, type WorktimeTimesheetRow } from '../api/worktime'
 import { buildDemoTimesheet, demoTimesheetSummary } from '../mocks/timesheetDemo'
 
 type ReportTab = 'overview' | 'movement' | 'staffing' | 'training' | 'worktime'
@@ -55,6 +56,11 @@ const trainingRows = ref<TrainingRow[]>([])
 const trainingSummary = ref<Record<string, number>>({ total: 0, planned: 0, ongoing: 0, completed: 0 })
 const staffingResolved = ref(false)
 const trainingResolved = ref(false)
+const productionWorktimeRows = ref<WorktimeTimesheetRow[]>([])
+const productionWorktimeMeta = ref<WorktimeTimesheetResponse['meta'] | null>(null)
+const worktimeResolved = ref(false)
+const worktimeLoading = ref(false)
+const worktimeWarning = ref('')
 
 const tabs = [
   { id: 'overview', label: 'Сводка' },
@@ -116,7 +122,16 @@ const staffingDepartmentRows = computed(() => {
 })
 
 const demoTimesheetRows = computed(() => demoMode ? buildDemoTimesheet(activeEmployees.value, month.value) : [])
-const worktimeSummary = computed(() => demoTimesheetSummary(demoTimesheetRows.value))
+const worktimeSummary = computed(() => {
+  if (demoMode) return demoTimesheetSummary(demoTimesheetRows.value)
+  const summary = productionWorktimeMeta.value?.summary
+  return {
+    planned: hoursFromMinutes(summary?.planned_minutes ?? null),
+    worked: hoursFromMinutes(summary?.worked_minutes ?? null),
+    absence: hoursFromMinutes(summary?.absence_minutes ?? null),
+    overtime: hoursFromMinutes(summary?.overtime_minutes ?? null),
+  }
+})
 const worktimeDepartmentRows = computed(() => {
   const grouped = new Map<string, {
     department: string
@@ -126,22 +141,45 @@ const worktimeDepartmentRows = computed(() => {
     absence: number
     overtime: number
   }>()
-  for (const row of demoTimesheetRows.value) {
-    const current = grouped.get(row.department) ?? {
-      department: row.department,
-      employees: 0,
-      planned: 0,
-      worked: 0,
-      absence: 0,
-      overtime: 0,
+
+  if (demoMode) {
+    for (const row of demoTimesheetRows.value) {
+      const current = grouped.get(row.department) ?? {
+        department: row.department,
+        employees: 0,
+        planned: 0,
+        worked: 0,
+        absence: 0,
+        overtime: 0,
+      }
+      current.employees += 1
+      current.planned += row.planned_hours
+      current.worked += row.worked_hours
+      current.absence += row.absence_hours
+      current.overtime += row.overtime_hours
+      grouped.set(row.department, current)
     }
-    current.employees += 1
-    current.planned += row.planned_hours
-    current.worked += row.worked_hours
-    current.absence += row.absence_hours
-    current.overtime += row.overtime_hours
-    grouped.set(row.department, current)
+  } else {
+    for (const row of productionWorktimeRows.value) {
+      if (row.days_recorded < 1) continue
+      const department = row.department_name || 'Без подразделения'
+      const current = grouped.get(department) ?? {
+        department,
+        employees: 0,
+        planned: 0,
+        worked: 0,
+        absence: 0,
+        overtime: 0,
+      }
+      current.employees += 1
+      current.planned += hoursFromMinutes(row.planned_minutes) ?? 0
+      current.worked += hoursFromMinutes(row.worked_minutes) ?? 0
+      current.absence += hoursFromMinutes(row.absence_minutes) ?? 0
+      current.overtime += hoursFromMinutes(row.overtime_minutes) ?? 0
+      grouped.set(department, current)
+    }
   }
+
   return [...grouped.values()].sort((a, b) => b.absence - a.absence || b.overtime - a.overtime)
 })
 
@@ -198,6 +236,14 @@ function actionTransition(row: PersonnelActionRow): string {
 function employeeName(row: PersonnelActionRow | TrainingRow): string {
   return [row.last_name, row.first_name, row.middle_name].filter(Boolean).join(' ')
 }
+function hoursFromMinutes(minutes: number | null | undefined): number | null {
+  if (minutes === null || minutes === undefined) return null
+  return Math.round((minutes / 60) * 100) / 100
+}
+function hoursLabel(value: number | null): string {
+  if (value === null || !Number.isFinite(value)) return '—'
+  return new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 2 }).format(value)
+}
 
 async function allEmployees(companyId: string, status: 'active' | 'archived') {
   const first = await listEmployees(companyId, 1, '', status)
@@ -214,6 +260,48 @@ async function allEmployees(companyId: string, status: 'active' | 'archived') {
     rows,
     total: first.meta.total,
     truncated: first.meta.last_page > maxAnalyticsPages,
+  }
+}
+
+async function allWorktime(companyId: string, period: string) {
+  const first = await getWorktimeTimesheet(companyId, period, 1)
+  const rows = [...first.data]
+  const remainingPages = Array.from(
+    { length: Math.max(0, first.meta.last_page - 1) },
+    (_, index) => index + 2,
+  )
+  for (let index = 0; index < remainingPages.length; index += 5) {
+    const batch = remainingPages.slice(index, index + 5)
+    const results = await Promise.all(batch.map(page => getWorktimeTimesheet(companyId, period, page)))
+    for (const result of results) rows.push(...result.data)
+  }
+  return { rows, meta: first.meta }
+}
+
+let worktimeGeneration = 0
+async function loadWorktimeReport() {
+  if (demoMode) return
+  const companyId = company.value
+  const period = month.value
+  const current = ++worktimeGeneration
+  productionWorktimeRows.value = []
+  productionWorktimeMeta.value = null
+  worktimeResolved.value = false
+  worktimeWarning.value = ''
+  if (!companyId) return
+
+  worktimeLoading.value = true
+  try {
+    const result = await allWorktime(companyId, period)
+    if (current !== worktimeGeneration) return
+    productionWorktimeRows.value = result.rows
+    productionWorktimeMeta.value = result.meta
+    worktimeResolved.value = true
+  } catch {
+    if (current !== worktimeGeneration) return
+    worktimeWarning.value = 'Данные рабочего времени за выбранный период временно недоступны.'
+  } finally {
+    if (current === worktimeGeneration) worktimeLoading.value = false
   }
 }
 
@@ -346,6 +434,7 @@ async function loadReport() {
 }
 
 watch(company, loadReport)
+watch([company, month], loadWorktimeReport)
 onMounted(loadCompanies)
 </script>
 
@@ -516,26 +605,27 @@ onMounted(loadCompanies)
           <div><h2>Использование рабочего времени</h2><p>{{ monthLabel }} · по подразделениям.</p></div>
           <RouterLink to="/timesheets">Открыть табель</RouterLink>
         </div>
-        <BaseNotice v-if="!demoMode" tone="info">
-          Показатели рабочего времени не формируются до подключения рабочего источника табельного учёта.
+        <BaseNotice v-if="worktimeWarning" tone="warning">{{ worktimeWarning }}</BaseNotice>
+        <BaseNotice
+          v-else-if="!demoMode && worktimeResolved && (productionWorktimeMeta?.summary.employees_with_entries ?? 0) === 0"
+          tone="info">
+          За выбранный период нет загруженных табельных записей. Нулевые показатели не подставляются.
         </BaseNotice>
-        <template v-else>
-          <div class="inline-metrics">
-            <div><span>План</span><strong>{{ worktimeSummary.planned.toLocaleString('ru-RU') }} ч</strong></div>
-            <div><span>Отработано</span><strong>{{ worktimeSummary.worked.toLocaleString('ru-RU') }} ч</strong></div>
-            <div><span>Неявки</span><strong>{{ worktimeSummary.absence.toLocaleString('ru-RU') }} ч</strong></div>
-            <div><span>Сверхурочно</span><strong>{{ worktimeSummary.overtime.toLocaleString('ru-RU') }} ч</strong></div>
-          </div>
-          <BaseDataTable :rows="worktimeDepartmentRows" :columns="worktimeColumns" row-key="department"
-            :loading="loading" caption="Рабочее время по подразделениям"
-            empty-title="Данных рабочего времени нет"
-            empty-description="Для выбранного периода аналитика рабочего времени недоступна.">
-            <template #cell-planned="{ value }">{{ value }} ч</template>
-            <template #cell-worked="{ value }">{{ value }} ч</template>
-            <template #cell-absence="{ value }">{{ value }} ч</template>
-            <template #cell-overtime="{ value }">{{ value }} ч</template>
-          </BaseDataTable>
-        </template>
+        <div class="inline-metrics">
+          <div><span>План</span><strong>{{ worktimeLoading ? '…' : hoursLabel(worktimeSummary.planned) + (worktimeSummary.planned === null ? '' : ' ч') }}</strong></div>
+          <div><span>Отработано</span><strong>{{ worktimeLoading ? '…' : hoursLabel(worktimeSummary.worked) + (worktimeSummary.worked === null ? '' : ' ч') }}</strong></div>
+          <div><span>Неявки</span><strong>{{ worktimeLoading ? '…' : hoursLabel(worktimeSummary.absence) + (worktimeSummary.absence === null ? '' : ' ч') }}</strong></div>
+          <div><span>Сверхурочно</span><strong>{{ worktimeLoading ? '…' : hoursLabel(worktimeSummary.overtime) + (worktimeSummary.overtime === null ? '' : ' ч') }}</strong></div>
+        </div>
+        <BaseDataTable :rows="worktimeDepartmentRows" :columns="worktimeColumns" row-key="department"
+          :loading="worktimeLoading" caption="Рабочее время по подразделениям"
+          empty-title="Данных рабочего времени нет"
+          empty-description="Для выбранного периода аналитика рабочего времени недоступна.">
+          <template #cell-planned="{ value }">{{ hoursLabel(Number(value)) }} ч</template>
+          <template #cell-worked="{ value }">{{ hoursLabel(Number(value)) }} ч</template>
+          <template #cell-absence="{ value }">{{ hoursLabel(Number(value)) }} ч</template>
+          <template #cell-overtime="{ value }">{{ hoursLabel(Number(value)) }} ч</template>
+        </BaseDataTable>
       </BaseCard>
     </template>
   </section>

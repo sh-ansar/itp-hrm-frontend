@@ -41,6 +41,12 @@ test('HR creates and edits a training record, then sees stale revision conflict 
     const trainingTable = page.getByRole('table', { name: 'Обучение сотрудника' })
     const created = trainingTable.getByRole('row', { name: /Плановый семинар HRM/ })
     await created.waitFor()
+    const trainingViewport = await page.locator('#training .table-scroll').evaluate(node => ({
+      scrollsInsideCard: node.scrollWidth > node.clientWidth,
+      pageOverflow: document.documentElement.scrollWidth > innerWidth + 1,
+    }))
+    assert.equal(trainingViewport.scrollsInsideCard, true)
+    assert.equal(trainingViewport.pageOverflow, false)
     await created.getByRole('button', { name: 'Изменить' }).click()
 
     const editor = page.getByRole('region', { name: 'Редактирование кадровых сведений' })

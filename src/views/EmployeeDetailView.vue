@@ -254,6 +254,8 @@ onMounted(load)
 </template>
 
 <style scoped>
+/* Detailed training records scroll inside the card instead of breaking dates and words. */
+.employee-profile #training :deep(table){min-width:1220px}
 .employee-profile{display:grid;grid-template-columns:minmax(0,1fr);gap:var(--space-4);scroll-behavior:smooth}
 .employee-hero{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(320px,.8fr);gap:var(--space-5);align-items:center;background:linear-gradient(135deg,#fff 0%,#f4fbff 100%)}
 .identity-block{display:flex;align-items:center;gap:18px;min-width:0}

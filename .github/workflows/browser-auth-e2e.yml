@@ -102,14 +102,19 @@ jobs:
           # Every test file must begin from a clean synthetic company/employee state.
           # Otherwise personnel-action tests mutate the shared fixture and make subsequent
           # screens appear broken even though their permissions and queries are correct.
+          failed=0
           for test_file in $tests; do
             echo "::group::Isolated browser test: $test_file"
             (cd backend && php artisan migrate:fresh --force > /dev/null)
             php tests/e2e/seed-synthetic-user.php > /dev/null
             php tests/e2e/seed-synthetic-organization.php > /dev/null
-            node --test --test-concurrency=1 "$test_file"
+            if ! node --test --test-concurrency=1 "$test_file"; then
+              echo "::error file=$test_file::Browser test failed"
+              failed=1
+            fi
             echo "::endgroup::"
           done
+          exit "$failed"
       - name: Print server diagnostics on failure
         if: failure()
         run: |

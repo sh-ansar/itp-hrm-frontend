@@ -49,9 +49,9 @@ function displayDate(value: string | null) {
 
       <footer>
         <span class="status-pill" :class="{ 'status-pill--draft': row.status === 'draft' }">{{ statusLabel(row.status) }}</span>
-        <button v-if="row.has_file" class="file-link" type="button" @click="emit('open',row)">
+        <BaseButton v-if="row.has_file" variant="secondary" @click="emit('open',row)">
           <Paperclip :size="14" /> PDF
-        </button>
+        </BaseButton>
         <BaseButton v-else-if="writesEnabled && row.status === 'draft'" variant="secondary"
           @click="emit('upload',row)">Прикрепить PDF</BaseButton>
         <span v-else class="file-empty">Без PDF</span>
@@ -84,7 +84,6 @@ function displayDate(value: string | null) {
 .document-mobile-card footer{display:flex;align-items:center;justify-content:space-between;gap:10px;padding-top:9px;border-top:1px solid var(--color-stroke)}
 .status-pill{display:inline-flex;padding:5px 9px;border-radius:999px;background:var(--color-success-surface);color:var(--color-success);font-size:10px;font-weight:700}
 .status-pill--draft{background:var(--color-accent-soft);color:var(--color-primary)}
-.file-link{display:inline-flex;align-items:center;gap:4px;padding:0;border:0;background:transparent;color:var(--color-primary);font:inherit;font-size:11px;font-weight:700;cursor:pointer}
 .file-empty{color:var(--color-muted);font-size:11px}
 .document-mobile-card footer :deep(.base-button){height:34px;min-height:34px;font-size:11px}
 </style>

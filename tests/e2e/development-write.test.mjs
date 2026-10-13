@@ -46,10 +46,22 @@ test('HR creates new training and reserve entry through reused drawers', async (
     await reserveEditor.getByLabel('Уровень резерва').fill('senior')
     await reserveEditor.getByLabel('Вид резерва').fill('internal')
     await reserveEditor.getByLabel('Год зачисления').fill('2026')
+    const formState = await reserveEditor.locator('form').evaluate(form => ({
+      valid: form.checkValidity(),
+      invalid: [...form.querySelectorAll(':invalid')].map(element => ({
+        name: element.getAttribute('type'), value: element.value, label: element.closest('label')?.textContent?.trim(),
+      })),
+    }))
+    assert.equal(formState.valid, true, 'Reserve form has invalid fields: ' + JSON.stringify(formState.invalid))
     const reserveResponse = page.waitForResponse(response =>
-      response.url().includes('/profile/reserve') && response.request().method() === 'POST')
+      response.url().includes('/profile/reserve') && response.request().method() === 'POST',
+    { timeout: 9000 })
     await reserveEditor.getByRole('button', { name: 'Сохранить запись' }).click()
-    const reply = await reserveResponse
+    let reply
+    try { reply = await reserveResponse } catch (cause) {
+      const message = (await reserveEditor.innerText()).slice(-1000)
+      throw new Error('No reserve POST was sent. Drawer content: ' + message, { cause })
+    }
     assert.equal(reply.status(), 201, 'Reserve write rejected: ' + (await reply.text()).slice(0, 450))
     await reserveDialog.waitFor({ state: 'hidden', timeout: 10000 })
     await page.getByRole('row', { name: /E2E начальник отдела B07/ }).waitFor({ timeout: 15000 })

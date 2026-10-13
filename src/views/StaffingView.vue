@@ -289,8 +289,8 @@ onMounted(refreshCompanies)
             </p>
           </div>
           <div class="plan-actions">
-            <BaseButton v-if="canEdit" variant="secondary" @click="createLine"><Plus :size="17" /> Добавить строку</BaseButton>
-            <BaseButton v-if="canEdit && detail.lines.length" @click="approveOpen = true"><CheckCircle2 :size="17" /> Утвердить</BaseButton>
+            <BaseButton v-if="canEdit && activeView === 'all'" variant="secondary" @click="createLine"><Plus :size="17" /> Добавить строку</BaseButton>
+            <BaseButton v-if="canEdit && detail.lines.length && activeView === 'all'" @click="approveOpen = true"><CheckCircle2 :size="17" /> Утвердить</BaseButton>
           </div>
         </div>
       </BaseCard>

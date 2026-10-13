@@ -55,12 +55,72 @@ export interface EmployeeAssignment extends Record<string, unknown> {
   revision: number
 }
 
+export interface EmployeeReferenceProfile {
+  personal: {
+    iin?: string | null
+    citizenship?: string | null
+    marital_status?: string | null
+    registration_address?: string | null
+    residence_address?: string | null
+    emergency_contact_name?: string | null
+    emergency_contact_phone?: string | null
+  }
+  identity_document: {
+    type?: string | null
+    number?: string | null
+    issued_on?: string | null
+    expires_on?: string | null
+    issued_by?: string | null
+  }
+  banking: {
+    bank_name?: string | null
+    iban?: string | null
+    payroll_account?: string | null
+  }
+  employment: {
+    contract_number?: string | null
+    contract_date?: string | null
+    contract_type?: string | null
+    employment_type?: string | null
+    probation_until?: string | null
+    work_schedule?: string | null
+  }
+  payroll: {
+    salary?: number | null
+    currency?: string | null
+    payment_frequency?: string | null
+    next_payment_date?: string | null
+  }
+  schedule: {
+    schedule_name?: string | null
+    shift?: string | null
+    hours_per_week?: number | null
+    timesheet_month?: string | null
+    planned_hours?: number | null
+    worked_hours?: number | null
+  }
+  documents: Array<{
+    id: string
+    title: string
+    number: string
+    issued_on: string | null
+    status: string
+  }>
+  history: Array<{
+    id: string
+    action: string
+    actor: string
+    created_at: string
+  }>
+}
+
 export interface EmployeeDetail {
   data: EmployeeRecord
   assignments: EmployeeAssignment[]
   experience: Array<{ id: string; revision: number; experience_type: string; started_on: string; ended_on: string | null; basis_reference: string | null }>
   reserve: Array<{ id: string; revision: number; target_position: string; reserve_level: string; reserve_type: string; joined_year: number; left_year: number | null; notes: string | null }>
   training: Array<{ id: string; revision: number; training_type: string; training_mode: string; topic: string; provider: string | null; city: string | null; started_on: string; ended_on: string | null; document_reference: string | null }>
+  reference_profile?: EmployeeReferenceProfile
   meta: {
     assignments_limit: number
     assignments_truncated: boolean

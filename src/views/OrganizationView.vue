@@ -302,7 +302,7 @@ onMounted(loadCompanies)
         Схема слишком велика: показаны первые {{ diagramDepartments.length }} подразделений из доступных {{ total }}.
       </BaseNotice>
 
-      <div v-if="viewMode === 'diagram'" class="structure-diagram" aria-label="Схема подразделений компании">
+      <div v-if="viewMode === 'diagram'" class="structure-diagram" role="region" tabindex="0" aria-label="Схема подразделений компании">
         <BaseLoadingState v-if="diagramLoading" label="Загрузка полной структуры" />
         <div v-else-if="visibleDepartmentForest.length" class="organization-chart" :style="{ zoom: chartZoom + '%' }">
           <div class="chart-company">
@@ -311,7 +311,7 @@ onMounted(loadCompanies)
             <span class="chart-company-count">{{ total }} подразделений</span>
           </div>
           <div class="chart-branches">
-            <DepartmentTreeNode v-for="node in visibleDepartmentForest" :key="node.id" :node="node" />
+            <DepartmentTreeNode v-for="node in visibleDepartmentForest" :key="node.id + ':' + searchQuery" :node="node" />
           </div>
         </div>
         <p v-else class="diagram-empty">{{ searchQuery.trim() ? 'Подразделения по запросу не найдены.' : 'Подразделений для отображения пока нет.' }}</p>
@@ -430,6 +430,7 @@ onMounted(loadCompanies)
 .chart-zoom{display:flex;align-items:center;gap:7px}
 .chart-zoom :deep(.base-button){width:32px;min-width:32px;height:32px;min-height:32px;color:var(--color-primary)}
 .chart-zoom input{width:90px;accent-color:var(--color-primary)}
+.structure-diagram:focus-visible{outline:2px solid var(--color-focus);outline-offset:2px}
 .structure-diagram{min-height:320px;padding:28px 24px 36px;background:var(--color-table-heading);border:1px solid var(--color-stroke);border-radius:var(--radius-md);overflow-x:auto;overflow-y:clip;overscroll-behavior-inline:contain}
 .organization-chart{display:grid;justify-items:center;gap:42px;min-width:1120px;padding:4px 10px 12px}
 .chart-company{position:relative;display:grid;justify-items:center;gap:6px;width:300px;padding:16px 18px;background:var(--color-surface);border:1px solid var(--color-stroke-strong);border-radius:var(--radius-md);box-shadow:var(--shadow-card);text-align:center}

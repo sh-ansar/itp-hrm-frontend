@@ -45,7 +45,7 @@ const expanded = ref(true)
   color:var(--color-primary);background:var(--color-accent-soft);border-radius:11px
 }
 .tree-copy{display:grid;gap:5px;min-width:0;flex:1}
-.tree-copy strong{font-size:13px;line-height:1.35;font-weight:600;overflow-wrap:anywhere}
+.tree-copy strong{font-size:13px;line-height:1.35;font-weight:600;overflow-wrap:normal;word-break:normal;hyphens:none}
 .tree-copy span{display:inline-flex;align-items:center;gap:5px;font-size:11px;color:var(--color-muted);line-height:1.45}
 .tree-card :deep(.base-button){flex:0 0 34px;width:34px;min-width:34px;height:34px;min-height:34px;color:var(--color-muted);background:var(--color-soft)}
 .tree-card :deep(.base-button:hover){color:var(--color-primary)}

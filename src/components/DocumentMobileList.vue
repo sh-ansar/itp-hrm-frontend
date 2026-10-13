@@ -3,6 +3,7 @@ import { FileCheck2, Paperclip } from 'lucide-vue-next'
 import BaseButton from './ui/BaseButton.vue'
 import type { DocumentRow } from '../api/documents'
 import { documentFileUrl, documentTypeLabel } from '../api/documents'
+import { getDemoDocumentUrl } from '../mocks/demoDocumentFiles'
 
 const props = defineProps<{
   rows: DocumentRow[]
@@ -59,7 +60,13 @@ function displayDate(value: string | null): string {
       </dl>
 
       <footer>
-        <span v-if="row.has_file && demoMode" class="file-ready"><FileCheck2 :size="15" /> PDF прикреплён</span>
+        <a v-if="row.has_file && demoMode && getDemoDocumentUrl(row.id)"
+          class="download-link" :href="documentFileUrl(companyId, row.id)" target="_blank" rel="noopener">
+          <FileCheck2 :size="15" /> Открыть PDF
+        </a>
+        <span v-else-if="row.has_file && demoMode" class="file-ready">
+          <FileCheck2 :size="15" /> Демо: файл недоступен
+        </span>
         <a v-else-if="row.has_file" class="download-link" :href="documentFileUrl(companyId,row.id)" target="_blank" rel="noopener">
           <FileCheck2 :size="15" /> Открыть PDF
         </a>

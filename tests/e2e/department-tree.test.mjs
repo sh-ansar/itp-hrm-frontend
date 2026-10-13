@@ -53,7 +53,7 @@ test('HR creates moves renames and deletes an unused department at mobile width'
     await deleteDialog.waitFor()
     await deleteDialog.getByRole('button', { name: 'Удалить' }).click()
 
-    await page.getByText('E2E Team Renamed').waitFor({ state: 'detached' })
+    await page.getByRole('row', { name: /E2E Team Renamed/ }).waitFor({ state: 'detached' })
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1), false)
   } finally {
     await context.close()

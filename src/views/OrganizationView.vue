@@ -388,7 +388,7 @@ onMounted(loadCompanies)
 .chart-zoom :deep(.base-button){width:32px;min-width:32px;height:32px;min-height:32px;color:var(--color-primary)}
 .chart-zoom input{width:90px;accent-color:var(--color-primary)}
 .structure-diagram{min-height:320px;padding:28px 24px 36px;background:var(--color-table-heading);border:1px solid var(--color-stroke);border-radius:var(--radius-md);overflow-x:auto;overflow-y:clip;overscroll-behavior-inline:contain}
-.organization-chart{display:grid;justify-items:center;gap:42px;min-width:980px;padding:4px 10px 12px}
+.organization-chart{display:grid;justify-items:center;gap:42px;min-width:1320px;padding:4px 10px 12px}
 .chart-company{position:relative;display:grid;justify-items:center;gap:6px;width:300px;padding:16px 18px;background:var(--color-surface);border:1px solid var(--color-stroke-strong);border-radius:var(--radius-md);box-shadow:var(--shadow-card);text-align:center}
 .chart-company::after{content:'';position:absolute;left:50%;bottom:-37px;width:1px;height:36px;background:var(--color-primary-stroke)}
 .chart-company-label{font-size:10px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--color-muted)}

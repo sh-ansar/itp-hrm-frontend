@@ -1,48 +1,46 @@
 <script setup lang="ts">
+import { ref } from 'vue'
 import { Columns3 } from 'lucide-vue-next'
-
-const props = withDefaults(defineProps<{
-  modelValue: Record<string, boolean>
-  columns: { key: string; label: string }[]
-  title?: string
-}>(), { title: 'Колонки' })
+import BaseButton from './BaseButton.vue'
+import BaseDialog from './BaseDialog.vue'
+const props = withDefaults(defineProps<{ modelValue: Record<string, boolean>; columns: { key: string; label: string }[]; title?: string }>(), { title: 'Колонки' })
 const emit = defineEmits<{ 'update:modelValue': [value: Record<string, boolean>] }>()
-function toggleColumn(key: string, checked: boolean) {
-  emit('update:modelValue', { ...props.modelValue, [key]: checked })
-}
+const open = ref(false)
+const draft = ref<Record<string, boolean>>({})
+function begin() { draft.value = Object.fromEntries(props.columns.map(column => [column.key, props.modelValue[column.key] !== false])); open.value = true }
+function apply() { emit('update:modelValue', { ...props.modelValue, ...draft.value }); open.value = false }
 </script>
-
 <template>
-  <details class="column-settings">
-    <summary><Columns3 :size="16" aria-hidden="true" /> {{ title }}</summary>
-    <div class="column-options" role="group" aria-label="Настройка отображаемых колонок">
-      <strong>Показывать колонки</strong>
-      <label v-for="column in columns" :key="column.key">
-        <input type="checkbox" :checked="modelValue[column.key] !== false"
-          @change="toggleColumn(column.key, ($event.target as HTMLInputElement).checked)" />
-        {{ column.label }}
-      </label>
-    </div>
-  </details>
+  <div class="column-settings">
+    <BaseButton variant="secondary" :aria-expanded="open" @click="begin"><Columns3 :size="16" aria-hidden="true" /> {{ title }}</BaseButton>
+    <BaseDialog :open="open" title="Настройка колонок" @close="open = false">
+      <form class="column-picker-form" @submit.prevent="apply">
+        <p>Выберите данные, которые будут отображаться в таблице.</p>
+        <div class="column-options" role="group" aria-label="Настройка отображаемых колонок">
+          <label v-for="column in columns" :key="column.key">
+            <span>{{ column.label }}</span>
+            <input v-model="draft[column.key]" type="checkbox" />
+          </label>
+        </div>
+        <div class="column-actions">
+          <BaseButton type="submit">Применить</BaseButton>
+          <BaseButton variant="secondary" @click="open = false">Отмена</BaseButton>
+        </div>
+      </form>
+    </BaseDialog>
+  </div>
 </template>
-
 <style scoped>
-.column-settings{position:relative;min-width:0}
-.column-settings summary{
-  list-style:none;display:inline-flex;align-items:center;gap:var(--space-1);height:40px;min-height:40px;
-  padding:var(--space-2) var(--space-3);border:1px solid var(--color-stroke);border-radius:var(--space-2);
-  background:var(--color-surface-raised);color:var(--color-text);box-shadow:var(--shadow-control);
-  font:inherit;font-size:var(--font-label-size);line-height:var(--line-caption);font-weight:600;cursor:pointer;white-space:nowrap
-}
-.column-settings summary::-webkit-details-marker{display:none}
-.column-settings[open] summary{border-color:var(--color-stroke-strong)}
-.column-settings summary:focus-visible{outline:2px solid var(--color-primary);outline-offset:2px}
-.column-options{
-  position:absolute;top:calc(100% + var(--space-1));right:0;z-index:40;display:grid;gap:var(--space-3);
-  width:min(260px,85vw);padding:var(--space-4);border:1px solid var(--color-stroke);border-radius:var(--space-2);
-  box-shadow:var(--shadow-float);background:var(--color-surface);color:var(--color-text)
-}
-.column-options strong{font-size:var(--font-caption-size);line-height:var(--line-caption);font-weight:600}
-.column-options label{display:flex;align-items:center;gap:var(--space-2);font-size:var(--font-caption-size);line-height:var(--line-caption);cursor:pointer}
-.column-options input{accent-color:var(--color-primary)}
+.column-settings{min-width:0}
+.column-picker-form{display:flex;flex-direction:column;gap:20px;min-height:calc(100dvh - 150px)}
+.column-picker-form p{margin:0;color:var(--color-muted);font-size:var(--font-body-size);line-height:1.5}
+.column-options{display:grid;gap:0}
+.column-options label{display:flex;justify-content:space-between;align-items:center;gap:20px;min-height:48px;border-bottom:1px solid var(--color-stroke);font-size:var(--font-body-size);cursor:pointer}
+.column-options input{appearance:none;position:relative;width:36px;height:20px;border:1px solid var(--color-stroke);border-radius:20px;background:var(--color-soft);flex:0 0 36px;cursor:pointer}
+.column-options input::after{content:'';position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:50%;background:var(--color-muted);transition:transform .15s}
+.column-options input:checked{background:var(--color-primary);border-color:var(--color-primary)}
+.column-options input:checked::after{background:var(--color-surface);transform:translateX(16px)}
+.column-options input:focus-visible{outline:2px solid var(--color-focus);outline-offset:3px}
+.column-actions{position:sticky;bottom:-24px;display:flex;gap:10px;flex-wrap:wrap;margin-top:auto;padding:16px 0;background:var(--color-surface);border-top:1px solid var(--color-stroke)}
+@media(prefers-reduced-motion:reduce){.column-options input::after{transition:none}}
 </style>

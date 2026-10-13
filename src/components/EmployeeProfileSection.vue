@@ -32,7 +32,7 @@ const contentId = useId()
 <style scoped>
 .employee-profile-section{min-width:0;background:var(--color-surface);border:1px solid var(--color-stroke);border-radius:var(--radius-md);overflow:hidden;box-shadow:var(--shadow-card)}
 .section-heading{display:flex;justify-content:space-between;align-items:center;gap:16px;min-height:58px;padding:12px 18px;border-bottom:1px solid var(--color-stroke)}
-.section-heading h2{margin:0;color:var(--color-text);font-size:15px;font-weight:600;line-height:1.4}
+.section-heading h2{margin:0;color:var(--color-text);font-size:16px;font-weight:500;line-height:1.4}
 .section-actions{display:flex;align-items:center;gap:10px;min-width:0}
 .expand-button{display:grid;place-items:center;width:30px;height:30px;flex:0 0 30px;border:1px solid var(--color-stroke);border-radius:var(--radius-sm);background:var(--color-surface);color:var(--color-muted)}
 .expand-button:hover{background:var(--color-soft);color:var(--color-primary)}

@@ -1,6 +1,6 @@
 /* HRM visual contract aligned to sh-ansar/demo_bnt_dt.
    Page components should consume semantic tokens instead of page-local values. */
-@import url("https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600;700&display=swap");
+@font-face{font-family:"Golos Text";src:url("/fonts/GolosText.ttf") format("truetype");font-weight:400 900;font-style:normal;font-display:swap}
 
 :root {
   font-family:"Golos Text",Golos,"Segoe UI",Arial,sans-serif;
@@ -42,10 +42,10 @@
   /* Corporate typography scale used by the source prototype. */
   --font-page-heading:clamp(24px,1.666667vw,32px);
   --font-section-heading:clamp(20px,1.388889vw,26.666667px);
-  --font-label-size:clamp(12px,.833333vw,16px);
+  --font-label-size:clamp(13px,.972222vw,16px);
   --font-body-size:clamp(14px,.972222vw,18.666667px);
   --font-caption-size:clamp(12px,.833333vw,16px);
-  --font-table-size:clamp(12px,.833333vw,16px);
+  --font-table-size:clamp(13px,.972222vw,16px);
   --line-body:clamp(20px,1.388889vw,26.666667px);
   --line-caption:clamp(16px,1.111111vw,21.333333px);
 

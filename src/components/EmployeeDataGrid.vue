@@ -19,15 +19,14 @@ defineProps<{ fields: EmployeeDisplayField[] }>()
 </template>
 
 <style scoped>
-.employee-data-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px 18px}
+.employee-data-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px 24px}
 .employee-data-field{display:grid;align-content:start;gap:7px;min-width:0}
-.employee-data-field>span{font-size:var(--font-caption-size);line-height:var(--line-caption);font-weight:500;color:var(--color-muted)}
+.employee-data-field>span{font-size:var(--font-body-size);line-height:var(--line-caption);font-weight:500;color:var(--color-text)}
 .employee-data-field>strong{
-  min-width:0;min-height:42px;display:flex;align-items:center;padding:9px 12px;
-  border:1px solid var(--color-stroke);border-radius:var(--radius-sm);
-  background:var(--color-surface);color:var(--color-text);
-  font-size:var(--font-label-size);line-height:var(--line-caption);font-weight:500;overflow-wrap:anywhere
+  min-width:0;min-height:22px;display:flex;align-items:flex-start;padding:0;
+  color:var(--color-text);font-size:var(--font-body-size);line-height:1.5;font-weight:400;overflow-wrap:anywhere
 }
+
 .employee-data-field--wide{grid-column:span 2}
 .employee-data-field--muted>strong{color:var(--color-muted)}
 @media(max-width:980px){.employee-data-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}

@@ -103,7 +103,6 @@ async function submit() {
 <template>
   <section class="create-form" :aria-label="edit ? 'Редактирование кадровых сведений' : 'Добавление кадровых сведений'">
     <h2>{{ edit ? 'Редактировать кадровые сведения' : 'Добавить кадровые сведения' }}</h2>
-    <p class="form-hint">Изменения сохраняются с проверкой прав и журналом аудита.</p>
     <div v-if="!edit && !initialSection" class="section-tabs" role="group" aria-label="Раздел карточки">
       <BaseButton v-for="item in sections" :key="item.value" variant="secondary"
         :disabled="saving" @click="selectSection(item.value)">{{ item.label }}{{ section === item.value ? ' ✓' : '' }}</BaseButton>

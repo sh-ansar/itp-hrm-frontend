@@ -86,11 +86,13 @@ table{border-collapse:separate;border-spacing:0;width:100%;min-width:540px;text-
 th{
   position:sticky;top:0;z-index:1;padding:10px 12px;
   background:var(--color-table-heading);color:var(--color-table-heading-text);
-  font-size:var(--font-caption-size);font-weight:600;white-space:nowrap;
+  font-size:var(--font-table-size);font-weight:500;white-space:nowrap;
   border-bottom:1px solid var(--color-stroke);
 }
-td{padding:10px 12px;border-bottom:1px solid var(--color-stroke);color:var(--color-text);overflow-wrap:anywhere;vertical-align:middle}
+td{padding:10px 12px;border-bottom:1px solid var(--color-stroke);border-right:1px solid var(--color-stroke);color:var(--color-text);overflow-wrap:anywhere;vertical-align:middle}
 tbody tr:last-child td{border-bottom:0}
+th:not(:last-child){border-right:1px solid var(--color-stroke)}
+td:last-child{border-right:0}
 .table-group th{
   position:static;padding:8px 12px;background:var(--color-soft);color:var(--color-text);
   font-size:var(--font-caption-size);font-weight:600;border-top:0;border-bottom:1px solid var(--color-stroke);

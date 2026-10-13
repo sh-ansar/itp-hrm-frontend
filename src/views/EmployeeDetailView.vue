@@ -3,6 +3,7 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { Plus } from 'lucide-vue-next'
 import { useRoute } from 'vue-router'
 import EmployeeProfileSection from '../components/EmployeeProfileSection.vue'
+import EmployeePhoto from '../components/EmployeePhoto.vue'
 import EmployeeDataGrid from '../components/EmployeeDataGrid.vue'
 import BaseButton from '../components/ui/BaseButton.vue'
 import BaseDataTable from '../components/ui/BaseDataTable.vue'
@@ -169,6 +170,8 @@ const documentColumns = [
 ]
 function historyActionLabel(action: string): string {
   const labels: Record<string, string> = {
+    'personnel.employee_photo_updated': 'Обновлено фото сотрудника',
+    'personnel.employee_photo_removed': 'Удалено фото сотрудника',
     'personnel.employee_created': 'Создана карточка сотрудника',
     'personnel.employee_updated': 'Изменены данные сотрудника',
     'personnel.profile_record_created': 'Добавлены кадровые сведения',
@@ -266,11 +269,11 @@ onMounted(load)
     <template v-else-if="profile">
       <div class="employee-identity">
         <div class="identity-photo-section">
-          <p class="identity-caption">Фото сотрудника</p>
-          <div class="identity-photo-row">
-            <div class="avatar" aria-label="Фото сотрудника не загружено">{{ initials }}</div>
-            <div class="identity-photo-help">Фото не загружено</div>
-          </div>
+          <EmployeePhoto v-if="profile.meta.extended_sections_visible"
+            :company-id="String(route.params.company)" :employee-id="profile.data.id"
+            :revision="profile.data.revision" :has-photo="!!profile.data.has_photo"
+            :can-edit="profile.meta.employee_writes_enabled" :name="displayName" :initials="initials" @saved="load" />
+          <div v-else class="avatar" aria-label="Карточка сотрудника">{{ initials }}</div>
           <div v-if="profile.meta.extended_sections_visible" class="gender-options" aria-label="Пол сотрудника">
             <span :class="{ 'gender-selected': profile.data.gender === 'male' }"><i aria-hidden="true"></i> Мужчина</span>
             <span :class="{ 'gender-selected': profile.data.gender === 'female' }"><i aria-hidden="true"></i> Женщина</span>
@@ -564,10 +567,8 @@ onMounted(load)
   line-height:var(--line-caption);font-weight:500
 }
 .read-field strong{
-  min-height:42px;display:flex;align-items:center;padding:9px 12px;
-  border:1px solid var(--color-stroke);border-radius:var(--radius-sm);
-  background:var(--color-surface);color:var(--color-text);
-  font-size:var(--font-label-size);line-height:var(--line-caption);font-weight:500;overflow-wrap:anywhere
+  min-height:22px;display:flex;align-items:flex-start;padding:0;
+  color:var(--color-text);font-size:var(--font-body-size);line-height:1.5;font-weight:400;overflow-wrap:anywhere
 }
 
 .profile-toolbar{display:flex;justify-content:flex-end}

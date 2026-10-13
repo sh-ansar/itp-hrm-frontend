@@ -1,3 +1,4 @@
+import { getDemoEmployeePhoto } from './employeePhotos'
 const companyId='11111111-1111-4111-8111-111111111111'
 const id=(n:number)=>`00000000-0000-4000-8000-${String(n).padStart(12,'0')}`
 const deps=[
@@ -181,6 +182,17 @@ export async function mockApiRequest<T>(path:string,options:RequestInit={}):Prom
     return {data:{id:document.id,has_file:true,revision:document.revision}} as T
   }
 
+  m=p.match(/^\/companies\/[^/]+\/employees\/([^/]+)\/photo$/)
+  if (m && ['POST', 'DELETE'].includes(method)) {
+    const employee:any=employees.find(x=>x.id===m![1])
+    if (!employee) throw new Error('Сотрудник не найден')
+    const body=options.body?JSON.parse(String(options.body)):{}
+    if (body.revision!==employee.revision) throw new Error('Карточка уже изменена. Обновите её')
+    employee.revision++
+    employee.has_photo=method==='POST'
+    recordEmployeeChange(employee.id, method==='POST'?'personnel.employee_photo_updated':'personnel.employee_photo_removed')
+    return {data:{has_photo:employee.has_photo,revision:employee.revision}} as T
+  }
   m=p.match(/^\/companies\/[^/]+\/employees\/([^/]+)$/)
   if(m&&method==='PUT'){
     const e:any=employees.find(x=>x.id===m![1])
@@ -191,7 +203,7 @@ export async function mockApiRequest<T>(path:string,options:RequestInit={}):Prom
     recordEmployeeChange(e.id, 'personnel.employee_updated')
     return {data:e} as T
   }
-  if(m&&method==='GET'){const e:any=employees.find(x=>x.id===m![1]);if(!e)throw new Error('Сотрудник не найден');const ei=employees.indexOf(e);return {data:e,assignments:e.current_department_id?[{id:id(7000+ei),department_id:e.current_department_id,position_id:e.current_position_id,department_name:e.current_department_name,position_name:e.current_position_name,valid_from:e.current_assignment_valid_from,valid_to:null,basis_reference:`Приказ № HR-${120+ei}`,revision:1}]:[],experience:[{id:id(8000+ei),revision:1,experience_type:'Основное место работы',started_on:'2022-03-01',ended_on:null,basis_reference:'Трудовой договор'}],reserve:employeeReserve(e,ei),training:employeeTraining(e,ei),reference_profile:referenceProfileFor(e,ei),meta:{assignments_limit:50,assignments_truncated:false,extended_sections_visible:true,profile_writes_enabled:true,assignment_writes_enabled:true,employee_writes_enabled:true}} as T}
+  if(m&&method==='GET'){const e:any=employees.find(x=>x.id===m![1]);if(!e)throw new Error('Сотрудник не найден');const ei=employees.indexOf(e);return {data:{...e,has_photo:!!getDemoEmployeePhoto(e.id)},assignments:e.current_department_id?[{id:id(7000+ei),department_id:e.current_department_id,position_id:e.current_position_id,department_name:e.current_department_name,position_name:e.current_position_name,valid_from:e.current_assignment_valid_from,valid_to:null,basis_reference:`Приказ № HR-${120+ei}`,revision:1}]:[],experience:[{id:id(8000+ei),revision:1,experience_type:'Основное место работы',started_on:'2022-03-01',ended_on:null,basis_reference:'Трудовой договор'}],reserve:employeeReserve(e,ei),training:employeeTraining(e,ei),reference_profile:referenceProfileFor(e,ei),meta:{assignments_limit:50,assignments_truncated:false,extended_sections_visible:true,profile_writes_enabled:true,assignment_writes_enabled:true,employee_writes_enabled:true}} as T}
   m=p.match(/^\/companies\/[^/]+\/employees\/([^/]+)\/personnel-actions\/(hire|transfer|terminate)$/)
   if(m&&method==='POST'){
     const employee:any=employees.find(x=>x.id===m![1])

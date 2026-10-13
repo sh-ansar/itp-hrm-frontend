@@ -131,9 +131,9 @@ watch(() => route.query.q, q => {
 
 <style scoped>
 /* Shared prototype shell: stable narrow navigation and left-aligned search */
-.app-shell{grid-template-columns:240px minmax(0,1fr)}
+.app-shell{grid-template-columns:264px minmax(0,1fr)}
 .app-shell--collapsed{grid-template-columns:62px minmax(0,1fr)}
-.topbar{height:62px;justify-content:flex-start;gap:16px;padding:0 22px}
+.topbar{height:56px;justify-content:flex-start;gap:16px;padding:0 22px}
 .topbar-leading{display:none}
 .topbar-search{margin-right:auto;flex:0 1 335px}
 .topbar-user{margin-left:auto}
@@ -144,7 +144,7 @@ watch(() => route.query.q, q => {
   .topbar-search{flex:1;min-width:0}
 }
 
-.sidebar-head{height:62px;flex:0 0 62px;display:flex;align-items:center;justify-content:space-between;gap:8px;padding:0 14px;border-bottom:1px solid var(--color-stroke)}
+.sidebar-head{height:56px;flex:0 0 56px;display:flex;align-items:center;justify-content:space-between;gap:8px;padding:0 14px;border-bottom:1px solid var(--color-stroke)}
 .brand-link{min-width:0;display:flex;align-items:center;gap:8px}
 .brand-mark{flex:0 0 auto;font-size:15px;font-weight:800;letter-spacing:-.05em;color:var(--color-text)}
 .brand-copy{min-width:0}
@@ -152,7 +152,7 @@ watch(() => route.query.q, q => {
 .sidebar-collapse,.mobile-nav-close,.mobile-nav-trigger,.logout-button{width:32px;height:32px;flex:0 0 32px;display:grid;place-items:center;border:0;border-radius:5px;background:transparent;color:var(--color-muted)}
 .sidebar-collapse:hover,.mobile-nav-close:hover,.mobile-nav-trigger:hover,.logout-button:hover{background:var(--color-soft);color:var(--color-text)}
 .sidebar-nav{min-height:0;flex:1;overflow-y:auto;overflow-x:hidden;padding:16px 10px;scrollbar-width:thin}
-.nav-item{display:flex;align-items:center;gap:12px;min-height:43px;padding:10px 11px;border-radius:4px;color:var(--color-text);font-size:13px;font-weight:600;line-height:1.3}
+.nav-item{display:flex;align-items:center;gap:12px;min-height:40px;padding:10px 11px;border-radius:4px;color:var(--color-text);font-size:14px;font-weight:500;line-height:1.3}
 .nav-svg-icon{width:19px;height:19px;flex:0 0 19px;object-fit:contain}
 .nav-item:hover{background:var(--color-hover)}
 .nav-item.router-link-active{background:var(--color-accent-soft);color:var(--color-primary)}

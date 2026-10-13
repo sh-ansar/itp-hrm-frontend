@@ -26,14 +26,20 @@ test('employee prototype register has real status filter, archive, grouping and 
     await page.getByRole('heading', { name: 'Реестр сотрудников' }).waitFor()
     await page.getByRole('row', { name: /E2E-001/ }).waitFor({ timeout: 15000 })
     const table = page.getByRole('table', { name: 'Реестр сотрудников выбранной компании' })
-    assert.equal(await table.getByRole('columnheader', { name: 'Подразделение' }).count(), 1)
+    assert.equal(await table.getByRole('columnheader', { name: 'Дата рождения' }).count(), 1)
+    assert.equal(await table.getByRole('columnheader', { name: 'Подразделение' }).count(), 0)
 
     await page.getByRole('button', { name: 'Группировка' }).click()
     await page.getByText('Сгруппированы записи текущей страницы.').waitFor()
     assert.ok((await table.locator('tbody tr.table-group').count()) >= 1)
 
-    await page.locator('.column-settings summary').click()
+    await page.getByRole('button', { name: 'Настройка колонок', exact: true }).click()
+    await page.locator('.column-options').getByLabel('Подразделение').check()
+    await page.getByRole('dialog', { name: 'Настройка колонок' }).getByRole('button', { name: 'Применить' }).click()
+    assert.equal(await table.getByRole('columnheader', { name: 'Подразделение' }).count(), 1)
+    await page.getByRole('button', { name: 'Настройка колонок', exact: true }).click()
     await page.locator('.column-options').getByLabel('Подразделение').uncheck()
+    await page.getByRole('dialog', { name: 'Настройка колонок' }).getByRole('button', { name: 'Применить' }).click()
     assert.equal(await table.getByRole('columnheader', { name: 'Подразделение' }).count(), 0)
 
     await page.getByRole('button', { name: 'Архив сотрудников' }).click()

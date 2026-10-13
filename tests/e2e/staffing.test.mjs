@@ -11,7 +11,7 @@ async function login(page) {
   await page.getByLabel('Электронная почта').fill('synthetic-e2e@example.test')
   await page.getByLabel('Пароль').fill('SyntheticE2E-Only!2026')
   await page.getByRole('button', { name: 'Войти' }).click()
-  await page.getByRole('heading', { name: 'Обзор системы' }).waitFor()
+  await page.getByRole('heading', { name: 'Главная' }).waitFor()
 }
 
 test('HR creates staffs and approves a real staffing-plan version at mobile width', async () => {

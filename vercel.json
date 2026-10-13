@@ -22,7 +22,8 @@
       "feat/reports-analytics-prototype": false,
       "fix/directories-prototype-parity": false,
       "feat/settings-workspace": false,
-      "feat/leaves-prototype": false
+      "feat/leaves-prototype": false,
+      "chore/remove-dead-placeholders": false
     }
   }
 }

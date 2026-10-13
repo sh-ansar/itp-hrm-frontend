@@ -199,7 +199,7 @@ onMounted(loadCompanies)
 <template>
   <section class="personnel-page">
     <BasePageHeading title="Реестр сотрудников" description="Кадровый состав и личные карточки">
-      <BaseButton v-if="employeeWritesEnabled" @click="createOpen = true"><Plus :size="16" /> Добавить сотрудника</BaseButton>
+      <BaseButton v-if="employeeWritesEnabled && activeTab === 'register'" @click="createOpen = true"><Plus :size="16" /> Добавить сотрудника</BaseButton>
     </BasePageHeading>
 
     <BaseNotice v-if="error" tone="error">{{ error }}</BaseNotice>
@@ -218,8 +218,8 @@ onMounted(loadCompanies)
       <template v-else-if="companies.length">
         <div class="register-heading">
           <div>
-            <h2>{{ activeTab === 'archive' ? 'Архив сотрудников' : 'Список сотрудников' }} <span>({{ total }})</span></h2>
-            <p>{{ currentCompany?.name }} · отображается {{ registryRows.length }} из {{ total }}</p>
+            <h2>{{ activeTab === 'archive' ? 'Архив сотрудников' : 'Список сотрудников' }} <span>({{ employeeLoading ? '…' : total }})</span></h2>
+            <p>{{ currentCompany?.name }} · {{ employeeLoading ? 'Загрузка записей…' : 'отображается ' + registryRows.length + ' из ' + total }}</p>
           </div>
           <div class="company-select"><BaseSelectField v-model="selectedCompany" label="Компания" :options="companies" /></div>
         </div>

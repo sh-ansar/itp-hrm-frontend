@@ -1,11 +1,11 @@
 <script setup lang="ts">
-withDefaults(defineProps<{ variant?: 'primary' | 'secondary'; disabled?: boolean; type?: 'button' | 'submit' | 'reset' }>(),{
-  variant:'primary',type:'button',disabled:false,
+withDefaults(defineProps<{ variant?: 'primary' | 'secondary'; disabled?: boolean; type?: 'button' | 'submit' | 'reset'; iconOnly?: boolean }>(),{
+  variant:'primary',type:'button',disabled:false,iconOnly:false,
 })
 </script>
 
 <template>
-  <button :type="type" :disabled="disabled" :class="['base-button',variant]"><slot /></button>
+  <button :type="type" :disabled="disabled" :class="['base-button',variant,{ 'icon-only': iconOnly }]"><slot /></button>
 </template>
 
 <style scoped>
@@ -24,6 +24,8 @@ withDefaults(defineProps<{ variant?: 'primary' | 'secondary'; disabled?: boolean
 .base-button:focus-visible{outline:2px solid var(--color-primary);outline-offset:2px}
 .base-button:disabled{opacity:.5;cursor:not-allowed}
 .base-button :deep(svg){position:relative;z-index:1;width:20px;height:20px;flex:none}
+.icon-only{width:40px;min-width:40px;padding:0}
+.icon-only :deep(svg){width:18px;height:18px}
 .base-button :deep(*){position:relative;z-index:1}
 .primary{border-color:var(--color-primary);background:var(--color-primary);color:var(--color-on-primary);box-shadow:var(--shadow-control)}
 .secondary{border-color:var(--color-stroke);background:var(--color-surface-raised);background-clip:padding-box;color:var(--color-text);box-shadow:var(--shadow-control);backdrop-filter:blur(20px)}

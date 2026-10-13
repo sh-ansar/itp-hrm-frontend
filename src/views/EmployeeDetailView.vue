@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
-import { Pencil, Plus, UserRound } from 'lucide-vue-next'
+import { Plus } from 'lucide-vue-next'
 import { useRoute } from 'vue-router'
 import EmployeeProfileSection from '../components/EmployeeProfileSection.vue'
+import EmployeeDataGrid, { type EmployeeDisplayField } from '../components/EmployeeDataGrid.vue'
 import BaseButton from '../components/ui/BaseButton.vue'
 import BaseDataTable from '../components/ui/BaseDataTable.vue'
 import BaseNotice from '../components/ui/BaseNotice.vue'
@@ -86,6 +87,85 @@ const initials = computed(() => {
   if (!data) return ''
   return [data.first_name, data.last_name].filter(Boolean).map(value => value.charAt(0).toUpperCase()).join('')
 })
+
+const reference = computed(() => profile.value?.reference_profile)
+const genderLabel = computed(() => profile.value?.data.gender === 'male' ? 'Мужчина' : profile.value?.data.gender === 'female' ? 'Женщина' : '—')
+function money(value: number | null | undefined, currency = 'KZT'): string {
+  return value == null ? '—' : `${Number(value).toLocaleString('ru-RU')} ${currency}`
+}
+const personalFields = computed<EmployeeDisplayField[]>(() => [
+  { label: 'ИИН', value: reference.value?.personal.iin },
+  { label: 'Дата рождения', value: formatDate(profile.value?.data.birth_date) },
+  { label: 'Пол', value: genderLabel.value },
+  { label: 'Гражданство', value: reference.value?.personal.citizenship },
+  { label: 'Семейное положение', value: reference.value?.personal.marital_status },
+  { label: 'Табельный номер', value: profile.value?.data.personnel_number },
+])
+const contactFields = computed<EmployeeDisplayField[]>(() => [
+  { label: 'Email', value: profile.value?.data.email },
+  { label: 'Телефон', value: profile.value?.data.phone },
+  { label: 'Адрес проживания', value: reference.value?.personal.residence_address ?? profile.value?.data.address, wide: true },
+  { label: 'Адрес регистрации', value: reference.value?.personal.registration_address, wide: true },
+  { label: 'Контактное лицо', value: reference.value?.personal.emergency_contact_name },
+  { label: 'Телефон контактного лица', value: reference.value?.personal.emergency_contact_phone },
+])
+const documentFields = computed<EmployeeDisplayField[]>(() => [
+  { label: 'Тип документа', value: reference.value?.identity_document.type },
+  { label: 'Номер документа', value: reference.value?.identity_document.number },
+  { label: 'Дата выдачи', value: formatDate(reference.value?.identity_document.issued_on) },
+  { label: 'Действителен до', value: formatDate(reference.value?.identity_document.expires_on) },
+  { label: 'Кем выдан', value: reference.value?.identity_document.issued_by, wide: true },
+])
+const bankingFields = computed<EmployeeDisplayField[]>(() => [
+  { label: 'Банк', value: reference.value?.banking.bank_name },
+  { label: 'IBAN', value: reference.value?.banking.iban, wide: true },
+  { label: 'Зарплатный счёт', value: reference.value?.banking.payroll_account },
+])
+const organizationFields = computed<EmployeeDisplayField[]>(() => [
+  { label: 'Подразделение', value: currentAssignment.value?.department_name ?? plannedAssignment.value?.department_name },
+  { label: 'Должность', value: currentAssignment.value?.position_name ?? plannedAssignment.value?.position_name },
+  { label: 'Дата назначения', value: formatDate(currentAssignment.value?.valid_from ?? plannedAssignment.value?.valid_from) },
+  { label: 'Объект', value: profile.value?.data.work_site },
+  { label: 'Рабочая зона', value: profile.value?.data.work_zone },
+  { label: 'Бригада / команда', value: profile.value?.data.work_team },
+  { label: 'Непосредственный руководитель', value: profile.value?.data.supervisor_name, wide: true },
+  { label: 'Статус сотрудника', value: employmentStatus.value },
+])
+const employmentFields = computed<EmployeeDisplayField[]>(() => [
+  { label: 'Номер договора', value: reference.value?.employment.contract_number },
+  { label: 'Дата договора', value: formatDate(reference.value?.employment.contract_date) },
+  { label: 'Вид договора', value: reference.value?.employment.contract_type },
+  { label: 'Тип занятости', value: reference.value?.employment.employment_type },
+  { label: 'Основание приёма', value: currentAssignment.value?.basis_reference ?? plannedAssignment.value?.basis_reference },
+  { label: 'Испытательный срок до', value: formatDate(reference.value?.employment.probation_until) },
+  { label: 'График работы', value: reference.value?.employment.work_schedule, wide: true },
+])
+const payrollFields = computed<EmployeeDisplayField[]>(() => [
+  { label: 'Оклад', value: money(reference.value?.payroll.salary, reference.value?.payroll.currency ?? 'KZT') },
+  { label: 'Периодичность выплат', value: reference.value?.payroll.payment_frequency },
+  { label: 'Следующая выплата', value: formatDate(reference.value?.payroll.next_payment_date) },
+  { label: 'Банк', value: reference.value?.banking.bank_name },
+  { label: 'IBAN', value: reference.value?.banking.iban, wide: true },
+])
+const scheduleFields = computed<EmployeeDisplayField[]>(() => [
+  { label: 'График', value: reference.value?.schedule.schedule_name },
+  { label: 'Смена', value: reference.value?.schedule.shift },
+  { label: 'Часов в неделю', value: reference.value?.schedule.hours_per_week },
+  { label: 'Табельный период', value: reference.value?.schedule.timesheet_month },
+  { label: 'План часов', value: reference.value?.schedule.planned_hours },
+  { label: 'Отработано часов', value: reference.value?.schedule.worked_hours },
+])
+const documentColumns = [
+  { key: 'title', label: 'Документ' },
+  { key: 'number', label: 'Номер' },
+  { key: 'issued_on', label: 'Дата' },
+  { key: 'status', label: 'Статус' },
+]
+const historyColumns = [
+  { key: 'action', label: 'Изменение' },
+  { key: 'actor', label: 'Кто изменил' },
+  { key: 'created_at', label: 'Дата' },
+]
 
 function beginEdit(section: ProfileSection, record: ProfileEditRow) {
   editing.value = { section, record }

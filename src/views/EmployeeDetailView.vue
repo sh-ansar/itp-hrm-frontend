@@ -447,7 +447,8 @@ onMounted(load)
   display:grid;grid-template-columns:minmax(0,1fr);gap:12px;
   max-width:100%;min-width:0;scroll-behavior:smooth
 }
-.employee-profile :deep(.view-tabs){margin:2px 0 4px}\n.employee-profile :deep(.view-tab){padding-inline:11px}
+.employee-profile :deep(.view-tabs){margin:2px 0 4px}
+.employee-profile :deep(.view-tab){padding-inline:10px;font-size:12px}\n.employee-profile :deep(.view-tab){padding-inline:11px}
 .employee-profile :deep(.view-tab){padding-inline:10px;font-size:11px}
 .employee-profile :deep(.table-scroll){border-radius:var(--radius-md)}
 
@@ -568,7 +569,11 @@ onMounted(load)
   font-size:13px;font-weight:600;text-decoration:underline;text-underline-offset:3px
 }
 
+@media(max-width:1100px){
+  .employee-profile :deep(.view-tab){padding-inline:9px;font-size:11.5px}
+}
 @media(max-width:900px){
+  .employee-profile :deep(.view-tab){padding-inline:12px;font-size:12px}
   .employee-identity{grid-template-columns:1fr;gap:18px}
   .identity-photo-section{padding-right:0;padding-bottom:18px;border-right:0;border-bottom:1px solid var(--color-stroke)}
 }

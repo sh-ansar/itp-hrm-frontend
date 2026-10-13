@@ -98,6 +98,9 @@ function displayDate(value: unknown): string {
 function trainingPeriod(row: TrainingRow): string {
   return displayDate(row.started_on) + ' — ' + (row.ended_on ? displayDate(row.ended_on) : 'по н.в.')
 }
+function trainingTypeLabel(value: string): string {
+  return ({ internal: 'Внутреннее', external: 'Внешнее' } as Record<string, string>)[value] ?? value
+}
 function nameOf(row: DevelopmentRow): string {
   return [row.last_name, row.first_name, row.middle_name].filter(Boolean).join(' ')
 }
@@ -280,7 +283,7 @@ onMounted(loadCompanies)
               </div>
             </template>
             <template #cell-topic="{ row }">
-              <div class="subject-cell"><strong>{{ row.topic }}</strong><span>{{ row.training_type }}</span></div>
+              <div class="subject-cell"><strong>{{ row.topic }}</strong><span>{{ trainingTypeLabel(row.training_type) }}</span></div>
             </template>
             <template #cell-training_mode="{ value }">{{ trainingModeName(String(value)) }}</template>
             <template #cell-provider="{ value }">{{ value || '—' }}</template>
@@ -314,7 +317,7 @@ onMounted(loadCompanies)
             <template v-if="isTraining">
               <div class="mobile-subject">
                 <strong>{{ (row as TrainingRow).topic }}</strong>
-                <span>{{ (row as TrainingRow).training_type }}</span>
+                <span>{{ trainingTypeLabel((row as TrainingRow).training_type) }}</span>
               </div>
               <dl>
                 <div><dt>Формат</dt><dd>{{ trainingModeName((row as TrainingRow).training_mode) }}</dd></div>

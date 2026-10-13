@@ -72,9 +72,12 @@ async function submit() {
 </template>
 
 <style scoped>
-.login-page{min-height:100vh;background:linear-gradient(145deg,#e5f0f5 0%,#f8fafb 60%,#e3eef4 100%);display:grid;place-items:center;padding:24px}
+.login-page{
+  min-height:100vh;display:grid;place-items:center;padding:24px;
+  background:linear-gradient(145deg,var(--color-accent-soft) 0%,var(--color-bg) 60%,var(--color-soft) 100%)
+}
 .login-wrap{width:min(100%,440px);display:grid;gap:18px}
-.login-brand{display:grid;gap:4px;color:#093044}
+.login-brand{display:grid;gap:4px;color:var(--color-text)}
 .login-brand strong{font-size:26px;letter-spacing:-.02em}
 .login-brand span{font-size:13px;color:var(--color-muted)}
 .login-wrap h1{font-size:25px;margin:0 0 8px}
@@ -83,5 +86,13 @@ async function submit() {
 .login-form :deep(.base-button){min-height:44px;margin-top:4px}
 
 .login-back{display:inline-block;margin-top:20px;color:var(--color-primary);font-size:14px;text-decoration:underline}
-.login-footnote{font-size:12px;color:#688696;text-align:center;margin:0}
+.login-footnote{font-size:12px;color:var(--color-muted);text-align:center;margin:0}
+@media(max-width:520px){
+  .login-page{place-items:start center;padding:20px 14px}
+  .login-wrap{width:100%;gap:14px}
+  .login-brand strong{font-size:22px}
+  .login-wrap h1{font-size:21px}
+  .login-form{gap:14px}
+  .login-form :deep(.base-button){width:100%}
+}
 </style>

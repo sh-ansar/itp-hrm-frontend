@@ -104,14 +104,14 @@ export async function uploadDocumentPdf(
   validateId(companyId)
   validateId(documentId)
   if (!Number.isSafeInteger(revision) || revision < 1) throw new Error('Обновите документ перед прикреплением файла')
+  if (file.size < 1 || file.size > 5 * 1024 * 1024 || file.type !== 'application/pdf') {
+    throw new Error('Выберите PDF-файл размером до 5 МБ')
+  }
   if (import.meta.env.VITE_DEMO_MODE === 'true') {
     return apiRequest(`/companies/${companyId}/documents/${documentId}/file`, {
       method: 'POST',
       body: JSON.stringify({ revision }),
     })
-  }
-  if (file.size < 1 || file.size > 5 * 1024 * 1024 || file.type !== 'application/pdf') {
-    throw new Error('Выберите PDF-файл размером до 5 МБ')
   }
   const csrf = readXsrfCookie()
   if (!csrf) throw new ApiError('invalid-response', 419, 'Сессия истекла. Обновите страницу.')

@@ -5,6 +5,7 @@ import BaseButton from '../components/ui/BaseButton.vue'
 import BaseCard from '../components/ui/BaseCard.vue'
 import BaseDataTable from '../components/ui/BaseDataTable.vue'
 import BaseDialog from '../components/ui/BaseDialog.vue'
+import BaseFormField from '../components/ui/BaseFormField.vue'
 import BaseLoadingState from '../components/ui/BaseLoadingState.vue'
 import BaseNotice from '../components/ui/BaseNotice.vue'
 import BasePageHeading from '../components/ui/BasePageHeading.vue'
@@ -35,6 +36,7 @@ const lineEditorOpen = ref(false)
 const approveOpen = ref(false)
 const editingLine = ref<StaffingPlanLine | null>(null)
 const staffingWritesEnabled = ref(false)
+const asOf = ref(new Date().toISOString().slice(0, 10))
 
 const selectedCompany = computed(() => companies.value.find(item => item.id === company.value) ?? null)
 const selectedPlan = computed(() => detail.value?.data ?? plans.value.find(item => item.id === selectedPlanId.value) ?? null)
@@ -123,7 +125,7 @@ async function loadDetail() {
   detailBusy.value = true
   error.value = ''
   try {
-    detail.value = await getStaffingPlan(company.value, selectedPlanId.value)
+    detail.value = await getStaffingPlan(company.value, selectedPlanId.value, asOf.value)
   } catch (cause) {
     error.value = cause instanceof Error ? cause.message : 'Не удалось открыть штатное расписание'
     detail.value = null
@@ -226,6 +228,10 @@ onMounted(refreshCompanies)
 
     <template v-else-if="detail && selectedPlan">
       <BaseCard class="plan-header">
+        <div class="snapshot-row">
+          <BaseFormField v-model="asOf" label="Дата среза занятости" type="date" :disabled="detailBusy" />
+          <BaseButton variant="secondary" :disabled="detailBusy || !asOf" @click="loadDetail">Показать на дату</BaseButton>
+        </div>
         <div class="plan-title">
           <div>
             <p class="kicker">Версия штатного расписания</p>
@@ -341,6 +347,8 @@ onMounted(refreshCompanies)
 .empty-state h2{margin:0;color:var(--color-text);font-size:var(--font-section-heading)}
 .empty-state p{max-width:620px;margin:0 0 8px;line-height:1.5}
 .plan-header{background:linear-gradient(135deg,#fff 0%,#f4fbff 100%)}
+.snapshot-row{display:flex;align-items:end;gap:10px;justify-content:flex-end;margin-bottom:var(--space-4);padding-bottom:var(--space-4);border-bottom:1px solid var(--color-stroke)}
+.snapshot-row :deep(.field){width:min(260px,100%)}
 .plan-title{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;flex-wrap:wrap}
 .title-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .title-row h2{margin:0;font-size:23px}
@@ -365,5 +373,5 @@ onMounted(refreshCompanies)
 .approve-copy p{margin:0}
 .approve-actions{display:flex;justify-content:flex-end;gap:var(--space-2)}
 @media(max-width:1000px){.toolbar{grid-template-columns:1fr 1fr}.company-summary{grid-column:1/-1;width:max-content}.metrics{grid-template-columns:repeat(2,minmax(0,1fr))}}
-@media(max-width:650px){.toolbar{grid-template-columns:1fr}.company-summary{grid-column:auto}.metrics{grid-template-columns:1fr 1fr}.plan-actions{width:100%}.plan-actions :deep(button){flex:1}.approve-actions :deep(button){flex:1}}
+@media(max-width:650px){.toolbar{grid-template-columns:1fr}.company-summary{grid-column:auto}.metrics{grid-template-columns:1fr 1fr}.snapshot-row{display:grid;grid-template-columns:1fr}.snapshot-row :deep(.field){width:100%}.snapshot-row :deep(button){width:100%}.plan-actions{width:100%}.plan-actions :deep(button){flex:1}.approve-actions :deep(button){flex:1}}
 </style>

@@ -21,6 +21,7 @@ const company = ref('')
 const busy = ref(false)
 const error = ref('')
 const success = ref('')
+const roleManagementEnabled = ref(false)
 const browserLoginEnabled = import.meta.env.VITE_ENABLE_BROWSER_LOGIN === 'true'
 const demoMode = import.meta.env.VITE_DEMO_MODE === 'true'
 
@@ -50,6 +51,19 @@ const themeModel = computed({
   get: () => ui.theme,
   set: value => ui.setTheme(value as UiTheme),
 })
+function roleLabel(role: CompanyRecord['role_code']): string {
+  if (role === 'company_admin') return 'Администратор компании'
+  if (role === 'hr_specialist') return 'HR-специалист'
+  if (role === 'department_manager') return 'Руководитель подразделения'
+  return 'Роль не определена'
+}
+
+function accessScopeLabel(item: CompanyRecord): string {
+  if (item.role_code !== 'department_manager') return 'Вся доступная область компании'
+  const scopes = item.department_scopes ?? []
+  return scopes.length ? scopes.map(scope => scope.name).join(', ') : 'Разрешённые подразделения не назначены'
+}
+
 const sidebarModel = computed({
   get: () => ui.sidebarCollapsed ? 'collapsed' : 'expanded',
   set: value => ui.setSidebarCollapsed(value === 'collapsed'),
@@ -69,6 +83,7 @@ async function reload() {
     const [companyResult] = await Promise.all(tasks)
     const result = companyResult as Awaited<ReturnType<typeof listCompanies>>
     companies.value = result.data
+    roleManagementEnabled.value = Boolean(result.meta.role_management_enabled)
     if (!companies.value.some(item => item.id === company.value)) company.value = result.data[0]?.id ?? ''
   } catch (cause) {
     error.value = cause instanceof Error ? cause.message : 'Не удалось обновить настройки'
@@ -95,7 +110,7 @@ onMounted(reload)
     <div class="settings-heading">
       <div>
         <h1>Настройки</h1>
-        <p>Профиль, интерфейс и доступ к рабочему контуру.</p>
+        <p>Профиль, внешний вид и права доступа.</p>
       </div>
       <BaseButton variant="secondary" :disabled="busy" @click="reload">
         <RefreshCw :size="16" aria-hidden="true" /> {{ busy ? 'Обновление…' : 'Обновить' }}
@@ -137,14 +152,14 @@ onMounted(reload)
         <BaseCard class="company-card">
           <div class="card-heading">
             <Building2 :size="19" aria-hidden="true" />
-            <div><h2>Рабочая компания</h2><p>Контур, доступный текущей сессии.</p></div>
+            <div><h2>Рабочая компания</h2><p>Компания, выбранная для текущей работы.</p></div>
           </div>
           <BaseSelectField v-if="companies.length" v-model="company" label="Компания" :options="companies" />
           <BaseNotice v-else tone="info">Для текущей сессии нет доступных компаний.</BaseNotice>
           <div v-if="selectedCompany" class="company-summary">
             <span>Текущий контур</span>
             <strong>{{ selectedCompany.name }}</strong>
-            <small>Компания используется как текущий рабочий контур.</small>
+            <small>{{ roleLabel(selectedCompany.role_code) }} · {{ accessScopeLabel(selectedCompany) }}</small>
           </div>
         </BaseCard>
       </div>
@@ -182,8 +197,8 @@ onMounted(reload)
           </div>
           <ul class="plain-list">
             <li>Тема и вид бокового меню сохраняются для этого браузера.</li>
-            <li>Настройки интерфейса не меняют данные сотрудников и рабочие процессы.</li>
-            <li>В любой момент можно вернуть стандартный внешний вид.</li>
+            <li>Настройки внешнего вида не меняют кадровые данные и рабочие процессы.</li>
+            <li>В любой момент можно вернуть стандартный вид интерфейса.</li>
           </ul>
         </BaseCard>
       </div>
@@ -192,11 +207,14 @@ onMounted(reload)
         <BaseCard class="access-card">
           <div class="card-heading">
             <UserRound :size="19" aria-hidden="true" />
-            <div><h2>Доступные компании</h2><p>Список формируется сервером из доступов текущего пользователя.</p></div>
+            <div><h2>Доступные компании</h2><p>Компании, доступные текущему пользователю.</p></div>
           </div>
           <div v-if="companies.length" class="company-list">
             <article v-for="item in companies" :key="item.id" :class="{ 'company-list-item--active': item.id === company }">
-              <div><strong>{{ item.name }}</strong><span>{{ item.id === company ? 'Выбранный контур' : 'Доступен' }}</span></div>
+              <div>
+                <strong>{{ item.name }}</strong>
+                <span>{{ roleLabel(item.role_code) }} · {{ item.id === company ? 'выбранный контур' : 'доступен' }}</span>
+              </div>
               <BaseButton v-if="item.id !== company" variant="secondary" @click="company = item.id">Выбрать</BaseButton>
             </article>
           </div>
@@ -208,13 +226,32 @@ onMounted(reload)
             <ShieldCheck :size="19" aria-hidden="true" />
             <div><h2>Роли и права</h2><p>Права определяют доступ к разделам и данным компании.</p></div>
           </div>
+          <div v-if="selectedCompany" class="access-projection">
+            <div>
+              <span>Текущая роль</span>
+              <strong>{{ roleLabel(selectedCompany.role_code) }}</strong>
+            </div>
+            <div>
+              <span>Область доступа</span>
+              <strong>{{ accessScopeLabel(selectedCompany) }}</strong>
+            </div>
+            <div v-if="selectedCompany.role_code === 'department_manager'" class="access-scope-list">
+              <span>Разрешённые подразделения</span>
+              <ul v-if="selectedCompany.department_scopes?.length">
+                <li v-for="scope in selectedCompany.department_scopes" :key="scope.id">{{ scope.name }}</li>
+              </ul>
+              <strong v-else>Не назначены</strong>
+            </div>
+          </div>
           <BaseNotice tone="info">
-            Изменение ролей выполняется администратором системы.
+            {{ roleManagementEnabled
+              ? 'Управление ролями доступно только администраторам системы.'
+              : 'Изменение ролей недоступно для текущего профиля.' }}
           </BaseNotice>
           <ul class="plain-list">
-            <li>Доступ к кадровым разделам зависит от назначенной роли.</li>
-            <li>Права задаются отдельно для каждой доступной компании.</li>
-            <li>В профиле отображаются только доступные пользователю рабочие контуры.</li>
+            <li>Роль и область доступа определяют доступные кадровые разделы.</li>
+            <li>Права задаются отдельно для каждой компании.</li>
+            <li>В профиле отображаются только доступные рабочие области.</li>
           </ul>
         </BaseCard>
       </div>
@@ -268,6 +305,12 @@ onMounted(reload)
 .company-list strong{color:var(--color-text);font-size:12px;overflow-wrap:anywhere}
 .company-list span{color:var(--color-muted);font-size:9px}
 .company-list-item--active{border-color:var(--color-primary)!important;background:var(--color-accent-soft)!important}
+.access-projection{display:grid;gap:8px;margin-bottom:12px}
+.access-projection>div{display:grid;gap:4px;padding:10px 12px;border-radius:var(--radius-sm);background:var(--color-soft)}
+.access-projection span{color:var(--color-muted);font-size:9px}
+.access-projection strong{color:var(--color-text);font-size:11px;line-height:1.45;font-weight:600}
+.access-scope-list ul{display:flex;flex-wrap:wrap;gap:6px;margin:2px 0 0;padding:0;list-style:none}
+.access-scope-list li{padding:5px 8px;border:1px solid var(--color-stroke);border-radius:999px;background:var(--color-surface);color:var(--color-text);font-size:10px}
 .company-list :deep(.base-button){height:32px;min-height:32px;font-size:10px}
 @media(max-width:900px){.settings-grid,.settings-grid--profile{grid-template-columns:1fr}}
 @media(max-width:600px){

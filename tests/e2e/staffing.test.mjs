@@ -61,10 +61,10 @@ test('HR creates staffs and approves a real staffing-plan version at mobile widt
     assert.match(rowText, /KZT/)
     assert.match(rowText, /Есть вакансии/)
 
-    const metrics = await page.locator('.staffing-summary-strip').innerText()
-    assert.match(metrics, /Плановых ставок\\s*3/)
-    assert.match(metrics, /Занято\\s*1/)
-    assert.match(metrics, /Вакантно\\s*2/)
+    const metrics = page.locator('.staffing-summary-item')
+    assert.equal(await metrics.nth(0).locator('strong').innerText(), '3', 'planned units')
+    assert.equal(await metrics.nth(1).locator('strong').innerText(), '1', 'occupied units')
+    assert.equal(await metrics.nth(2).locator('strong').innerText(), '2', 'vacant units')
 
     const views = page.getByRole('navigation', { name: 'Разделы оргструктуры и штатного расписания' })
     await views.getByRole('button', { name: 'Вакантные позиции' }).click()

@@ -41,16 +41,20 @@ const activeTab = ref<ReportTab>('overview')
 const loadingCompanies = ref(false)
 const loading = ref(false)
 const error = ref('')
+const warning = ref('')
 const activeEmployees = ref<EmployeeRecord[]>([])
-const activeTotal = ref(0)
-const archivedTotal = ref(0)
+const activeTotal = ref<number | null>(null)
+const archivedTotal = ref<number | null>(null)
+const activeEmployeesTruncated = ref(false)
 const actionRows = ref<PersonnelActionRow[]>([])
-const actionTotal = ref(0)
-const actionSummary = ref({ hire: 0, transfer: 0, termination: 0 })
+const actionTotal = ref<number | null>(null)
+const actionSummary = ref<{ hire: number | null; transfer: number | null; termination: number | null }>({ hire: null, transfer: null, termination: null })
 const staffingPlan = ref<StaffingPlanRecord | null>(null)
 const staffingLines = ref<StaffingPlanLine[]>([])
 const trainingRows = ref<TrainingRow[]>([])
 const trainingSummary = ref<Record<string, number>>({ total: 0, planned: 0, ongoing: 0, completed: 0 })
+const staffingResolved = ref(false)
+const trainingResolved = ref(false)
 
 const tabs = [
   { id: 'overview', label: 'Сводка' },
@@ -75,7 +79,7 @@ const monthLabel = computed(() => {
 const vacancyTotal = computed(() => staffingLines.value.reduce((sum, row) => sum + Number(row.vacant_units || 0), 0))
 const plannedTotal = computed(() => staffingLines.value.reduce((sum, row) => sum + Number(row.planned_units || 0), 0))
 const occupiedTotal = computed(() => staffingLines.value.reduce((sum, row) => sum + Number(row.occupied_units || 0), 0))
-const trainingTotal = computed(() => Number(trainingSummary.value.total ?? trainingRows.value.length))
+const trainingTotal = computed(() => trainingResolved.value ? Number(trainingSummary.value.total ?? trainingRows.value.length) : null)
 
 const departmentRows = computed(() => {
   const grouped = new Map<string, number>()
@@ -198,11 +202,19 @@ function employeeName(row: PersonnelActionRow | TrainingRow): string {
 async function allEmployees(companyId: string, status: 'active' | 'archived') {
   const first = await listEmployees(companyId, 1, '', status)
   const rows = [...first.data]
-  for (let page = 2; page <= Math.min(first.meta.last_page, 10); page += 1) {
-    const result = await listEmployees(companyId, page, '', status)
-    rows.push(...result.data)
+  const maxAnalyticsPages = 20
+  const lastPage = Math.min(first.meta.last_page, maxAnalyticsPages)
+  const remainingPages = Array.from({ length: Math.max(0, lastPage - 1) }, (_, index) => index + 2)
+  for (let index = 0; index < remainingPages.length; index += 5) {
+    const batch = remainingPages.slice(index, index + 5)
+    const results = await Promise.all(batch.map(page => listEmployees(companyId, page, '', status)))
+    for (const result of results) rows.push(...result.data)
   }
-  return { rows, total: first.meta.total }
+  return {
+    rows,
+    total: first.meta.total,
+    truncated: first.meta.last_page > maxAnalyticsPages,
+  }
 }
 
 async function loadCompanies() {
@@ -226,15 +238,19 @@ async function loadReport() {
   const companyId = company.value
   const current = ++generation
   activeEmployees.value = []
-  activeTotal.value = 0
-  archivedTotal.value = 0
+  activeTotal.value = null
+  archivedTotal.value = null
+  activeEmployeesTruncated.value = false
   actionRows.value = []
-  actionTotal.value = 0
-  actionSummary.value = { hire: 0, transfer: 0, termination: 0 }
+  actionTotal.value = null
+  actionSummary.value = { hire: null, transfer: null, termination: null }
   staffingPlan.value = null
   staffingLines.value = []
+  staffingResolved.value = false
   trainingRows.value = []
   trainingSummary.value = { total: 0, planned: 0, ongoing: 0, completed: 0 }
+  trainingResolved.value = false
+  warning.value = ''
   if (!companyId) return
 
   loading.value = true
@@ -261,39 +277,67 @@ async function loadReport() {
     ])
     if (current !== generation) return
 
+    const missing: string[] = []
     if (activeResult.status === 'fulfilled') {
       activeEmployees.value = activeResult.value.rows
       activeTotal.value = activeResult.value.total
+      activeEmployeesTruncated.value = activeResult.value.truncated
+    } else {
+      missing.push('активные сотрудники')
     }
     if (archivedResult.status === 'fulfilled') archivedTotal.value = archivedResult.value.total
+    else missing.push('архив сотрудников')
+
     if (actionsResult.status === 'fulfilled') {
       actionRows.value = actionsResult.value.data
       actionTotal.value = actionsResult.value.meta.total
+    } else {
+      missing.push('журнал кадровых действий')
     }
     actionSummary.value = {
-      hire: hiresResult.status === 'fulfilled' ? hiresResult.value.meta.total : 0,
-      transfer: transfersResult.status === 'fulfilled' ? transfersResult.value.meta.total : 0,
-      termination: terminationsResult.status === 'fulfilled' ? terminationsResult.value.meta.total : 0,
+      hire: hiresResult.status === 'fulfilled' ? hiresResult.value.meta.total : null,
+      transfer: transfersResult.status === 'fulfilled' ? transfersResult.value.meta.total : null,
+      termination: terminationsResult.status === 'fulfilled' ? terminationsResult.value.meta.total : null,
     }
+    if ([hiresResult, transfersResult, terminationsResult].some(result => result.status === 'rejected')) {
+      missing.push('сводка движения персонала')
+    }
+
     if (trainingResult.status === 'fulfilled') {
       trainingRows.value = trainingResult.value.data
       trainingSummary.value = {
         total: trainingResult.value.meta.total,
         ...trainingResult.value.meta.summary,
       }
+      trainingResolved.value = true
+    } else {
+      missing.push('обучение')
     }
+
     if (plansResult.status === 'fulfilled') {
       const preferred = preferredApprovedStaffingPlan(plansResult.value.data)
+      staffingResolved.value = true
       if (preferred) {
         staffingPlan.value = preferred
         try {
           const detail = await getStaffingPlan(companyId, preferred.id)
           if (current === generation) staffingLines.value = detail.lines
         } catch {
+          staffingResolved.value = false
           staffingLines.value = []
+          missing.push('детали штатного расписания')
         }
       }
+    } else {
+      missing.push('штатное расписание')
     }
+
+    if (activeEmployeesTruncated.value) {
+      missing.push(`распределение по подразделениям ограничено первыми ${activeEmployees.value.length} сотрудниками`)
+    }
+    warning.value = missing.length
+      ? 'Часть аналитики недоступна или ограничена: ' + [...new Set(missing)].join(', ') + '.'
+      : ''
   } catch (cause) {
     if (current === generation) error.value = cause instanceof Error ? cause.message : 'Не удалось собрать кадровую аналитику'
   } finally {
@@ -313,6 +357,7 @@ onMounted(loadCompanies)
     </div>
 
     <BaseNotice v-if="error" tone="error">{{ error }}</BaseNotice>
+    <BaseNotice v-if="warning" tone="warning">{{ warning }}</BaseNotice>
     <BaseLoadingState v-if="loadingCompanies" label="Загрузка компаний" />
     <BaseNotice v-else-if="!companies.length && !error" tone="info">Нет доступных компаний.</BaseNotice>
 
@@ -324,7 +369,7 @@ onMounted(loadCompanies)
         </div>
         <div class="reports-controls">
           <BaseSelectField v-model="company" label="Компания" :options="companies" />
-          <BaseFormField v-model="month" label="Период рабочего времени" type="month" />
+          <BaseFormField v-if="activeTab === 'worktime'" v-model="month" label="Период рабочего времени" type="month" />
         </div>
       </div>
 
@@ -335,26 +380,26 @@ onMounted(loadCompanies)
         <BaseCard class="summary-card">
           <UsersRound :size="19" aria-hidden="true" />
           <span>Сотрудники</span>
-          <strong>{{ loading ? '…' : activeTotal }}</strong>
-          <small>{{ archivedTotal }} в архиве</small>
+          <strong>{{ loading ? '…' : (activeTotal ?? '—') }}</strong>
+          <small>{{ archivedTotal === null ? 'архив недоступен' : archivedTotal + ' в архиве' }}</small>
         </BaseCard>
         <BaseCard class="summary-card">
           <BriefcaseBusiness :size="19" aria-hidden="true" />
           <span>Вакантные ставки</span>
-          <strong>{{ loading ? '…' : vacancyTotal }}</strong>
-          <small>{{ occupiedTotal }} из {{ plannedTotal }} занято</small>
+          <strong>{{ loading ? '…' : (staffingResolved && staffingPlan ? vacancyTotal : '—') }}</strong>
+          <small>{{ staffingResolved && staffingPlan ? occupiedTotal + ' из ' + plannedTotal + ' занято' : 'нет доступного утверждённого плана' }}</small>
         </BaseCard>
         <BaseCard class="summary-card">
           <UserRoundCheck :size="19" aria-hidden="true" />
           <span>Кадровые действия</span>
-          <strong>{{ loading ? '…' : actionTotal }}</strong>
-          <small>в журнале компании</small>
+          <strong>{{ loading ? '…' : (actionTotal ?? '—') }}</strong>
+          <small>{{ actionTotal === null ? 'журнал недоступен' : 'в журнале компании' }}</small>
         </BaseCard>
         <BaseCard class="summary-card">
           <GraduationCap :size="19" aria-hidden="true" />
           <span>Обучение</span>
-          <strong>{{ loading ? '…' : trainingTotal }}</strong>
-          <small>зарегистрированных записей</small>
+          <strong>{{ loading ? '…' : (trainingTotal ?? '—') }}</strong>
+          <small>{{ trainingResolved ? 'зарегистрированных записей' : 'данные обучения недоступны' }}</small>
         </BaseCard>
       </div>
 
@@ -363,7 +408,7 @@ onMounted(loadCompanies)
           <BaseCard class="report-card">
             <div class="section-heading">
               <div><h2>Численность по подразделениям</h2><p>Активные сотрудники.</p></div>
-              <span>{{ activeTotal }} сотрудников</span>
+              <span>{{ activeTotal ?? '—' }} сотрудников<span v-if="activeEmployeesTruncated"> · показано {{ activeEmployees.length }}</span></span>
             </div>
             <div v-if="departmentRows.length" class="department-bars">
               <div v-for="row in departmentRows" :key="row.department" class="department-bar-row">
@@ -393,13 +438,13 @@ onMounted(loadCompanies)
 
       <BaseCard v-else-if="activeTab === 'movement'" class="report-card">
         <div class="section-heading">
-          <div><h2>Движение персонала</h2><p>Кадровые действия, зарегистрированные в компании.</p></div>
-          <span>{{ actionTotal }} событий</span>
+          <div><h2>Движение персонала</h2><p>Последние кадровые действия и точные итоги по типам событий.</p></div>
+          <span>Показано {{ actionRows.length }} из {{ actionTotal ?? '—' }}</span>
         </div>
         <div class="inline-metrics">
-          <div><span>Приём</span><strong>{{ actionSummary.hire }}</strong></div>
-          <div><span>Перевод</span><strong>{{ actionSummary.transfer }}</strong></div>
-          <div><span>Увольнение</span><strong>{{ actionSummary.termination }}</strong></div>
+          <div><span>Приём</span><strong>{{ actionSummary.hire ?? '—' }}</strong></div>
+          <div><span>Перевод</span><strong>{{ actionSummary.transfer ?? '—' }}</strong></div>
+          <div><span>Увольнение</span><strong>{{ actionSummary.termination ?? '—' }}</strong></div>
         </div>
         <BaseDataTable :rows="actionRows" :columns="movementColumns" row-key="id" :loading="loading"
           caption="Движение персонала" empty-title="Кадровых действий нет"
@@ -440,8 +485,8 @@ onMounted(loadCompanies)
 
       <BaseCard v-else-if="activeTab === 'training'" class="report-card">
         <div class="section-heading">
-          <div><h2>Обучение сотрудников</h2><p>Состояние зарегистрированных программ обучения.</p></div>
-          <span>{{ trainingTotal }} записей</span>
+          <div><h2>Обучение сотрудников</h2><p>Состояние зарегистрированных программ обучения; таблица показывает последнюю доступную страницу.</p></div>
+          <span>{{ trainingTotal ?? '—' }} записей</span>
         </div>
         <div class="inline-metrics">
           <div><span>Запланировано</span><strong>{{ trainingSummary.planned ?? 0 }}</strong></div>
@@ -471,21 +516,26 @@ onMounted(loadCompanies)
           <div><h2>Использование рабочего времени</h2><p>{{ monthLabel }} · по подразделениям.</p></div>
           <RouterLink to="/timesheets">Открыть табель</RouterLink>
         </div>
-        <div class="inline-metrics">
-          <div><span>План</span><strong>{{ worktimeSummary.planned.toLocaleString('ru-RU') }} ч</strong></div>
-          <div><span>Отработано</span><strong>{{ worktimeSummary.worked.toLocaleString('ru-RU') }} ч</strong></div>
-          <div><span>Неявки</span><strong>{{ worktimeSummary.absence.toLocaleString('ru-RU') }} ч</strong></div>
-          <div><span>Сверхурочно</span><strong>{{ worktimeSummary.overtime.toLocaleString('ru-RU') }} ч</strong></div>
-        </div>
-        <BaseDataTable :rows="worktimeDepartmentRows" :columns="worktimeColumns" row-key="department"
-          :loading="loading" caption="Рабочее время по подразделениям"
-          empty-title="Данных рабочего времени нет"
-          empty-description="Для выбранного периода аналитика рабочего времени недоступна.">
-          <template #cell-planned="{ value }">{{ value }} ч</template>
-          <template #cell-worked="{ value }">{{ value }} ч</template>
-          <template #cell-absence="{ value }">{{ value }} ч</template>
-          <template #cell-overtime="{ value }">{{ value }} ч</template>
-        </BaseDataTable>
+        <BaseNotice v-if="!demoMode" tone="info">
+          Показатели рабочего времени не формируются до подключения рабочего источника табельного учёта.
+        </BaseNotice>
+        <template v-else>
+          <div class="inline-metrics">
+            <div><span>План</span><strong>{{ worktimeSummary.planned.toLocaleString('ru-RU') }} ч</strong></div>
+            <div><span>Отработано</span><strong>{{ worktimeSummary.worked.toLocaleString('ru-RU') }} ч</strong></div>
+            <div><span>Неявки</span><strong>{{ worktimeSummary.absence.toLocaleString('ru-RU') }} ч</strong></div>
+            <div><span>Сверхурочно</span><strong>{{ worktimeSummary.overtime.toLocaleString('ru-RU') }} ч</strong></div>
+          </div>
+          <BaseDataTable :rows="worktimeDepartmentRows" :columns="worktimeColumns" row-key="department"
+            :loading="loading" caption="Рабочее время по подразделениям"
+            empty-title="Данных рабочего времени нет"
+            empty-description="Для выбранного периода аналитика рабочего времени недоступна.">
+            <template #cell-planned="{ value }">{{ value }} ч</template>
+            <template #cell-worked="{ value }">{{ value }} ч</template>
+            <template #cell-absence="{ value }">{{ value }} ч</template>
+            <template #cell-overtime="{ value }">{{ value }} ч</template>
+          </BaseDataTable>
+        </template>
       </BaseCard>
     </template>
   </section>

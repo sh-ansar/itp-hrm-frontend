@@ -34,7 +34,7 @@ const expanded = ref(true)
 </template>
 
 <style scoped>
-.tree-branch{position:relative;display:grid;gap:12px;min-width:0}
+.tree-branch{position:relative;display:grid;align-content:start;gap:12px;min-width:0}
 .tree-card{
   display:flex;align-items:center;gap:12px;width:100%;min-width:0;max-width:580px;min-height:74px;
   padding:13px 16px;background:var(--color-surface);border:1px solid var(--color-stroke);
@@ -66,7 +66,7 @@ const expanded = ref(true)
 .tree-branch--level-0>.tree-children>.tree-branch--level-1::before{
   content:'';position:absolute;top:-16px;left:50%;width:1px;height:16px;background:var(--color-primary-stroke)
 }
-.tree-branch--level-0>.tree-children>.tree-branch--level-1>.tree-card{max-width:none}
+.tree-branch--level-0>.tree-children>.tree-branch--level-1>.tree-card{max-width:none;min-height:116px;align-self:start}
 @media(max-width:1100px){
   .tree-branch--level-0>.tree-children{grid-template-columns:repeat(2,minmax(0,1fr))}
   .tree-branch--level-0>.tree-children::before,

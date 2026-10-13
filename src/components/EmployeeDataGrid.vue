@@ -26,7 +26,7 @@ defineProps<{ fields: EmployeeDisplayField[] }>()
   min-width:0;min-height:42px;display:flex;align-items:center;padding:9px 12px;
   border:1px solid var(--color-stroke);border-radius:var(--radius-sm);
   background:var(--color-surface);color:var(--color-text);
-  font-size:var(--font-label-size);line-height:var(--line-caption);font-weight:500;overflow-wrap:anywhere
+  font-size:var(--font-label-size);line-height:var(--line-caption);font-weight:500;overflow-wrap:break-word;word-break:normal
 }
 .employee-data-field--wide{grid-column:span 2}
 .employee-data-field--muted>strong{color:var(--color-muted)}

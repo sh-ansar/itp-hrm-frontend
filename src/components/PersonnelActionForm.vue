@@ -57,6 +57,10 @@ const employeeOptions=computed(()=>employees.value.map(item=>({
 const operationLabel=computed(()=>operation.value==='hire'?'Приём на работу':operation.value==='transfer'?'Перевод':'Увольнение')
 
 async function searchEmployees(){
+  selectedEmployeeId.value=''
+  selectedEmployee.value=null
+  assignments.value=[]
+  employees.value=[]
   searchBusy.value=true
   error.value=''
   try{
@@ -133,6 +137,10 @@ async function submit(){
 
   saving.value=true
   try{
+    if(operation.value==='hire' && openAssignment.value){
+      error.value='У сотрудника уже есть открытое назначение. Обновите сведения.'
+      return
+    }
     if(operation.value==='hire'){
       await hireEmployee(props.companyId,selectedEmployee.value.id,{
         department_id:departmentId.value,
@@ -178,7 +186,7 @@ loadDirectories()
 
 <template>
   <form class="action-form" @submit.prevent="submit">
-    <BaseNotice v-if="error" tone="error">{{ error }}</BaseNotice>
+    <BaseNotice v-if="error" tone="error" role="alert">{{ error }}</BaseNotice>
 
     <div class="employee-search">
       <BaseFormField v-model="search" label="Поиск сотрудника" placeholder="ФИО или табельный номер" :disabled="searchBusy||saving" />

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-export interface EmployeeDisplayField {
+interface EmployeeDisplayField {
   label: string
   value: string | number | null | undefined
   wide?: boolean

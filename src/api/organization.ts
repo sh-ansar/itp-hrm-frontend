@@ -1,11 +1,11 @@
 import { apiRequest } from './client'
 
 export interface CompanyRecord extends Record<string, unknown> { id: string; name: string }
-export interface DepartmentRecord extends Record<string, unknown> { id: string; name: string; parent_id: string | null }
+export interface DepartmentRecord extends Record<string, unknown> { id: string; name: string; parent_id: string | null; revision: number }
 export interface PositionRecord extends Record<string, unknown> { id: string; name: string }
 export interface PagedResponse<T> {
   data: T[]
-  meta: { current_page: number; last_page: number; per_page: number; total: number }
+  meta: { current_page: number; last_page: number; per_page: number; total: number; [key: string]: unknown }
 }
 
 const assertCompanyId = (companyId: string) => {
@@ -16,10 +16,57 @@ export const listCompanies = () => apiRequest<PagedResponse<CompanyRecord>>('/co
 
 export const listDepartments = (companyId: string, page = 1) => {
   assertCompanyId(companyId)
-  return apiRequest<PagedResponse<DepartmentRecord>>(`/companies/${companyId}/departments?per_page=100&page=${encodeURIComponent(page)}`)
+  return apiRequest<DepartmentListResponse>(`/companies/${companyId}/departments?per_page=100&page=${encodeURIComponent(page)}`)
 }
 
 export const listPositions = (companyId: string, page = 1) => {
   assertCompanyId(companyId)
   return apiRequest<PagedResponse<PositionRecord>>(`/companies/${companyId}/positions?per_page=100&page=${encodeURIComponent(page)}`)
+}
+
+
+export interface DepartmentListResponse extends PagedResponse<DepartmentRecord> {
+  meta: PagedResponse<DepartmentRecord>['meta'] & { department_writes_enabled: boolean }
+}
+
+export interface DepartmentPayload {
+  name: string
+  parent_id: string | null
+}
+
+export const createDepartment = (companyId: string, payload: DepartmentPayload): Promise<{ data: DepartmentRecord }> => {
+  assertCompanyId(companyId)
+  return apiRequest<{ data: DepartmentRecord }>(`/companies/${companyId}/departments`, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
+}
+
+export const updateDepartment = (
+  companyId: string,
+  departmentId: string,
+  revision: number,
+  payload: DepartmentPayload,
+): Promise<{ data: DepartmentRecord }> => {
+  assertCompanyId(companyId)
+  if (!/^[a-f0-9-]{36}$/i.test(departmentId)) throw new Error('Некорректный идентификатор подразделения')
+  if (!Number.isSafeInteger(revision) || revision < 1) throw new Error('Неверная версия подразделения')
+  return apiRequest<{ data: DepartmentRecord }>(`/companies/${companyId}/departments/${departmentId}`, {
+    method: 'PUT',
+    body: JSON.stringify({ ...payload, revision }),
+  })
+}
+
+export const deleteDepartment = (
+  companyId: string,
+  departmentId: string,
+  revision: number,
+): Promise<{ data: { id: string } }> => {
+  assertCompanyId(companyId)
+  if (!/^[a-f0-9-]{36}$/i.test(departmentId)) throw new Error('Некорректный идентификатор подразделения')
+  if (!Number.isSafeInteger(revision) || revision < 1) throw new Error('Неверная версия подразделения')
+  return apiRequest<{ data: { id: string } }>(`/companies/${companyId}/departments/${departmentId}`, {
+    method: 'DELETE',
+    body: JSON.stringify({ revision }),
+  })
 }

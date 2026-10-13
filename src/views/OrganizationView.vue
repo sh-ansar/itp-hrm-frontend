@@ -396,7 +396,18 @@ onMounted(loadCompanies)
 .chart-branches{position:relative;display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));align-items:start;gap:28px;width:100%}
 .chart-branches::before{content:'';position:absolute;left:8%;right:8%;top:-18px;height:1px;background:var(--color-primary-stroke)}
 .chart-branches :deep(.tree-branch)::before{content:'';position:absolute;top:-24px;left:50%;height:24px;width:1px;background:var(--color-primary-stroke)}
-@media(max-width:640px){.organization-chart{gap:24px}.chart-company::after{bottom:-25px;height:24px}.chart-branches{grid-template-columns:1fr;gap:12px}.chart-branches::before,.chart-branches :deep(.tree-branch)::before{display:none}}
+@media(max-width:900px){
+ .organization-chart{min-width:0;width:100%;gap:30px}
+ .chart-branches{grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:18px}
+}
+@media(max-width:640px){
+ .structure-diagram{padding:16px 12px 22px}
+ .organization-chart{min-width:0;gap:24px}
+ .chart-company{width:min(100%,320px)}
+ .chart-company::after{bottom:-25px;height:24px}
+ .chart-branches{grid-template-columns:1fr;gap:12px}
+ .chart-branches::before,.chart-branches :deep(.tree-branch)::before{display:none}
+}
 .diagram-empty{margin:0;color:var(--color-muted);font-size:13px}
 .hierarchy-label{display:inline-flex;align-items:center;gap:6px;padding-inline-start:clamp(0px,calc(var(--depth) * 15px),180px);max-width:100%;min-width:160px;overflow-wrap:anywhere}
 .branch-mark{color:var(--color-muted)}

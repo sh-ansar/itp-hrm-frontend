@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { FileText, Paperclip } from 'lucide-vue-next'
 import BaseButton from './ui/BaseButton.vue'
-import { documentFileUrl, documentTypeLabel, type DocumentRow } from '../api/documents'
+import { documentTypeLabel, type DocumentRow } from '../api/documents'
 
 const props = defineProps<{
   rows: DocumentRow[]
@@ -9,7 +9,7 @@ const props = defineProps<{
   writesEnabled: boolean
   loading?: boolean
 }>()
-const emit = defineEmits<{ upload: [row: DocumentRow] }>()
+const emit = defineEmits<{ upload: [row: DocumentRow]; open: [row: DocumentRow] }>()
 
 function employeeName(row: DocumentRow) {
   return [row.last_name,row.first_name].filter(Boolean).join(' ')
@@ -49,9 +49,9 @@ function displayDate(value: string | null) {
 
       <footer>
         <span class="status-pill" :class="{ 'status-pill--draft': row.status === 'draft' }">{{ statusLabel(row.status) }}</span>
-        <a v-if="row.has_file" class="file-link" :href="documentFileUrl(companyId,row.id)">
+        <button v-if="row.has_file" class="file-link" type="button" @click="emit('open',row)">
           <Paperclip :size="14" /> PDF
-        </a>
+        </button>
         <BaseButton v-else-if="writesEnabled && row.status === 'draft'" variant="secondary"
           @click="emit('upload',row)">Прикрепить PDF</BaseButton>
         <span v-else class="file-empty">Без PDF</span>
@@ -84,7 +84,7 @@ function displayDate(value: string | null) {
 .document-mobile-card footer{display:flex;align-items:center;justify-content:space-between;gap:10px;padding-top:9px;border-top:1px solid var(--color-stroke)}
 .status-pill{display:inline-flex;padding:5px 9px;border-radius:999px;background:var(--color-success-surface);color:var(--color-success);font-size:10px;font-weight:700}
 .status-pill--draft{background:var(--color-accent-soft);color:var(--color-primary)}
-.file-link{display:inline-flex;align-items:center;gap:4px;color:var(--color-primary);font-size:11px;font-weight:700}
+.file-link{display:inline-flex;align-items:center;gap:4px;padding:0;border:0;background:transparent;color:var(--color-primary);font:inherit;font-size:11px;font-weight:700;cursor:pointer}
 .file-empty{color:var(--color-muted);font-size:11px}
 .document-mobile-card footer :deep(.base-button){height:34px;min-height:34px;font-size:11px}
 </style>

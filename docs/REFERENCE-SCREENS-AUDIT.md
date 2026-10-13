@@ -20,7 +20,7 @@ The frontend-only Vercel demo may render isolated deterministic mock values to r
 ## Not implemented in the real backend — do **not** present mock values as production data
 
 1. **Employee master**: the demo card now reproduces the approved prototype groups for identity, contacts, bank details and employment contract using isolated mock data. The real backend still requires approved field definitions, validation and role-specific privacy access before those extra fields become writable production data.
-2. **Development combined display** `Desktop_Employees_full_screen_Кадровый_резерв_и_обучение.png`: separate HR-protected company training and reserve registries with status counters, search and drawer creation now exist. A combined timeline, workflows, approvals and training certificates remain pending.
+2. **Development combined display** `Desktop_Employees_full_screen_Кадровый_резерв_и_обучение.png`: a combined employee workspace now shows кадровый резерв and обучение together from the existing authorized APIs, with direct drill-down to the full reserve/training registries. No fictitious workflow, approval or certificate lifecycle is added.
 3. **Staffing explorer** `Desktop_Оргструктура_и_штатка_схема_open_Организационная_структура.png` and four staffing table screenshots: department chart, staffing, vacancy view, authorized staffing history and CSV export are implemented against real scoped data. Approval queue and staffing version comparison remain separate future contracts; do not fake them.
 4. **Contract expiration, hiring dates, demographics and earnings** in register/dashboard screenshots: no reliable scoped APIs for these values. Do not hardcode reference screenshot numbers (340 employees, 18 departments, etc.).
 5. **Employee management actions**: mass editing, deletion, moving to archive, 1C sync, template creation and exports in mockups are not approved endpoints or lifecycle operations. Keep out of active UI until contracts exist.
@@ -38,7 +38,7 @@ The frontend-only Vercel demo may render isolated deterministic mock values to r
 
 ## Next parity milestones
 
-1. Finish screenshot-verified employee register and tabs, and test fast search, archive and column grouping.
+1. Final visual QA of the completed Employees workspace: register, grouped register, archive, combined reserve/training workspace and employee card tabs.
 2. Expand employee identity fields via approved sensitive-data schema before implementing reference photo/personal tabs.
 3. Add org-tree visualization and unified staffing/vacancies tabs.
 4. Add company-level training/reserve views and authenticated report exports.

@@ -161,8 +161,81 @@ export async function mockApiRequest<T>(path:string,options:RequestInit={}):Prom
     return {data:{id:document.id,employee_id:document.employee_id,document_type:document.document_type,status:'draft',revision:1}} as T
   }
 
+// The demo must behave like a real CRUD flow. Never acknowledge a write unless
+  // the corresponding in-memory record was changed and can be read back.
+  m=p.match(/^\/companies\/[^/]+\/(departments|positions)(?:\/([^/]+))?$/)
+  if(m&&method!=='GET'){
+    const kind=m[1],recordId=m[2],body=options.body?JSON.parse(String(options.body)):{}
+    const rows:any[]=kind==='departments'?deps:positions
+    const name=typeof body.name==='string'?body.name.trim():''
+    if(method==='POST'&&!recordId){
+      if(!name)throw new Error(kind==='departments'?'Введите название подразделения':'Введите название должности')
+      const parentId=kind==='departments'?body.parent_id??null:null
+      if(kind==='departments'&&parentId!==null&&!deps.some(dep=>dep.id===parentId))
+        throw new Error('Родительское подразделение не найдено')
+      if(rows.some(row=>row.name.toLowerCase()===name.toLowerCase()&&
+        (kind==='positions'||row.parent_id===parentId)))
+        throw new Error('Такая запись уже существует')
+      const created:any=kind==='departments'
+        ? {id:crypto.randomUUID(),name,parent_id:parentId,revision:1}
+        : {id:crypto.randomUUID(),name,revision:1}
+      rows.push(created)
+      return {data:created} as T
+    }
+    if((method==='PUT'||method==='DELETE')&&recordId){
+      const record:any=rows.find(row=>row.id===recordId)
+      if(!record)throw new Error('Запись не найдена')
+      if(Number(body.revision)!==Number(record.revision))
+        throw new Error('Запись уже изменена. Обновите страницу')
+      if(method==='DELETE'){
+        const planLines=Array.from(staffingByPlan.values()).flat()
+        const referenced=kind==='departments'
+          ? deps.some(dep=>dep.parent_id===recordId)
+            || employees.some(employee=>employee.current_department_id===recordId)
+            || planLines.some(line=>line.department_id===recordId)
+          : employees.some(employee=>employee.current_position_id===recordId)
+            || planLines.some(line=>line.position_id===recordId)
+        if(referenced)throw new Error(kind==='departments'
+          ? 'Подразделение используется в структуре, назначениях или штатном расписании'
+          : 'Должность используется в назначениях или штатном расписании')
+        rows.splice(rows.indexOf(record),1)
+        return {data:{id:recordId}} as T
+      }
+      if(!name)throw new Error('Название не может быть пустым')
+      const parentId=kind==='departments'?body.parent_id??null:null
+      if(kind==='departments'&&parentId!==null){
+        if(!deps.some(dep=>dep.id===parentId))throw new Error('Родительское подразделение не найдено')
+        const visited=new Set<string>([recordId])
+        let cursor:string|null=parentId
+        while(cursor!==null){
+          if(visited.has(cursor))throw new Error('Нельзя перенести подразделение в собственную ветку')
+          visited.add(cursor)
+          cursor=deps.find(dep=>dep.id===cursor)?.parent_id??null
+        }
+      }
+      if(rows.some(row=>row.id!==recordId&&row.name.toLowerCase()===name.toLowerCase()&&
+        (kind==='positions'||row.parent_id===parentId)))
+        throw new Error('Такая запись уже существует')
+      record.name=name
+      if(kind==='departments')record.parent_id=parentId
+      record.revision+=1
+      // Labels on assignments and staffing must match their directory records.
+      for(const employee of employees){
+        if(kind==='departments'&&employee.current_department_id===recordId)
+          employee.current_department_name=name
+        if(kind==='positions'&&employee.current_position_id===recordId)
+          employee.current_position_name=name
+      }
+      for(const lines of staffingByPlan.values())for(const line of lines){
+        if(kind==='departments'&&line.department_id===recordId)line.department_name=name
+        if(kind==='positions'&&line.position_id===recordId)line.position_name=name
+      }
+      return {data:record} as T
+    }
+    throw new Error('Действие со справочником не поддерживается')
+  }
   m=p.match(/^\/companies\/[^/]+\/(departments|positions|employees|personnel-actions|documents)$/)
-  if(m){const pg=Number(u.searchParams.get('page')||1),kind=m[1];let rows:any[]=kind==='departments'?deps:kind==='positions'?positions:kind==='employees'?employees:kind==='personnel-actions'?actions:documents
+  if(m&&method==='GET'){const pg=Number(u.searchParams.get('page')||1),kind=m[1];let rows:any[]=kind==='departments'?deps:kind==='positions'?positions:kind==='employees'?employees:kind==='personnel-actions'?actions:documents
     if(kind==='employees'){const q=(u.searchParams.get('search')||'').toLowerCase(),s=u.searchParams.get('status')||'all';rows=rows.filter((x:any)=>(s==='all'||x.employment_status===s)&&(!q||json(x).toLowerCase().includes(q)))}
     if(kind==='personnel-actions'&&u.searchParams.get('type'))rows=rows.filter((x:any)=>x.action_type===u.searchParams.get('type'))
     if(kind==='personnel-actions'&&u.searchParams.get('employee_id'))rows=rows.filter((x:any)=>x.employee_id===u.searchParams.get('employee_id'))

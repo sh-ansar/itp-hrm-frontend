@@ -434,23 +434,11 @@ onMounted(refreshCompanies)
         </div>
       </BaseCard>
 
-      <div class="metrics">
-        <BaseCard>
-          <span>Плановых ставок</span>
-          <strong>{{ formatUnits(totals.planned) }}</strong>
-        </BaseCard>
-        <BaseCard>
-          <span>Занято</span>
-          <strong>{{ formatUnits(totals.occupied) }}</strong>
-        </BaseCard>
-        <BaseCard>
-          <span>Вакантно</span>
-          <strong>{{ formatUnits(totals.vacant) }}</strong>
-        </BaseCard>
-        <BaseCard>
-          <span>Сверх штата</span>
-          <strong>{{ formatUnits(totals.overstaffed) }}</strong>
-        </BaseCard>
+      <div class="staffing-summary-strip" aria-label="Показатели штатного расписания">
+        <div class="staffing-summary-item"><span>Плановых ставок</span><strong>{{ formatUnits(totals.planned) }}</strong></div>
+        <div class="staffing-summary-item"><span>Занято</span><strong>{{ formatUnits(totals.occupied) }}</strong></div>
+        <div class="staffing-summary-item staffing-summary-item--accent"><span>Вакантно</span><strong>{{ formatUnits(totals.vacant) }}</strong></div>
+        <div class="staffing-summary-item"><span>Сверх штата</span><strong>{{ formatUnits(totals.overstaffed) }}</strong></div>
       </div>
 
       <BaseCard>
@@ -569,10 +557,12 @@ onMounted(refreshCompanies)
 .plan-status.approved{background:var(--color-success-surface);color:var(--color-success)}
 .plan-title .muted{margin:8px 0 0;font-size:13px}
 .plan-actions{display:flex;gap:8px;flex-wrap:wrap}
-.metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:var(--space-4)}
-.metrics :deep(.base-card){display:grid;gap:7px}
-.metrics span{font-size:12px;color:var(--color-muted)}
-.metrics strong{font-size:25px;line-height:1.1;color:var(--color-primary)}
+.staffing-summary-strip{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));background:var(--color-surface);border:1px solid var(--color-stroke);border-radius:8px;overflow:hidden}
+.staffing-summary-item{display:grid;gap:4px;padding:13px 18px;border-right:1px solid var(--color-stroke)}
+.staffing-summary-item:last-child{border-right:0}
+.staffing-summary-item span{font-size:11px;line-height:1.25;color:var(--color-muted)}
+.staffing-summary-item strong{font-size:20px;line-height:1.15;font-weight:650;color:var(--color-text)}
+.staffing-summary-item--accent strong{color:var(--color-primary)}
 .section-heading{display:flex;align-items:end;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:var(--space-4)}
 .section-heading h2{margin:0;font-size:var(--font-section-heading)}
 .section-copy{margin:5px 0 0;color:var(--color-muted);font-size:12px;line-height:1.45}
@@ -593,6 +583,6 @@ onMounted(refreshCompanies)
 .approve-copy{display:grid;gap:var(--space-4)}
 .approve-copy p{margin:0}
 .approve-actions{display:flex;justify-content:flex-end;gap:var(--space-2)}
-@media(max-width:1000px){.metrics{grid-template-columns:repeat(2,minmax(0,1fr))}}
-@media(max-width:650px){.toolbar{grid-template-columns:1fr}.line-toolbar .line-search{min-width:100%;flex-basis:100%}.metrics{grid-template-columns:1fr 1fr}.snapshot-row{display:grid;grid-template-columns:1fr}.snapshot-row :deep(.field){width:100%}.snapshot-row :deep(button){width:100%}.plan-actions{width:100%}.plan-actions :deep(button){flex:1}.approve-actions :deep(button){flex:1}}
+@media(max-width:1000px){.staffing-summary-strip{grid-template-columns:repeat(2,minmax(0,1fr))}.staffing-summary-item:nth-child(2){border-right:0}.staffing-summary-item:nth-child(-n+2){border-bottom:1px solid var(--color-stroke)}}
+@media(max-width:650px){.toolbar{grid-template-columns:1fr}.line-toolbar .line-search{min-width:100%;flex-basis:100%}.staffing-summary-item{padding:11px 12px}.staffing-summary-item strong{font-size:18px}.snapshot-row{display:grid;grid-template-columns:1fr}.snapshot-row :deep(.field){width:100%}.snapshot-row :deep(button){width:100%}.plan-actions{width:100%}.plan-actions :deep(button){flex:1}.approve-actions :deep(button){flex:1}}
 </style>

@@ -40,10 +40,17 @@ export interface PersonnelActionListResponse{
   }
 }
 
-export function listPersonnelActions(companyId:string,page=1,type?:PersonnelActionType|''):Promise<PersonnelActionListResponse>{
+export function listPersonnelActions(
+  companyId:string,
+  page=1,
+  type?:PersonnelActionType|'',
+  employeeId='',
+):Promise<PersonnelActionListResponse>{
   if(!uuid.test(companyId)) throw new Error('Некорректный идентификатор компании')
+  if(employeeId && !uuid.test(employeeId)) throw new Error('Некорректный идентификатор сотрудника')
   const params=new URLSearchParams({page:String(page),per_page:'25'})
   if(type) params.set('type',type)
+  if(employeeId) params.set('employee_id',employeeId)
   return apiRequest(`/companies/${companyId}/personnel-actions?${params.toString()}`)
 }
 

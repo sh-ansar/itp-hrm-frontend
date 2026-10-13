@@ -10,11 +10,24 @@ const props = defineProps<{
   companyId: string
   selectedIds: string[]
   loading?: boolean
+  grouped?: boolean
 }>()
 const emit = defineEmits<{ select: [id: string, checked: boolean] }>()
 
 const statusClass = (row: EmployeeRow) => 'status-pill--' + (row.employment_status ?? 'unassigned')
 const hasRows = computed(() => !props.loading && props.rows.length > 0)
+const groupedRows = computed(() => {
+  if (!props.grouped) return [{ label: '', rows: props.rows }]
+  const groups = new Map<string, EmployeeRow[]>()
+  for (const row of props.rows) {
+    const label = row.current_department_name || 'Без подразделения'
+    if (!groups.has(label)) groups.set(label, [])
+    groups.get(label)!.push(row)
+  }
+  return [...groups.entries()]
+    .sort(([a], [b]) => a.localeCompare(b, 'ru'))
+    .map(([label, rows]) => ({ label, rows }))
+})
 function displayDate(value: unknown): string {
   if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}/.test(value)) return '—'
   const [year, month, day] = value.slice(0, 10).split('-')
@@ -27,7 +40,11 @@ function displayDate(value: unknown): string {
     <div v-if="loading" class="employee-mobile-loading" aria-live="polite">Загрузка сотрудников…</div>
     <p v-else-if="!hasRows" class="employee-mobile-empty">Сотрудники не найдены.</p>
 
-    <article v-for="row in rows" :key="row.id" class="employee-mobile-card">
+    <template v-for="group in groupedRows" :key="group.label || 'all'">
+      <div v-if="grouped && group.label" class="employee-mobile-group">
+        <strong>{{ group.label }}</strong><span>{{ group.rows.length }}</span>
+      </div>
+      <article v-for="row in group.rows" :key="row.id" class="employee-mobile-card">
       <header>
         <label class="employee-select">
           <input type="checkbox" :checked="selectedIds.includes(row.id)"
@@ -65,7 +82,8 @@ function displayDate(value: unknown): string {
       <footer>
         <span class="status-pill" :class="statusClass(row)">{{ row.status_label }}</span>
       </footer>
-    </article>
+      </article>
+    </template>
   </div>
 </template>
 
@@ -75,6 +93,9 @@ function displayDate(value: unknown): string {
   margin:0;padding:22px 12px;text-align:center;color:var(--color-muted);
   font-size:var(--font-caption-size);line-height:var(--line-caption)
 }
+.employee-mobile-group{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:5px 3px 1px}
+.employee-mobile-group strong{min-width:0;color:var(--color-text);font-size:12px;line-height:1.4;font-weight:600;overflow-wrap:anywhere}
+.employee-mobile-group span{flex:0 0 auto;color:var(--color-muted);font-size:11px}
 .employee-mobile-card{
   min-width:0;padding:13px;border:1px solid var(--color-stroke);
   border-radius:var(--radius-md);background:var(--color-surface);box-shadow:var(--shadow-card)

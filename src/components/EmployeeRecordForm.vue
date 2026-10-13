@@ -16,6 +16,15 @@ const personnelNumber = ref(props.edit?.personnel_number ?? '')
 const lastName = ref(props.edit?.last_name ?? '')
 const firstName = ref(props.edit?.first_name ?? '')
 const middleName = ref(props.edit?.middle_name ?? '')
+const birthDate = ref(props.edit?.birth_date ?? '')
+const gender = ref<'male' | 'female' | ''>(props.edit?.gender ?? '')
+const email = ref(props.edit?.email ?? '')
+const phone = ref(props.edit?.phone ?? '')
+const address = ref(props.edit?.address ?? '')
+const work_site = ref(props.edit?.work_site ?? '')
+const work_zone = ref(props.edit?.work_zone ?? '')
+const work_team = ref(props.edit?.work_team ?? '')
+const supervisor_name = ref(props.edit?.supervisor_name ?? '')
 const saving = ref(false)
 const error = ref('')
 
@@ -33,6 +42,15 @@ async function submit() {
       last_name: lastName.value.trim(),
       first_name: firstName.value.trim(),
       middle_name: middleName.value.trim() || null,
+      birth_date: birthDate.value || null,
+      gender: gender.value || null,
+      email: email.value.trim() || null,
+      phone: phone.value.trim() || null,
+      address: address.value.trim() || null,
+      work_site: work_site.value.trim() || null,
+      work_zone: work_zone.value.trim() || null,
+      work_team: work_team.value.trim() || null,
+      supervisor_name: supervisor_name.value.trim() || null,
     }
     const response = props.edit
       ? await updateEmployee(props.companyId, props.edit.id, props.edit.revision, payload)
@@ -54,6 +72,15 @@ async function submit() {
       <BaseFormField v-model="lastName" label="Фамилия" :disabled="saving" required />
       <BaseFormField v-model="firstName" label="Имя" :disabled="saving" required />
       <BaseFormField v-model="middleName" label="Отчество" :disabled="saving" />
+      <label class="identity-field">Дата рождения<input v-model="birthDate" type="date" :disabled="saving" /></label>
+      <label class="identity-field">Пол<select v-model="gender" :disabled="saving"><option value="">Не указан</option><option value="male">Мужчина</option><option value="female">Женщина</option></select></label>
+      <label class="identity-field">Email<input v-model="email" type="email" :disabled="saving" autocomplete="email" /></label>
+      <BaseFormField v-model="phone" label="Телефон" :disabled="saving" />
+      <BaseFormField v-model="address" label="Адрес" :disabled="saving" />
+      <BaseFormField v-model="work_site" label="Объект" :disabled="saving" />
+      <BaseFormField v-model="work_zone" label="Рабочая зона" :disabled="saving" />
+      <BaseFormField v-model="work_team" label="Бригада" :disabled="saving" />
+      <BaseFormField v-model="supervisor_name" label="Непосредственный руководитель" :disabled="saving" />
     </div>
     <div class="actions">
       <BaseButton type="button" variant="secondary" :disabled="saving" @click="emit('cancelled')">Отмена</BaseButton>
@@ -67,4 +94,4 @@ async function submit() {
 .form-grid{display:grid;grid-template-columns:1fr;gap:18px}
 .actions{position:sticky;bottom:-34px;z-index:2;display:flex;justify-content:flex-end;gap:var(--space-2);flex-wrap:wrap;margin-top:auto;padding:16px 0;background:var(--color-surface);border-top:1px solid var(--color-stroke)}
 @media(max-width:600px){.employee-record-form{min-height:calc(100dvh - 128px)}.actions{bottom:-28px}.actions :deep(button){flex:1}}
-</style>
+.identity-field{display:grid;gap:8px;font-size:var(--font-label-size);font-weight:600}.identity-field input,.identity-field select{width:100%;height:var(--control-height);border:1px solid var(--color-stroke);border-radius:var(--radius-sm);padding:8px 12px;background:var(--color-surface);color:var(--color-text);font:inherit;font-weight:400}</style>

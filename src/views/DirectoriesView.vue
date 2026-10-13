@@ -142,7 +142,6 @@ onMounted(loadCompanies)
         <div class="title-block">
           <div class="section-icon"><BriefcaseBusiness :size="21" /></div>
           <div>
-            <p class="kicker">Справочник</p>
             <h2>Должности</h2>
             <p class="muted">Наименования должностей без количества ставок. Ставки задаются в штатном расписании.</p>
           </div>
@@ -217,7 +216,6 @@ onMounted(loadCompanies)
 .title-block>div:last-child{min-width:0;max-width:100%}
 .title-block .muted{overflow-wrap:anywhere}
 .section-icon{display:grid;place-items:center;width:42px;height:42px;border-radius:12px;background:var(--color-accent-soft);color:var(--color-primary)}
-.kicker{margin:0 0 4px;color:var(--color-primary);font-size:11px;font-weight:700;letter-spacing:.055em;text-transform:uppercase}
 h2{margin:0;font-size:var(--font-section-heading)}
 .title-block .muted{margin:6px 0 0;font-size:13px}
 .row-actions{display:flex;gap:8px;flex-wrap:wrap}

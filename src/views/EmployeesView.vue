@@ -6,7 +6,6 @@ import BaseCard from '../components/ui/BaseCard.vue'
 import BaseButton from '../components/ui/BaseButton.vue'
 import BaseSelectField from '../components/ui/BaseSelectField.vue'
 import BasePagination from '../components/ui/BasePagination.vue'
-import BasePageHeading from '../components/ui/BasePageHeading.vue'
 import BaseNotice from '../components/ui/BaseNotice.vue'
 import BaseLoadingState from '../components/ui/BaseLoadingState.vue'
 import BaseDataTable from '../components/ui/BaseDataTable.vue'
@@ -14,6 +13,7 @@ import BaseDialog from '../components/ui/BaseDialog.vue'
 import BaseViewTabs from '../components/ui/BaseViewTabs.vue'
 import BaseColumnPicker from '../components/ui/BaseColumnPicker.vue'
 import EmployeeRecordForm from '../components/EmployeeRecordForm.vue'
+import { downloadCsv } from '../utils/exportCsv'
 import { listCompanies, listDepartments, type CompanyRecord } from '../api/organization'
 import {
   listEmployees, type EmployeeRecord, type EmploymentFilter, type EmploymentStatus,
@@ -33,6 +33,8 @@ const search = ref('')
 const searchDraft = ref('')
 const statusFilter = ref<EmploymentFilter>('all')
 const grouped = ref(false)
+const filtersOpen = ref(false)
+const selectedIds = ref<string[]>([])
 const error = ref('')
 const page = ref(1)
 const total = ref(0)
@@ -43,6 +45,7 @@ let counterGeneration = 0
 
 const tabOptions = [
   { id: 'register', label: 'Реестр сотрудников' },
+  { id: 'reserve', label: 'Кадровый резерв и обучение' },
   { id: 'archive', label: 'Архив сотрудников' },
 ]
 const activeTab = computed(() => statusFilter.value === 'archived' ? 'archive' : 'register')
@@ -57,15 +60,17 @@ const statusLabels: Record<EmploymentStatus, string> = {
   active: 'Работает', planned: 'Запланирован', archived: 'В архиве', unassigned: 'Без назначения',
 }
 const columns = [
+  { key: 'selection', label: 'Выбор' },
   { key: 'full_name', label: 'ФИО / Отдел' },
   { key: 'personnel_number', label: 'Таб. №' },
   { key: 'current_position_name', label: 'Должность' },
   { key: 'current_department_name', label: 'Подразделение' },
+  { key: 'current_assignment_valid_from', label: 'Дата назначения' },
   { key: 'status_label', label: 'Статус' },
   { key: 'details', label: 'Действие' },
 ]
 const optionalColumns = columns.filter(column => !['full_name', 'details'].includes(column.key))
-const columnKeys = ['personnel_number', 'current_position_name', 'current_department_name', 'status_label']
+const columnKeys = ['personnel_number', 'current_position_name', 'current_department_name', 'current_assignment_valid_from', 'status_label']
 function savedColumnPreferences(): Record<string, boolean> {
   const initial = Object.fromEntries(columnKeys.map(key => [key, true]))
   try {
@@ -76,7 +81,7 @@ function savedColumnPreferences(): Record<string, boolean> {
 }
 const visibleFields = ref<Record<string, boolean>>(savedColumnPreferences())
 const visibleColumns = computed(() =>
-  columns.filter(column => column.key === 'full_name' || column.key === 'details' || visibleFields.value[column.key] !== false))
+  columns.filter(column => ['selection', 'full_name', 'details'].includes(column.key) || visibleFields.value[column.key] !== false))
 const currentCompany = computed(() => companies.value.find(item => item.id === selectedCompany.value))
 const registryRows = computed<EmployeeRow[]>(() => employees.value.map(employee => {
   const state: EmploymentStatus = employee.employment_status
@@ -87,9 +92,38 @@ const registryRows = computed<EmployeeRow[]>(() => employees.value.map(employee 
     status_label: statusLabels[state],
   }
 }))
+function displayDate(value: unknown): string {
+  if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}/.test(value)) return '—'
+  const [year, month, day] = value.slice(0, 10).split('-')
+  return day + '.' + month + '.' + year
+}
 const groupEmployees = (row: EmployeeRow) => row.current_department_name || 'Без подразделения'
+const allPageSelected = computed(() => registryRows.value.length > 0 && registryRows.value.every(row => selectedIds.value.includes(row.id)))
+const selectedOnPage = computed(() => registryRows.value.filter(row => selectedIds.value.includes(row.id)))
+function toggleSelection(id: string, checked: boolean) {
+  selectedIds.value = checked ? [...new Set([...selectedIds.value, id])] : selectedIds.value.filter(item => item !== id)
+}
+function togglePageSelection(checked: boolean) {
+  const currentIds = registryRows.value.map(row => row.id)
+  selectedIds.value = checked ? [...new Set([...selectedIds.value, ...currentIds])] : selectedIds.value.filter(id => !currentIds.includes(id))
+}
+function exportSelected() {
+  const rows = selectedOnPage.value
+  if (!rows.length) return
+  downloadCsv('employees-selected.csv',
+    ['ФИО', 'Табельный номер', 'Должность', 'Подразделение', 'Статус'],
+    rows.map(row => [
+      row.full_name, row.personnel_number, row.current_position_name,
+      row.current_department_name, row.status_label,
+    ]),
+  )
+}
 
 function setTab(next: string) {
+  if (next === 'reserve') {
+    router.push({ name: 'reserve' })
+    return
+  }
   setStatus(next === 'archive' ? 'archived' : 'all')
 }
 function setStatus(status: EmploymentFilter) {
@@ -149,6 +183,7 @@ async function loadEmployees() {
   const company = selectedCompany.value
   const current = ++generation
   employees.value = []
+  selectedIds.value = []
   total.value = 0
   lastPage.value = 1
   employeeWritesEnabled.value = false
@@ -199,19 +234,37 @@ onMounted(loadCompanies)
 
 <template>
   <section class="personnel-page">
-    <BasePageHeading title="Реестр сотрудников" description="Кадровый состав и личные карточки">
-      <BaseButton v-if="employeeWritesEnabled && activeTab === 'register'" @click="createOpen = true"><Plus :size="16" /> Добавить сотрудника</BaseButton>
-    </BasePageHeading>
+    <div class="registry-breadcrumb"><img src="/prototype-icons/Home.svg" alt="" aria-hidden="true" /><span>/</span><strong>Сотрудники</strong><span>/</span><span>{{ activeTab === 'archive' ? 'Архив сотрудников' : 'Реестр сотрудников' }}</span></div>
 
     <BaseNotice v-if="error" tone="error">{{ error }}</BaseNotice>
     <BaseViewTabs :model-value="activeTab" :options="tabOptions" label="Разделы реестра сотрудников"
       @update:model-value="setTab" />
 
     <div class="registry-metrics" aria-label="Сводка по персоналу">
-      <BaseCard class="registry-metric"><Users :size="17" /><span>Сотрудников по фильтру</span><strong>{{ employeeLoading ? '…' : total }}</strong></BaseCard>
-      <BaseCard class="registry-metric"><Users :size="17" /><span>Работают</span><strong>{{ counters.active ?? '—' }}</strong></BaseCard>
-      <BaseCard class="registry-metric"><Archive :size="17" /><span>В архиве</span><strong>{{ counters.archived ?? '—' }}</strong></BaseCard>
-      <BaseCard class="registry-metric"><FolderTree :size="17" /><span>Подразделений</span><strong>{{ counters.departments ?? '—' }}</strong></BaseCard>
+      <BaseCard class="registry-metric">
+        <span>Сотрудники</span>
+        <img src="/prototype-icons/Info.svg" class="registry-info-icon" alt="" aria-hidden="true" />
+        <strong>{{ counters.active ?? '—' }}</strong>
+        <small>активных сотрудников работают в компании</small>
+      </BaseCard>
+      <BaseCard class="registry-metric">
+        <span>Отделы</span>
+        <img src="/prototype-icons/Info.svg" class="registry-info-icon" alt="" aria-hidden="true" />
+        <strong>{{ counters.departments ?? '—' }}</strong>
+        <small>структурных подразделений в компании</small>
+      </BaseCard>
+      <BaseCard class="registry-metric">
+        <span>Вакантные позиции</span>
+        <img src="/prototype-icons/Link-External.svg" class="registry-info-icon" alt="" aria-hidden="true" />
+        <strong class="registry-missing-value">—</strong>
+        <small>данные по штатным вакансиям не подключены</small>
+      </BaseCard>
+      <BaseCard class="registry-metric">
+        <span>Истекающие договоры</span>
+        <img src="/prototype-icons/Filter.svg" class="registry-info-icon" alt="" aria-hidden="true" />
+        <strong class="registry-missing-value">—</strong>
+        <small>данные о сроках договоров не подключены</small>
+      </BaseCard>
     </div>
 
     <BaseCard class="registry-card">
@@ -219,10 +272,13 @@ onMounted(loadCompanies)
       <template v-else-if="companies.length">
         <div class="register-heading">
           <div>
-            <h2>{{ activeTab === 'archive' ? 'Архив сотрудников' : 'Список сотрудников' }} <span>({{ employeeLoading ? '…' : total }})</span></h2>
+            <h1>{{ activeTab === 'archive' ? 'Архив сотрудников' : 'Реестр сотрудников' }} <span>({{ employeeLoading ? '…' : total }})</span></h1>
             <p>{{ currentCompany?.name }} · {{ employeeLoading ? 'Загрузка записей…' : 'отображается ' + registryRows.length + ' из ' + total }}</p>
           </div>
-          <div class="company-select"><BaseSelectField v-model="selectedCompany" label="Компания" :options="companies" /></div>
+          <div class="register-actions">
+            <BaseButton v-if="employeeWritesEnabled && activeTab === 'register'" @click="createOpen = true"><Plus :size="16" /> Добавить сотрудника</BaseButton>
+            <div class="company-select"><BaseSelectField v-model="selectedCompany" label="Компания" :options="companies" /></div>
+          </div>
         </div>
 
         <div class="registry-toolbar" aria-label="Настройки реестра">
@@ -232,22 +288,38 @@ onMounted(loadCompanies)
               placeholder="Поиск по ФИО или табельному номеру" />
             <BaseButton type="submit" variant="secondary">Найти</BaseButton>
           </form>
-          <BaseSelectField v-if="activeTab !== 'archive'" class="status-select"
-            :model-value="statusFilter" label="Фильтр статуса" :options="statusSelectOptions"
-            @update:model-value="setStatus($event as EmploymentFilter)" />
+          <BaseButton variant="secondary" @click="filtersOpen = !filtersOpen" :aria-expanded="filtersOpen">
+            <img src="/prototype-icons/Filter.svg" alt="" class="toolbar-icon" /> Фильтры
+          </BaseButton>
           <BaseButton variant="secondary" @click="grouped = !grouped">
             <FolderTree :size="16" /> {{ grouped ? 'Без группировки' : 'Группировка' }}
           </BaseButton>
-          <BaseColumnPicker v-model="visibleFields" :columns="optionalColumns" />
+          <BaseColumnPicker v-model="visibleFields" :columns="optionalColumns" title="Настройка колонок" />
           <BaseButton v-if="search" variant="secondary" @click="clearSearch">Сбросить поиск</BaseButton>
         </div>
 
+        <div v-if="filtersOpen" class="registry-filters">
+          <BaseSelectField v-if="activeTab !== 'archive'" class="status-select"
+            :model-value="statusFilter" label="Статус сотрудника" :options="statusSelectOptions"
+            @update:model-value="setStatus($event as EmploymentFilter)" />
+          <BaseButton v-if="statusFilter !== 'all'" variant="secondary" @click="setStatus('all')">Сбросить фильтр</BaseButton>
+        </div>
+        <div class="registry-selection" aria-label="Выбор сотрудников текущей страницы">
+          <label><input type="checkbox" :checked="allPageSelected" :disabled="!registryRows.length" @change="togglePageSelection(($event.target as HTMLInputElement).checked)" /> Выбрать страницу</label>
+          <span>Выбрано на странице: {{ selectedOnPage.length }} из {{ registryRows.length }}</span>
+          <BaseButton v-if="selectedOnPage.length" variant="secondary" @click="exportSelected">Экспорт выбранных CSV</BaseButton>
+          <BaseButton v-if="selectedOnPage.length" variant="secondary" @click="selectedIds = []">Снять выделение</BaseButton>
+        </div>
         <p v-if="grouped" class="scope-hint">Сгруппированы записи текущей страницы. Фильтры и количество сотрудников рассчитываются по всему реестру.</p>
 
         <BaseDataTable :rows="registryRows" :columns="visibleColumns" :group-by="grouped ? groupEmployees : undefined"
           row-key="id" caption="Реестр сотрудников выбранной компании" :loading="employeeLoading"
           :empty-title="activeTab === 'archive' ? 'В архиве сотрудников нет' : 'Сотрудники не найдены'"
           :empty-description="search ? 'Уточните поиск или сбросьте запрос.' : 'Нет записей для выбранного фильтра.'">
+          <template #cell-selection="{ row }">
+            <input type="checkbox" :checked="selectedIds.includes(row.id)" :aria-label="'Выбрать сотрудника: ' + row.full_name"
+              @change="toggleSelection(row.id, ($event.target as HTMLInputElement).checked)" />
+          </template>
           <template #cell-full_name="{ row }">
             <div class="name-cell">
               <RouterLink :to="{ name: 'employee-detail', params: { company: selectedCompany, employee: row.id } }">{{ row.full_name }}</RouterLink>
@@ -256,13 +328,14 @@ onMounted(loadCompanies)
           </template>
           <template #cell-current_position_name="{ value }">{{ value ?? '—' }}</template>
           <template #cell-current_department_name="{ value }">{{ value ?? '—' }}</template>
+          <template #cell-current_assignment_valid_from="{ value }">{{ displayDate(value) }}</template>
           <template #cell-status_label="{ row }">
             <span class="status-pill" :class="'status-pill--' + (row.employment_status ?? 'unassigned')">
               {{ row.status_label }}
             </span>
           </template>
           <template #cell-details="{ row }">
-            <RouterLink class="employee-link" :to="{ name: 'employee-detail', params: { company: selectedCompany, employee: row.id } }">Открыть</RouterLink>
+            <RouterLink class="employee-link" :to="{ name: 'employee-detail', params: { company: selectedCompany, employee: row.id } }" :aria-label="'Открыть карточку: ' + row.full_name" :title="'Открыть карточку: ' + row.full_name"><img src="/prototype-icons/Edit.svg" alt="" /><span class="sr-only">Открыть карточку</span></RouterLink>
           </template>
         </BaseDataTable>
         <BasePagination :page="page" :last-page="lastPage" :loading="employeeLoading"
@@ -279,18 +352,30 @@ onMounted(loadCompanies)
 </template>
 
 <style scoped>
-.personnel-page{display:grid;grid-template-columns:minmax(0,1fr);gap:var(--space-4);max-width:100%;min-width:0}
+.personnel-page{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;max-width:100%;min-width:0}
+.personnel-page :deep(.base-card){border-radius:6px;box-shadow:none}
+.personnel-page :deep(table){font-size:13px}
+.personnel-page :deep(th){font-weight:600;padding:11px 13px}
+.personnel-page :deep(td){vertical-align:middle;padding:10px 13px}
+.personnel-page :deep(.table-scroll){border-radius:6px;contain:layout paint}
 .registry-metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:var(--space-3)}
-.registry-metric{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:start;min-height:114px}
-.registry-metric span{font-size:12px;color:var(--color-muted);grid-column:1;grid-row:1;line-height:1.4}
+.registry-metric{display:grid;grid-template-columns:minmax(0,1fr) auto;align-content:start;gap:5px 9px;align-items:start;min-height:122px}
+.registry-metric span{font-size:12px;text-transform:uppercase;font-weight:700;letter-spacing:.01em;color:var(--color-muted);grid-column:1;grid-row:1;line-height:1.4}
 .registry-metric :deep(svg){color:var(--color-primary);grid-column:2;grid-row:1}
-.registry-metric strong{font-size:26px;grid-column:1/-1;line-height:1.15}
-.registry-card{min-width:0}
+.registry-metric strong{font-size:25px;color:var(--color-primary);grid-column:1/-1;line-height:1.18}
+.registry-metric small{grid-column:1/-1;color:var(--color-muted);font-size:11px;line-height:1.4}
+.registry-info-icon{grid-column:2;grid-row:1;width:15px;height:15px;object-fit:contain}
+.registry-metric .registry-missing-value{color:var(--color-muted)}
+.registry-card{min-width:0;box-shadow:none;background:transparent;border:0;padding:0}
 .register-heading{display:flex;align-items:end;justify-content:space-between;gap:16px;margin-bottom:var(--space-4);flex-wrap:wrap}
-.register-heading h2{font-size:20px;letter-spacing:-.025em;margin:0}
-.register-heading h2 span{color:var(--color-muted);font-size:15px;font-weight:500}
+.register-heading h1{font-size:21px;letter-spacing:-.025em;margin:0;line-height:1.25}
+.register-heading h1 span{color:var(--color-text);font-size:15px;font-weight:400}
 .register-heading p{margin:6px 0 0;color:var(--color-muted);font-size:12px}
-.company-select{min-width:200px;max-width:320px;flex:1}
+.register-actions{display:flex;gap:10px;align-items:end;flex-wrap:wrap;justify-content:flex-end}
+.company-select{min-width:175px;max-width:260px;flex:1}
+.registry-breadcrumb{display:flex;align-items:center;gap:10px;color:var(--color-muted);font-size:12px;min-height:24px}
+.registry-breadcrumb img{width:15px;height:15px}
+.registry-breadcrumb strong{font-weight:500;color:var(--color-text)}
 .registry-toolbar{display:flex;align-items:center;gap:var(--space-2);flex-wrap:wrap;margin-bottom:var(--space-3)}
 .registry-search{display:flex;align-items:center;gap:8px;min-width:260px;flex:1 1 300px;min-height:var(--control-height);padding:3px 4px 3px 12px;border:1px solid var(--color-stroke);border-radius:var(--radius-md);color:var(--color-muted)}
 .registry-search:focus-within{border-color:var(--color-primary)}
@@ -299,7 +384,7 @@ onMounted(loadCompanies)
 .status-select{flex:0 1 175px;min-width:145px}
 .status-select :deep(label){position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}
 .status-select :deep(select){font-size:13px}
-.name-cell{min-width:180px;display:grid;gap:4px}
+.name-cell{min-width:180px;display:grid;gap:3px}
 .name-cell a{font-weight:600;color:var(--color-text)}
 .name-cell a:hover{color:var(--color-primary);text-decoration:underline}
 .name-cell span{font-size:11px;color:var(--color-muted)}
@@ -308,17 +393,28 @@ onMounted(loadCompanies)
 .status-pill--planned{background:var(--color-accent-soft);color:var(--color-primary)}
 .status-pill--archived{background:var(--color-danger-surface);color:var(--color-danger)}
 .status-pill--unassigned{background:var(--color-warning-surface);color:var(--color-warning)}
-.employee-link{color:var(--color-primary);font-weight:700;font-size:12px;text-decoration:underline;text-underline-offset:3px}
+.employee-link{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:4px;color:var(--color-primary)}
+.employee-link:hover{background:var(--color-accent-soft)}
+.employee-link img{width:17px;height:17px}
+.registry-selection{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:0 0 12px;min-height:34px;font-size:12px;color:var(--color-muted)}
+.registry-selection label{display:inline-flex;align-items:center;gap:8px;font-weight:600;color:var(--color-text);cursor:pointer}
+.registry-selection input,.personnel-page :deep(td input[type=checkbox]){accent-color:var(--color-primary);width:15px;height:15px;cursor:pointer}
+.registry-selection :deep(button){min-height:30px;padding:5px 10px}
+.personnel-page :deep(th:first-child),.personnel-page :deep(td:first-child){width:45px;text-align:center;padding-left:10px;padding-right:10px}
+.registry-filters{display:flex;gap:12px;align-items:end;flex-wrap:wrap;margin:-2px 0 14px;padding:12px 14px;border:1px solid var(--color-stroke);border-radius:6px;background:#fff}
+.registry-toolbar .toolbar-icon{width:16px;height:16px;object-fit:contain}
 .scope-hint{color:var(--color-muted);font-size:12px;line-height:1.5;margin:0 0 12px}
 .sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap}
 @media(max-width:1100px){.registry-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:650px){
   .registry-metrics{gap:8px}
-  .registry-metric{min-height:100px}
+  .registry-metric{min-height:118px}
   .registry-metric strong{font-size:22px}
   .registry-search{min-width:100%;width:100%}
   .registry-toolbar>:deep(button){flex:1 1 auto}
   .status-select{flex:1}.status-select :deep(select){width:100%}
   .company-select{max-width:none;width:100%}
+  .register-actions{width:100%;justify-content:stretch}
+  .register-actions :deep(button){flex:1}
 }
 </style>

@@ -23,15 +23,32 @@ const saving = ref(false)
 const error = ref('')
 
 const rootOption = { id: '__root__', name: 'Верхний уровень' }
+// Do not offer descendants as parents when editing: that would create a cycle.
+const excludedParentIds = computed(() => {
+  const ids = new Set<string>()
+  if (!props.edit) return ids
+  const queue = [props.edit.id]
+  while (queue.length) {
+    const id = queue.shift()!
+    if (ids.has(id)) continue
+    ids.add(id)
+    for (const item of props.departments) if (item.parent_id === id) queue.push(item.id)
+  }
+  return ids
+})
 const parentOptions = computed(() => [
   rootOption,
   ...props.departments
-    .filter(item => item.id !== props.edit?.id)
+    .filter(item => !excludedParentIds.value.has(item.id))
     .map(item => ({ id: item.id, name: item.name })),
 ])
 
 async function submit() {
   error.value = ''
+  if (parentId.value !== '__root__' && !parentOptions.value.some(item => item.id === parentId.value)) {
+    error.value = 'Выберите доступное родительское подразделение'
+    return
+  }
   if (!name.value.trim()) {
     error.value = 'Введите название подразделения'
     return
@@ -62,7 +79,7 @@ async function submit() {
     <BaseNotice v-if="error" tone="error">{{ error }}</BaseNotice>
     <BaseFormField v-model="name" label="Название подразделения" placeholder="Например: Финансовый департамент" :disabled="saving" required />
     <BaseSelectField v-model="parentId" label="Родительское подразделение" :options="parentOptions" :disabled="saving" />
-    <p class="hint">Система не позволит создать цикл и не даст выбрать подразделение из другой компании.</p>
+    <p class="hint">Выберите уровень структуры. Подразделение нельзя подчинить самому себе или своему дочернему подразделению.</p>
     <div class="actions">
       <BaseButton type="button" variant="secondary" :disabled="saving" @click="emit('cancelled')">Отмена</BaseButton>
       <BaseButton type="submit" :disabled="saving">{{ saving ? 'Сохранение…' : edit ? 'Сохранить изменения' : 'Добавить подразделение' }}</BaseButton>

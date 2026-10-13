@@ -128,3 +128,20 @@ export function approveStaffingPlan(
     body: JSON.stringify({ revision }),
   })
 }
+
+export interface StaffingHistoryEvent extends Record<string, unknown> {
+  id: number
+  action: string
+  staffing_plan_id: string | null
+  staffing_line_id: string | null
+  revision: number | null
+  created_at: string
+}
+
+export function listStaffingHistory(companyId: string, page = 1): Promise<{
+  data: StaffingHistoryEvent[]
+  meta: { current_page: number; last_page: number; total: number }
+}> {
+  assertUuid(companyId, 'идентификатор компании')
+  return apiRequest(`/companies/${companyId}/staffing-history?page=${page}&per_page=25`)
+}

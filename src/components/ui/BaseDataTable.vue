@@ -76,7 +76,7 @@ const displayRows = computed<Entry[]>(() => {
 </template>
 
 <style scoped>
-.table-scroll{width:100%;max-width:100%;overflow-x:auto;border:1px solid var(--color-stroke);border-radius:var(--radius-lg);background:var(--color-surface)}
+.table-scroll{width:100%;max-width:100%;overflow-x:auto;contain:paint;border:1px solid var(--color-stroke);border-radius:var(--radius-lg);background:var(--color-surface)}
 .table-scroll:focus-visible{outline:3px solid var(--color-focus);outline-offset:2px}
 table{border-collapse:collapse;width:100%;min-width:540px;text-align:left;font-size:var(--font-table-size)}
 th{position:sticky;top:0;background:var(--color-table-heading);color:var(--color-table-heading-text);font-weight:700;white-space:nowrap;padding:14px 16px;border-bottom:1px solid var(--color-stroke)}

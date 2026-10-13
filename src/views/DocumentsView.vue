@@ -162,7 +162,6 @@ onMounted(loadCompanies)
     <BaseCard v-if="company">
       <div class="table-header">
         <div>
-          <p class="kicker">Реестр компании</p>
           <h2>Кадровые документы</h2>
           <p class="muted">{{ selectedCompany?.name }} · Страница {{ page }} из {{ lastPage }}</p>
         </div>
@@ -226,7 +225,6 @@ onMounted(loadCompanies)
 .table-header{display:flex;justify-content:space-between;gap:16px;align-items:end;flex-wrap:wrap;margin-bottom:var(--space-4)}
 .table-header h2{font-size:var(--font-section-heading);margin:0}
 .table-header .muted{margin:6px 0 0}
-.kicker{margin:0 0 5px;color:var(--color-primary);font-size:11px;font-weight:700;letter-spacing:.055em;text-transform:uppercase}
 .count{font-size:12px;color:var(--color-muted);white-space:nowrap}
 .document-name,.employee-name{display:grid;gap:3px;min-width:0;overflow-wrap:anywhere}
 .document-name strong,.employee-name strong{font-size:13px}

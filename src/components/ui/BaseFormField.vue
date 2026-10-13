@@ -4,7 +4,7 @@ import { computed, useId } from 'vue'
 const props = withDefaults(defineProps<{
   label: string
   modelValue: string
-  type?: 'text' | 'email' | 'password' | 'date'
+  type?: 'text' | 'email' | 'password' | 'date' | 'number'
   placeholder?: string
   required?: boolean
   disabled?: boolean
@@ -21,7 +21,7 @@ const errorId = computed(() => props.error ? `${id}-error` : undefined)
   <div class="field">
     <label :for="id">{{ label }}<span v-if="required" aria-hidden="true"> *</span></label>
     <input :id="id" :type="type" :value="modelValue" :placeholder="placeholder"
-      :required="required" :disabled="disabled" :autocomplete="autocomplete"
+      :required="required" :disabled="disabled" :autocomplete="autocomplete" :step="type === 'number' ? 'any' : undefined"
       :aria-invalid="!!error" :aria-describedby="errorId"
       @input="$emit('update:modelValue', ($event.target as HTMLInputElement).value)" />
     <p v-if="error" :id="errorId" class="error">{{ error }}</p>

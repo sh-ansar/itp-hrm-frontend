@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { CheckCircle2, CircleDollarSign, FolderTree, Pencil, Plus, UsersRound } from 'lucide-vue-next'
 import BaseButton from '../components/ui/BaseButton.vue'
 import BaseCard from '../components/ui/BaseCard.vue'
@@ -10,15 +11,20 @@ import BaseLoadingState from '../components/ui/BaseLoadingState.vue'
 import BaseNotice from '../components/ui/BaseNotice.vue'
 import BasePageHeading from '../components/ui/BasePageHeading.vue'
 import BaseSelectField from '../components/ui/BaseSelectField.vue'
-import BaseViewTabs from '../components/ui/BaseViewTabs.vue'
 import BaseColumnPicker from '../components/ui/BaseColumnPicker.vue'
+import BasePagination from '../components/ui/BasePagination.vue'
+import OrgStaffingNav from '../components/OrgStaffingNav.vue'
 import StaffingLineForm from '../components/StaffingLineForm.vue'
+import StaffingMobileList from '../components/StaffingMobileList.vue'
 import StaffingPlanForm from '../components/StaffingPlanForm.vue'
 import { localTodayISO } from '../utils/localDate'
+import { downloadCsv } from '../utils/exportCsv'
 import { preferredStaffingPlan } from '../utils/staffingPlanChoice'
 import { listCompanies, type CompanyRecord } from '../api/organization'
 import {
   approveStaffingPlan,
+  listStaffingHistory,
+  type StaffingHistoryEvent,
   getStaffingPlan,
   listStaffingPlans,
   type StaffingPlanDetailResponse,
@@ -26,9 +32,44 @@ import {
   type StaffingPlanRecord,
 } from '../api/staffing'
 
+const route = useRoute()
+const router = useRouter()
 const companies = ref<CompanyRecord[]>([])
 const company = ref('')
 const plans = ref<StaffingPlanRecord[]>([])
+const historyRows = ref<StaffingHistoryEvent[]>([])
+const historyPage = ref(1)
+const historyTotal = ref(0)
+const historyLastPage = ref(1)
+const historyBusy = ref(false)
+const historyError = ref('')
+const historyActions: Record<string,string> = {
+  'staffing.plan_created': 'Создание версии',
+  'staffing.plan_updated': 'Изменение версии',
+  'staffing.plan_line_created': 'Ввод штатной позиции',
+  'staffing.plan_line_updated': 'Изменение штатной позиции',
+  'staffing.plan_approved': 'Утверждение штатного расписания',
+}
+let historyGeneration = 0
+async function loadHistory() {
+  const current = ++historyGeneration
+  if (!company.value || activeView.value !== 'changes') return
+  historyBusy.value = true
+  historyError.value = ''
+  try {
+    const result = await listStaffingHistory(company.value, historyPage.value)
+    if (current !== historyGeneration) return
+    historyRows.value = result.data
+    historyTotal.value = result.meta.total
+    historyLastPage.value = result.meta.last_page
+  } catch (cause) {
+    if (current !== historyGeneration) return
+    historyError.value = cause instanceof Error ? cause.message : 'Не удалось загрузить историю изменений'
+    historyRows.value = []
+  } finally {
+    if (current === historyGeneration) historyBusy.value = false
+  }
+}
 const selectedPlanId = ref('')
 const detail = ref<StaffingPlanDetailResponse | null>(null)
 const companyBusy = ref(false)
@@ -41,14 +82,10 @@ const approveOpen = ref(false)
 const editingLine = ref<StaffingPlanLine | null>(null)
 const staffingWritesEnabled = ref(false)
 const asOf = ref(localTodayISO())
-const activeView = ref('all')
+const initialView = ['all', 'vacant', 'changes'].includes(String(route.query.view)) ? String(route.query.view) : 'all'
+const activeView = ref(initialView)
 const searchLines = ref('')
 const grouped = ref(false)
-const viewTabs = [
-  { id: 'all', label: 'Штатное расписание' },
-  { id: 'vacant', label: 'Вакантные позиции' },
-  { id: 'overstaffed', label: 'Сверх штата' },
-]
 
 const selectedPlan = computed(() => detail.value?.data ?? plans.value.find(item => item.id === selectedPlanId.value) ?? null)
 const canEdit = computed(() => !!detail.value?.meta.staffing_writes_enabled)
@@ -71,6 +108,9 @@ const filteredLines = computed(() => {
     return (line.department_name + ' ' + line.position_name).toLocaleLowerCase('ru').includes(term)
   })
 })
+const mobileLines = computed(() => grouped.value
+  ? [...filteredLines.value].sort((a, b) => a.department_name.localeCompare(b.department_name, 'ru') || a.position_name.localeCompare(b.position_name, 'ru'))
+  : filteredLines.value)
 const groupLines = (row: StaffingPlanLine): string => row.department_name || 'Без подразделения'
 
 const planOptions = computed(() => plans.value.map(item => ({
@@ -87,6 +127,14 @@ const lineColumns = [
   { key: 'base_salary', label: 'Базовый оклад' },
   { key: 'status', label: 'Состояние' },
   { key: 'actions', label: '' },
+]
+
+const changeColumns = [
+  { key: 'id', label: '№ изменения' },
+  { key: 'action', label: 'Тип изменения' },
+  { key: 'staffing_plan_id', label: 'Версия расписания' },
+  { key: 'revision', label: 'Ревизия' },
+  { key: 'created_at', label: 'Дата изменения' },
 ]
 
 const optionalLineColumns = lineColumns.filter(column => !['department_name', 'position_name', 'actions'].includes(column.key))
@@ -137,13 +185,19 @@ async function refreshCompanies() {
   }
 }
 
+let planRequest = 0
+let detailRequest = 0
+
 async function loadPlans() {
-  if (!company.value) return
+  const current = ++planRequest
+  const companyId = company.value
+  if (!companyId) { plans.value = []; planBusy.value = false; return }
   planBusy.value = true
   error.value = ''
   detail.value = null
   try {
-    const response = await listStaffingPlans(company.value)
+    const response = await listStaffingPlans(companyId)
+    if (current !== planRequest || companyId !== company.value) return
     plans.value = response.data
     staffingWritesEnabled.value = response.meta.staffing_writes_enabled
     if (!plans.value.some(item => item.id === selectedPlanId.value)) {
@@ -151,29 +205,38 @@ async function loadPlans() {
     }
     if (!selectedPlanId.value) detail.value = null
   } catch (cause) {
+    if (current !== planRequest) return
     error.value = cause instanceof Error ? cause.message : 'Не удалось загрузить версии штатного расписания'
     plans.value = []
     staffingWritesEnabled.value = false
     selectedPlanId.value = ''
   } finally {
-    planBusy.value = false
+    if (current === planRequest) planBusy.value = false
   }
 }
 
 async function loadDetail() {
-  if (!company.value || !selectedPlanId.value) {
+  const current = ++detailRequest
+  const companyId = company.value
+  const planId = selectedPlanId.value
+  const date = asOf.value
+  if (!companyId || !planId) {
     detail.value = null
+    detailBusy.value = false
     return
   }
   detailBusy.value = true
   error.value = ''
   try {
-    detail.value = await getStaffingPlan(company.value, selectedPlanId.value, asOf.value)
+    const response = await getStaffingPlan(companyId, planId, date)
+    if (current !== detailRequest || companyId !== company.value || planId !== selectedPlanId.value) return
+    detail.value = response
   } catch (cause) {
+    if (current !== detailRequest) return
     error.value = cause instanceof Error ? cause.message : 'Не удалось открыть штатное расписание'
     detail.value = null
   } finally {
-    detailBusy.value = false
+    if (current === detailRequest) detailBusy.value = false
   }
 }
 
@@ -182,6 +245,14 @@ async function planCreated(plan: StaffingPlanRecord) {
   await loadPlans()
   selectedPlanId.value = plan.id
   await loadDetail()
+}
+
+function exportCurrentRows() {
+  if (activeView.value === 'changes') {
+    downloadCsv('staffing-history.csv', ['№', 'Тип', 'Версия', 'Ревизия', 'Дата'], historyRows.value.map(event => [event.id, historyActions[event.action] ?? event.action, event.staffing_plan_id, event.revision, event.created_at]))
+    return
+  }
+  downloadCsv(activeView.value === 'vacant' ? 'vacancies.csv' : 'staffing.csv', ['Подразделение', 'Должность', 'Ставок', 'Занято', 'Вакантно', 'Оклад', 'Валюта'], filteredLines.value.map(line => [line.department_name, line.position_name, line.planned_units, line.occupied_units, line.vacant_units, line.base_salary, line.currency]))
 }
 
 function createLine() {
@@ -215,9 +286,25 @@ async function approvePlan() {
   }
 }
 
+watch(() => route.query.view, value => {
+  const next = ['all', 'vacant', 'changes'].includes(String(value)) ? String(value) : 'all'
+  if (activeView.value !== next) activeView.value = next
+})
+watch(activeView, value => {
+  const target = value === 'all' ? undefined : value
+  if (String(route.query.view ?? 'all') !== value) {
+    router.replace({ path: '/staffing', query: target ? { view: target } : {} })
+  }
+})
+
+watch([company, activeView, historyPage], () => { loadHistory() })
+
 watch(company, async () => {
+  historyPage.value = 1
+  historyRows.value = []
+  ++detailRequest
+  detailBusy.value = false
   selectedPlanId.value = ''
-  activeView.value = 'all'
   searchLines.value = ''
   plans.value = []
   detail.value = null
@@ -229,16 +316,17 @@ onMounted(refreshCompanies)
 
 <template>
   <section class="staffing-page">
+    <OrgStaffingNav />
     <BasePageHeading
-      title="Штатное расписание"
-      description="Версии штатной структуры, плановые ставки, занятость и вакансии по подразделениям."
+       :title="activeView === 'vacant' ? 'Вакантные позиции' : activeView === 'changes' ? 'Изменения штатного расписания' : 'Штатное расписание'"
+       :description="activeView === 'vacant' ? 'Открытые штатные единицы по подразделениям.' : activeView === 'changes' ? 'Версии и периоды действия штатного расписания.' : 'Штатные единицы, ставки и занятость.'"
     >
+      <BaseButton v-if="activeView === 'changes' ? historyRows.length : filteredLines.length" variant="secondary" @click="exportCurrentRows">Экспорт CSV</BaseButton>
       <BaseButton v-if="staffingWritesEnabled" @click="createPlanOpen = true">
         <Plus :size="17" /> Новая версия
       </BaseButton>
     </BasePageHeading>
 
-    <BaseViewTabs v-model="activeView" :options="viewTabs" label="Штатные представления" />
 
     <BaseNotice v-if="error" tone="error">{{ error }}</BaseNotice>
 
@@ -258,9 +346,60 @@ onMounted(refreshCompanies)
       <BaseNotice v-else-if="!error" tone="info">Нет доступных компаний.</BaseNotice>
     </BaseCard>
 
-    <BaseLoadingState v-if="planBusy || detailBusy" label="Загрузка штатного расписания" />
+    <BaseCard v-if="activeView === 'changes' && company">
+      <div class="section-heading">
+        <div>
+          <h2>Реестр изменений штатного расписания</h2>
+          <p class="section-copy">История операций со штатными позициями и версиями расписания.</p>
+        </div>
+        <span class="muted">{{ historyTotal }} событий</span>
+      </div>
+      <BaseNotice v-if="historyError" tone="error">{{ historyError }}</BaseNotice>
+      <div class="staffing-history-desktop">
+        <BaseDataTable
+        :rows="historyRows"
+        :columns="changeColumns"
+        :loading="historyBusy"
+        row-key="id"
+        caption="История изменений штатного расписания"
+        empty-title="История изменений пуста"
+        empty-description="Здесь появятся события создания, изменения и утверждения расписания."
+      >
+        <template #cell-action="{ value }">{{ historyActions[String(value)] ?? value }}</template>
+        <template #cell-staffing_plan_id="{ value }">
+          <span class="history-reference">{{ value ? plans.find(plan => plan.id === value)?.name ?? String(value).slice(0, 8) : '—' }}</span>
+        </template>
+        <template #cell-created_at="{ value }">{{ new Date(String(value)).toLocaleString('ru-RU') }}</template>
+        </BaseDataTable>
+      </div>
+      <div class="staffing-history-mobile">
+        <BaseLoadingState v-if="historyBusy" label="Загрузка истории изменений" />
+        <p v-else-if="!historyRows.length" class="staffing-history-empty">История изменений пока пуста.</p>
+        <article v-for="event in historyRows" :key="event.id" class="staffing-history-card">
+          <div class="staffing-history-card-heading">
+            <strong>{{ historyActions[event.action] ?? event.action }}</strong>
+            <span>№ {{ event.id }}</span>
+          </div>
+          <p>{{ plans.find(plan => plan.id === event.staffing_plan_id)?.name ?? (event.staffing_plan_id ? 'Версия ' + event.staffing_plan_id.slice(0, 8) : 'Без версии') }}</p>
+          <div class="staffing-history-card-foot">
+            <span>{{ new Date(event.created_at).toLocaleString('ru-RU') }}</span>
+            <span v-if="event.revision != null">Ревизия {{ event.revision }}</span>
+          </div>
+        </article>
+      </div>
+      <BasePagination
+        :page="historyPage"
+        :last-page="historyLastPage"
+        :loading="historyBusy"
+        caption="Страницы истории штатного расписания"
+        @previous="historyPage--"
+        @next="historyPage++"
+      />
+    </BaseCard>
 
-    <BaseCard v-else-if="company && !plans.length">
+    <BaseLoadingState v-if="activeView !== 'changes' && (planBusy || detailBusy)" label="Загрузка штатного расписания" />
+
+    <BaseCard v-else-if="activeView !== 'changes' && company && !plans.length">
       <div class="empty-state">
         <UsersRound :size="30" />
         <h2>Штатное расписание ещё не создано</h2>
@@ -269,7 +408,7 @@ onMounted(refreshCompanies)
       </div>
     </BaseCard>
 
-    <template v-else-if="detail && selectedPlan">
+    <template v-else-if="activeView !== 'changes' && detail && selectedPlan">
       <BaseCard class="plan-header">
         <div class="snapshot-row">
           <BaseFormField v-model="asOf" label="Дата среза занятости" type="date" :disabled="detailBusy" />
@@ -277,7 +416,6 @@ onMounted(refreshCompanies)
         </div>
         <div class="plan-title">
           <div>
-            <p class="kicker">Версия штатного расписания</p>
             <div class="title-row">
               <h2>{{ selectedPlan.name }}</h2>
               <span class="plan-status" :class="{ approved: selectedPlan.status === 'approved' }">
@@ -318,8 +456,8 @@ onMounted(refreshCompanies)
       <BaseCard>
         <div class="section-heading">
           <div>
-            <p class="kicker">Структура штата</p>
-            <h2>{{ activeView === 'vacant' ? 'Вакантные позиции' : activeView === 'overstaffed' ? 'Сверхштатные позиции' : 'Штатные единицы' }}</h2>
+            <h2>{{ activeView === 'vacant' ? 'Вакантные позиции' : 'Штатное расписание' }}</h2>
+            <p class="section-copy">{{ activeView === 'vacant' ? 'Открытые позиции по подразделениям.' : 'Должности, ставки и текущая занятость.' }}</p>
           </div>
           <span class="muted">{{ filteredLines.length }} из {{ detail.lines.length }} строк</span>
         </div>
@@ -334,7 +472,8 @@ onMounted(refreshCompanies)
         </div>
         <p v-if="grouped" class="line-hint">Группировка по подразделениям выбранной версии штатного расписания.</p>
 
-        <BaseDataTable
+        <div class="staffing-desktop-table">
+          <BaseDataTable
           :rows="filteredLines"
           :columns="visibleLineColumns"
           :group-by="grouped ? groupLines : undefined"
@@ -357,7 +496,13 @@ onMounted(refreshCompanies)
           <template #cell-actions="{ row }">
             <BaseButton v-if="canEdit" variant="secondary" @click="editLine(row)"><Pencil :size="15" /> Изменить</BaseButton>
           </template>
-        </BaseDataTable>
+          </BaseDataTable>
+        </div>
+        <div class="staffing-mobile-only">
+          <StaffingMobileList :rows="mobileLines" :can-edit="canEdit" :grouped="grouped"
+            :filtered="!!searchLines.trim()" :vacant-only="activeView === 'vacant'"
+            @edit="editLine" />
+        </div>
       </BaseCard>
     </template>
 
@@ -393,17 +538,32 @@ onMounted(refreshCompanies)
 
 <style scoped>
 .staffing-page{display:grid;grid-template-columns:minmax(0,1fr);gap:var(--space-4)}
+.staffing-mobile-only,.staffing-history-mobile{display:none}
+.staffing-history-card{min-width:0;padding:14px;border:1px solid var(--color-stroke);border-radius:8px;background:var(--color-surface)}
+.staffing-history-card-heading{display:flex;align-items:start;justify-content:space-between;gap:12px}
+.staffing-history-card-heading strong{font-size:14px;line-height:1.4}
+.staffing-history-card-heading span{font-size:11px;white-space:nowrap;color:var(--color-muted)}
+.staffing-history-card p{margin:8px 0 10px;color:var(--color-muted);font-size:12px;line-height:1.5;overflow-wrap:anywhere}
+.staffing-history-card-foot{display:flex;gap:8px;align-items:center;justify-content:space-between;padding-top:9px;border-top:1px solid var(--color-stroke);font-size:11px;color:var(--color-muted)}
+.staffing-history-empty{margin:12px 0;text-align:center;color:var(--color-muted);font-size:13px}
+@media(max-width:700px){
+ .staffing-desktop-table,.staffing-history-desktop{display:none}
+ .staffing-mobile-only{display:block}
+ .staffing-history-mobile{display:grid;gap:10px}
+ .line-toolbar :deep(.column-settings){display:none}
+}
+.staffing-page :deep(.base-card){box-shadow:0 1px 3px rgba(9,48,68,.035)}
+.staffing-page :deep(.page-heading){margin-bottom:0}
 .toolbar{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-items:end;gap:var(--space-4)}
 .empty-state{display:grid;justify-items:center;text-align:center;gap:10px;padding:40px 20px;color:var(--color-muted)}
 .empty-state h2{margin:0;color:var(--color-text);font-size:var(--font-section-heading)}
 .empty-state p{max-width:620px;margin:0 0 8px;line-height:1.5}
-.plan-header{background:linear-gradient(135deg,#fff 0%,#f4fbff 100%)}
-.snapshot-row{display:flex;align-items:end;gap:10px;justify-content:flex-end;margin-bottom:var(--space-4);padding-bottom:var(--space-4);border-bottom:1px solid var(--color-stroke)}
+.plan-header{background:transparent;border:0!important;box-shadow:none!important;padding:0!important}
+.snapshot-row{display:flex;align-items:end;gap:10px;justify-content:flex-end;margin-bottom:8px;padding-bottom:8px;border-bottom:0}
 .snapshot-row :deep(.field){width:min(260px,100%)}
 .plan-title{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;flex-wrap:wrap}
 .title-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
-.title-row h2{margin:0;font-size:23px}
-.kicker{margin:0 0 5px;color:var(--color-primary);font-size:11px;font-weight:700;letter-spacing:.055em;text-transform:uppercase}
+.title-row h2{margin:0;font-size:20px}
 .plan-status,.line-status{display:inline-flex;align-items:center;width:max-content;border-radius:999px;font-size:11px;font-weight:700;white-space:nowrap}
 .plan-status{padding:5px 9px;background:var(--color-warning-surface);color:var(--color-warning)}
 .plan-status.approved{background:var(--color-success-surface);color:var(--color-success)}
@@ -412,11 +572,17 @@ onMounted(refreshCompanies)
 .metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:var(--space-4)}
 .metrics :deep(.base-card){display:grid;gap:7px}
 .metrics span{font-size:12px;color:var(--color-muted)}
-.metrics strong{font-size:26px;line-height:1}
+.metrics strong{font-size:25px;line-height:1.1;color:var(--color-primary)}
 .section-heading{display:flex;align-items:end;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:var(--space-4)}
 .section-heading h2{margin:0;font-size:var(--font-section-heading)}
+.section-copy{margin:5px 0 0;color:var(--color-muted);font-size:12px;line-height:1.45}
 .line-toolbar{display:flex;align-items:end;gap:var(--space-2);flex-wrap:wrap;margin-bottom:var(--space-3)}
 .line-toolbar .line-search{min-width:230px;flex:1}
+.staffing-page :deep(.table-scroll){border-radius:6px}
+.staffing-page :deep(.table-scroll th){padding:11px 12px;background:var(--color-table-heading)}
+.staffing-page :deep(.table-scroll td){padding:10px 12px}
+.staffing-page :deep(.field label){font-size:12px}
+.staffing-page :deep(.base-card){border-radius:8px}
 .line-toolbar :deep(button){display:inline-flex;gap:7px;align-items:center;justify-content:center}
 .line-hint{color:var(--color-muted);font-size:12px;line-height:1.5;margin:0 0 var(--space-3)}
 .salary{display:inline-flex;align-items:center;gap:6px;white-space:nowrap}

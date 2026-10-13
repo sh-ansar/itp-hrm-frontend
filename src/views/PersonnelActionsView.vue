@@ -157,7 +157,6 @@ onMounted(loadCompanies)
     <BaseCard v-if="company">
       <div class="section-heading">
         <div>
-          <p class="kicker">Журнал операций</p>
           <h2>Кадровые действия</h2>
           <p class="muted">Проведённые записи не редактируются и не удаляются.</p>
         </div>
@@ -211,7 +210,6 @@ onMounted(loadCompanies)
 .metrics strong{font-size:22px}
 .section-heading{display:flex;align-items:end;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:var(--space-4)}
 .section-heading h2{margin:0;font-size:var(--font-section-heading)}
-.kicker{margin:0 0 5px;color:var(--color-primary);font-size:11px;font-weight:700;letter-spacing:.055em;text-transform:uppercase}
 .section-heading .muted{margin:5px 0 0}
 .action-pill{display:inline-flex;padding:5px 8px;border-radius:999px;font-size:11px;font-weight:700;white-space:nowrap}
 .action-pill--hire{background:var(--color-success-surface);color:var(--color-success)}

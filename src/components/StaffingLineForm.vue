@@ -63,6 +63,10 @@ async function submit() {
     error.value = 'Выберите подразделение и должность и укажите количество ставок больше нуля'
     return
   }
+  if (units > 100000 || Math.abs(units * 100 - Math.round(units * 100)) > 1e-6) {
+    error.value = 'Количество ставок должно быть не больше 100 000 с точностью до сотых'
+    return
+  }
   if (salary !== null && (!Number.isFinite(salary) || salary < 0)) {
     error.value = 'Оклад не может быть отрицательным'
     return
@@ -102,11 +106,12 @@ onMounted(loadDirectories)
         :options="departments" :disabled="loading || saving" required />
       <BaseSelectField v-model="positionId" label="Должность" placeholder="Выберите должность"
         :options="positions" :disabled="loading || saving" required />
-      <BaseFormField v-model="plannedUnits" label="Количество ставок" placeholder="1" :disabled="saving" required />
-      <BaseFormField v-model="baseSalary" label="Базовый оклад" placeholder="Например: 450000" :disabled="saving" />
+      <BaseFormField v-model="plannedUnits" label="Количество ставок" type="number" placeholder="1" :disabled="saving" required />
+      <BaseFormField v-model="baseSalary" label="Базовый оклад" type="number" placeholder="Например: 450000" :disabled="saving" />
       <BaseSelectField v-model="currency" label="Валюта" :options="currencies" :disabled="saving || !baseSalary" />
       <BaseFormField v-model="notes" label="Примечание" placeholder="Необязательно" :disabled="saving" />
     </div>
+    <p class="form-hint">Количество ставок допускает дробное значение, например 0,5. Оклад и примечание необязательны.</p>
     <div class="actions">
       <BaseButton type="button" variant="secondary" :disabled="saving" @click="emit('cancelled')">Отмена</BaseButton>
       <BaseButton type="submit" :disabled="saving || loading">{{ saving ? 'Сохранение…' : edit ? 'Сохранить' : 'Добавить в штат' }}</BaseButton>
@@ -117,6 +122,7 @@ onMounted(loadDirectories)
 <style scoped>
 .line-form{display:grid;gap:var(--space-4)}
 .form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--space-4)}
+.form-hint{margin:0;font-size:12px;line-height:1.5;color:var(--color-muted)}
 .actions{display:flex;justify-content:flex-end;gap:var(--space-2)}
 @media(max-width:600px){.form-grid{grid-template-columns:1fr}.actions :deep(button){flex:1}}
 </style>

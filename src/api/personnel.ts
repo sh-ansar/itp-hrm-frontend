@@ -14,6 +14,15 @@ export interface EmployeeRecord extends Record<string, unknown> {
   first_name: string
   middle_name: string | null
   revision: number
+  birth_date?: string | null
+  gender?: 'male' | 'female' | null
+  email?: string | null
+  phone?: string | null
+  address?: string | null
+  work_site?: string | null
+  work_zone?: string | null
+  work_team?: string | null
+  supervisor_name?: string | null
   current_department_name?: string | null
   current_position_name?: string | null
   current_assignment_valid_from?: string | null
@@ -68,6 +77,15 @@ export function getEmployee(companyId: string, employeeId: string): Promise<Empl
 }
 
 export interface EmployeeIdentityPayload {
+  birth_date?: string | null
+  gender?: 'male' | 'female' | null
+  email?: string | null
+  phone?: string | null
+  address?: string | null
+  work_site?: string | null
+  work_zone?: string | null
+  work_team?: string | null
+  supervisor_name?: string | null
   personnel_number: string
   last_name: string
   first_name: string

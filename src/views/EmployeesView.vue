@@ -46,7 +46,7 @@ let counterGeneration = 0
 
 const tabOptions = [
   { id: 'register', label: 'Реестр сотрудников' },
-  { id: 'reserve', label: 'Кадровый резерв и обучение' },
+  { id: 'development', label: 'Кадровый резерв и обучение' },
   { id: 'archive', label: 'Архив сотрудников' },
 ]
 const activeTab = computed(() => statusFilter.value === 'archived' ? 'archive' : 'register')
@@ -122,8 +122,8 @@ function exportSelected() {
 
 function setTab(next: string) {
   filtersOpen.value = false
-  if (next === 'reserve') {
-    router.push({ name: 'reserve' })
+  if (next === 'development') {
+    router.push({ name: 'employees-development' })
     return
   }
   setStatus(next === 'archive' ? 'archived' : 'all')

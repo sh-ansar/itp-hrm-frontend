@@ -28,12 +28,21 @@ function toggleColumn(key: string, checked: boolean) {
 
 <style scoped>
 .column-settings{position:relative;min-width:0}
-.column-settings summary{list-style:none;display:inline-flex;align-items:center;gap:8px;min-height:var(--control-height);padding:9px 14px;border:1px solid var(--color-stroke);border-radius:var(--radius-md);background:var(--color-surface);color:var(--color-text);font:inherit;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap}
+.column-settings summary{
+  list-style:none;display:inline-flex;align-items:center;gap:var(--space-1);height:40px;min-height:40px;
+  padding:var(--space-2) var(--space-3);border:1px solid var(--color-stroke);border-radius:var(--space-2);
+  background:var(--color-surface-raised);color:var(--color-text);box-shadow:var(--shadow-control);
+  font:inherit;font-size:var(--font-label-size);line-height:var(--line-caption);font-weight:600;cursor:pointer;white-space:nowrap
+}
 .column-settings summary::-webkit-details-marker{display:none}
-.column-settings[open] summary{border-color:var(--color-primary)}
-.column-settings summary:focus-visible{outline:3px solid var(--color-focus);outline-offset:2px}
-.column-options{position:absolute;top:calc(100% + 6px);right:0;z-index:12;display:grid;gap:12px;width:min(245px,85vw);padding:16px;border:1px solid var(--color-stroke);border-radius:var(--radius-md);box-shadow:var(--shadow-card);background:var(--color-surface)}
-.column-options strong{font-size:13px}
-.column-options label{display:flex;align-items:center;gap:10px;font-size:13px;cursor:pointer}
+.column-settings[open] summary{border-color:var(--color-stroke-strong)}
+.column-settings summary:focus-visible{outline:2px solid var(--color-primary);outline-offset:2px}
+.column-options{
+  position:absolute;top:calc(100% + var(--space-1));right:0;z-index:40;display:grid;gap:var(--space-3);
+  width:min(260px,85vw);padding:var(--space-4);border:1px solid var(--color-stroke);border-radius:var(--space-2);
+  box-shadow:var(--shadow-float);background:var(--color-surface);color:var(--color-text)
+}
+.column-options strong{font-size:var(--font-caption-size);line-height:var(--line-caption);font-weight:600}
+.column-options label{display:flex;align-items:center;gap:var(--space-2);font-size:var(--font-caption-size);line-height:var(--line-caption);cursor:pointer}
 .column-options input{accent-color:var(--color-primary)}
 </style>

@@ -41,7 +41,11 @@ const viewMode = ref('diagram')
 const searchQuery = ref('')
 const chartZoom = ref(100)
 const viewModes = [{ id: 'table', label: 'Таблица' }, { id: 'diagram', label: 'Схема' }]
-const departmentForest = computed(() => buildDepartmentForest(departments.value))
+const diagramDepartments = ref<DepartmentRecord[]>([])
+const diagramLoading = ref(false)
+const diagramError = ref('')
+const diagramPartial = ref(false)
+const departmentForest = computed(() => buildDepartmentForest(diagramDepartments.value))
 const visibleDepartmentForest = computed(() => filterDepartmentForest(departmentForest.value, searchQuery.value))
 
 const departmentNames = computed(() => new Map(departments.value.map(item => [item.id, item.name])))
@@ -177,6 +181,39 @@ async function loadDepartments() {
   }
 }
 
+// The diagram represents every accessible department page. Table pagination stays separate.
+let diagramGeneration = 0
+async function loadDiagram() {
+  const current = ++diagramGeneration
+  const companyId = selectedCompany.value
+  diagramDepartments.value = []
+  diagramError.value = ''
+  diagramPartial.value = false
+  diagramLoading.value = Boolean(companyId && viewMode.value === 'diagram')
+  if (!companyId || viewMode.value !== 'diagram') return
+  try {
+    const first = await listDepartments(companyId, 1)
+    if (current !== diagramGeneration || companyId !== selectedCompany.value) return
+    const rows = [...first.data]
+    const maxPage = Math.min(first.meta.last_page, 100)
+    // Small batches avoid hundreds of simultaneous calls on large organizations.
+    for (let start = 2; start <= maxPage; start += 4) {
+      const end = Math.min(start + 3, maxPage)
+      const pages = await Promise.all(Array.from({ length: end - start + 1 }, (_, i) => listDepartments(companyId, start + i)))
+      if (current !== diagramGeneration || companyId !== selectedCompany.value) return
+      for (const pageResult of pages) rows.push(...pageResult.data)
+    }
+    diagramDepartments.value = rows
+    diagramPartial.value = maxPage < first.meta.last_page
+  } catch (cause) {
+    if (current === diagramGeneration) {
+      diagramError.value = cause instanceof Error ? cause.message : 'Не удалось загрузить схему подразделений'
+    }
+  } finally {
+    if (current === diagramGeneration) diagramLoading.value = false
+  }
+}
+
 function exportDepartments() {
   downloadCsv('orgstructure.csv', ['Подразделение', 'Родитель'], filteredHierarchyRows.value.map(row => [row.name, row.parentLabel]))
 }
@@ -194,7 +231,7 @@ function editDepartmentRecord(row: DepartmentRecord) {
 async function departmentSaved() {
   editorOpen.value = false
   editingDepartment.value = null
-  await loadDepartments()
+  await Promise.all([loadDepartments(), loadDiagram()])
 }
 
 async function confirmDelete() {
@@ -208,7 +245,7 @@ async function confirmDelete() {
       deleteCandidate.value.revision,
     )
     deleteCandidate.value = null
-    await loadDepartments()
+    await Promise.all([loadDepartments(), loadDiagram()])
   } catch (cause) {
     error.value = cause instanceof Error ? cause.message : 'Не удалось удалить подразделение'
     deleteCandidate.value = null
@@ -219,6 +256,7 @@ async function confirmDelete() {
 
 watch(selectedCompany, () => { page.value = 1 })
 watch([selectedCompany, page], loadDepartments)
+watch([selectedCompany, viewMode], loadDiagram)
 onMounted(loadCompanies)
 </script>
 
@@ -256,12 +294,16 @@ onMounted(loadCompanies)
             :disabled="chartZoom >= 130" @click="chartZoom = Math.min(130, chartZoom + 10)"><Plus :size="16" /></BaseButton>
         </div>
       </div>
-      <BaseNotice v-if="total > departments.length" tone="info">
+      <BaseNotice v-if="viewMode === 'table' && total > departments.length" tone="info">
         Показана текущая страница. Невидимые подразделения и родительские связи не раскрываются.
+      </BaseNotice>
+      <BaseNotice v-if="viewMode === 'diagram' && diagramError" tone="error">{{ diagramError }}</BaseNotice>
+      <BaseNotice v-if="viewMode === 'diagram' && diagramPartial" tone="warning">
+        Схема слишком велика: показаны первые {{ diagramDepartments.length }} подразделений из доступных {{ total }}.
       </BaseNotice>
 
       <div v-if="viewMode === 'diagram'" class="structure-diagram" aria-label="Схема подразделений компании">
-        <BaseLoadingState v-if="loadingDepartments" label="Загрузка структуры" />
+        <BaseLoadingState v-if="diagramLoading" label="Загрузка полной структуры" />
         <div v-else-if="visibleDepartmentForest.length" class="organization-chart" :style="{ zoom: chartZoom + '%' }">
           <div class="chart-company">
             <span class="chart-company-label">Компания</span>
@@ -272,7 +314,7 @@ onMounted(loadCompanies)
             <DepartmentTreeNode v-for="node in visibleDepartmentForest" :key="node.id" :node="node" />
           </div>
         </div>
-        <p v-else class="diagram-empty">{{ searchQuery.trim() ? 'Подразделения по запросу не найдены на текущей странице.' : 'Подразделений для отображения пока нет.' }}</p>
+        <p v-else class="diagram-empty">{{ searchQuery.trim() ? 'Подразделения по запросу не найдены.' : 'Подразделений для отображения пока нет.' }}</p>
       </div>
 
       <div v-else class="org-table-view">

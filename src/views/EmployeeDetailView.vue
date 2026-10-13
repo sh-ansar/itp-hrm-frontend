@@ -274,43 +274,23 @@ onMounted(load)
 
       <BaseViewTabs v-model="activeSection" :options="sectionTabs" label="Разделы карточки сотрудника" />
       <template v-if="activeSection === 'personal' && profile.meta.extended_sections_visible">
+        <EmployeeProfileSection title="Основные личные данные">
+          <EmployeeDataGrid :fields="personalFields" />
+        </EmployeeProfileSection>
         <EmployeeProfileSection title="Контакты и адреса">
-          <div class="assignment-fields">
-            <div class="read-field"><span>Email</span><strong>{{ profile.data.email ?? '—' }}</strong></div>
-            <div class="read-field"><span>Телефон</span><strong>{{ profile.data.phone ?? '—' }}</strong></div>
-            <div class="read-field read-field--wide"><span>Адрес</span><strong>{{ profile.data.address ?? '—' }}</strong></div>
-          </div>
+          <EmployeeDataGrid :fields="contactFields" />
         </EmployeeProfileSection>
         <EmployeeProfileSection title="Документы, удостоверяющие личность">
-          <p class="section-empty-note">Сведения об удостоверяющих документах пока не внесены.</p>
+          <EmployeeDataGrid :fields="documentFields" />
+        </EmployeeProfileSection>
+        <EmployeeProfileSection title="Банковские реквизиты">
+          <EmployeeDataGrid :fields="bankingFields" />
         </EmployeeProfileSection>
       </template>
 
       <template v-if="activeSection === 'organization' && profile.meta.extended_sections_visible">
-        <EmployeeProfileSection title="Подразделение и должность">
-          <div class="assignment-fields">
-            <div class="read-field"><span>Отдел</span><strong>{{ currentAssignment?.department_name ?? plannedAssignment?.department_name ?? '—' }}</strong></div>
-            <div class="read-field"><span>Должность</span><strong>{{ currentAssignment?.position_name ?? plannedAssignment?.position_name ?? '—' }}</strong></div>
-            <div class="read-field"><span>Дата назначения на должность</span><strong>{{ formatDate(currentAssignment?.valid_from ?? plannedAssignment?.valid_from) }}</strong></div>
-          </div>
-        </EmployeeProfileSection>
-        <EmployeeProfileSection title="Объект и место работы">
-          <div class="assignment-fields">
-            <div class="read-field"><span>Объект</span><strong>{{ profile.data.work_site ?? '—' }}</strong></div>
-            <div class="read-field"><span>Рабочая зона</span><strong>{{ profile.data.work_zone ?? '—' }}</strong></div>
-          </div>
-        </EmployeeProfileSection>
-        <EmployeeProfileSection title="Бригада и руководитель">
-          <div class="assignment-fields">
-            <div class="read-field"><span>Бригада</span><strong>{{ profile.data.work_team ?? '—' }}</strong></div>
-            <div class="read-field"><span>Непосредственный руководитель</span><strong>{{ profile.data.supervisor_name ?? '—' }}</strong></div>
-          </div>
-        </EmployeeProfileSection>
-        <EmployeeProfileSection title="Статус и штатная позиция">
-          <div class="assignment-fields">
-            <div class="read-field"><span>Статус сотрудника</span><strong>{{ employmentStatus }}</strong></div>
-            <div class="read-field"><span>Должность</span><strong>{{ currentAssignment?.position_name ?? plannedAssignment?.position_name ?? '—' }}</strong></div>
-          </div>
+        <EmployeeProfileSection title="Организационные данные">
+          <EmployeeDataGrid :fields="organizationFields" />
         </EmployeeProfileSection>
       </template>
       <div v-if="profile.meta.profile_writes_enabled && activeSection === 'development'" class="profile-toolbar">
@@ -318,16 +298,13 @@ onMounted(load)
       </div>
 
       <template v-if="activeSection === 'employment'">
-        <EmployeeProfileSection title="Договор и приём">
+        <EmployeeProfileSection title="Трудовой договор и приём">
           <template v-if="profile.meta.assignment_writes_enabled" #actions>
             <BaseButton @click="assignmentCreateOpen = true"><Plus :size="16" /> Добавить назначение</BaseButton>
           </template>
-          <div class="assignment-fields">
-            <div class="read-field"><span>Основание назначения</span><strong>{{ currentAssignment?.basis_reference ?? plannedAssignment?.basis_reference ?? '—' }}</strong></div>
-            <div class="read-field"><span>Дата приёма / назначения</span><strong>{{ formatDate(currentAssignment?.valid_from ?? plannedAssignment?.valid_from) }}</strong></div>
-            <div class="read-field"><span>Дата окончания</span><strong>{{ formatDate(currentAssignment?.valid_to ?? plannedAssignment?.valid_to) }}</strong></div>
-          </div>
+          <EmployeeDataGrid :fields="employmentFields" />
         </EmployeeProfileSection>
+
         <EmployeeProfileSection title="Стаж и трудовой опыт">
           <h3 class="assignment-history-title">История назначений</h3>
           <BaseDataTable :columns="columns" :rows="profile.assignments" row-key="id"
@@ -343,39 +320,43 @@ onMounted(load)
             </template>
           </BaseDataTable>
           <BaseNotice v-if="profile.meta.assignments_truncated" tone="info">Показаны первые 100 назначений. Для полной истории требуется отдельный просмотр.</BaseNotice>
-          <template v-if="profile.meta.extended_sections_visible">
-            <h3 class="assignment-history-title">Периоды стажа</h3>
-            <BaseDataTable :rows="profile.experience" row-key="id" caption="Периоды трудового стажа"
-              :columns="[{key:'experience_type',label:'Вид стажа'},{key:'started_on',label:'Начало'},{key:'ended_on',label:'Окончание'},{key:'basis_reference',label:'Основание'}, ...(profile.meta.profile_writes_enabled ? [{key:'edit',label:'Действия'}] : [])]"
-              empty-title="Сведения о стаже отсутствуют" empty-description="Периоды стажа ещё не внесены.">
-              <template #cell-edit="{ row }"><BaseButton variant="secondary" @click="beginEdit('experience', row)">Изменить</BaseButton></template>
-            </BaseDataTable>
-          </template>
-        </EmployeeProfileSection>
-        <EmployeeProfileSection title="Условия труда и персонифицированный учёт">
-          <p class="section-empty-note">Сведения об условиях труда пока не добавлены.</p>
-        </EmployeeProfileSection>
-        <EmployeeProfileSection title="Совмещение и дополнительные обязанности">
-          <p class="section-empty-note">Сведения о совмещении и дополнительных обязанностях пока не добавлены.</p>
-        </EmployeeProfileSection>
-        <EmployeeProfileSection title="Прекращение договора">
-          <p class="section-empty-note">Данные о прекращении договора пока не внесены.</p>
+
+          <h3 class="assignment-history-title">Периоды стажа</h3>
+          <BaseDataTable :rows="profile.experience" row-key="id" caption="Периоды трудового стажа"
+            :columns="[{key:'experience_type',label:'Вид стажа'},{key:'started_on',label:'Начало'},{key:'ended_on',label:'Окончание'},{key:'basis_reference',label:'Основание'}, ...(profile.meta.profile_writes_enabled ? [{key:'edit',label:'Действия'}] : [])]"
+            empty-title="Сведения о стаже отсутствуют" empty-description="Периоды стажа ещё не внесены.">
+            <template #cell-started_on="{ value }">{{ formatDate(typeof value === 'string' ? value : null) }}</template>
+            <template #cell-ended_on="{ value }">{{ typeof value === 'string' ? formatDate(value) : 'По настоящее время' }}</template>
+            <template #cell-edit="{ row }"><BaseButton variant="secondary" @click="beginEdit('experience', row)">Изменить</BaseButton></template>
+          </BaseDataTable>
         </EmployeeProfileSection>
       </template>
 
       <template v-if="profile.meta.extended_sections_visible">
         <EmployeeProfileSection v-if="activeSection === 'documents'" title="Документы сотрудника">
-          <p class="section-empty-note">Документы пока не связаны с личной карточкой через API.</p>
-          <RouterLink class="related-module-link" to="/documents">Открыть реестр документов</RouterLink>
+          <BaseDataTable :rows="reference?.documents ?? []" :columns="documentColumns" row-key="id"
+            caption="Документы сотрудника" empty-title="Документы не добавлены"
+            empty-description="В карточке пока нет доступных документов.">
+            <template #cell-issued_on="{ value }">{{ formatDate(typeof value === 'string' ? value : null) }}</template>
+          </BaseDataTable>
+          <RouterLink class="related-module-link" to="/documents">Открыть общий реестр документов</RouterLink>
         </EmployeeProfileSection>
+
         <template v-if="activeSection === 'payroll'">
-          <EmployeeProfileSection title="Начисления"><p class="section-empty-note">Сведения о начислениях пока не подключены.</p></EmployeeProfileSection>
-          <EmployeeProfileSection title="Удержания"><p class="section-empty-note">Сведения об удержаниях пока не подключены.</p></EmployeeProfileSection>
+          <EmployeeProfileSection title="Расчёты и начисления">
+            <EmployeeDataGrid :fields="payrollFields" />
+          </EmployeeProfileSection>
+          <EmployeeProfileSection title="Банковские реквизиты">
+            <EmployeeDataGrid :fields="bankingFields" />
+          </EmployeeProfileSection>
         </template>
+
         <template v-if="activeSection === 'schedule'">
-          <EmployeeProfileSection title="График работы"><p class="section-empty-note">График сотрудника пока не связан с карточкой.</p></EmployeeProfileSection>
-          <EmployeeProfileSection title="Табель"><p class="section-empty-note">Табельные данные пока не подключены.</p></EmployeeProfileSection>
+          <EmployeeProfileSection title="График работы и табель">
+            <EmployeeDataGrid :fields="scheduleFields" />
+          </EmployeeProfileSection>
         </template>
+
         <template v-if="activeSection === 'development'">
           <EmployeeProfileSection title="Кадровый резерв">
             <BaseDataTable :rows="profile.reserve" row-key="id" caption="Кадровый резерв сотрудника"
@@ -389,12 +370,20 @@ onMounted(load)
               :columns="[{key:'training_type',label:'Вид'},{key:'training_mode',label:'Формат'},{key:'topic',label:'Тема'},{key:'provider',label:'Центр обучения'},{key:'city',label:'Город'},{key:'started_on',label:'Начало'},{key:'ended_on',label:'Окончание'},{key:'document_reference',label:'Документ'}, ...(profile.meta.profile_writes_enabled ? [{key:'edit',label:'Действия'}] : [])]"
               empty-title="Обучение не зарегистрировано" empty-description="Данные об обучении пока не внесены.">
               <template #cell-training_mode="{ value }">{{ trainingModeLabel(value) }}</template>
+              <template #cell-started_on="{ value }">{{ formatDate(typeof value === 'string' ? value : null) }}</template>
+              <template #cell-ended_on="{ value }">{{ formatDate(typeof value === 'string' ? value : null) }}</template>
               <template #cell-edit="{ row }"><BaseButton variant="secondary" @click="beginEdit('training', row)">Изменить</BaseButton></template>
             </BaseDataTable>
           </EmployeeProfileSection>
         </template>
+
         <EmployeeProfileSection v-if="activeSection === 'history'" title="История изменений">
-          <p class="section-empty-note">Журнал изменений личной карточки пока не подключён к этому экрану.</p>
+          <BaseDataTable :rows="reference?.history ?? []" :columns="historyColumns" row-key="id"
+            caption="История изменений карточки сотрудника"
+            empty-title="История изменений пуста"
+            empty-description="Для карточки ещё нет доступных событий.">
+            <template #cell-created_at="{ value }">{{ new Date(String(value)).toLocaleString('ru-RU') }}</template>
+          </BaseDataTable>
         </EmployeeProfileSection>
       </template>
     </template>

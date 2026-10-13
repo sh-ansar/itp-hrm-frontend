@@ -57,7 +57,7 @@ const expanded = ref(true)
 }
 .tree-branch--level-0>.tree-card{margin-inline:auto}
 .tree-branch--level-0>.tree-children{
-  grid-template-columns:repeat(5,minmax(0,1fr));gap:18px;
+  grid-template-columns:repeat(5,minmax(190px,1fr));gap:18px;
   margin-left:0;padding:30px 0 0;border-left:0
 }
 .tree-branch--level-0>.tree-children::before{

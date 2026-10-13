@@ -27,11 +27,11 @@ withDefaults(defineProps<{
 </template>
 
 <style scoped>
-.empty-state{display:flex;gap:16px;align-items:flex-start;padding:16px 0;max-width:780px}
-.state-marker{height:12px;width:12px;border-radius:50%;flex:none;margin-top:8px;background:#8ba9ba}
-.warning .state-marker{background:#c48b26}
+.empty-state{display:flex;gap:var(--space-3);align-items:flex-start;padding:var(--space-4) 0;max-width:780px}
+.state-marker{height:8px;width:8px;border-radius:50%;flex:none;margin-top:7px;background:var(--color-muted);box-shadow:0 0 0 4px var(--color-accent-soft)}
+.warning .state-marker{background:var(--color-warning);box-shadow:0 0 0 4px var(--color-warning-surface)}
 .body{min-width:0}
-h2{font-size:20px;line-height:1.3;margin:0 0 10px;color:var(--color-text)}
-p{line-height:1.6;margin:0 0 18px;color:var(--color-muted);overflow-wrap:anywhere}
-@media(max-width:520px){.empty-state{gap:12px;padding:8px 0}h2{font-size:18px}}
+h2{font-size:var(--font-section-heading);line-height:1.4;font-weight:700;margin:0 0 var(--space-2);color:var(--color-text)}
+p{font-size:var(--font-body-size);line-height:var(--line-body);margin:0 0 var(--space-4);color:var(--color-muted);overflow-wrap:anywhere}
+@media(max-width:520px){.empty-state{gap:var(--space-2);padding:var(--space-2) 0}}
 </style>

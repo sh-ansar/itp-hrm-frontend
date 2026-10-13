@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { ChevronRight } from 'lucide-vue-next'
-import type { EmployeeRecord, EmploymentStatus } from '../api/personnel'
+import type { EmployeeRecord } from '../api/personnel'
 
 type EmployeeRow = EmployeeRecord & { full_name: string; status_label: string }
 

@@ -179,7 +179,7 @@ test('personnel action journal is readable but writes stay hidden in read-only m
     await page.getByRole('heading', { name:'Обзор системы' }).waitFor()
     await page.goto('/personnel-actions')
     await page.getByRole('heading', { name:'Кадровые действия', exact:true }).waitFor()
-    await page.getByRole('table', { name:'Журнал кадровых действий' }).waitFor()
+    await page.getByText('Кадровых действий пока нет').waitFor()
     assert.equal(await page.getByRole('button', { name:'Новое действие' }).count(), 0)
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1), false)
   } finally { await context.close() }

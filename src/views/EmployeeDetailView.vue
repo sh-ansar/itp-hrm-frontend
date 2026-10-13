@@ -23,7 +23,18 @@ const assignmentEditing = ref<EmployeeAssignment | null>(null)
 const assignmentTransitioning = ref<EmployeeAssignment | null>(null)
 const identityEditOpen = ref(false)
 
-const currentAssignment = computed(() => profile.value?.assignments.find(item => item.valid_to === null) ?? profile.value?.assignments[0] ?? null)
+function localDay(): string {
+  const date = new Date()
+  return [date.getFullYear(), String(date.getMonth() + 1).padStart(2, '0'), String(date.getDate()).padStart(2, '0')].join('-')
+}
+const today = localDay()
+const currentAssignment = computed(() => profile.value?.assignments.find(item =>
+  item.valid_from <= today && (item.valid_to === null || item.valid_to >= today)) ?? null)
+const plannedAssignment = computed(() => profile.value?.assignments.find(item =>
+  item.valid_from > today && item.valid_to === null) ?? null)
+const employmentStatus = computed(() => currentAssignment.value
+  ? 'Активный сотрудник'
+  : plannedAssignment.value ? 'Приём запланирован' : 'Нет активного назначения')
 const initials = computed(() => {
   const data = profile.value?.data
   if (!data) return ''
@@ -87,15 +98,20 @@ onMounted(load)
           <div class="identity-copy">
             <div class="identity-title-row">
               <h2>{{ profile.data.last_name }} {{ profile.data.first_name }} {{ profile.data.middle_name ?? '' }}</h2>
-              <span class="status-pill"><BadgeCheck :size="14" /> Активный сотрудник</span>
+              <span class="status-pill" :class="{ 'status-pill--inactive': !currentAssignment, 'status-pill--planned': !currentAssignment && !!plannedAssignment }">
+                <BadgeCheck v-if="currentAssignment" :size="14" />
+                <Clock3 v-else-if="plannedAssignment" :size="14" />
+                <UserRound v-else :size="14" />
+                {{ employmentStatus }}
+              </span>
             </div>
-            <p class="current-role">{{ currentAssignment?.position_name ?? 'Должность не назначена' }}</p>
-            <p class="muted">{{ currentAssignment?.department_name ?? 'Подразделение не назначено' }}</p>
+            <p class="current-role">{{ currentAssignment?.position_name ?? (plannedAssignment ? 'Планируется: ' + plannedAssignment.position_name : 'Должность не назначена') }}</p>
+            <p class="muted">{{ currentAssignment?.department_name ?? plannedAssignment?.department_name ?? 'Подразделение не назначено' }}</p>
           </div>
         </div>
         <div class="hero-facts">
           <div><span>Табельный номер</span><strong>{{ profile.data.personnel_number }}</strong></div>
-          <div><span>Текущее назначение</span><strong>{{ currentAssignment?.valid_from ?? '—' }}</strong></div>
+          <div><span>{{ currentAssignment ? 'Текущее назначение' : plannedAssignment ? 'Плановый выход' : 'Назначение' }}</span><strong>{{ currentAssignment?.valid_from ?? plannedAssignment?.valid_from ?? '—' }}</strong></div>
           <div><span>История назначений</span><strong>{{ profile.assignments.length }}</strong></div>
         </div>
       </BaseCard>
@@ -231,6 +247,8 @@ onMounted(load)
 .identity-title-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .identity-title-row h2{margin:0;font-size:24px;line-height:1.25}
 .status-pill{display:inline-flex;align-items:center;gap:5px;padding:5px 9px;border-radius:999px;background:var(--color-success-surface);color:var(--color-success);font-size:11px;font-weight:700}
+.status-pill--inactive{background:var(--color-soft);color:var(--color-muted)}
+.status-pill--planned{background:var(--color-accent-soft);color:var(--color-primary)}
 .current-role{margin:8px 0 3px;font-weight:700;font-size:15px}
 .identity-copy .muted{margin:0}
 .hero-facts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}

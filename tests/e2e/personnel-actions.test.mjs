@@ -20,9 +20,6 @@ async function openActionForSynthetic(page){
   await dialog.waitFor()
   await dialog.getByLabel('Поиск сотрудника').fill('E2E-001')
   await dialog.getByRole('button',{name:'Найти'}).click()
-  const select=dialog.getByLabel('Сотрудник',{exact:true})
-  await select.waitFor()
-  await select.selectOption({label:'Synthetic Employee · E2E-001'})
   await dialog.getByText(/Текущее назначение|Открытого назначения нет/).waitFor()
   return dialog
 }

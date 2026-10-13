@@ -66,6 +66,27 @@ test('HR creates staffs and approves a real staffing-plan version at mobile widt
     assert.match(metrics, /Занято\s*1/)
     assert.match(metrics, /Вакантно\s*2/)
 
+    const views = page.getByRole('navigation', { name: 'Штатные представления' })
+    await views.getByRole('button', { name: 'Вакантные позиции' }).click()
+    await row.waitFor()
+    await views.getByRole('button', { name: 'Сверх штата' }).click()
+    await page.getByText('Сверхштатных позиций нет').waitFor()
+    await views.getByRole('button', { name: 'Штатное расписание' }).click()
+    await row.waitFor()
+
+    await page.getByLabel('Поиск штатных единиц').fill('Visible Finance')
+    await row.waitFor()
+    await page.getByLabel('Поиск штатных единиц').fill('Несуществующее')
+    await page.getByText('Штатные единицы не найдены').waitFor()
+    await page.getByLabel('Поиск штатных единиц').fill('')
+    await row.waitFor()
+
+    await page.getByRole('button', { name: 'Группировка' }).click()
+    await table.locator('tbody tr.table-group').first().waitFor()
+    await page.locator('.column-settings summary').click()
+    await page.locator('.column-options').getByLabel('Базовый оклад').uncheck()
+    assert.equal(await table.getByRole('columnheader', { name: 'Базовый оклад' }).count(), 0)
+
     await page.getByRole('button', { name: 'Утвердить' }).first().click()
     const approveDialog = page.getByRole('dialog', { name: 'Утвердить штатное расписание' })
     await approveDialog.waitFor()

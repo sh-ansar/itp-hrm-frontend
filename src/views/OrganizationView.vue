@@ -40,31 +40,6 @@ const deleting = ref(false)
 const viewMode = ref('diagram')
 const searchQuery = ref('')
 const chartZoom = ref(100)
-const orgStaffLines = ref<StaffingPlanLine[]>([])
-const staffingStatsReady = ref(false)
-const staffingStatsBusy = ref(false)
-const staffingPlanLabel = ref('')
-let statsGeneration = 0
-const staffTotals = computed(() => orgStaffLines.value.reduce((sum, line) => ({
-  planned: sum.planned + Number(line.planned_units),
-  occupied: sum.occupied + Number(line.occupied_units),
-  vacant: sum.vacant + Number(line.vacant_units),
-}), { planned: 0, occupied: 0, vacant: 0 }))
-const staffCountsByDepartment = computed(() => {
-  const result: Record<string, { planned: number; occupied: number; vacant: number }> = {}
-  for (const line of orgStaffLines.value) {
-    const counts = result[line.department_id] ?? { planned: 0, occupied: 0, vacant: 0 }
-    counts.planned += Number(line.planned_units)
-    counts.occupied += Number(line.occupied_units)
-    counts.vacant += Number(line.vacant_units)
-    result[line.department_id] = counts
-  }
-  return result
-})
-function numberLabel(value: number): string {
-  return value.toLocaleString('ru-RU', { maximumFractionDigits: 2 })
-}
-
 const viewModes = [{ id: 'table', label: 'Таблица' }, { id: 'diagram', label: 'Схема' }]
 const departmentForest = computed(() => buildDepartmentForest(departments.value))
 

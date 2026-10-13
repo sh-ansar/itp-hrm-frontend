@@ -88,5 +88,6 @@ export function trainingModeName(value: string): string {
 export function developmentStatusName(section: DevelopmentSection, status: string): string {
   const training = { planned: 'Запланировано', ongoing: 'В процессе', completed: 'Завершено' }
   const reserve = { active: 'В резерве', alumni: 'Выбыл' }
-  return (section === 'training' ? training : reserve as Record<string, string>)[status as keyof typeof training] ?? status
+  const labels: Record<string, string> = section === 'training' ? training : reserve
+  return labels[status] ?? status
 }

@@ -52,6 +52,7 @@ The frontend-only Vercel demo may render isolated deterministic mock values to r
 4. Worktime/timesheet is browser-checked on desktop/mobile/dark. Production reads now use the scoped backend contract; mutation controls remain out until approved write workflows exist.
 5. Reports/analytics is browser-checked across all five tabs; worktime analytics now use the same production read contract as the timesheet workspace. Do not add payroll or other unsourced metrics until scoped contracts exist.
 6. Development registries are browser-checked on desktop/mobile/dark; training and reserve stay inside the Employees domain rather than duplicating main navigation.
+7. Leave schedule is browser-checked on desktop/mobile/dark; production reads preserve planned vs actual dates and never infer completion from the plan.
 6. Settings workspace is browser-checked on a clean preview; theme/sidebar preferences persist locally and role management remains server-gated.
 7. Leave schedule demo is browser-checked across schedule/month/category tabs and year switching; all mutations remain disabled until the backend domain exists.
 6. Directories is browser-checked on desktop/mobile/dark and create/edit/delete dialogs; do not duplicate departments or invent unsupported classifier CRUD.

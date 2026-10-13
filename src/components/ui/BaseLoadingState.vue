@@ -18,10 +18,13 @@ withDefaults(defineProps<{
 </template>
 
 <style scoped>
-.loading-state{display:grid;gap:14px;width:100%;padding:10px 0}
-.skeleton-head,.skeleton-row{background:linear-gradient(90deg,#e8eff3 25%,#f5f8fa 50%,#e8eff3 75%);background-size:200% 100%;animation:shimmer 1.6s linear infinite;border-radius:8px}
-.skeleton-head{width:32%;height:22px;min-width:110px}
-.skeleton-row{width:100%;height:42px}
+.loading-state{display:grid;gap:var(--space-3);width:100%;padding:var(--space-2) 0}
+.skeleton-head,.skeleton-row{
+  background:linear-gradient(90deg,#e8eff2 25%,#f8fafb 50%,#e8eff2 75%);
+  background-size:200% 100%;animation:shimmer 1.6s linear infinite;border-radius:var(--space-2)
+}
+.skeleton-head{width:32%;height:20px;min-width:110px}
+.skeleton-row{width:100%;height:40px}
 .skeleton-row:nth-child(odd){width:88%}
 .visually-hidden{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap}
 @keyframes shimmer{to{background-position-x:-200%}}

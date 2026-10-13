@@ -33,7 +33,7 @@ test('organization table and nested chart switch without losing company scope or
     await diagramSearch.fill('Visible Finance Child')
     assert.equal(await page.locator('.chart-branches .tree-card').count() > 0, true, 'matching department remains in diagram')
     await diagramSearch.fill('несуществующее подразделение')
-    await page.getByText('Подразделения по запросу не найдены на текущей странице.').waitFor()
+    await page.getByText('Подразделения по запросу не найдены.').waitFor()
     await diagramSearch.fill('')
     await navigation.getByRole('button', { name: 'Таблица' }).click()
     await page.getByRole('table', { name: 'Подразделения компании' }).waitFor()

@@ -1,96 +1,112 @@
 <script setup lang="ts">
-import { ArrowRight, BriefcaseBusiness, FileText, Network, UserRoundCheck, Users } from 'lucide-vue-next'
+import { onMounted, ref } from 'vue'
+import { ArrowRight, BriefcaseBusiness, FileText, Network, UserRoundCheck, Users, ClipboardList } from 'lucide-vue-next'
 import BaseCard from '../components/ui/BaseCard.vue'
 import BasePageHeading from '../components/ui/BasePageHeading.vue'
+import { listCompanies, listDepartments, listPositions } from '../api/organization'
+import { listEmployees } from '../api/personnel'
+import { listPersonnelActions } from '../api/personnelActions'
 
-const focusModules = [
-  { to: '/employees', title: 'Сотрудники', description: 'Реестр, карточки, назначения и история кадровых данных', icon: Users, status: 'Подключено' },
-  { to: '/organization', title: 'Оргструктура', description: 'Компании и доступная иерархия подразделений', icon: Network, status: 'Подключено' },
-  { to: '/staffing', title: 'Штатное расписание', description: 'Утверждённые версии, плановые ставки, занятость и вакансии', icon: BriefcaseBusiness, status: 'Подключено' },
-  { to: '/personnel-actions', title: 'Кадровые действия', description: 'Атомарные операции приёма, перевода и увольнения с журналом', icon: UserRoundCheck, status: 'Подключено' },
-  { to: '/documents', title: 'Документы и приказы', description: 'Защищённый реестр, черновики документов и приватные PDF', icon: FileText, status: 'Первый этап' },
+const companyName = ref('')
+const loading = ref(true)
+const summary = ref<{ employees: number | null; departments: number | null; positions: number | null; actions: number | null }>({
+  employees: null, departments: null, positions: null, actions: null,
+})
+const shortcuts = [
+  { to: '/employees', title: 'Сотрудники', description: 'Реестр и личные карточки', icon: Users },
+  { to: '/organization', title: 'Оргструктура', description: 'Подразделения и иерархия', icon: Network },
+  { to: '/staffing', title: 'Штатное расписание', description: 'Плановые ставки и вакансии', icon: BriefcaseBusiness },
+  { to: '/personnel-actions', title: 'Кадровые действия', description: 'Приём, перевод и увольнение', icon: UserRoundCheck },
+  { to: '/documents', title: 'Документы и приказы', description: 'Кадровый реестр и PDF', icon: FileText },
+  { to: '/directories', title: 'Справочники', description: 'Должности и настройки учёта', icon: ClipboardList },
 ]
 
-const nextModules = [
-  { to: '/leaves', label: 'Отпуска' },
-  { to: '/timesheets', label: 'Табельный учёт' },
-  { to: '/reports', label: 'Отчёты и аналитика' },
-]
+async function loadSummary() {
+  loading.value = true
+  try {
+    const companies = await listCompanies()
+    const company = companies.data[0]
+    if (!company) return
+    companyName.value = company.name
+    const values = await Promise.allSettled([
+      listEmployees(company.id),
+      listDepartments(company.id),
+      listPositions(company.id),
+      listPersonnelActions(company.id),
+    ])
+    summary.value = {
+      employees: values[0].status === 'fulfilled' ? values[0].value.meta.total : null,
+      departments: values[1].status === 'fulfilled' ? values[1].value.meta.total : null,
+      positions: values[2].status === 'fulfilled' ? values[2].value.meta.total : null,
+      actions: values[3].status === 'fulfilled' ? values[3].value.meta.total : null,
+    }
+  } finally {
+    loading.value = false
+  }
+}
+onMounted(loadSummary)
 </script>
 
 <template>
   <section class="overview-page">
-    <BasePageHeading
-      title="Обзор системы"
-      description="Кадровые процессы, организационная структура и развитие персонала в едином рабочем пространстве."
-    />
-    <div class="hero-grid">
-      <BaseCard class="hero-card">
-        <p class="eyebrow">Текущий контур</p>
-        <h2>Кадровый учёт уже подключён к реальным API</h2>
-        <p class="muted">Реестр сотрудников, назначения, стаж, обучение, кадровый резерв, штатное расписание и журнал кадровых действий подключены к backend. Следующий этап — согласования, утверждение и юридически значимый жизненный цикл приказов.</p>
-        <RouterLink class="primary-link" to="/employees">Перейти к сотрудникам <ArrowRight :size="17" /></RouterLink>
-      </BaseCard>
-      <BaseCard>
-        <p class="eyebrow">Фокус разработки</p>
-        <div class="focus-list">
-          <div><strong>1</strong><span>Полная карточка сотрудника</span></div>
-          <div><strong>2</strong><span>Штатное расписание и вакансии</span></div>
-          <div><strong>3</strong><span>Приказы и защищённые документы</span></div>
-        </div>
-      </BaseCard>
+    <BasePageHeading title="Обзор системы" description="Сводная информация по персоналу и кадровым процессам" />
+    <BaseCard class="welcome">
+      <div class="welcome-copy">
+        <span class="eyebrow">Кадровая служба</span>
+        <h2>Управление персоналом</h2>
+        <p>Все данные о сотрудниках, должностях, назначениях и документах — в одном рабочем пространстве.</p>
+        <RouterLink to="/employees" class="primary-link">Открыть реестр сотрудников <ArrowRight :size="17" /></RouterLink>
+      </div>
+      <div class="welcome-icon" aria-hidden="true"><Users :size="64" :stroke-width="1.1" /></div>
+    </BaseCard>
+
+    <div class="section-line"><h2>Кадровая сводка</h2><span>{{ companyName }}</span></div>
+    <div class="stats">
+      <BaseCard><span>Сотрудники</span><strong>{{ loading ? '…' : summary.employees ?? '—' }}</strong><Users :size="18" /></BaseCard>
+      <BaseCard><span>Подразделения</span><strong>{{ loading ? '…' : summary.departments ?? '—' }}</strong><Network :size="18" /></BaseCard>
+      <BaseCard><span>Должности</span><strong>{{ loading ? '…' : summary.positions ?? '—' }}</strong><BriefcaseBusiness :size="18" /></BaseCard>
+      <BaseCard><span>Кадровые события</span><strong>{{ loading ? '…' : summary.actions ?? '—' }}</strong><UserRoundCheck :size="18" /></BaseCard>
     </div>
 
+    <div class="section-line"><h2>Разделы системы</h2></div>
     <div class="module-grid">
-      <RouterLink v-for="module in focusModules" :key="module.to" :to="module.to" class="module-link">
+      <RouterLink v-for="item in shortcuts" :key="item.to" :to="item.to" class="module-link">
         <BaseCard class="module-card">
-          <div class="module-icon"><component :is="module.icon" :size="22" /></div>
-          <div class="module-copy">
-            <div class="module-title-row"><strong>{{ module.title }}</strong><span class="status">{{ module.status }}</span></div>
-            <p>{{ module.description }}</p>
-          </div>
-          <ArrowRight class="module-arrow" :size="18" />
+          <div class="module-icon"><component :is="item.icon" :size="22" :stroke-width="1.8" /></div>
+          <div><strong>{{ item.title }}</strong><p>{{ item.description }}</p></div>
+          <ArrowRight class="module-arrow" :size="17" />
         </BaseCard>
       </RouterLink>
     </div>
-
-    <BaseCard>
-      <div class="section-heading">
-        <div><p class="eyebrow">Следующая очередь</p><h2>Остальные модули уже заложены в навигацию</h2></div>
-        <span class="muted">Без декоративных «готовых» экранов без backend</span>
-      </div>
-      <div class="next-grid">
-        <RouterLink v-for="item in nextModules" :key="item.to" :to="item.to">{{ item.label }} <ArrowRight :size="15" /></RouterLink>
-      </div>
-    </BaseCard>
   </section>
 </template>
 
 <style scoped>
-.overview-page{display:grid;gap:var(--space-5)}
-.hero-grid{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(280px,.8fr);gap:var(--space-4)}
-.hero-card{background:linear-gradient(135deg,#fff 0%,#f3fbff 100%)}
-.eyebrow{margin:0 0 8px;color:var(--color-primary);font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em}
-h2{margin:0;font-size:var(--font-section-heading);line-height:1.35}
-.hero-card .muted{max-width:760px;line-height:1.6;margin:12px 0 18px}
-.primary-link{display:inline-flex;align-items:center;gap:7px;color:var(--color-primary);font-weight:700}
-.focus-list{display:grid;gap:14px;margin-top:18px}
-.focus-list div{display:flex;align-items:center;gap:12px}
-.focus-list strong{display:grid;place-items:center;width:30px;height:30px;border-radius:10px;background:var(--color-accent-soft);color:var(--color-primary)}
-.focus-list span{font-size:14px;font-weight:600}
-.module-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--space-4)}
+.overview-page{display:grid;gap:var(--space-5);min-width:0}
+.welcome{display:flex;align-items:center;justify-content:space-between;gap:24px;background:linear-gradient(115deg,#fff,#f2faff);min-height:206px}
+.welcome-copy{max-width:620px}
+.eyebrow{font-size:11px;text-transform:uppercase;color:var(--color-primary);font-weight:700;letter-spacing:.07em}
+.welcome h2{font-size:clamp(22px,2vw,28px);letter-spacing:-.025em;margin:9px 0}
+.welcome p{font-size:14px;line-height:1.6;color:var(--color-muted);margin:0 0 20px}
+.welcome-icon{flex:0 0 118px;width:118px;height:118px;display:grid;place-items:center;background:var(--color-accent-soft);color:var(--color-primary);border-radius:30px}
+.primary-link{display:inline-flex;align-items:center;gap:8px;color:var(--color-primary);font-size:13px;font-weight:700}
+.section-line{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:0 0 -10px}
+.section-line h2{margin:0;font-size:18px;letter-spacing:-.02em}
+.section-line span{font-size:12px;color:var(--color-muted)}
+.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:var(--space-4)}
+.stats :deep(.base-card){position:relative;min-height:120px;display:grid;align-content:space-between;gap:10px}
+.stats span{font-size:12px;color:var(--color-muted)}
+.stats strong{font-size:27px;font-weight:700}
+.stats svg{position:absolute;top:22px;right:23px;color:var(--color-primary)}
+.module-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--space-4)}
 .module-link{min-width:0}
-.module-card{height:100%;display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:start;gap:14px;transition:transform .15s ease,border-color .15s ease}
-.module-link:hover .module-card{transform:translateY(-2px);border-color:rgba(6,151,224,.3)}
-.module-icon{display:grid;place-items:center;width:42px;height:42px;border-radius:12px;background:var(--color-accent-soft);color:var(--color-primary)}
-.module-copy{min-width:0}
-.module-title-row{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
-.module-copy p{margin:8px 0 0;color:var(--color-muted);font-size:13px;line-height:1.5}
-.status{font-size:11px;font-weight:700;color:var(--color-primary);background:var(--color-accent-soft);padding:5px 8px;border-radius:999px}
-.module-arrow{color:var(--color-muted);margin-top:10px}
-.section-heading{display:flex;justify-content:space-between;align-items:end;gap:16px;flex-wrap:wrap;margin-bottom:18px}
-.next-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
-.next-grid a{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:12px 14px;border:1px solid var(--color-stroke);border-radius:var(--radius-md);font-size:13px;font-weight:600}
-@media(max-width:900px){.hero-grid,.module-grid{grid-template-columns:1fr}.next-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
-@media(max-width:560px){.next-grid{grid-template-columns:1fr}}
+.module-card{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:14px;align-items:center;min-height:112px;transition:border-color .15s ease,transform .15s ease}
+.module-link:hover .module-card{transform:translateY(-2px);border-color:var(--color-primary)}
+.module-icon{width:46px;height:46px;display:grid;place-items:center;background:var(--color-accent-soft);color:var(--color-primary);border-radius:13px}
+.module-card strong{font-size:14px}
+.module-card p{margin:6px 0 0;font-size:12px;color:var(--color-muted);line-height:1.4}
+.module-arrow{color:var(--color-muted)}
+@media(max-width:1200px){.module-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:1000px){.stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:600px){.stats,.module-grid{grid-template-columns:1fr}.welcome{padding:20px!important;min-height:0}.welcome-icon{display:none}.overview-page{gap:var(--space-4)}}
 </style>

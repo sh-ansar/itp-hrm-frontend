@@ -98,8 +98,9 @@ function displayDate(value: unknown): string {
 function trainingPeriod(row: TrainingRow): string {
   return displayDate(row.started_on) + ' — ' + (row.ended_on ? displayDate(row.ended_on) : 'по н.в.')
 }
-function trainingTypeLabel(value: string): string {
-  return ({ internal: 'Внутреннее', external: 'Внешнее' } as Record<string, string>)[value] ?? value
+function trainingTypeLabel(value: unknown): string {
+  const key = String(value ?? '')
+  return ({ internal: 'Внутреннее', external: 'Внешнее' } as Record<string, string>)[key] ?? (key || '—')
 }
 function nameOf(row: DevelopmentRow): string {
   return [row.last_name, row.first_name, row.middle_name].filter(Boolean).join(' ')

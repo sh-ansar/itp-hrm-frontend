@@ -36,18 +36,18 @@ const expanded = ref(true)
 <style scoped>
 .tree-branch{position:relative;display:grid;align-content:start;gap:12px;min-width:0}
 .tree-card{
-  display:flex;align-items:center;gap:12px;width:100%;min-width:0;max-width:580px;min-height:74px;
-  padding:13px 16px;background:var(--color-surface);border:1px solid var(--color-stroke);
+  display:flex;align-items:center;gap:9px;width:100%;min-width:0;max-width:580px;min-height:70px;
+  padding:11px 12px;background:var(--color-surface);border:1px solid var(--color-stroke);
   border-radius:var(--radius-md);box-shadow:var(--shadow-card)
 }
 .tree-icon{
-  display:grid;place-items:center;flex:0 0 38px;width:38px;height:38px;
+  display:grid;place-items:center;flex:0 0 34px;width:34px;height:34px;
   color:var(--color-primary);background:var(--color-accent-soft);border-radius:11px
 }
 .tree-copy{display:grid;gap:5px;min-width:0;flex:1}
-.tree-copy strong{font-size:13px;line-height:1.35;font-weight:600;overflow-wrap:anywhere}
+.tree-copy strong{font-size:12px;line-height:1.35;font-weight:600;overflow-wrap:normal;word-break:normal;hyphens:none}
 .tree-copy span{display:inline-flex;align-items:center;gap:5px;font-size:11px;color:var(--color-muted);line-height:1.45}
-.tree-card :deep(.base-button){flex:0 0 34px;width:34px;min-width:34px;height:34px;min-height:34px;color:var(--color-muted);background:var(--color-soft)}
+.tree-card :deep(.base-button){flex:0 0 30px;width:30px;min-width:30px;height:30px;min-height:30px;color:var(--color-muted);background:var(--color-soft)}
 .tree-card :deep(.base-button:hover){color:var(--color-primary)}
 .tree-card :deep(.base-button svg){transition:transform .15s ease}
 .tree-card :deep(.base-button svg.closed){transform:rotate(-90deg)}
@@ -66,7 +66,7 @@ const expanded = ref(true)
 .tree-branch--level-0>.tree-children>.tree-branch--level-1::before{
   content:'';position:absolute;top:-16px;left:50%;width:1px;height:16px;background:var(--color-primary-stroke)
 }
-.tree-branch--level-0>.tree-children>.tree-branch--level-1>.tree-card{max-width:none;min-height:116px;align-self:start}
+.tree-branch--level-0>.tree-children>.tree-branch--level-1>.tree-card{max-width:none;min-height:104px;align-self:start}
 @media(max-width:1100px){
   .tree-branch--level-0>.tree-children{grid-template-columns:repeat(2,minmax(0,1fr))}
   .tree-branch--level-0>.tree-children::before,

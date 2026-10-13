@@ -1,6 +1,18 @@
 import { apiRequest } from './client'
 
-export interface CompanyRecord extends Record<string, unknown> { id: string; name: string }
+export type CompanyRoleCode = 'company_admin' | 'hr_specialist' | 'department_manager'
+
+export interface CompanyDepartmentScope {
+  id: string
+  name: string
+}
+
+export interface CompanyRecord extends Record<string, unknown> {
+  id: string
+  name: string
+  role_code?: CompanyRoleCode
+  department_scopes?: CompanyDepartmentScope[]
+}
 export interface DepartmentRecord extends Record<string, unknown> { id: string; name: string; parent_id: string | null; revision: number }
 export interface PositionRecord extends Record<string, unknown> { id: string; name: string; revision: number }
 export interface PagedResponse<T> {
@@ -12,7 +24,11 @@ const assertCompanyId = (companyId: string) => {
   if (!/^[a-f0-9-]{36}$/i.test(companyId)) throw new Error('Некорректный идентификатор компании')
 }
 
-export const listCompanies = () => apiRequest<PagedResponse<CompanyRecord>>('/companies?per_page=100')
+export interface CompanyListResponse extends PagedResponse<CompanyRecord> {
+  meta: PagedResponse<CompanyRecord>['meta'] & { role_management_enabled?: boolean }
+}
+
+export const listCompanies = () => apiRequest<CompanyListResponse>('/companies?per_page=100')
 
 export const listDepartments = (companyId: string, page = 1) => {
   assertCompanyId(companyId)

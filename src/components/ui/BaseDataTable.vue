@@ -77,7 +77,7 @@ const displayRows = computed<Entry[]>(() => {
 
 <style scoped>
 .table-scroll{
-  width:100%;max-width:100%;overflow-x:auto;contain:paint;
+  width:100%;max-width:100%;overflow-x:auto;overflow-y:hidden;overscroll-behavior-inline:contain;contain:paint;
   border:1px solid var(--color-stroke);border-radius:var(--space-2);
   background:var(--color-surface-raised);box-shadow:var(--shadow-card);
 }

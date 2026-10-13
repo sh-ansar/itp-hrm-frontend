@@ -82,7 +82,38 @@ export async function mockApiRequest<T>(path:string,options:RequestInit={}):Prom
   const method=(options.method||'GET').toUpperCase(),u=new URL(path,'https://demo.local'),p=u.pathname
   if(p==='/health') return {status:'ok',service:'itp-hrm-api'} as T
   if(p==='/companies') return page([{id:companyId,name:'ITP HRM Demo'}],1,100) as T
-  let m=p.match(/^\/companies\/[^/]+\/(departments|positions|employees|personnel-actions|documents)$/)
+  let m=p.match(/^\/companies\/[^/]+\/employees$/)
+  if(m&&method==='POST'){
+    const body=options.body?JSON.parse(String(options.body)):{}
+    const nextIndex=employees.length
+    const employee:any={
+      id:id(1000+nextIndex),
+      personnel_number:String(body.personnel_number||`EMP-${String(nextIndex+1).padStart(4,'0')}`),
+      last_name:String(body.last_name||'Новый'),
+      first_name:String(body.first_name||'Сотрудник'),
+      middle_name:body.middle_name??null,
+      revision:1,
+      birth_date:body.birth_date??null,
+      gender:body.gender??null,
+      email:body.email??null,
+      phone:body.phone??null,
+      address:body.address??null,
+      work_site:body.work_site??null,
+      work_zone:body.work_zone??null,
+      work_team:body.work_team??null,
+      supervisor_name:body.supervisor_name??null,
+      current_department_name:null,
+      current_position_name:null,
+      current_department_id:null,
+      current_position_id:null,
+      current_assignment_valid_from:null,
+      employment_status:'unassigned',
+    }
+    employees.unshift(employee)
+    return {data:employee} as T
+  }
+
+  m=p.match(/^\/companies\/[^/]+\/(departments|positions|employees|personnel-actions|documents)$/)
   if(m){const pg=Number(u.searchParams.get('page')||1),kind=m[1];let rows:any[]=kind==='departments'?deps:kind==='positions'?positions:kind==='employees'?employees:kind==='personnel-actions'?actions:documents
     if(kind==='employees'){const q=(u.searchParams.get('search')||'').toLowerCase(),s=u.searchParams.get('status')||'all';rows=rows.filter((x:any)=>(s==='all'||x.employment_status===s)&&(!q||json(x).toLowerCase().includes(q)))}
     if(kind==='personnel-actions'&&u.searchParams.get('type'))rows=rows.filter((x:any)=>x.action_type===u.searchParams.get('type'))

@@ -12,6 +12,7 @@ import EmployeeProfileCreateForm from '../components/EmployeeProfileCreateForm.v
 import EmployeeAssignmentCreateForm from '../components/EmployeeAssignmentCreateForm.vue'
 import EmployeeRecordForm from '../components/EmployeeRecordForm.vue'
 import BaseDialog from '../components/ui/BaseDialog.vue'
+import BaseViewTabs from '../components/ui/BaseViewTabs.vue'
 import { getEmployee, type EmployeeAssignment, type EmployeeDetail, type ProfileEditRow, type ProfileSection } from '../api/personnel'
 import { localTodayISO } from '../utils/localDate'
 
@@ -25,6 +26,16 @@ const assignmentTransitioning = ref<EmployeeAssignment | null>(null)
 const identityEditOpen = ref(false)
 const assignmentCreateOpen = ref(false)
 const profileCreateOpen = ref(false)
+const activeSection = ref('employment')
+const sectionTabs = computed(() => [
+  { id: 'employment', label: 'Работа и назначения' },
+  ...(profile.value?.meta.extended_sections_visible
+    ? [
+      { id: 'experience', label: 'Стаж' },
+      { id: 'training', label: 'Обучение' },
+      { id: 'reserve', label: 'Кадровый резерв' },
+    ] : []),
+])
 
 const today = localTodayISO()
 const currentAssignment = computed(() => profile.value?.assignments.find(item =>
@@ -116,17 +127,12 @@ onMounted(load)
         </div>
       </BaseCard>
 
-      <nav class="profile-nav" aria-label="Разделы карточки сотрудника">
-        <a href="#employment"><BriefcaseBusiness :size="16" /> Работа и назначения</a>
-        <a v-if="profile.meta.extended_sections_visible" href="#experience"><Clock3 :size="16" /> Стаж</a>
-        <a v-if="profile.meta.extended_sections_visible" href="#training"><BookOpenCheck :size="16" /> Обучение</a>
-        <a v-if="profile.meta.extended_sections_visible" href="#reserve"><ShieldCheck :size="16" /> Кадровый резерв</a>
-      </nav>
+      <BaseViewTabs v-model="activeSection" :options="sectionTabs" label="Разделы карточки сотрудника" />
       <div v-if="profile.meta.profile_writes_enabled" class="profile-toolbar">
         <BaseButton @click="profileCreateOpen = true"><Plus :size="16" /> Добавить сведения</BaseButton>
       </div>
 
-      <BaseCard id="employment">
+      <BaseCard v-if="activeSection === 'employment'" id="employment">
         <div class="section-header">
           <div>
             <p class="section-kicker">Работа</p>
@@ -161,7 +167,7 @@ onMounted(load)
 
 
       <template v-if="profile.meta.extended_sections_visible">
-        <BaseCard id="experience">
+        <BaseCard v-if="activeSection === 'experience'" id="experience">
           <div class="section-header compact"><div><p class="section-kicker">История</p><h2>Трудовой стаж</h2></div><span class="counter">{{ profile.experience.length }} записей</span></div>
           <BaseDataTable :rows="profile.experience" row-key="id" caption="Периоды трудового стажа"
             :columns="[{key:'experience_type',label:'Вид стажа'},{key:'started_on',label:'Начало'},{key:'ended_on',label:'Окончание'},{key:'basis_reference',label:'Основание'}, ...(profile.meta.profile_writes_enabled ? [{key:'edit',label:'Действия'}] : [])]"
@@ -171,7 +177,7 @@ onMounted(load)
 
         </BaseCard>
 
-        <BaseCard id="training">
+        <BaseCard v-if="activeSection === 'training'" id="training">
           <div class="section-header compact"><div><p class="section-kicker">Развитие</p><h2>Дополнительное обучение</h2></div><span class="counter">{{ profile.training.length }} записей</span></div>
           <BaseDataTable :rows="profile.training" row-key="id" caption="Обучение сотрудника"
             :columns="[{key:'training_type',label:'Вид'},{key:'training_mode',label:'Способ'},{key:'topic',label:'Тема'},{key:'provider',label:'Центр обучения'},{key:'city',label:'Город'},{key:'started_on',label:'С даты'},{key:'ended_on',label:'По дату'},{key:'document_reference',label:'Документ'}, ...(profile.meta.profile_writes_enabled ? [{key:'edit',label:'Действия'}] : [])]"
@@ -181,7 +187,7 @@ onMounted(load)
 
         </BaseCard>
 
-        <BaseCard id="reserve">
+        <BaseCard v-if="activeSection === 'reserve'" id="reserve">
           <div class="section-header compact"><div><p class="section-kicker">Развитие</p><h2>Кадровый резерв</h2></div><span class="counter">{{ profile.reserve.length }} записей</span></div>
           <BaseDataTable :rows="profile.reserve" row-key="id" caption="Кадровый резерв сотрудника"
             :columns="[{key:'target_position',label:'Резервируемая должность'},{key:'reserve_level',label:'Уровень'},{key:'reserve_type',label:'Вид'},{key:'joined_year',label:'Год зачисления'},{key:'left_year',label:'Год исключения'}, ...(profile.meta.profile_writes_enabled ? [{key:'edit',label:'Действия'}] : [])]"
@@ -257,9 +263,6 @@ onMounted(load)
 .hero-facts>div{display:grid;gap:5px;padding:13px;border:1px solid var(--color-stroke);border-radius:var(--radius-md);background:rgba(255,255,255,.72)}
 .hero-facts span{font-size:11px;color:var(--color-muted)}
 .hero-facts strong{font-size:13px;overflow-wrap:anywhere}
-.profile-nav{display:flex;gap:8px;overflow-x:auto;padding:4px 0 2px}
-.profile-nav a{display:inline-flex;align-items:center;gap:7px;white-space:nowrap;padding:9px 12px;border:1px solid var(--color-stroke);border-radius:999px;background:#fff;color:#416579;font-size:13px;font-weight:600}
-.profile-nav a:hover{border-color:rgba(6,151,224,.3);color:var(--color-primary)}
 .section-header{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;flex-wrap:wrap;margin-bottom:var(--space-4)}
 .section-header.compact{align-items:end}
 .section-header h2{font-size:var(--font-section-heading);margin:0}

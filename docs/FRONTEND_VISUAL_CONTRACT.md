@@ -1,6 +1,8 @@
 # HRM frontend visual contract
 
-Source of truth for the visual language: `sh-ansar/demo_bnt_dt`, primarily:
+Source of truth for **page structure and composition**: the HRM prototype screenshots supplied by the product owner.
+
+`sh-ansar/demo_bnt_dt` is a source only for **shared visual primitives** (tokens, typography, controls and reusable component styling), primarily:
 
 - `assets/css/tokens.css`
 - `assets/css/components.css`
@@ -9,13 +11,15 @@ Source of truth for the visual language: `sh-ansar/demo_bnt_dt`, primarily:
 
 ## Non-negotiable rules
 
-1. Do not invent visual patterns that are absent from the prototype.
-2. Reuse shared UI components before adding page-local controls.
-3. Page-local CSS may define layout only when a shared token or component cannot express it.
-4. Do not introduce new colors, typography sizes, control heights, radii or shadows without a prototype source.
-5. Remove service/development copy that is not visible in the prototype.
-6. Desktop parity is checked against the prototype first; then tablet and mobile are adapted from the same visual system.
-7. Mock data exists only to expose prototype states and must stay separable from the real API.
+1. Do not invent visual patterns that are absent from the HRM prototype.
+2. Never copy BNT page chrome, navigation, headings, sections or page composition into HRM unless that exact structure is visible in the HRM prototype.
+3. Reuse shared UI components before adding page-local controls.
+4. Page-local CSS may define layout only when a shared token or component cannot express it.
+5. Do not introduce new colors, typography sizes, control heights, radii or shadows without a prototype source.
+6. Remove service/development copy that is not visible in the prototype.
+7. Desktop parity is checked against the prototype first; then tablet and mobile are adapted from the same visual system.
+8. Mock data exists only to expose prototype states and must stay separable from the real API.
+9. Every reusable component and finished screen must support both light and dark semantic themes; dark mode must not change layout geometry.
 
 ## Canonical foundation
 

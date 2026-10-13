@@ -191,7 +191,9 @@ test('employee card creates and edits training that appears in the shared compan
     await editor.waitFor({ state: 'hidden' })
     await table.getByRole('row').filter({ hasText: renamed }).waitFor()
 
-    await page.goto('/learning')
+    // Navigate within Vue's router: a full-page reload intentionally resets
+    // mock-only HR data, which is never stored as sensitive browser storage.
+    await page.evaluate(async () => { const { router } = await import('/src/router/index.ts'); await router.push('/learning') })
     await page.getByRole('heading', { name: 'Обучение', level: 1 }).waitFor()
     await page.getByText(renamed).waitFor()
     assert.deepEqual(errors, [])

@@ -54,8 +54,8 @@ test('HR creates and edits an employee master record from the redesigned UI', as
     // New employees have no active assignment and must not appear in the active-only view.
     await page.getByRole('button', { name: 'Фильтры' }).click()
     await page.getByLabel('Статус сотрудника').selectOption('unassigned')
-    await page.getByRole('searchbox', { name: 'Поиск сотрудника' }).fill('E2E-NEW-01')
-    await page.getByRole('searchbox', { name: 'Поиск сотрудника' }).press('Enter')
+    await page.getByRole('searchbox', { name: 'Поиск в реестре' }).fill('E2E-NEW-01')
+    await page.getByRole('searchbox', { name: 'Поиск в реестре' }).press('Enter')
     const resultRow = page.locator('.employee-mobile-card').filter({ hasText: 'E2E-NEW-01' })
     await resultRow.waitFor()
     assert.match(await resultRow.innerText(), /Обновлённый Сотрудник Тестовый/)

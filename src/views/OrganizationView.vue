@@ -10,6 +10,9 @@ import BaseSelectField from '../components/ui/BaseSelectField.vue'
 import BasePagination from '../components/ui/BasePagination.vue'
 import BasePageHeading from '../components/ui/BasePageHeading.vue'
 import BaseDialog from '../components/ui/BaseDialog.vue'
+import BaseViewTabs from '../components/ui/BaseViewTabs.vue'
+import DepartmentTreeNode from '../components/DepartmentTreeNode.vue'
+import { buildDepartmentForest } from '../utils/departmentTree'
 import DepartmentForm from '../components/DepartmentForm.vue'
 import {
   deleteDepartment,
@@ -33,6 +36,9 @@ const editorOpen = ref(false)
 const editingDepartment = ref<DepartmentRecord | null>(null)
 const deleteCandidate = ref<DepartmentRecord | null>(null)
 const deleting = ref(false)
+const viewMode = ref('table')
+const viewModes = [{ id: 'table', label: 'Таблица' }, { id: 'diagram', label: 'Схема' }]
+const departmentForest = computed(() => buildDepartmentForest(departments.value))
 
 const departmentNames = computed(() => new Map(departments.value.map(item => [item.id, item.name])))
 const currentCompany = computed(() => companies.value.find(item => item.id === selectedCompany.value) ?? null)
@@ -199,11 +205,21 @@ onMounted(loadCompanies)
         <span class="muted">Страница {{ page }} из {{ lastPage }}</span>
       </div>
 
+      <BaseViewTabs v-model="viewMode" class="structure-tabs"
+        :options="viewModes" label="Представление организационной структуры" />
       <BaseNotice v-if="total > departments.length" tone="info">
-        Отображена только текущая страница. Скрытые или недоступные подразделения не раскрываются.
+        Показана текущая страница. Невидимые подразделения и родительские связи не раскрываются.
       </BaseNotice>
 
-      <BaseDataTable
+      <div v-if="viewMode === 'diagram'" class="structure-diagram" aria-label="Схема подразделений компании">
+        <BaseLoadingState v-if="loadingDepartments" label="Загрузка структуры" />
+        <div v-else-if="departmentForest.length" class="structure-forest">
+          <DepartmentTreeNode v-for="node in departmentForest" :key="node.id" :node="node" />
+        </div>
+        <p v-else class="diagram-empty">Подразделений для отображения пока нет.</p>
+      </div>
+
+      <BaseDataTable v-else
         row-key="id"
         caption="Подразделения компании"
         :loading="loadingDepartments"
@@ -277,6 +293,10 @@ onMounted(loadCompanies)
 .structure-stat strong{font-size:20px}
 .section-title{display:flex;align-items:end;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:18px}
 .section-title h2{font-size:var(--font-section-heading);margin:0}
+.structure-tabs{margin-bottom:var(--space-4)}
+.structure-diagram{min-height:240px;padding:clamp(14px,2vw,26px);background:var(--color-table-heading);border:1px solid var(--color-stroke);border-radius:var(--radius-lg);overflow-x:auto}
+.structure-forest{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr));align-items:start;gap:20px}
+.diagram-empty{margin:0;color:var(--color-muted);font-size:13px}
 .kicker{margin:0 0 5px;color:var(--color-primary);font-size:11px;font-weight:700;letter-spacing:.055em;text-transform:uppercase}
 .hierarchy-label{display:inline-flex;align-items:center;gap:6px;padding-inline-start:clamp(0px,calc(var(--depth) * 15px),180px);max-width:100%;overflow-wrap:anywhere}
 .branch-mark{color:var(--color-muted)}

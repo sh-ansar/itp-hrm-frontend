@@ -17,7 +17,7 @@ Reference: user's ZIP containing **67 images** (44 PNG layouts/fragments, 23 JPG
 | Worktime / timesheets | Shared-tab workspace for timesheet, work schedules, production calendar and absences; production reads use scoped backend APIs, while deterministic mocks remain isolated to demo mode | Browser QA + production/demo builds |
 | Reports and analytics | Company-scoped views for headcount, personnel movement, staffing/vacancies, training and worktime; worktime analytics use the same scoped production read contract as the timesheet workspace | Browser QA + production/demo builds |
 | Development / reserve / training | Combined employee workspace plus full training and reserve registries, responsive mobile cards, search/status filtering and employee drill-down | Browser QA + demo build |
-| Settings workspace | Session/profile state, accessible companies and persistent interface preferences; role mutation remains disabled until the backend administrative contract is enabled | Browser QA + demo build |
+| Settings workspace | Session/profile state, backend-projected company role and department scope, accessible companies and persistent interface preferences; role mutation remains gated | Browser QA + production/demo builds |
 | Leave schedule | Annual leave schedule, monthly distribution and leave categories; production reads use the scoped leave API while deterministic prototype values remain isolated to demo mode | Browser QA + production/demo builds |
 | Directories | Company-scoped position directory with real create/edit/delete permissions, shared drawer form and responsive desktop/mobile register; departments remain managed only in organization structure | Browser QA + demo build |
 
@@ -54,7 +54,7 @@ The frontend-only Vercel demo may render isolated deterministic mock values to r
 6. **Personnel actions/documents**: journal, drawers, document register and protected attachment flow remain aligned with the shared responsive components.
 7. **Worktime/reports**: timesheet, schedules, production calendar, absences and report aggregation use the scoped production read contract outside demo mode; missing values are never converted into false zeroes.
 8. **Leaves**: production reads use the scoped leave API; demo-only implementation notices were removed from the product surface.
-9. **Directories/settings**: directory CRUD stays company-scoped; settings use product language rather than frontend/backend/localStorage implementation terminology.
+9. **Directories/settings**: directory CRUD stays company-scoped; settings show the real company role and department scope while using product language rather than implementation terminology.
 10. **Responsive/theme verification**: 375px mobile and 1440px desktop were rechecked during the final sweep; prior 768/1280 checks remain part of the shared component audit. No document-level horizontal overflow is allowed.
 
 ### Corrections made in the final prototype sweep

@@ -19,7 +19,12 @@ const emit = defineEmits<{ 'update:modelValue': [value: string] }>()
 </template>
 
 <style scoped>
-.view-tabs{display:flex;align-items:stretch;gap:0;min-width:0;max-width:100%;overflow-x:auto;border-bottom:1px solid var(--color-stroke);scrollbar-width:thin}
+.view-tabs{
+  display:flex;align-items:stretch;gap:0;min-width:0;max-width:100%;
+  overflow-x:auto;overflow-y:hidden;border-bottom:1px solid var(--color-stroke);
+  scrollbar-width:none;-ms-overflow-style:none;overscroll-behavior-inline:contain
+}
+.view-tabs::-webkit-scrollbar{display:none;width:0;height:0}
 .view-tab{
   position:relative;display:inline-flex;align-items:center;justify-content:center;min-height:40px;
   padding:var(--space-2) var(--space-4);border:0;border-radius:0;background:transparent;

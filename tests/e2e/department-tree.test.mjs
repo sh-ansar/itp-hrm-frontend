@@ -30,7 +30,7 @@ test('HR creates moves renames and deletes an unused department at mobile width'
     const createDialog = page.getByRole('dialog', { name: 'Новое подразделение' })
     await createDialog.waitFor()
     await createDialog.getByLabel('Название подразделения').fill('E2E Team')
-    await createDialog.getByLabel('Родительское подразделение').selectOption('33333333-3333-4333-8333-333333333333')
+    await createDialog.getByLabel('Родительское подразделение').selectOption({ label: 'Visible Finance' })
     await createDialog.getByRole('button', { name: 'Добавить подразделение' }).click()
 
     const createdRow = page.getByRole('row', { name: /E2E Team/ })
@@ -41,7 +41,7 @@ test('HR creates moves renames and deletes an unused department at mobile width'
     const editDialog = page.getByRole('dialog', { name: 'Изменить подразделение' })
     await editDialog.waitFor()
     await editDialog.getByLabel('Название подразделения').fill('E2E Team Renamed')
-    await editDialog.getByLabel('Родительское подразделение').selectOption('55555555-5555-4555-8555-555555555555')
+    await editDialog.getByLabel('Родительское подразделение').selectOption({ label: 'Visible Finance Child' })
     await editDialog.getByRole('button', { name: 'Сохранить изменения' }).click()
 
     const renamedRow = page.getByRole('row', { name: /E2E Team Renamed/ })

@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import { Pencil, Plus, Trash2, Search } from 'lucide-vue-next'
-import BaseCard from '../components/ui/BaseCard.vue'
 import BaseDataTable from '../components/ui/BaseDataTable.vue'
 import BaseLoadingState from '../components/ui/BaseLoadingState.vue'
 import BaseNotice from '../components/ui/BaseNotice.vue'
@@ -288,27 +287,21 @@ onMounted(loadCompanies)
     <BaseLoadingState v-if="loadingCompanies" label="Загрузка компаний" />
     <BaseNotice v-else-if="!companies.length && !error" tone="info">Нет доступных компаний.</BaseNotice>
 
-    <div v-if="selectedCompany" class="org-metrics" aria-label="Показатели организационной структуры">
-      <BaseCard class="org-metric">
-        <span>Подразделения</span>
-        <strong>{{ loadingDepartments ? '—' : numberLabel(total) }}</strong>
-        <small>Доступных подразделений</small>
-      </BaseCard>
-      <BaseCard class="org-metric">
-        <span>Штатные единицы</span>
-        <strong>{{ staffingStatsReady ? numberLabel(staffTotals.planned) : '—' }}</strong>
-        <small>{{ staffingStatsBusy ? 'Загрузка...' : staffingStatsReady ? 'По выбранной штатке' : 'Данные недоступны' }}</small>
-      </BaseCard>
-      <BaseCard class="org-metric">
-        <span>Занято</span>
-        <strong>{{ staffingStatsReady ? numberLabel(staffTotals.occupied) : '—' }}</strong>
-        <small>{{ staffingStatsReady && staffTotals.planned ? numberLabel(staffTotals.occupied / staffTotals.planned * 100) + '% ставок' : 'По штатному расписанию' }}</small>
-      </BaseCard>
-      <BaseCard class="org-metric">
-        <span>Вакантные позиции</span>
-        <strong>{{ staffingStatsReady ? numberLabel(staffTotals.vacant) : '—' }}</strong>
-        <small>Незанятых ставок</small>
-      </BaseCard>
+    <div v-if="selectedCompany" class="org-summary-strip" aria-label="Показатели организационной структуры">
+      <div class="org-summary-item">
+        <span>Подразделения</span><strong>{{ loadingDepartments ? '—' : numberLabel(total) }}</strong>
+      </div>
+      <div class="org-summary-item">
+        <span>Штатные единицы</span><strong>{{ staffingStatsReady ? numberLabel(staffTotals.planned) : '—' }}</strong>
+      </div>
+      <div class="org-summary-item">
+        <span>Занято</span><strong>{{ staffingStatsReady ? numberLabel(staffTotals.occupied) : '—' }}</strong>
+      </div>
+      <div class="org-summary-item org-summary-item--vacant">
+        <span>Вакантно</span><strong>{{ staffingStatsReady ? numberLabel(staffTotals.vacant) : '—' }}</strong>
+      </div>
+      <span v-if="staffingStatsBusy" class="org-summary-caption">Обновляем штатные показатели…</span>
+      <span v-else-if="staffingPlanLabel" class="org-summary-caption">{{ staffingPlanLabel }}</span>
     </div>
 
     <section v-if="selectedCompany" class="org-content">
@@ -449,12 +442,12 @@ onMounted(loadCompanies)
 .organization-page{display:grid;grid-template-columns:minmax(0,1fr);gap:18px}
 .org-heading-actions{display:flex;align-items:end;justify-content:flex-end;gap:10px;min-width:0;flex-wrap:nowrap}
 .org-heading-actions :deep(.base-select-field){flex:0 1 200px;width:200px;max-width:200px;min-width:0}
-.org-metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px}
-.org-metrics :deep(.base-card){padding:16px;border-radius:8px;min-height:118px}
-.org-metric{display:grid;align-content:start;gap:10px}
-.org-metric span{font-size:12px;font-weight:700;text-transform:uppercase;color:var(--color-text)}
-.org-metric strong{font-size:26px;line-height:1.1;color:var(--color-primary)}
-.org-metric small{font-size:12px;line-height:1.35;color:var(--color-muted)}
+.org-summary-strip{display:flex;align-items:stretch;min-width:0;background:var(--color-surface);border:1px solid var(--color-stroke);border-radius:8px;overflow:hidden}
+.org-summary-item{display:grid;gap:4px;min-width:150px;padding:13px 18px;border-right:1px solid var(--color-stroke)}
+.org-summary-item span{font-size:11px;line-height:1.25;color:var(--color-muted)}
+.org-summary-item strong{font-size:20px;line-height:1.15;font-weight:650;color:var(--color-text)}
+.org-summary-item--vacant strong{color:var(--color-primary)}
+.org-summary-caption{align-self:center;margin-left:auto;padding:0 18px;max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px;color:var(--color-muted)}
 .org-content{min-width:0}
 .org-mobile-list,.org-mobile-only{display:none}
 
@@ -480,14 +473,14 @@ onMounted(loadCompanies)
 .chart-zoom button{width:30px;height:30px;border:1px solid var(--color-stroke);border-radius:6px;background:var(--color-surface);color:var(--color-primary)}
 .chart-zoom button:disabled{opacity:.4;cursor:not-allowed}
 .chart-zoom input{width:90px;accent-color:var(--color-primary)}
-.structure-diagram{min-height:240px;padding:clamp(14px,2vw,26px);background:var(--color-table-heading);border:1px solid var(--color-stroke);border-radius:var(--radius-lg);overflow-x:auto}
-.organization-chart{display:grid;justify-items:center;gap:36px;min-width:0;padding:8px 4px 20px}
-.chart-company{position:relative;display:grid;justify-items:center;gap:8px;width:min(100%,320px);padding:20px;background:var(--color-surface);border:1px solid var(--color-stroke);border-radius:var(--radius-md);box-shadow:var(--shadow-card);text-align:center}
+.structure-diagram{min-height:320px;padding:28px 24px 36px;background:#fbfdfe;border:1px solid var(--color-stroke);border-radius:8px;overflow:auto}
+.organization-chart{display:grid;justify-items:center;gap:42px;min-width:980px;padding:4px 10px 12px}
+.chart-company{position:relative;display:grid;justify-items:center;gap:6px;width:300px;padding:16px 18px;background:var(--color-surface);border:1px solid rgba(6,151,224,.28);border-radius:7px;box-shadow:0 3px 12px rgba(9,48,68,.06);text-align:center}
 .chart-company::after{content:'';position:absolute;left:50%;bottom:-37px;width:1px;height:36px;background:var(--color-primary-stroke)}
-.chart-company-label{font-size:12px;color:var(--color-muted)}
-.chart-company strong{font-size:15px;line-height:1.3}
+.chart-company-label{font-size:10px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--color-muted)}
+.chart-company strong{font-size:14px;line-height:1.35}
 .chart-company-count{font-size:12px;color:var(--color-primary)}
-.chart-branches{position:relative;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr));align-items:start;gap:24px;width:100%}
+.chart-branches{position:relative;display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));align-items:start;gap:28px;width:100%}
 .chart-branches::before{content:'';position:absolute;left:8%;right:8%;top:-18px;height:1px;background:var(--color-primary-stroke)}
 .chart-branches :deep(.tree-branch)::before{content:'';position:absolute;top:-24px;left:50%;height:24px;width:1px;background:var(--color-primary-stroke)}
 @media(max-width:640px){.organization-chart{gap:24px}.chart-company::after{bottom:-25px;height:24px}.chart-branches{grid-template-columns:1fr;gap:12px}.chart-branches::before,.chart-branches :deep(.tree-branch)::before{display:none}}
@@ -505,7 +498,7 @@ onMounted(loadCompanies)
 .delete-copy p{margin:0}
 .delete-actions{display:flex;justify-content:flex-end;gap:var(--space-2)}
 @media(max-width:1100px){
- .org-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .org-summary-strip{overflow-x:auto}
  .section-title{grid-template-columns:minmax(0,1fr)}
  .org-heading-actions{justify-content:flex-start;flex-wrap:wrap}
 }
@@ -514,11 +507,11 @@ onMounted(loadCompanies)
  .org-heading-actions{width:100%;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px}
  .org-heading-actions :deep(.base-select-field){width:100%;max-width:none;grid-column:1}
  .org-heading-actions :deep(button:last-child){grid-column:1/-1;width:100%}
- .org-metrics{gap:8px}
- .org-metrics :deep(.base-card){padding:12px;min-height:100px}
- .org-metric strong{font-size:23px}
- .org-metric span{font-size:10px}
- .org-metric small{font-size:11px}
+ .org-summary-strip{display:grid;grid-template-columns:1fr 1fr;overflow:hidden}
+ .org-summary-item{min-width:0;padding:11px 12px;border-right:1px solid var(--color-stroke);border-bottom:1px solid var(--color-stroke)}
+ .org-summary-item:nth-child(even){border-right:0}
+ .org-summary-item strong{font-size:18px}
+ .org-summary-caption{display:none}
  .section-title{display:grid;grid-template-columns:1fr;align-items:stretch}
  .section-title h1{font-size:20px}
  .org-mobile-list{display:grid;gap:10px}

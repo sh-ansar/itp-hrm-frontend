@@ -1,48 +1,129 @@
-/* ITP HRM shared design contract. Source reference: sh-ansar/demo_bnt_dt/assets/css/tokens.css.
-   All reusable controls must use these semantic variables, not page-local colors. */
+/* HRM visual contract aligned to sh-ansar/demo_bnt_dt.
+   Page components should consume semantic tokens instead of page-local values. */
 @import url("https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600;700&display=swap");
+
 :root {
-  font-family:'Golos Text','Segoe UI',Arial,sans-serif;
+  font-family:"Golos Text",Golos,"Segoe UI",Arial,sans-serif;
   color:#093044;
-  background:#f7fafb;
+  background:#f8fafb;
   font-synthesis:none;
+
+  /* Prototype semantic palette. */
   --color-primary:#0697e0;
   --color-primary-hover:#087eb9;
-  --color-primary-stroke:rgba(6,151,224,.26);
+  --color-primary-stroke:rgba(68,112,134,.24);
   --color-text:#093044;
+  --color-text-secondary:#051c27;
   --color-muted:#7199ac;
-  --color-page:#f7fafb;
+  --color-page:#f8fafb;
   --color-surface:#fff;
+  --color-surface-raised:rgba(255,255,255,.8);
   --color-soft:#f8fafb;
-  --color-stroke:rgba(68,112,134,.16);
+  --color-stroke:rgba(68,112,134,.08);
+  --color-stroke-strong:rgba(68,112,134,.24);
   --color-accent-soft:#e5f6ff;
+  --color-hover:rgba(35,142,195,.06);
   --color-focus:#82b8f5;
-  --color-table-heading:#eff5f8;
-  --color-table-heading-text:#285065;
-  --color-table-hover:#f8fbfc;
-  --color-on-primary:#fff;
-  --font-table-size:14px;
-  --color-danger:#982c2c;
-  --color-danger-border:#be4747;
-  --color-danger-surface:#fff1f1;
-  --color-warning:#735218;
-  --color-warning-surface:#fff9e9;
-  --color-success:#245b46;
-  --color-success-surface:#edf8f1;
-  --radius-sm:6px;
-  --radius-md:8px;
-  --radius-lg:10px;
-  --control-height:44px;
+  --color-table-heading:#f8fafb;
+  --color-table-heading-text:#093044;
+  --color-table-hover:rgba(35,142,195,.04);
+  --color-on-primary:#fefefe;
+  --color-overlay:rgba(9,35,52,.38);
+
+  /* Prototype semantic statuses. */
+  --color-danger:#d01717;
+  --color-danger-border:rgba(208,23,23,.28);
+  --color-danger-surface:#fde8e8;
+  --color-warning:#e5a500;
+  --color-warning-surface:#f7f1e2;
+  --color-success:#12a131;
+  --color-success-surface:#e2f1e7;
+
+  /* Corporate typography scale used by the source prototype. */
+  --font-page-heading:clamp(24px,1.666667vw,32px);
+  --font-section-heading:clamp(20px,1.388889vw,26.666667px);
+  --font-label-size:clamp(12px,.833333vw,16px);
+  --font-body-size:clamp(14px,.972222vw,18.666667px);
+  --font-caption-size:clamp(12px,.833333vw,16px);
+  --font-table-size:clamp(12px,.833333vw,16px);
+  --line-body:clamp(20px,1.388889vw,26.666667px);
+  --line-caption:clamp(16px,1.111111vw,21.333333px);
+
+  /* Shared geometry from demo_bnt_dt. */
+  --control-height:40px;
   --space-1:4px;
   --space-2:8px;
   --space-3:12px;
   --space-4:16px;
   --space-5:24px;
   --space-6:32px;
-  --font-label-size:14px;
-  --font-body-size:14px;
-  --font-caption-size:13px;
-  --font-page-heading:28px;
-  --font-section-heading:20px;
-  --shadow-card:0 1px 4px rgba(8,31,43,.035);
+  --space-7:48px;
+  --radius-sm:8px;
+  --radius-md:8px;
+  --radius-lg:14px;
+
+  /* Prototype elevation. */
+  --shadow-card:0 2px 4px rgba(56,83,97,.05);
+  --shadow-control:0 2px 4px rgba(56,83,97,.05);
+  --shadow-float:0 117px 70px rgba(8,31,43,.03),0 52px 52px rgba(8,31,43,.04),0 13px 29px rgba(8,31,43,.05);
+
+  /* Shell geometry from the reference, capped for HRM desktop layouts. */
+  --shell-sidebar:clamp(264px,18.333333vw,352px);
+  --shell-topbar:clamp(52px,3.611111vw,69.333333px);
+  --shell-gutter:clamp(24px,1.666667vw,32px);
+  --shell-search-max:clamp(380px,26.388889vw,506.666667px);
+}
+
+
+:root[data-theme="dark"] {
+  color:#e5f6ff;
+  background:#092634;
+  --color-primary:#20b9ee;
+  --color-primary-hover:#38c4f2;
+  --color-primary-stroke:rgba(141,192,216,.28);
+  --color-text:#e5f6ff;
+  --color-text-secondary:#ffffff;
+  --color-muted:#8dc0d8;
+  --color-page:#092634;
+  --color-surface:#032130;
+  --color-surface-raised:rgba(3,33,48,.92);
+  --color-soft:#0b2b3a;
+  --color-stroke:rgba(141,192,216,.12);
+  --color-stroke-strong:rgba(141,192,216,.28);
+  --color-accent-soft:rgba(0,136,204,.2);
+  --color-hover:rgba(147,206,224,.08);
+  --color-focus:#57b0de;
+  --color-table-heading:#0b2b3a;
+  --color-table-heading-text:#e5f6ff;
+  --color-table-hover:rgba(147,206,224,.06);
+  --color-on-primary:#fefefe;
+  --color-overlay:rgba(0,12,20,.62);
+  --color-danger:#f42525;
+  --color-danger-border:rgba(244,37,37,.36);
+  --color-danger-surface:rgba(208,23,23,.2);
+  --color-warning:#e5a500;
+  --color-warning-surface:rgba(229,165,0,.2);
+  --color-success:#17cf3f;
+  --color-success-surface:rgba(18,161,49,.24);
+  --shadow-card:0 2px 4px rgba(0,0,0,.14);
+  --shadow-control:0 2px 4px rgba(0,0,0,.12);
+  --shadow-float:0 32px 70px rgba(0,0,0,.24),0 13px 29px rgba(0,0,0,.18);
+}
+
+@media(max-width:959px){
+  :root{
+    --shell-sidebar:0px;
+    --shell-topbar:64px;
+    --shell-gutter:16px;
+  }
+}
+
+@media(max-width:600px){
+  :root{
+    --font-page-heading:20px;
+    --font-section-heading:18px;
+    --font-body-size:14px;
+    --font-caption-size:12px;
+    --font-table-size:12px;
+  }
 }

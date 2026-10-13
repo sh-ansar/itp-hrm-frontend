@@ -3,7 +3,6 @@ import { computed, onMounted, ref } from 'vue'
 import { ArrowRight, BriefcaseBusiness, FileText, FolderTree, UserRoundCheck, Users } from 'lucide-vue-next'
 import BaseCard from '../components/ui/BaseCard.vue'
 import BaseDataTable from '../components/ui/BaseDataTable.vue'
-import BasePageHeading from '../components/ui/BasePageHeading.vue'
 import BaseNotice from '../components/ui/BaseNotice.vue'
 import { listCompanies, listDepartments } from '../api/organization'
 import { listEmployees, type EmployeeRecord } from '../api/personnel'
@@ -26,12 +25,20 @@ const summary = ref({
 const employeeRows = computed(() => employees.value.map(item => ({
   ...item,
   full_name: [item.last_name, item.first_name, item.middle_name].filter(Boolean).join(' '),
+  status_label: item.employment_status === 'planned' ? 'Запланирован'
+    : item.employment_status === 'archived' ? 'В архиве'
+      : item.employment_status === 'unassigned' ? 'Без назначения' : 'Работает',
 })))
 const actionRows = computed(() => actions.value.map(item => ({
   ...item,
   full_name: [item.last_name, item.first_name, item.middle_name].filter(Boolean).join(' '),
   action_label: ({ hire: 'Приём', transfer: 'Перевод', termination: 'Увольнение' } as Record<string,string>)[item.action_type] || item.action_type,
 })))
+function displayDate(value: unknown): string {
+  if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}/.test(value)) return '—'
+  const [year, month, day] = value.slice(0,10).split('-')
+  return day + '.' + month + '.' + year
+}
 
 async function load() {
   loading.value = true
@@ -83,87 +90,146 @@ onMounted(load)
 
 <template>
   <section class="overview-page">
-    <BasePageHeading title="Обзор системы" :description="companyName || 'Кадровые данные компании'" />
+    <div class="overview-breadcrumb">
+      <img src="/prototype-icons/Home.svg" alt="" aria-hidden="true" />
+      <span>/</span><strong>Главная</strong>
+    </div>
+
+    <div class="overview-heading">
+      <div>
+        <h1>Главная</h1>
+        <p>{{ companyName || 'Кадровая сводка компании' }}</p>
+      </div>
+    </div>
+
     <BaseNotice v-if="error" tone="info">{{ error }}</BaseNotice>
 
-    <div class="summary-grid">
+    <div class="summary-grid" aria-label="Кадровая сводка">
       <BaseCard class="summary-card">
-        <span>СОТРУДНИКИ</span><strong>{{ loading ? '…' : summary.employees ?? '—' }}</strong><Users :size="21" />
+        <span>Сотрудники</span>
+        <Users :size="18" aria-hidden="true" />
+        <strong>{{ loading ? '…' : summary.employees ?? '—' }}</strong>
         <RouterLink to="/employees">Открыть реестр <ArrowRight :size="14" /></RouterLink>
       </BaseCard>
       <BaseCard class="summary-card">
-        <span>ПОДРАЗДЕЛЕНИЯ</span><strong>{{ loading ? '…' : summary.departments ?? '—' }}</strong><FolderTree :size="21" />
+        <span>Подразделения</span>
+        <FolderTree :size="18" aria-hidden="true" />
+        <strong>{{ loading ? '…' : summary.departments ?? '—' }}</strong>
         <RouterLink to="/organization">Оргструктура <ArrowRight :size="14" /></RouterLink>
       </BaseCard>
       <BaseCard class="summary-card">
-        <span>ВАКАНТНЫЕ СТАВКИ</span><strong>{{ loading ? '…' : summary.vacancies ?? '—' }}</strong><BriefcaseBusiness :size="21" />
+        <span>Вакантные ставки</span>
+        <BriefcaseBusiness :size="18" aria-hidden="true" />
+        <strong>{{ loading ? '…' : summary.vacancies ?? '—' }}</strong>
         <RouterLink to="/staffing">Штатное расписание <ArrowRight :size="14" /></RouterLink>
       </BaseCard>
       <BaseCard class="summary-card">
-        <span>КАДРОВЫЕ СОБЫТИЯ</span><strong>{{ loading ? '…' : summary.actions ?? '—' }}</strong><UserRoundCheck :size="21" />
-        <RouterLink to="/personnel-actions">Журнал действий <ArrowRight :size="14" /></RouterLink>
+        <span>Кадровые события</span>
+        <UserRoundCheck :size="18" aria-hidden="true" />
+        <strong>{{ loading ? '…' : summary.actions ?? '—' }}</strong>
+        <RouterLink to="/personnel-actions">Открыть журнал <ArrowRight :size="14" /></RouterLink>
       </BaseCard>
     </div>
 
     <BaseCard class="overview-register">
       <div class="section-title">
-        <h2>Реестр сотрудников</h2>
-        <RouterLink to="/employees">Все сотрудники <ArrowRight :size="16" /></RouterLink>
+        <div><h2>Сотрудники</h2><p>Последние записи реестра</p></div>
+        <RouterLink to="/employees">Все сотрудники <ArrowRight :size="15" /></RouterLink>
       </div>
       <BaseDataTable :rows="employeeRows" :columns="[
         { key: 'full_name', label: 'ФИО / Подразделение' },
         { key: 'personnel_number', label: 'Таб. №' },
         { key: 'current_position_name', label: 'Должность' },
+        { key: 'status_label', label: 'Статус' },
         { key: 'details', label: '' },
       ]" row-key="id" :loading="loading"
         caption="Последние записи реестра сотрудников" empty-title="Сотрудники не найдены"
         empty-description="В выбранной компании нет доступных сотрудников.">
         <template #cell-full_name="{ row }">
-          <div class="person-cell"><strong>{{ row.full_name }}</strong>
-            <span>{{ row.current_department_name || 'Без подразделения' }}</span></div>
+          <div class="person-cell">
+            <strong>{{ row.full_name }}</strong>
+            <span>{{ row.current_department_name || 'Без подразделения' }}</span>
+          </div>
         </template>
         <template #cell-current_position_name="{ value }">{{ value || '—' }}</template>
+        <template #cell-status_label="{ row }">
+          <span class="status-pill" :class="'status-pill--' + (row.employment_status ?? 'unassigned')">{{ row.status_label }}</span>
+        </template>
         <template #cell-details="{ row }">
-          <RouterLink class="detail-link" :to="{ name: 'employee-detail', params: { company: companyId, employee: row.id } }">Открыть</RouterLink>
+          <RouterLink class="detail-link" :to="{ name: 'employee-detail', params: { company: companyId, employee: row.id } }">
+            Открыть
+          </RouterLink>
         </template>
       </BaseDataTable>
     </BaseCard>
 
-    <BaseCard v-if="actions.length || loading" class="overview-register">
+    <BaseCard class="overview-register">
       <div class="section-title">
-        <h2>Кадровые действия</h2>
-        <RouterLink to="/personnel-actions">Весь журнал <ArrowRight :size="16" /></RouterLink>
+        <div><h2>Последние кадровые действия</h2><p>Приём, перевод и увольнение сотрудников</p></div>
+        <RouterLink to="/personnel-actions">Весь журнал <ArrowRight :size="15" /></RouterLink>
       </div>
       <BaseDataTable :rows="actionRows" :columns="[
         { key: 'effective_on', label: 'Дата' },
         { key: 'full_name', label: 'Сотрудник' },
         { key: 'action_label', label: 'Действие' },
         { key: 'basis_reference', label: 'Основание' },
-      ]" row-key="id" :loading="loading" caption="Кадровые действия компании" />
+      ]" row-key="id" :loading="loading"
+        caption="Последние кадровые действия компании"
+        empty-title="Кадровых действий нет"
+        empty-description="Записи появятся после оформления кадровых операций.">
+        <template #cell-effective_on="{ value }">{{ displayDate(value) }}</template>
+      </BaseDataTable>
     </BaseCard>
 
-    <div class="secondary-link"><FileText :size="17" /><RouterLink to="/documents">Документы и приказы <ArrowRight :size="15" /></RouterLink></div>
+    <RouterLink class="documents-link" to="/documents">
+      <FileText :size="17" aria-hidden="true" />
+      <span>Документы и приказы</span>
+      <ArrowRight :size="15" aria-hidden="true" />
+    </RouterLink>
   </section>
 </template>
 
 <style scoped>
-.overview-page{display:grid;grid-template-columns:minmax(0,1fr);gap:var(--space-4);min-width:0}
-.summary-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:var(--space-3)}
-.summary-card{position:relative;display:grid;align-content:space-between;gap:10px;min-height:138px}
-.summary-card>span{font-size:11px;line-height:1.35;font-weight:700;letter-spacing:.025em;color:var(--color-text)}
-.summary-card>strong{font-size:29px;font-weight:700;line-height:1.1;color:var(--color-primary)}
-.summary-card>svg{position:absolute;right:21px;top:22px;color:var(--color-muted)}
-.summary-card a{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--color-muted);font-weight:600}
-.summary-card a:hover{color:var(--color-primary)}
-.section-title{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:var(--space-4)}
-.section-title h2{font-size:20px;margin:0;letter-spacing:-.02em}
-.section-title a{display:inline-flex;align-items:center;gap:7px;color:var(--color-primary);font-size:13px;font-weight:700}
+.overview-page{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;min-width:0;max-width:100%}
+.overview-breadcrumb{display:flex;align-items:center;gap:10px;min-height:24px;color:var(--color-muted);font-size:12px}
+.overview-breadcrumb img{width:15px;height:15px}
+.overview-breadcrumb strong{color:var(--color-text);font-weight:500}
+.overview-heading{display:flex;align-items:end;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.overview-heading h1{margin:0;color:var(--color-text);font-size:21px;line-height:1.25;font-weight:700;letter-spacing:-.025em}
+.overview-heading p{margin:6px 0 0;color:var(--color-muted);font-size:12px;line-height:1.4}
+.summary-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.summary-card{position:relative;display:grid;grid-template-columns:minmax(0,1fr) auto;align-content:start;gap:6px 9px;min-height:118px}
+.summary-card>span{grid-column:1;grid-row:1;color:var(--color-muted);font-size:12px;line-height:1.4;font-weight:600}
+.summary-card>svg{grid-column:2;grid-row:1;color:var(--color-primary)}
+.summary-card>strong{grid-column:1/-1;color:var(--color-primary);font-size:25px;line-height:1.15;font-weight:700}
+.summary-card>a{grid-column:1/-1;display:inline-flex;align-items:center;gap:5px;width:max-content;color:var(--color-muted);font-size:11px;line-height:1.4;font-weight:600}
+.summary-card>a:hover{color:var(--color-primary)}
+.overview-register{min-width:0}
+.section-title{display:flex;align-items:end;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+.section-title h2{margin:0;color:var(--color-text);font-size:16px;line-height:1.35;font-weight:600}
+.section-title p{margin:4px 0 0;color:var(--color-muted);font-size:11px;line-height:1.4}
+.section-title a{display:inline-flex;align-items:center;gap:5px;color:var(--color-primary);font-size:12px;font-weight:600}
 .person-cell{display:grid;gap:3px;min-width:180px}
-.person-cell strong{font-size:13px}
-.person-cell span{font-size:11px;color:var(--color-muted)}
-.detail-link{color:var(--color-primary);text-decoration:underline;text-underline-offset:3px;font-weight:600}
-.secondary-link{display:flex;align-items:center;gap:8px;color:var(--color-muted);font-size:13px}
-.secondary-link a{color:var(--color-primary);display:inline-flex;align-items:center;gap:5px}
+.person-cell strong{color:var(--color-text);font-size:13px;line-height:1.4;font-weight:600}
+.person-cell span{color:var(--color-muted);font-size:11px;line-height:1.4}
+.detail-link{color:var(--color-primary);font-size:12px;font-weight:600;text-decoration:underline;text-underline-offset:3px}
+.status-pill{display:inline-flex;padding:5px 9px;border-radius:999px;background:var(--color-soft);font-size:10px;font-weight:700;white-space:nowrap}
+.status-pill--active{background:var(--color-success-surface);color:var(--color-success)}
+.status-pill--planned{background:var(--color-accent-soft);color:var(--color-primary)}
+.status-pill--archived{background:var(--color-danger-surface);color:var(--color-danger)}
+.status-pill--unassigned{background:var(--color-warning-surface);color:var(--color-warning)}
+.documents-link{
+  display:inline-flex;align-items:center;gap:7px;width:max-content;max-width:100%;
+  color:var(--color-primary);font-size:12px;line-height:1.4;font-weight:600
+}
+.documents-link:hover{text-decoration:underline;text-underline-offset:3px}
 @media(max-width:1050px){.summary-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
-@media(max-width:480px){.summary-grid{gap:8px}.summary-card{min-height:116px}.summary-card>strong{font-size:24px}.summary-card>svg{right:12px;top:12px}}
+@media(max-width:650px){
+  .summary-grid{gap:8px}
+  .summary-card{min-height:106px}
+  .summary-card>strong{font-size:22px}
+  .overview-register{padding:13px}
+  .section-title{align-items:flex-start}
+}
 </style>
+

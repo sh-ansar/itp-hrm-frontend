@@ -16,5 +16,6 @@ defineEmits<{ previous: []; next: [] }>()
 </template>
 <style scoped>
 .base-pagination{display:flex;align-items:center;justify-content:space-between;gap:var(--space-3);flex-wrap:wrap;margin-top:var(--space-4)}
-.base-pagination__label{font-size:var(--font-caption-size);color:var(--color-muted)}
+.base-pagination__label{font-size:var(--font-caption-size);line-height:var(--line-caption);color:var(--color-muted)}
+@media(max-width:520px){.base-pagination{display:grid;grid-template-columns:1fr auto 1fr}.base-pagination :deep(button){width:100%}}
 </style>

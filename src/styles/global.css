@@ -1,16 +1,17 @@
 *{box-sizing:border-box}
 html{scroll-behavior:smooth}
-body{margin:0;min-width:320px;background:var(--color-page);color:var(--color-text)}
+html,body,#app{min-width:320px;min-height:100%}
+body{margin:0;min-width:320px;background:var(--color-page);color:var(--color-text);font-family:inherit;font-size:var(--font-body-size);line-height:var(--line-body);-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
 button,input,select,textarea{font:inherit}
 button{cursor:pointer}
 a{color:inherit;text-decoration:none}
-button:focus-visible,a:focus-visible{outline:3px solid var(--color-focus);outline-offset:2px}
+button:focus-visible,a:focus-visible{outline:2px solid var(--color-primary);outline-offset:2px}
 .app-shell{min-height:100vh;min-height:100dvh;display:grid;grid-template-columns:276px minmax(0,1fr);transition:grid-template-columns .2s ease}
 .app-shell--collapsed{grid-template-columns:70px minmax(0,1fr)}
 .sidebar{position:sticky;top:0;height:100vh;height:100dvh;min-height:0;display:flex;flex-direction:column;overflow:hidden;background:var(--color-surface);border-right:1px solid var(--color-stroke);box-shadow:var(--shadow-card);z-index:20}
 .main{min-width:0;max-width:100%;width:100%}
-.topbar{height:70px;display:flex;align-items:center;justify-content:space-between;gap:clamp(12px,2vw,32px);padding:0 clamp(16px,2.2vw,32px);position:sticky;top:0;z-index:15;background:rgba(255,255,255,.96);border-bottom:1px solid var(--color-stroke);backdrop-filter:blur(14px)}
-.content{max-width:1560px;margin:0 auto;padding:24px clamp(16px,2.2vw,32px) 36px;min-width:0}
+.topbar{height:70px;display:flex;align-items:center;justify-content:space-between;gap:clamp(12px,2vw,32px);padding:0 clamp(16px,2.2vw,32px);position:sticky;top:0;z-index:15;background:var(--color-surface);border-bottom:1px solid var(--color-stroke);backdrop-filter:blur(14px)}
+.content{max-width:1560px;margin:0 auto;padding:24px clamp(16px,2.2vw,32px) 36px;min-width:0;background:var(--color-page)}
 .page-title{margin:0 0 var(--space-2);font-size:var(--font-page-heading);line-height:1.2;letter-spacing:-.025em}
 .muted{color:var(--color-muted)}
 .cards{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:var(--space-4)}

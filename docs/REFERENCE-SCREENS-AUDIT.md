@@ -10,14 +10,18 @@ Reference: user's ZIP containing **67 images** (44 PNG layouts/fragments, 23 JPG
 | Employee card labour data / closed tabs | Compact employee summary and real tabs for assignments, experience, training, reserve; preserve drawer-based guarded edit flow | Chromium write tests |
 | Right-side creation drawer | Shared BaseDialog, one-column identity form, sticky actions; supports actual employee master fields | Browser create/edit |
 | Collapsed/expanded navigation | Shared desktop sidebar, compact rail and mobile overlay | Shell E2E |
-| HR overview | Factual company statistics, short employee and personnel action tables; no developer/project-status cards | Browser and API |
+| HR overview | Главная with factual company statistics, short employee register, recent personnel actions and document entry point; no developer/project-status cards | Control preview pending |
 | Archive employees | Effective-dated, company-scoped backend status; cannot classify never-hired people as former employees | Backend SQLite/PostgreSQL tests |
 
-## Not implemented — do **not** render fictitious data or dead controls
+## Backend gaps and demo-mode rule
 
-1. **Employee master**: photo, gender, date of birth, identity document, e-mail, phone, payroll account, contract and personal IDs shown in `Desktop_Employees_Карточка_сотрудника_Трудовые_данные.png` and `Drawer__Добавить сотрудника Png.png`. Requires approved field definitions, validation and role-specific privacy access on backend before adding forms.
-2. **Development combined display** `Desktop_Employees_full_screen_Кадровый_резерв_и_обучение.png`: separate HR-protected company training and reserve registries with status counters, search and drawer creation now exist. A combined timeline, workflows, approvals and training certificates remain pending.
-3. **Staffing history and advanced explorer** `Desktop_Оргструктура_и_штатка_схема_open_Организационная_структура.png` and four staffing table screenshots: department chart and staffing vacancy/excess tabs are now implemented against authorized data. Change history, export, approval queue and staffing version comparisons still need dedicated backend contracts.
+The frontend-only Vercel demo may render isolated deterministic mock values to reproduce approved prototype states. Those values must never be written to or mixed with the real backend. Outside `VITE_DEMO_MODE`, unavailable backend fields remain unavailable.
+
+## Not implemented in the real backend — do **not** present mock values as production data
+
+1. **Employee master**: the demo card now reproduces the approved prototype groups for identity, contacts, bank details and employment contract using isolated mock data. The real backend still requires approved field definitions, validation and role-specific privacy access before those extra fields become writable production data.
+2. **Development combined display** `Desktop_Employees_full_screen_Кадровый_резерв_и_обучение.png`: a combined employee workspace now shows кадровый резерв and обучение together from the existing authorized APIs, with direct drill-down to the full reserve/training registries. No fictitious workflow, approval or certificate lifecycle is added.
+3. **Staffing explorer** `Desktop_Оргструктура_и_штатка_схема_open_Организационная_структура.png` and four staffing table screenshots: department chart, staffing, vacancy view, authorized staffing history and CSV export are implemented against real scoped data. Approval queue and staffing version comparison remain separate future contracts; do not fake them.
 4. **Contract expiration, hiring dates, demographics and earnings** in register/dashboard screenshots: no reliable scoped APIs for these values. Do not hardcode reference screenshot numbers (340 employees, 18 departments, etc.).
 5. **Employee management actions**: mass editing, deletion, moving to archive, 1C sync, template creation and exports in mockups are not approved endpoints or lifecycle operations. Keep out of active UI until contracts exist.
 6. **Payroll, tariffs, time attendance, personal settings, notifications** shown in screenshots: require domain stages and authorization; current placeholder routes are not acceptance-complete.
@@ -34,7 +38,7 @@ Reference: user's ZIP containing **67 images** (44 PNG layouts/fragments, 23 JPG
 
 ## Next parity milestones
 
-1. Finish screenshot-verified employee register and tabs, and test fast search, archive and column grouping.
+1. Final visual QA of the completed Employees workspace: register, grouped register, archive, combined reserve/training workspace and employee card tabs.
 2. Expand employee identity fields via approved sensitive-data schema before implementing reference photo/personal tabs.
 3. Add org-tree visualization and unified staffing/vacancies tabs.
 4. Add company-level training/reserve views and authenticated report exports.

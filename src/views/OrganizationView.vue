@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
-import { Pencil, Plus, Trash2, Search } from 'lucide-vue-next'
-import BaseCard from '../components/ui/BaseCard.vue'
+import { Minus, Pencil, Plus, Trash2, Search } from 'lucide-vue-next'
 import BaseDataTable from '../components/ui/BaseDataTable.vue'
 import BaseLoadingState from '../components/ui/BaseLoadingState.vue'
 import BaseNotice from '../components/ui/BaseNotice.vue'
@@ -16,9 +15,6 @@ import { downloadCsv } from '../utils/exportCsv'
 import OrgStaffingNav from '../components/OrgStaffingNav.vue'
 import { buildDepartmentForest } from '../utils/departmentTree'
 import DepartmentForm from '../components/DepartmentForm.vue'
-import { getStaffingPlan, listStaffingPlans, type StaffingPlanLine } from '../api/staffing'
-import { preferredStaffingPlan } from '../utils/staffingPlanChoice'
-import { localTodayISO } from '../utils/localDate'
 import {
   deleteDepartment,
   listCompanies,
@@ -41,34 +37,9 @@ const editorOpen = ref(false)
 const editingDepartment = ref<DepartmentRecord | null>(null)
 const deleteCandidate = ref<DepartmentRecord | null>(null)
 const deleting = ref(false)
-const viewMode = ref('table')
+const viewMode = ref('diagram')
 const searchQuery = ref('')
 const chartZoom = ref(100)
-const orgStaffLines = ref<StaffingPlanLine[]>([])
-const staffingStatsReady = ref(false)
-const staffingStatsBusy = ref(false)
-const staffingPlanLabel = ref('')
-let statsGeneration = 0
-const staffTotals = computed(() => orgStaffLines.value.reduce((sum, line) => ({
-  planned: sum.planned + Number(line.planned_units),
-  occupied: sum.occupied + Number(line.occupied_units),
-  vacant: sum.vacant + Number(line.vacant_units),
-}), { planned: 0, occupied: 0, vacant: 0 }))
-const staffCountsByDepartment = computed(() => {
-  const result: Record<string, { planned: number; occupied: number; vacant: number }> = {}
-  for (const line of orgStaffLines.value) {
-    const counts = result[line.department_id] ?? { planned: 0, occupied: 0, vacant: 0 }
-    counts.planned += Number(line.planned_units)
-    counts.occupied += Number(line.occupied_units)
-    counts.vacant += Number(line.vacant_units)
-    result[line.department_id] = counts
-  }
-  return result
-})
-function numberLabel(value: number): string {
-  return value.toLocaleString('ru-RU', { maximumFractionDigits: 2 })
-}
-
 const viewModes = [{ id: 'table', label: 'Таблица' }, { id: 'diagram', label: 'Схема' }]
 const departmentForest = computed(() => buildDepartmentForest(departments.value))
 
@@ -136,9 +107,6 @@ const filteredHierarchyRows = computed(() => {
 const extraColumns = [
   { key: 'parentLabel', label: 'Входит в' },
   { key: 'depth', label: 'Уровень' },
-  { key: 'planned_units', label: 'Штатных единиц' },
-  { key: 'occupied_units', label: 'Занято' },
-  { key: 'vacant_units', label: 'Вакантно' },
 ]
 function orgColumnPreferences(): Record<string, boolean> {
   const initial = Object.fromEntries(extraColumns.map(column => [column.key, true]))
@@ -208,32 +176,6 @@ async function loadDepartments() {
   }
 }
 
-async function loadStaffingStats() {
-  const companyId = selectedCompany.value
-  const seq = ++statsGeneration
-  orgStaffLines.value = []
-  staffingPlanLabel.value = ''
-  staffingStatsReady.value = false
-  if (!companyId) { staffingStatsBusy.value = false; return }
-  staffingStatsBusy.value = true
-  try {
-    const response = await listStaffingPlans(companyId)
-    if (seq !== statsGeneration) return
-    const plan = preferredStaffingPlan(response.data, localTodayISO())
-    if (!plan) return
-    const detail = await getStaffingPlan(companyId, plan.id, localTodayISO())
-    if (seq !== statsGeneration) return
-    orgStaffLines.value = detail.lines
-    staffingPlanLabel.value = plan.name
-    staffingStatsReady.value = true
-  } catch {
-    // Staffing access can be more restricted than the organizational directory.
-    // Do not disclose inaccessible totals or block the organization page.
-  } finally {
-    if (seq === statsGeneration) staffingStatsBusy.value = false
-  }
-}
-
 function exportDepartments() {
   downloadCsv('orgstructure.csv', ['Подразделение', 'Родитель'], filteredHierarchyRows.value.map(row => [row.name, row.parentLabel]))
 }
@@ -276,7 +218,6 @@ async function confirmDelete() {
 
 watch(selectedCompany, () => { page.value = 1 })
 watch([selectedCompany, page], loadDepartments)
-watch(selectedCompany, loadStaffingStats)
 onMounted(loadCompanies)
 </script>
 
@@ -288,28 +229,6 @@ onMounted(loadCompanies)
     <BaseLoadingState v-if="loadingCompanies" label="Загрузка компаний" />
     <BaseNotice v-else-if="!companies.length && !error" tone="info">Нет доступных компаний.</BaseNotice>
 
-    <div v-if="selectedCompany" class="org-metrics" aria-label="Показатели организационной структуры">
-      <BaseCard class="org-metric">
-        <span>Подразделения</span>
-        <strong>{{ loadingDepartments ? '—' : numberLabel(total) }}</strong>
-        <small>Доступных подразделений</small>
-      </BaseCard>
-      <BaseCard class="org-metric">
-        <span>Штатные единицы</span>
-        <strong>{{ staffingStatsReady ? numberLabel(staffTotals.planned) : '—' }}</strong>
-        <small>{{ staffingStatsBusy ? 'Загрузка...' : staffingStatsReady ? 'По выбранной штатке' : 'Данные недоступны' }}</small>
-      </BaseCard>
-      <BaseCard class="org-metric">
-        <span>Занято</span>
-        <strong>{{ staffingStatsReady ? numberLabel(staffTotals.occupied) : '—' }}</strong>
-        <small>{{ staffingStatsReady && staffTotals.planned ? numberLabel(staffTotals.occupied / staffTotals.planned * 100) + '% ставок' : 'По штатному расписанию' }}</small>
-      </BaseCard>
-      <BaseCard class="org-metric">
-        <span>Вакантные позиции</span>
-        <strong>{{ staffingStatsReady ? numberLabel(staffTotals.vacant) : '—' }}</strong>
-        <small>Незанятых ставок</small>
-      </BaseCard>
-    </div>
 
     <section v-if="selectedCompany" class="org-content">
       <div class="section-title">
@@ -329,9 +248,11 @@ onMounted(loadCompanies)
         <label class="structure-search"><Search :size="17" aria-hidden="true" /><span class="visually-hidden">Поиск подразделений</span><input v-model="searchQuery" type="search" placeholder="Поиск подразделений" /></label>
         <BaseColumnPicker v-if="viewMode === 'table'" v-model="shownOrgColumns" :columns="extraColumns" title="Колонки" />
         <div v-if="viewMode === 'diagram'" class="chart-zoom">
-          <button type="button" aria-label="Уменьшить схему" :disabled="chartZoom <= 70" @click="chartZoom = Math.max(70, chartZoom - 10)">−</button>
+          <BaseButton icon-only variant="secondary" aria-label="Уменьшить схему"
+            :disabled="chartZoom <= 70" @click="chartZoom = Math.max(70, chartZoom - 10)"><Minus :size="16" /></BaseButton>
           <input v-model.number="chartZoom" type="range" min="70" max="130" step="10" aria-label="Масштаб схемы" />
-          <button type="button" aria-label="Увеличить схему" :disabled="chartZoom >= 130" @click="chartZoom = Math.min(130, chartZoom + 10)">+</button>
+          <BaseButton icon-only variant="secondary" aria-label="Увеличить схему"
+            :disabled="chartZoom >= 130" @click="chartZoom = Math.min(130, chartZoom + 10)"><Plus :size="16" /></BaseButton>
         </div>
       </div>
       <BaseNotice v-if="total > departments.length" tone="info">
@@ -347,7 +268,7 @@ onMounted(loadCompanies)
             <span class="chart-company-count">{{ total }} подразделений</span>
           </div>
           <div class="chart-branches">
-            <DepartmentTreeNode v-for="node in departmentForest" :key="node.id" :node="node" :counts="staffCountsByDepartment" />
+            <DepartmentTreeNode v-for="node in departmentForest" :key="node.id" :node="node" />
           </div>
         </div>
         <p v-else class="diagram-empty">{{ searchQuery.trim() ? 'Для поиска используйте режим «Таблица».' : 'Подразделений для отображения пока нет.' }}</p>
@@ -363,9 +284,6 @@ onMounted(loadCompanies)
               <span>Уровень {{ Number(row.depth) + 1 }}</span>
             </div>
             <p>{{ row.parentLabel }}</p>
-            <div v-if="staffCountsByDepartment[row.id]" class="org-mobile-item-stats">
-              {{ numberLabel(staffCountsByDepartment[row.id].occupied) }} занято · {{ numberLabel(staffCountsByDepartment[row.id].vacant) }} вакансий
-            </div>
             <div v-if="departmentWritesEnabled" class="org-mobile-actions">
               <BaseButton variant="secondary" @click="editDepartmentRecord(row)"><Pencil :size="15" /> Изменить</BaseButton>
               <BaseButton variant="secondary" @click="deleteCandidate = row"><Trash2 :size="15" /> Удалить</BaseButton>
@@ -391,13 +309,10 @@ onMounted(loadCompanies)
         </template>
         <template #cell-parentLabel="{ value }">{{ value }}</template>
         <template #cell-depth="{ row }">{{ Number(row.depth) + 1 }}</template>
-        <template #cell-planned_units="{ row }">{{ staffingStatsReady ? numberLabel(staffCountsByDepartment[row.id]?.planned ?? 0) : '—' }}</template>
-        <template #cell-occupied_units="{ row }">{{ staffingStatsReady ? numberLabel(staffCountsByDepartment[row.id]?.occupied ?? 0) : '—' }}</template>
-        <template #cell-vacant_units="{ row }">{{ staffingStatsReady ? numberLabel(staffCountsByDepartment[row.id]?.vacant ?? 0) : '—' }}</template>
         <template #cell-actions="{ row }">
           <div class="row-actions">
-            <button class="row-icon-action" type="button" :aria-label="'Изменить ' + row.name" @click="editDepartmentRecord(row)"><Pencil :size="16" /></button>
-            <button class="row-icon-action" type="button" :aria-label="'Удалить ' + row.name" @click="deleteCandidate = row"><Trash2 :size="16" /></button>
+            <BaseButton icon-only variant="secondary" :aria-label="'Изменить ' + row.name" @click="editDepartmentRecord(row)"><Pencil :size="16" /></BaseButton>
+            <BaseButton icon-only variant="secondary" :aria-label="'Удалить ' + row.name" @click="deleteCandidate = row"><Trash2 :size="16" /></BaseButton>
           </div>
         </template>
           </BaseDataTable>
@@ -449,12 +364,6 @@ onMounted(loadCompanies)
 .organization-page{display:grid;grid-template-columns:minmax(0,1fr);gap:18px}
 .org-heading-actions{display:flex;align-items:end;justify-content:flex-end;gap:10px;min-width:0;flex-wrap:nowrap}
 .org-heading-actions :deep(.base-select-field){flex:0 1 200px;width:200px;max-width:200px;min-width:0}
-.org-metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px}
-.org-metrics :deep(.base-card){padding:16px;border-radius:8px;min-height:118px}
-.org-metric{display:grid;align-content:start;gap:10px}
-.org-metric span{font-size:12px;font-weight:700;text-transform:uppercase;color:var(--color-text)}
-.org-metric strong{font-size:26px;line-height:1.1;color:var(--color-primary)}
-.org-metric small{font-size:12px;line-height:1.35;color:var(--color-muted)}
 .org-content{min-width:0}
 .org-mobile-list,.org-mobile-only{display:none}
 
@@ -467,7 +376,6 @@ onMounted(loadCompanies)
 .org-mobile-item-head strong{font-size:14px}
 .org-mobile-item-head span{font-size:12px;white-space:nowrap;color:var(--color-muted)}
 .org-mobile-item p{margin:6px 0;color:var(--color-muted);font-size:12px}
-.org-mobile-item-stats{font-size:12px;color:var(--color-primary);margin-top:8px}
 .org-mobile-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
 
 .structure-tools{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:var(--space-4)}
@@ -477,27 +385,36 @@ onMounted(loadCompanies)
 .structure-search input{width:220px;max-width:100%;border:0;background:transparent;color:var(--color-text);outline:none;font:inherit;font-size:13px}
 .visually-hidden{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}
 .chart-zoom{display:flex;align-items:center;gap:7px}
-.chart-zoom button{width:30px;height:30px;border:1px solid var(--color-stroke);border-radius:6px;background:var(--color-surface);color:var(--color-primary)}
-.chart-zoom button:disabled{opacity:.4;cursor:not-allowed}
+.chart-zoom :deep(.base-button){width:32px;min-width:32px;height:32px;min-height:32px;color:var(--color-primary)}
 .chart-zoom input{width:90px;accent-color:var(--color-primary)}
-.structure-diagram{min-height:240px;padding:clamp(14px,2vw,26px);background:var(--color-table-heading);border:1px solid var(--color-stroke);border-radius:var(--radius-lg);overflow-x:auto}
-.organization-chart{display:grid;justify-items:center;gap:36px;min-width:0;padding:8px 4px 20px}
-.chart-company{position:relative;display:grid;justify-items:center;gap:8px;width:min(100%,320px);padding:20px;background:var(--color-surface);border:1px solid var(--color-stroke);border-radius:var(--radius-md);box-shadow:var(--shadow-card);text-align:center}
+.structure-diagram{min-height:320px;padding:28px 24px 36px;background:var(--color-table-heading);border:1px solid var(--color-stroke);border-radius:var(--radius-md);overflow:auto}
+.organization-chart{display:grid;justify-items:center;gap:42px;min-width:980px;padding:4px 10px 12px}
+.chart-company{position:relative;display:grid;justify-items:center;gap:6px;width:300px;padding:16px 18px;background:var(--color-surface);border:1px solid var(--color-stroke-strong);border-radius:var(--radius-md);box-shadow:var(--shadow-card);text-align:center}
 .chart-company::after{content:'';position:absolute;left:50%;bottom:-37px;width:1px;height:36px;background:var(--color-primary-stroke)}
-.chart-company-label{font-size:12px;color:var(--color-muted)}
-.chart-company strong{font-size:15px;line-height:1.3}
+.chart-company-label{font-size:10px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--color-muted)}
+.chart-company strong{font-size:14px;line-height:1.35}
 .chart-company-count{font-size:12px;color:var(--color-primary)}
-.chart-branches{position:relative;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr));align-items:start;gap:24px;width:100%}
+.chart-branches{position:relative;display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));align-items:start;gap:28px;width:100%}
 .chart-branches::before{content:'';position:absolute;left:8%;right:8%;top:-18px;height:1px;background:var(--color-primary-stroke)}
 .chart-branches :deep(.tree-branch)::before{content:'';position:absolute;top:-24px;left:50%;height:24px;width:1px;background:var(--color-primary-stroke)}
-@media(max-width:640px){.organization-chart{gap:24px}.chart-company::after{bottom:-25px;height:24px}.chart-branches{grid-template-columns:1fr;gap:12px}.chart-branches::before,.chart-branches :deep(.tree-branch)::before{display:none}}
+@media(max-width:900px){
+ .organization-chart{min-width:0;width:100%;gap:30px}
+ .chart-branches{grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:18px}
+}
+@media(max-width:640px){
+ .structure-diagram{padding:16px 12px 22px}
+ .organization-chart{min-width:0;gap:24px}
+ .chart-company{width:min(100%,320px)}
+ .chart-company::after{bottom:-25px;height:24px}
+ .chart-branches{grid-template-columns:1fr;gap:12px}
+ .chart-branches::before,.chart-branches :deep(.tree-branch)::before{display:none}
+}
 .diagram-empty{margin:0;color:var(--color-muted);font-size:13px}
 .hierarchy-label{display:inline-flex;align-items:center;gap:6px;padding-inline-start:clamp(0px,calc(var(--depth) * 15px),180px);max-width:100%;min-width:160px;overflow-wrap:anywhere}
 .branch-mark{color:var(--color-muted)}
 .row-actions{display:flex;align-items:center;gap:6px;flex-wrap:nowrap;min-width:max-content}
-.row-icon-action{display:grid;place-items:center;width:32px;height:32px;border:0;border-radius:6px;color:var(--color-muted);background:transparent;cursor:pointer}
-.row-icon-action:hover{color:var(--color-primary);background:var(--color-accent-soft)}
-.row-icon-action:focus-visible{outline:3px solid var(--color-focus)}
+.row-actions :deep(.base-button){width:32px;min-width:32px;height:32px;min-height:32px;color:var(--color-muted)}
+.row-actions :deep(.base-button:hover){color:var(--color-primary)}
 .org-desktop-table :deep(.table-scroll){border-radius:7px}
 .org-desktop-table :deep(.table-scroll th){padding:11px 12px;font-size:12px}
 .org-desktop-table :deep(.table-scroll td){padding:10px 12px;font-size:13px}
@@ -505,7 +422,6 @@ onMounted(loadCompanies)
 .delete-copy p{margin:0}
 .delete-actions{display:flex;justify-content:flex-end;gap:var(--space-2)}
 @media(max-width:1100px){
- .org-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}
  .section-title{grid-template-columns:minmax(0,1fr)}
  .org-heading-actions{justify-content:flex-start;flex-wrap:wrap}
 }
@@ -514,11 +430,6 @@ onMounted(loadCompanies)
  .org-heading-actions{width:100%;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px}
  .org-heading-actions :deep(.base-select-field){width:100%;max-width:none;grid-column:1}
  .org-heading-actions :deep(button:last-child){grid-column:1/-1;width:100%}
- .org-metrics{gap:8px}
- .org-metrics :deep(.base-card){padding:12px;min-height:100px}
- .org-metric strong{font-size:23px}
- .org-metric span{font-size:10px}
- .org-metric small{font-size:11px}
  .section-title{display:grid;grid-template-columns:1fr;align-items:stretch}
  .section-title h1{font-size:20px}
  .org-mobile-list{display:grid;gap:10px}

@@ -19,10 +19,15 @@ const emit = defineEmits<{ 'update:modelValue': [value: string] }>()
 </template>
 
 <style scoped>
-.view-tabs{display:flex;align-items:stretch;gap:2px;min-width:0;max-width:100%;overflow-x:auto;border-bottom:1px solid var(--color-stroke);scrollbar-width:thin}
-.view-tab{position:relative;display:inline-flex;align-items:center;justify-content:center;min-height:43px;padding:10px 16px;border:0;border-radius:9px 9px 0 0;background:transparent;color:var(--color-muted);font:inherit;font-size:13px;font-weight:600;white-space:nowrap}
-.view-tab:hover{color:var(--color-primary);background:var(--color-soft)}
-.view-tab--active{color:var(--color-primary);background:var(--color-surface)}
-.view-tab--active::after{content:'';height:2px;position:absolute;bottom:0;left:0;right:0;background:var(--color-primary)}
-@media(max-width:480px){.view-tab{padding:10px 12px;font-size:12px}}
+.view-tabs{display:flex;align-items:stretch;gap:0;min-width:0;max-width:100%;overflow-x:auto;border-bottom:1px solid var(--color-stroke);scrollbar-width:thin}
+.view-tab{
+  position:relative;display:inline-flex;align-items:center;justify-content:center;min-height:40px;
+  padding:var(--space-2) var(--space-4);border:0;border-radius:0;background:transparent;
+  color:var(--color-muted);font:inherit;font-size:var(--font-label-size);line-height:var(--line-caption);font-weight:500;white-space:nowrap
+}
+.view-tab:hover{color:var(--color-text);background:var(--color-hover)}
+.view-tab--active{color:var(--color-primary);background:transparent;font-weight:600}
+.view-tab--active::after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:2px;background:var(--color-primary)}
+.view-tab:focus-visible{outline:2px solid var(--color-primary);outline-offset:-2px}
+@media(max-width:480px){.view-tab{padding:var(--space-2) var(--space-3);font-size:12px;line-height:16px}}
 </style>

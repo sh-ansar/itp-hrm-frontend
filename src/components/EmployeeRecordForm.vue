@@ -3,6 +3,7 @@ import { ref } from 'vue'
 import BaseButton from './ui/BaseButton.vue'
 import BaseFormField from './ui/BaseFormField.vue'
 import BaseNotice from './ui/BaseNotice.vue'
+import BaseSelectField from './ui/BaseSelectField.vue'
 import { createEmployee, updateEmployee, type EmployeeRecord } from '../api/personnel'
 
 const props = defineProps<{
@@ -25,6 +26,11 @@ const work_site = ref(props.edit?.work_site ?? '')
 const work_zone = ref(props.edit?.work_zone ?? '')
 const work_team = ref(props.edit?.work_team ?? '')
 const supervisor_name = ref(props.edit?.supervisor_name ?? '')
+const genderOptions = [
+  { id: '', name: 'Не указан' },
+  { id: 'male', name: 'Мужчина' },
+  { id: 'female', name: 'Женщина' },
+]
 const saving = ref(false)
 const error = ref('')
 
@@ -72,9 +78,9 @@ async function submit() {
       <BaseFormField v-model="lastName" label="Фамилия" :disabled="saving" required />
       <BaseFormField v-model="firstName" label="Имя" :disabled="saving" required />
       <BaseFormField v-model="middleName" label="Отчество" :disabled="saving" />
-      <label class="identity-field">Дата рождения<input v-model="birthDate" type="date" :disabled="saving" /></label>
-      <label class="identity-field">Пол<select v-model="gender" :disabled="saving"><option value="">Не указан</option><option value="male">Мужчина</option><option value="female">Женщина</option></select></label>
-      <label class="identity-field">Email<input v-model="email" type="email" :disabled="saving" autocomplete="email" /></label>
+      <BaseFormField v-model="birthDate" label="Дата рождения" type="date" :disabled="saving" />
+      <BaseSelectField v-model="gender" label="Пол" :options="genderOptions" :disabled="saving" />
+      <BaseFormField v-model="email" label="Email" type="email" :disabled="saving" autocomplete="email" />
       <BaseFormField v-model="phone" label="Телефон" :disabled="saving" />
       <BaseFormField v-model="address" label="Адрес" :disabled="saving" />
       <BaseFormField v-model="work_site" label="Объект" :disabled="saving" />
@@ -94,4 +100,4 @@ async function submit() {
 .form-grid{display:grid;grid-template-columns:1fr;gap:18px}
 .actions{position:sticky;bottom:-34px;z-index:2;display:flex;justify-content:flex-end;gap:var(--space-2);flex-wrap:wrap;margin-top:auto;padding:16px 0;background:var(--color-surface);border-top:1px solid var(--color-stroke)}
 @media(max-width:600px){.employee-record-form{min-height:calc(100dvh - 128px)}.actions{bottom:-28px}.actions :deep(button){flex:1}}
-.identity-field{display:grid;gap:8px;font-size:var(--font-label-size);font-weight:600}.identity-field input,.identity-field select{width:100%;height:var(--control-height);border:1px solid var(--color-stroke);border-radius:var(--radius-sm);padding:8px 12px;background:var(--color-surface);color:var(--color-text);font:inherit;font-weight:400}</style>
+</style>

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
-import { Archive, FolderTree, Plus, Search, Users } from 'lucide-vue-next'
+import { FolderTree, Plus, Search } from 'lucide-vue-next'
 import { useRoute, useRouter } from 'vue-router'
 import BaseCard from '../components/ui/BaseCard.vue'
 import BaseButton from '../components/ui/BaseButton.vue'
@@ -13,6 +13,7 @@ import BaseDialog from '../components/ui/BaseDialog.vue'
 import BaseViewTabs from '../components/ui/BaseViewTabs.vue'
 import BaseColumnPicker from '../components/ui/BaseColumnPicker.vue'
 import EmployeeRecordForm from '../components/EmployeeRecordForm.vue'
+import EmployeeMobileList from '../components/EmployeeMobileList.vue'
 import { downloadCsv } from '../utils/exportCsv'
 import { listCompanies, listDepartments, type CompanyRecord } from '../api/organization'
 import {
@@ -39,13 +40,13 @@ const error = ref('')
 const page = ref(1)
 const total = ref(0)
 const lastPage = ref(1)
-const counters = ref({ active: null as number | null, archived: null as number | null, departments: null as number | null })
+const counters = ref({ active: null as number | null, archived: null as number | null, departments: null as number | null, vacancies: null as number | null, expiring: null as number | null })
 let generation = 0
 let counterGeneration = 0
 
 const tabOptions = [
   { id: 'register', label: 'Реестр сотрудников' },
-  { id: 'reserve', label: 'Кадровый резерв и обучение' },
+  { id: 'development', label: 'Кадровый резерв и обучение' },
   { id: 'archive', label: 'Архив сотрудников' },
 ]
 const activeTab = computed(() => statusFilter.value === 'archived' ? 'archive' : 'register')
@@ -120,8 +121,9 @@ function exportSelected() {
 }
 
 function setTab(next: string) {
-  if (next === 'reserve') {
-    router.push({ name: 'reserve' })
+  filtersOpen.value = false
+  if (next === 'development') {
+    router.push({ name: 'employees-development' })
     return
   }
   setStatus(next === 'archive' ? 'archived' : 'all')
@@ -148,7 +150,7 @@ function clearSearch() {
 async function loadCounters() {
   const company = selectedCompany.value
   const current = ++counterGeneration
-  counters.value = { active: null, archived: null, departments: null }
+  counters.value = { active: null, archived: null, departments: null, vacancies: null, expiring: null }
   if (!company) return
   const result = await Promise.allSettled([
     listEmployees(company, 1, '', 'active'),
@@ -156,10 +158,13 @@ async function loadCounters() {
     listDepartments(company),
   ])
   if (current !== counterGeneration) return
+  const summary = result[0].status === 'fulfilled' ? result[0].value.meta.registry_summary : undefined
   counters.value = {
     active: result[0].status === 'fulfilled' ? result[0].value.meta.total : null,
     archived: result[1].status === 'fulfilled' ? result[1].value.meta.total : null,
     departments: result[2].status === 'fulfilled' ? result[2].value.meta.total : null,
+    vacancies: summary?.vacancies ?? null,
+    expiring: summary?.expiring_contracts ?? null,
   }
 }
 
@@ -245,25 +250,25 @@ onMounted(loadCompanies)
         <span>Сотрудники</span>
         <img src="/prototype-icons/Info.svg" class="registry-info-icon" alt="" aria-hidden="true" />
         <strong>{{ counters.active ?? '—' }}</strong>
-        <small>активных сотрудников работают в компании</small>
+        <small>активных сотрудников</small>
       </BaseCard>
       <BaseCard class="registry-metric">
         <span>Отделы</span>
         <img src="/prototype-icons/Info.svg" class="registry-info-icon" alt="" aria-hidden="true" />
         <strong>{{ counters.departments ?? '—' }}</strong>
-        <small>структурных подразделений в компании</small>
+        <small>структурных подразделений</small>
       </BaseCard>
-      <BaseCard class="registry-metric">
+      <BaseCard v-if="counters.vacancies !== null" class="registry-metric">
         <span>Вакантные позиции</span>
         <img src="/prototype-icons/Link-External.svg" class="registry-info-icon" alt="" aria-hidden="true" />
-        <strong class="registry-missing-value">—</strong>
-        <small>данные по штатным вакансиям не подключены</small>
+        <strong>{{ counters.vacancies }}</strong>
+        <small>открытых штатных единиц</small>
       </BaseCard>
-      <BaseCard class="registry-metric">
+      <BaseCard v-if="counters.expiring !== null" class="registry-metric">
         <span>Истекающие договоры</span>
         <img src="/prototype-icons/Filter.svg" class="registry-info-icon" alt="" aria-hidden="true" />
-        <strong class="registry-missing-value">—</strong>
-        <small>данные о сроках договоров не подключены</small>
+        <strong>{{ counters.expiring }}</strong>
+        <small>требуют внимания</small>
       </BaseCard>
     </div>
 
@@ -288,7 +293,7 @@ onMounted(loadCompanies)
               placeholder="Поиск по ФИО или табельному номеру" />
             <BaseButton type="submit" variant="secondary">Найти</BaseButton>
           </form>
-          <BaseButton variant="secondary" @click="filtersOpen = !filtersOpen" :aria-expanded="filtersOpen">
+          <BaseButton v-if="activeTab !== 'archive'" variant="secondary" @click="filtersOpen = !filtersOpen" :aria-expanded="filtersOpen">
             <img src="/prototype-icons/Filter.svg" alt="" class="toolbar-icon" /> Фильтры
           </BaseButton>
           <BaseButton variant="secondary" @click="grouped = !grouped">
@@ -312,7 +317,8 @@ onMounted(loadCompanies)
         </div>
         <p v-if="grouped" class="scope-hint">Сгруппированы записи текущей страницы. Фильтры и количество сотрудников рассчитываются по всему реестру.</p>
 
-        <BaseDataTable :rows="registryRows" :columns="visibleColumns" :group-by="grouped ? groupEmployees : undefined"
+        <div class="registry-desktop-table">
+          <BaseDataTable :rows="registryRows" :columns="visibleColumns" :group-by="grouped ? groupEmployees : undefined"
           row-key="id" caption="Реестр сотрудников выбранной компании" :loading="employeeLoading"
           :empty-title="activeTab === 'archive' ? 'В архиве сотрудников нет' : 'Сотрудники не найдены'"
           :empty-description="search ? 'Уточните поиск или сбросьте запрос.' : 'Нет записей для выбранного фильтра.'">
@@ -337,7 +343,12 @@ onMounted(loadCompanies)
           <template #cell-details="{ row }">
             <RouterLink class="employee-link" :to="{ name: 'employee-detail', params: { company: selectedCompany, employee: row.id } }" :aria-label="'Открыть карточку: ' + row.full_name" :title="'Открыть карточку: ' + row.full_name"><img src="/prototype-icons/Edit.svg" alt="" /><span class="sr-only">Открыть карточку</span></RouterLink>
           </template>
-        </BaseDataTable>
+          </BaseDataTable>
+        </div>
+        <div class="registry-mobile-list">
+          <EmployeeMobileList :rows="registryRows" :company-id="selectedCompany" :selected-ids="selectedIds"
+            :loading="employeeLoading" :grouped="grouped" @select="toggleSelection" />
+        </div>
         <BasePagination :page="page" :last-page="lastPage" :loading="employeeLoading"
           caption="Страницы реестра сотрудников" @previous="page--" @next="page++" />
       </template>
@@ -358,15 +369,15 @@ onMounted(loadCompanies)
 .personnel-page :deep(th){font-weight:600;padding:11px 13px}
 .personnel-page :deep(td){vertical-align:middle;padding:10px 13px}
 .personnel-page :deep(.table-scroll){border-radius:6px;contain:layout paint}
-.registry-metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:var(--space-3)}
+.registry-metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:var(--space-3)}
 .registry-metric{display:grid;grid-template-columns:minmax(0,1fr) auto;align-content:start;gap:5px 9px;align-items:start;min-height:122px}
 .registry-metric span{font-size:12px;text-transform:uppercase;font-weight:700;letter-spacing:.01em;color:var(--color-muted);grid-column:1;grid-row:1;line-height:1.4}
 .registry-metric :deep(svg){color:var(--color-primary);grid-column:2;grid-row:1}
 .registry-metric strong{font-size:25px;color:var(--color-primary);grid-column:1/-1;line-height:1.18}
 .registry-metric small{grid-column:1/-1;color:var(--color-muted);font-size:11px;line-height:1.4}
 .registry-info-icon{grid-column:2;grid-row:1;width:15px;height:15px;object-fit:contain}
-.registry-metric .registry-missing-value{color:var(--color-muted)}
 .registry-card{min-width:0;box-shadow:none;background:transparent;border:0;padding:0}
+.registry-mobile-list{display:none}
 .register-heading{display:flex;align-items:end;justify-content:space-between;gap:16px;margin-bottom:var(--space-4);flex-wrap:wrap}
 .register-heading h1{font-size:21px;letter-spacing:-.025em;margin:0;line-height:1.25}
 .register-heading h1 span{color:var(--color-text);font-size:15px;font-weight:400}
@@ -401,11 +412,16 @@ onMounted(loadCompanies)
 .registry-selection input,.personnel-page :deep(td input[type=checkbox]){accent-color:var(--color-primary);width:15px;height:15px;cursor:pointer}
 .registry-selection :deep(button){min-height:30px;padding:5px 10px}
 .personnel-page :deep(th:first-child),.personnel-page :deep(td:first-child){width:45px;text-align:center;padding-left:10px;padding-right:10px}
-.registry-filters{display:flex;gap:12px;align-items:end;flex-wrap:wrap;margin:-2px 0 14px;padding:12px 14px;border:1px solid var(--color-stroke);border-radius:6px;background:#fff}
+.registry-filters{display:flex;gap:12px;align-items:end;flex-wrap:wrap;margin:-2px 0 14px;padding:12px 14px;border:1px solid var(--color-stroke);border-radius:6px;background:var(--color-surface)}
 .registry-toolbar .toolbar-icon{width:16px;height:16px;object-fit:contain}
 .scope-hint{color:var(--color-muted);font-size:12px;line-height:1.5;margin:0 0 12px}
 .sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap}
 @media(max-width:1100px){.registry-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:700px){
+  .registry-desktop-table{display:none}
+  .registry-mobile-list{display:block}
+  .registry-toolbar :deep(.column-settings){display:none}
+}
 @media(max-width:650px){
   .registry-metrics{gap:8px}
   .registry-metric{min-height:118px}

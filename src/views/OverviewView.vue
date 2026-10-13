@@ -9,6 +9,7 @@ import { listCompanies, listDepartments } from '../api/organization'
 import { listEmployees, type EmployeeRecord } from '../api/personnel'
 import { listPersonnelActions, type PersonnelActionRow } from '../api/personnelActions'
 import { getStaffingPlan, listStaffingPlans } from '../api/staffing'
+import { preferredApprovedStaffingPlan } from '../utils/staffingPlanChoice'
 
 const companyId = ref('')
 const companyName = ref('')
@@ -62,12 +63,10 @@ async function load() {
       summary.value.actions = results[2].value.meta.total
     }
     if (results[3].status === 'fulfilled') {
-      const latestApproved = results[3].value.data
-        .filter(plan => plan.status === 'approved')
-        .sort((a, b) => b.valid_from.localeCompare(a.valid_from))[0]
-      if (latestApproved) {
+      const preferred = preferredApprovedStaffingPlan(results[3].value.data)
+      if (preferred) {
         try {
-          const detail = await getStaffingPlan(company.id, latestApproved.id)
+          const detail = await getStaffingPlan(company.id, preferred.id)
           summary.value.vacancies = detail.lines.reduce(
             (total, line) => total + Number(line.vacant_units || 0), 0)
         } catch { summary.value.vacancies = null }

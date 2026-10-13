@@ -27,7 +27,7 @@ test('HR creates a document draft, uploads private PDF and downloads it at mobil
     await draft.waitFor()
     await draft.getByLabel('Поиск сотрудника').fill('E2E-001')
     await draft.getByRole('button', { name: 'Найти' }).click()
-    await draft.getByLabel('Сотрудник').locator('option').filter({ hasText: 'E2E-001' }).waitFor()
+    await draft.getByLabel('Сотрудник').locator('option').filter({ hasText: 'E2E-001' }).waitFor({ state: 'attached' })
     await draft.getByLabel('Сотрудник').selectOption({ index: 1 })
     await draft.getByLabel('Вид документа').selectOption('order')
     await draft.getByLabel('Название документа').fill('Приказ о переводе E2E')

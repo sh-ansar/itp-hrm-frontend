@@ -61,7 +61,7 @@ test('HR creates a document draft, uploads private PDF and downloads it at mobil
       return { status: response.status, type: response.headers.get('content-type'), bytes: (await response.arrayBuffer()).byteLength }
     }, url)
     assert.equal(downloaded.status, 200)
-    assert.match(downloaded.type ?? '', /application\\/pdf/)
+    assert.ok(downloaded.type?.includes('application/pdf'))
     assert.ok(downloaded.bytes > 10)
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1), false)
   } finally {

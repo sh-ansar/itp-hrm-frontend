@@ -9,6 +9,7 @@ import BaseSelectField from '../components/ui/BaseSelectField.vue'
 import BaseViewTabs from '../components/ui/BaseViewTabs.vue'
 import { listCompanies, type CompanyRecord } from '../api/organization'
 import { listEmployees, type EmployeeRecord } from '../api/personnel'
+import { getLeaves, type LeaveResponse, type LeaveRow } from '../api/leaves'
 import { localTodayISO } from '../utils/localDate'
 import {
   buildDemoLeaves,
@@ -27,6 +28,8 @@ const company = ref('')
 const year = ref(localTodayISO().slice(0, 4))
 const activeTab = ref<LeaveTab>('schedule')
 const employees = ref<EmployeeRecord[]>([])
+const productionLeaves = ref<LeaveRow[]>([])
+const productionMeta = ref<LeaveResponse['meta'] | null>(null)
 const loadingCompanies = ref(false)
 const loading = ref(false)
 const error = ref('')
@@ -44,8 +47,41 @@ const yearOptions = Array.from({ length: 5 }, (_, index) => {
 })
 
 const selectedCompany = computed(() => companies.value.find(item => item.id === company.value) ?? null)
-const rows = computed(() => demoMode ? buildDemoLeaves(employees.value, Number(year.value)) : [])
-const summary = computed(() => leaveSummary(rows.value))
+const rows = computed<DemoLeaveRow[]>(() => {
+  if (demoMode) return buildDemoLeaves(employees.value, Number(year.value))
+  return productionLeaves.value.map(row => ({
+    id: row.id,
+    employee_id: row.employee_id,
+    personnel_number: row.personnel_number,
+    full_name: [row.last_name, row.first_name, row.middle_name].filter(Boolean).join(' '),
+    department: row.department_name || 'Без подразделения',
+    position: row.position_name || 'Без должности',
+    leave_type: row.leave_type_name,
+    started_on: row.started_on,
+    ended_on: row.ended_on,
+    days: row.days,
+    status: row.status,
+    schedule_state: row.schedule_state,
+  }))
+})
+const summary = computed(() => {
+  if (demoMode) {
+    const value = leaveSummary(rows.value)
+    return {
+      ...value,
+      employees: new Set(rows.value.map(row => row.employee_id)).size,
+    }
+  }
+  return productionMeta.value?.summary ?? {
+    total: 0,
+    employees: 0,
+    days: 0,
+    planned: 0,
+    ongoing: 0,
+    completed: 0,
+    shifted: 0,
+  }
+})
 const monthRows = computed(() => leaveMonths(rows.value))
 const typeRows = computed(() => leaveTypeRows(rows.value))
 const maxMonthEmployees = computed(() => Math.max(1, ...monthRows.value.map(row => row.employees)))
@@ -108,34 +144,67 @@ async function loadCompanies() {
   }
 }
 
-async function loadEmployees() {
+async function loadAllLeaves(companyId: string, selectedYear: number) {
+  const first = await getLeaves(companyId, selectedYear, 1)
+  const resultRows = [...first.data]
+  const remainingPages = Array.from(
+    { length: Math.max(0, first.meta.last_page - 1) },
+    (_, index) => index + 2,
+  )
+  for (let index = 0; index < remainingPages.length; index += 5) {
+    const batch = remainingPages.slice(index, index + 5)
+    const results = await Promise.all(batch.map(page => getLeaves(companyId, selectedYear, page)))
+    for (const result of results) resultRows.push(...result.data)
+  }
+  return { rows: resultRows, meta: first.meta }
+}
+
+async function loadWorkspace() {
   const companyId = company.value
   const current = ++generation
   employees.value = []
+  productionLeaves.value = []
+  productionMeta.value = null
   if (!companyId) return
+
   loading.value = true
   error.value = ''
   try {
-    const first = await listEmployees(companyId, 1, '', 'active')
-    if (current !== generation) return
-    const resultRows = [...first.data]
-    const lastPage = Math.min(first.meta.last_page, 20)
-    for (let index = 2; index <= lastPage; index += 5) {
-      const batch = Array.from({ length: Math.min(5, lastPage - index + 1) }, (_, offset) => index + offset)
-      const results = await Promise.all(batch.map(page => listEmployees(companyId, page, '', 'active')))
+    if (demoMode) {
+      const first = await listEmployees(companyId, 1, '', 'active')
       if (current !== generation) return
-      for (const result of results) resultRows.push(...result.data)
+      const resultRows = [...first.data]
+      const lastPage = Math.min(first.meta.last_page, 20)
+      for (let index = 2; index <= lastPage; index += 5) {
+        const batch = Array.from(
+          { length: Math.min(5, lastPage - index + 1) },
+          (_, offset) => index + offset,
+        )
+        const results = await Promise.all(batch.map(page => listEmployees(companyId, page, '', 'active')))
+        if (current !== generation) return
+        for (const result of results) resultRows.push(...result.data)
+      }
+      employees.value = resultRows
+      return
     }
-    employees.value = resultRows
+
+    const selectedYear = Number(year.value)
+    const result = await loadAllLeaves(companyId, selectedYear)
+    if (current !== generation) return
+    productionLeaves.value = result.rows
+    productionMeta.value = result.meta
   } catch (cause) {
     if (current !== generation) return
-    error.value = cause instanceof Error ? cause.message : 'Не удалось загрузить сотрудников'
+    error.value = cause instanceof Error ? cause.message : 'Не удалось загрузить график отпусков'
   } finally {
     if (current === generation) loading.value = false
   }
 }
 
-watch(company, loadEmployees)
+watch(company, loadWorkspace)
+watch(year, () => {
+  if (!demoMode) loadWorkspace()
+})
 onMounted(loadCompanies)
 </script>
 
@@ -162,11 +231,11 @@ onMounted(loadCompanies)
         </div>
       </div>
 
-      <BaseNotice v-if="!demoMode" tone="info">
-        Production-источник отпусков ещё не подключён. До появления backend-контракта раздел работает без данных и без операций записи.
-      </BaseNotice>
-      <BaseNotice v-else tone="info">
+      <BaseNotice v-if="demoMode" tone="info">
         Демонстрационный график формируется из доступных сотрудников и не записывается в production.
+      </BaseNotice>
+      <BaseNotice v-else-if="productionMeta && productionMeta.total === 0" tone="info">
+        На {{ year }} год записи графика отпусков ещё не загружены. Система не формирует плановые даты автоматически.
       </BaseNotice>
 
       <BaseViewTabs :model-value="activeTab" :options="tabs" label="Разделы графика отпусков"
@@ -176,8 +245,8 @@ onMounted(loadCompanies)
         <BaseCard class="summary-card">
           <UsersRound :size="19" aria-hidden="true" />
           <span>Сотрудники</span>
-          <strong>{{ loading ? '…' : summary.total }}</strong>
-          <small>в графике года</small>
+          <strong>{{ loading ? '…' : summary.employees }}</strong>
+          <small>уникальных сотрудников</small>
         </BaseCard>
         <BaseCard class="summary-card">
           <CalendarDays :size="19" aria-hidden="true" />

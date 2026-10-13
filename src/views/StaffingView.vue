@@ -87,7 +87,7 @@ const searchLines = ref('')
 const grouped = ref(false)
 
 const selectedPlan = computed(() => detail.value?.data ?? plans.value.find(item => item.id === selectedPlanId.value) ?? null)
-const canEdit = computed(() => !!detail.value?.meta.staffing_writes_enabled)
+const canEdit = computed(() => !!detail.value?.meta.staffing_writes_enabled && selectedPlan.value?.status === 'draft')
 const totals = computed(() => {
   const lines = detail.value?.lines ?? []
   return lines.reduce((sum, line) => ({

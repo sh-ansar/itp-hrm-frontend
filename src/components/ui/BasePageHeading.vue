@@ -14,6 +14,8 @@ defineProps<{ title: string; description: string }>()
 .base-page-heading{display:flex;align-items:center;justify-content:space-between;gap:var(--space-4);flex-wrap:wrap}
 .base-page-heading__copy{min-width:0}
 .base-page-heading__copy p{margin:0;font-size:var(--font-body-size)}
-.base-page-heading__actions{display:flex;gap:var(--space-2)}
+.base-page-heading__actions{display:flex;gap:var(--space-2);flex-wrap:wrap;min-width:0}
+.base-page-heading__copy{max-width:760px}
+.base-page-heading__copy p{line-height:1.5}
 @media(max-width:600px){.base-page-heading{align-items:flex-start}.base-page-heading__actions{width:100%}.base-page-heading__actions :deep(button){width:100%}}
 </style>

@@ -7,10 +7,11 @@ import BaseDataTable from '../components/ui/BaseDataTable.vue'
 import BaseDialog from '../components/ui/BaseDialog.vue'
 import BaseLoadingState from '../components/ui/BaseLoadingState.vue'
 import BaseNotice from '../components/ui/BaseNotice.vue'
-import BasePageHeading from '../components/ui/BasePageHeading.vue'
 import BasePagination from '../components/ui/BasePagination.vue'
 import BaseSelectField from '../components/ui/BaseSelectField.vue'
+import BaseViewTabs from '../components/ui/BaseViewTabs.vue'
 import PersonnelActionForm from '../components/PersonnelActionForm.vue'
+import PersonnelActionMobileList from '../components/PersonnelActionMobileList.vue'
 import { listCompanies, type CompanyRecord } from '../api/organization'
 import {
   listPersonnelActions,
@@ -18,207 +19,262 @@ import {
   type PersonnelActionType,
 } from '../api/personnelActions'
 
-const companies=ref<CompanyRecord[]>([])
-const company=ref('')
-const rows=ref<PersonnelActionRow[]>([])
-const companyBusy=ref(false)
-const busy=ref(false)
-const error=ref('')
-const page=ref(1)
-const pages=ref(1)
-const total=ref(0)
-const writesEnabled=ref(false)
-const typeFilter=ref('')
-const createOpen=ref(false)
+type ActionFilter = 'all' | PersonnelActionType
 
-const selectedCompany=computed(()=>companies.value.find(item=>item.id===company.value)??null)
-const filterOptions=[
-  {id:'all',name:'Все действия'},
-  {id:'hire',name:'Приём'},
-  {id:'transfer',name:'Перевод'},
-  {id:'termination',name:'Увольнение'},
+const companies = ref<CompanyRecord[]>([])
+const company = ref('')
+const rows = ref<PersonnelActionRow[]>([])
+const companyBusy = ref(false)
+const busy = ref(false)
+const error = ref('')
+const page = ref(1)
+const pages = ref(1)
+const total = ref(0)
+const writesEnabled = ref(false)
+const typeFilter = ref<ActionFilter>('all')
+const createOpen = ref(false)
+const summary = ref<{ hire:number; transfer:number; termination:number } | null>(null)
+
+const selectedCompany = computed(() => companies.value.find(item => item.id === company.value) ?? null)
+const actionTabs = [
+  { id:'all', label:'Все действия' },
+  { id:'hire', label:'Приём' },
+  { id:'transfer', label:'Перевод' },
+  { id:'termination', label:'Увольнение' },
+]
+const columns = [
+  { key:'effective_on', label:'Дата' },
+  { key:'action_type', label:'Действие' },
+  { key:'employee', label:'Сотрудник' },
+  { key:'transition', label:'Изменение' },
+  { key:'basis_reference', label:'Основание' },
 ]
 
-const columns=[
-  {key:'effective_on',label:'Дата'},
-  {key:'action_type',label:'Действие'},
-  {key:'employee',label:'Сотрудник'},
-  {key:'transition',label:'Изменение'},
-  {key:'basis_reference',label:'Основание'},
-]
-
-function actionLabel(type:PersonnelActionType){
-  return type==='hire'?'Приём':type==='transfer'?'Перевод':'Увольнение'
+function actionLabel(type: PersonnelActionType) {
+  return type === 'hire' ? 'Приём' : type === 'transfer' ? 'Перевод' : 'Увольнение'
 }
-function employeeName(row:PersonnelActionRow){
+function employeeName(row: PersonnelActionRow) {
   return [row.last_name,row.first_name,row.middle_name].filter(Boolean).join(' ')
 }
-function transitionText(row:PersonnelActionRow){
-  const from=[row.source_position_name,row.source_department_name].filter(Boolean).join(' · ')
-  const to=[row.target_position_name,row.target_department_name].filter(Boolean).join(' · ')
-  if(row.action_type==='hire') return to||'Назначение не найдено'
-  if(row.action_type==='termination') return from?from+' → прекращено':'Назначение прекращено'
-  return `${from||'—'} → ${to||'—'}`
+function transitionText(row: PersonnelActionRow) {
+  const from = [row.source_position_name,row.source_department_name].filter(Boolean).join(' · ')
+  const to = [row.target_position_name,row.target_department_name].filter(Boolean).join(' · ')
+  if (row.action_type === 'hire') return to || 'Назначение не найдено'
+  if (row.action_type === 'termination') return from ? from + ' → прекращено' : 'Назначение прекращено'
+  return `${from || '—'} → ${to || '—'}`
+}
+function displayDate(value: unknown): string {
+  if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}/.test(value)) return String(value ?? '—')
+  return value.slice(8,10) + '.' + value.slice(5,7) + '.' + value.slice(0,4)
+}
+function setActionFilter(value: string) {
+  typeFilter.value = (['hire','transfer','termination'].includes(value) ? value : 'all') as ActionFilter
 }
 
-async function loadCompanies(){
-  companyBusy.value=true
-  error.value=''
-  try{
-    const result=await listCompanies()
-    companies.value=result.data
-    if(!companies.value.some(item=>item.id===company.value)){
-      company.value=companies.value[0]?.id??''
-    }
-  }catch(cause){
-    error.value=cause instanceof Error?cause.message:'Не удалось загрузить компании'
-    companies.value=[]
-    company.value=''
-  }finally{companyBusy.value=false}
+async function loadCompanies() {
+  companyBusy.value = true
+  error.value = ''
+  try {
+    const result = await listCompanies()
+    companies.value = result.data
+    if (!companies.value.some(item => item.id === company.value))
+      company.value = companies.value[0]?.id ?? ''
+  } catch (cause) {
+    error.value = cause instanceof Error ? cause.message : 'Не удалось загрузить компании'
+    companies.value = []
+    company.value = ''
+  } finally {
+    companyBusy.value = false
+  }
 }
 
-async function loadActions(){
-  if(!company.value)return
-  busy.value=true
-  error.value=''
-  try{
-    const result=await listPersonnelActions(
-      company.value,
+let generation = 0
+async function loadActions() {
+  const companyId = company.value
+  const current = ++generation
+  if (!companyId) return
+  busy.value = true
+  error.value = ''
+  try {
+    const result = await listPersonnelActions(
+      companyId,
       page.value,
-      typeFilter.value==='all'||!typeFilter.value?'':typeFilter.value as PersonnelActionType,
+      typeFilter.value === 'all' ? '' : typeFilter.value,
     )
-    rows.value=result.data
-    pages.value=result.meta.last_page
-    total.value=result.meta.total
-    writesEnabled.value=result.meta.personnel_actions_writes_enabled
-  }catch(cause){
-    error.value=cause instanceof Error?cause.message:'Не удалось загрузить кадровые действия'
-    rows.value=[]
-    pages.value=1
-    total.value=0
-    writesEnabled.value=false
-  }finally{busy.value=false}
+    if (current !== generation || companyId !== company.value) return
+    rows.value = result.data
+    pages.value = result.meta.last_page
+    total.value = result.meta.total
+    writesEnabled.value = result.meta.personnel_actions_writes_enabled
+    summary.value = result.meta.summary ?? null
+  } catch (cause) {
+    if (current !== generation) return
+    error.value = cause instanceof Error ? cause.message : 'Не удалось загрузить кадровые действия'
+    rows.value = []
+    pages.value = 1
+    total.value = 0
+    writesEnabled.value = false
+    summary.value = null
+  } finally {
+    if (current === generation) busy.value = false
+  }
 }
 
-async function saved(){
-  createOpen.value=false
-  page.value=1
+async function saved() {
+  createOpen.value = false
+  page.value = 1
   await loadActions()
 }
 
-watch(company,()=>{page.value=1;typeFilter.value='all'})
-watch([company,page,typeFilter],loadActions)
+watch(company, () => {
+  page.value = 1
+  typeFilter.value = 'all'
+})
+watch(typeFilter, () => { page.value = 1 })
+watch([company,page,typeFilter], loadActions)
 onMounted(loadCompanies)
 </script>
 
 <template>
   <section class="actions-page">
-    <BasePageHeading
-      title="Кадровые действия"
-      description="Проведённые операции приёма, перевода и увольнения с основаниями и неизменяемым журналом."
-    >
-      <BaseButton v-if="writesEnabled" @click="createOpen=true"><Plus :size="17" /> Новое действие</BaseButton>
-    </BasePageHeading>
-
-    <BaseNotice v-if="error" tone="error">{{ error }}</BaseNotice>
-
-    <BaseCard>
-      <BaseLoadingState v-if="companyBusy" label="Загрузка компаний" />
-      <div v-else-if="companies.length" class="toolbar">
-        <BaseSelectField v-model="company" label="Компания" :options="companies" />
-        <BaseSelectField v-model="typeFilter" label="Тип действия" :options="filterOptions" />
-        <div class="summary">
-          <span>Операций</span>
-          <strong>{{ total }}</strong>
-          <small>{{ selectedCompany?.name }}</small>
-        </div>
-      </div>
-      <BaseNotice v-else-if="!error" tone="info">Нет доступных компаний.</BaseNotice>
-    </BaseCard>
-
-    <div class="metrics">
-      <BaseCard>
-        <LogIn :size="19" />
-        <span>Приём</span>
-        <strong>{{ rows.filter(row=>row.action_type==='hire').length }}</strong>
-      </BaseCard>
-      <BaseCard>
-        <ArrowRightLeft :size="19" />
-        <span>Перевод</span>
-        <strong>{{ rows.filter(row=>row.action_type==='transfer').length }}</strong>
-      </BaseCard>
-      <BaseCard>
-        <LogOut :size="19" />
-        <span>Увольнение</span>
-        <strong>{{ rows.filter(row=>row.action_type==='termination').length }}</strong>
-      </BaseCard>
+    <div class="actions-breadcrumb">
+      <img src="/prototype-icons/Home.svg" alt="" aria-hidden="true" />
+      <span>/</span><strong>Кадровые процессы</strong>
     </div>
 
-    <BaseCard v-if="company">
-      <div class="section-heading">
+    <BaseNotice v-if="error" tone="error">{{ error }}</BaseNotice>
+    <BaseLoadingState v-if="companyBusy" label="Загрузка компаний" />
+    <BaseNotice v-else-if="!companies.length && !error" tone="info">Нет доступных компаний.</BaseNotice>
+
+    <template v-else-if="companies.length">
+      <div class="actions-heading">
         <div>
-          <h2>Кадровые действия</h2>
-          <p class="muted">Проведённые записи не редактируются и не удаляются.</p>
+          <h1>Кадровые процессы</h1>
+          <p>{{ selectedCompany?.name }}</p>
         </div>
-        <span class="muted">Страница {{ page }} из {{ pages }}</span>
+        <div class="actions-heading-controls">
+          <BaseSelectField v-model="company" label="Компания" :options="companies" />
+          <BaseButton v-if="writesEnabled" @click="createOpen = true">
+            <Plus :size="17" /> Новое действие
+          </BaseButton>
+        </div>
       </div>
 
-      <BaseDataTable
-        :rows="rows"
-        :columns="columns"
-        row-key="id"
-        :loading="busy"
-        caption="Журнал кадровых действий"
-        empty-title="Кадровых действий пока нет"
-        empty-description="Проведённые операции приёма, перевода и увольнения появятся здесь."
-      >
-        <template #cell-action_type="{ row }">
-          <span class="action-pill" :class="'action-pill--'+row.action_type">{{ actionLabel(row.action_type) }}</span>
-        </template>
-        <template #cell-employee="{ row }">
-          <div class="employee-cell"><strong>{{ employeeName(row) }}</strong><span>{{ row.personnel_number }}</span></div>
-        </template>
-        <template #cell-transition="{ row }">{{ transitionText(row) }}</template>
-      </BaseDataTable>
+      <BaseViewTabs :model-value="typeFilter" :options="actionTabs"
+        label="Тип кадрового действия" @update:model-value="setActionFilter" />
 
-      <BasePagination
-        :page="page"
-        :last-page="pages"
-        :loading="busy"
-        caption="Страницы журнала кадровых действий"
-        @previous="page--"
-        @next="page++"
-      />
-    </BaseCard>
+      <div v-if="summary" class="action-metrics" aria-label="Сводка кадровых действий">
+        <BaseCard class="action-metric">
+          <LogIn :size="18" aria-hidden="true" />
+          <span>Приём</span>
+          <strong>{{ summary.hire }}</strong>
+        </BaseCard>
+        <BaseCard class="action-metric">
+          <ArrowRightLeft :size="18" aria-hidden="true" />
+          <span>Перевод</span>
+          <strong>{{ summary.transfer }}</strong>
+        </BaseCard>
+        <BaseCard class="action-metric">
+          <LogOut :size="18" aria-hidden="true" />
+          <span>Увольнение</span>
+          <strong>{{ summary.termination }}</strong>
+        </BaseCard>
+      </div>
 
-    <BaseDialog :open="createOpen" title="Новое кадровое действие" @close="createOpen=false">
-      <PersonnelActionForm v-if="company" :company-id="company" @saved="saved" @cancelled="createOpen=false" />
+      <BaseCard class="action-register">
+        <div class="section-heading">
+          <div>
+            <h2>{{ actionTabs.find(item => item.id === typeFilter)?.label }}</h2>
+            <p>Проведённые кадровые операции и основания.</p>
+          </div>
+          <span>{{ total }} операций</span>
+        </div>
+
+        <div class="actions-desktop">
+          <BaseDataTable
+            :rows="rows"
+            :columns="columns"
+            row-key="id"
+            :loading="busy"
+            caption="Журнал кадровых действий"
+            empty-title="Кадровых действий пока нет"
+            empty-description="Проведённые операции появятся здесь."
+          >
+            <template #cell-effective_on="{ value }">{{ displayDate(value) }}</template>
+            <template #cell-action_type="{ row }">
+              <span class="action-pill" :class="'action-pill--' + row.action_type">{{ actionLabel(row.action_type) }}</span>
+            </template>
+            <template #cell-employee="{ row }">
+              <div class="employee-cell">
+                <RouterLink :to="{ name:'employee-detail', params:{ company, employee:row.employee_id } }">
+                  {{ employeeName(row) }}
+                </RouterLink>
+                <span>{{ row.personnel_number }}</span>
+              </div>
+            </template>
+            <template #cell-transition="{ row }">{{ transitionText(row) }}</template>
+            <template #cell-basis_reference="{ value }">{{ value || '—' }}</template>
+          </BaseDataTable>
+        </div>
+
+        <div class="actions-mobile">
+          <PersonnelActionMobileList :rows="rows" :company-id="company" :loading="busy" />
+        </div>
+
+        <BasePagination
+          :page="page"
+          :last-page="pages"
+          :loading="busy"
+          caption="Страницы журнала кадровых действий"
+          @previous="page--"
+          @next="page++"
+        />
+      </BaseCard>
+    </template>
+
+    <BaseDialog :open="createOpen" title="Новое кадровое действие" @close="createOpen = false">
+      <PersonnelActionForm v-if="company" :company-id="company" @saved="saved" @cancelled="createOpen = false" />
     </BaseDialog>
   </section>
 </template>
 
 <style scoped>
-.actions-page{display:grid;grid-template-columns:minmax(0,1fr);gap:var(--space-4);min-width:0;max-width:100%;overflow-x:clip}
-.actions-page>*{min-width:0;max-width:100%}
-.toolbar{display:grid;grid-template-columns:minmax(220px,1fr) minmax(180px,.7fr) auto;gap:var(--space-4);align-items:end;min-width:0}
-.summary{display:grid;gap:2px;min-width:0;padding:10px 14px;border-radius:var(--radius-md);background:var(--color-soft)}
-.summary span,.summary small{font-size:11px;color:var(--color-muted)}
-.summary strong{font-size:20px}
-.metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--space-4)}
-.metrics :deep(.base-card){display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center}
-.metrics span{font-size:12px;color:var(--color-muted)}
-.metrics strong{font-size:22px}
-.section-heading{display:flex;align-items:end;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:var(--space-4)}
-.section-heading h2{margin:0;font-size:var(--font-section-heading)}
-.section-heading .muted{margin:5px 0 0}
-.action-pill{display:inline-flex;padding:5px 8px;border-radius:999px;font-size:11px;font-weight:700;white-space:nowrap}
+.actions-page{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;min-width:0;max-width:100%}
+.actions-breadcrumb{display:flex;align-items:center;gap:10px;min-height:24px;color:var(--color-muted);font-size:12px}
+.actions-breadcrumb img{width:15px;height:15px}
+.actions-breadcrumb strong{color:var(--color-text);font-weight:500}
+.actions-heading{display:flex;align-items:end;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.actions-heading h1{margin:0;color:var(--color-text);font-size:21px;line-height:1.25;font-weight:700;letter-spacing:-.025em}
+.actions-heading p{margin:6px 0 0;color:var(--color-muted);font-size:12px}
+.actions-heading-controls{display:flex;align-items:end;justify-content:flex-end;gap:10px;flex-wrap:wrap}
+.actions-heading-controls :deep(.base-select-field){width:220px;max-width:220px}
+.action-metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.action-metric{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:9px;min-height:72px}
+.action-metric svg{color:var(--color-primary)}
+.action-metric span{color:var(--color-muted);font-size:12px}
+.action-metric strong{color:var(--color-text);font-size:21px}
+.action-register{min-width:0}
+.section-heading{display:flex;align-items:end;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+.section-heading h2{margin:0;color:var(--color-text);font-size:16px;line-height:1.35;font-weight:600}
+.section-heading p{margin:4px 0 0;color:var(--color-muted);font-size:11px}
+.section-heading>span{color:var(--color-muted);font-size:11px}
+.employee-cell{display:grid;gap:3px;min-width:170px}
+.employee-cell a{color:var(--color-text);font-size:13px;font-weight:600}
+.employee-cell a:hover{color:var(--color-primary)}
+.employee-cell span{color:var(--color-muted);font-size:11px}
+.action-pill{display:inline-flex;padding:5px 8px;border-radius:999px;font-size:10px;line-height:1;font-weight:700;white-space:nowrap}
 .action-pill--hire{background:var(--color-success-surface);color:var(--color-success)}
 .action-pill--transfer{background:var(--color-accent-soft);color:var(--color-primary)}
 .action-pill--termination{background:var(--color-warning-surface);color:var(--color-warning)}
-.employee-cell{display:grid;gap:2px;min-width:0;overflow-wrap:anywhere}
-.section-heading>div{min-width:0;overflow-wrap:anywhere}
-.summary{overflow-wrap:anywhere}
-.employee-cell span{font-size:11px;color:var(--color-muted)}
-@media(max-width:850px){.toolbar{grid-template-columns:1fr 1fr}.summary{grid-column:1/-1}.metrics{grid-template-columns:1fr}}
-@media(max-width:600px){.toolbar{grid-template-columns:1fr}.summary{grid-column:auto}}
+.actions-mobile{display:none}
+@media(max-width:800px){
+  .actions-desktop{display:none}
+  .actions-mobile{display:block}
+  .action-metrics{grid-template-columns:1fr}
+}
+@media(max-width:650px){
+  .actions-heading-controls{display:grid;grid-template-columns:1fr;width:100%}
+  .actions-heading-controls :deep(.base-select-field){width:100%;max-width:none}
+  .actions-heading-controls :deep(.base-button){width:100%}
+}
 </style>

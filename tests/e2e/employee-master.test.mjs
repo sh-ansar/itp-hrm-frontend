@@ -36,7 +36,7 @@ test('HR creates and edits an employee master record from the redesigned UI', as
     await createDialog.getByRole('button', { name: 'Добавить сотрудника' }).click()
 
     await page.locator('.employee-page-heading h1').waitFor()
-    await page.getByText('Новый Сотрудник Тестовый').waitFor()
+    await page.locator('.employee-page-heading h1').getByText('Новый Сотрудник Тестовый').waitFor()
 
     await page.getByRole('button', { name: 'Изменить карточку' }).click()
     const editDialog = page.getByRole('dialog', { name: 'Основные данные сотрудника' })
@@ -45,7 +45,7 @@ test('HR creates and edits an employee master record from the redesigned UI', as
     await editDialog.getByLabel('Фамилия').fill('Обновлённый')
     await editDialog.getByRole('button', { name: 'Сохранить карточку' }).click()
 
-    await page.getByText('Обновлённый Сотрудник Тестовый').waitFor()
+    await page.locator('.employee-page-heading h1').getByText('Обновлённый Сотрудник Тестовый').waitFor()
 
     await page.goto('/employees')
     await page.getByRole('heading', { name: 'Реестр сотрудников' }).waitFor()

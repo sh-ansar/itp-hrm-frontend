@@ -36,7 +36,7 @@ test('organization table and nested chart switch without losing company scope or
     await page.getByText('Подразделения по запросу не найдены.').waitFor()
     await diagramSearch.fill('')
     await navigation.getByRole('button', { name: 'Таблица' }).click()
-    await page.getByRole('table', { name: 'Подразделения компании' }).waitFor()
+    await page.locator('.org-mobile-item').filter({ hasText: 'Visible Finance' }).first().waitFor()
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1), false)
   } finally {
     await context.close()

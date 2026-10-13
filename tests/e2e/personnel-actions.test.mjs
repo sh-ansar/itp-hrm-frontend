@@ -22,7 +22,7 @@ async function openActionForSynthetic(page){
   await dialog.getByRole('button',{name:'Найти'}).click()
   const select=dialog.getByLabel('Сотрудник')
   await select.waitFor()
-  await select.selectOption({label:/Synthetic Employee/})
+  await select.selectOption({label:'Synthetic Employee · E2E-001'})
   await dialog.getByText(/Текущее назначение|Открытого назначения нет/).waitFor()
   return dialog
 }

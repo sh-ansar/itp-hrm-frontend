@@ -49,7 +49,7 @@ test('HR creates edits and deletes an unused position directory record', async (
     await deleteDialog.waitFor()
     await deleteDialog.getByRole('button', { name: 'Удалить' }).click()
 
-    await page.getByRole('row', { name: /E2E Senior Analyst/ }).waitFor({ state: 'detached' })
+    await page.getByRole('table', { name: 'Справочник должностей компании' }).getByRole('row', { name: /E2E Senior Analyst/ }).waitFor({ state: 'detached' })
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1), false)
   } finally {
     await context.close()

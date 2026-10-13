@@ -24,6 +24,7 @@ test('HR creates edits and atomically transfers assignments at mobile width', as
     await page.getByRole('row', { name: /E2E-001/ }).getByRole('link', { name: 'Открыть' }).click()
     await page.getByRole('heading', { name: 'Карточка сотрудника' }).waitFor()
 
+    await page.getByRole('button', { name: 'Добавить назначение' }).click()
     const form = page.getByRole('region', { name: 'Новое назначение' })
     await form.waitFor()
     await form.getByLabel('Подразделение').selectOption('33333333-3333-4333-8333-333333333333')

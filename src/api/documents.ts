@@ -45,6 +45,7 @@ export interface DocumentListResponse {
 }
 export interface DocumentDraft {
   employee_id: string
+  personnel_action_id?: string | null
   document_type: DocumentType
   document_number: string | null
   title: string
@@ -77,6 +78,7 @@ export function listDocuments(
 export function createDocumentDraft(companyId: string, data: DocumentDraft): Promise<DocumentCreated> {
   validateId(companyId)
   validateId(data.employee_id)
+  if (data.personnel_action_id) validateId(data.personnel_action_id)
   if (!documentTypes.some(type => type.id === data.document_type)) throw new Error('Выберите тип документа')
   if (!data.title.trim()) throw new Error('Укажите название документа')
   return apiRequest<DocumentCreated>(`/companies/${companyId}/documents`, {
@@ -102,12 +104,14 @@ export async function uploadDocumentPdf(
   validateId(companyId)
   validateId(documentId)
   if (!Number.isSafeInteger(revision) || revision < 1) throw new Error('Обновите документ перед прикреплением файла')
-  if (import.meta.env.VITE_DEMO_MODE === 'true') {
-    await new Promise(resolve => setTimeout(resolve, 120))
-    return { data: { id: documentId, has_file: true, revision: revision + 1 } }
-  }
   if (file.size < 1 || file.size > 5 * 1024 * 1024 || file.type !== 'application/pdf') {
     throw new Error('Выберите PDF-файл размером до 5 МБ')
+  }
+  if (import.meta.env.VITE_DEMO_MODE === 'true') {
+    return apiRequest(`/companies/${companyId}/documents/${documentId}/file`, {
+      method: 'POST',
+      body: JSON.stringify({ revision }),
+    })
   }
   const csrf = readXsrfCookie()
   if (!csrf) throw new ApiError('invalid-response', 419, 'Сессия истекла. Обновите страницу.')

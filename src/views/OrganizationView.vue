@@ -172,7 +172,6 @@ onMounted(loadCompanies)
       title="Организационная структура"
       description="Иерархия подразделений компании с безопасным управлением родительскими связями."
     >
-      <BaseButton variant="secondary" :disabled="loadingCompanies || loadingDepartments" @click="loadCompanies">Обновить</BaseButton>
       <BaseButton v-if="departmentWritesEnabled" @click="createDepartmentRecord"><Plus :size="17" /> Добавить подразделение</BaseButton>
     </BasePageHeading>
 

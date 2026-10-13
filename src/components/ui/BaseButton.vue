@@ -10,7 +10,7 @@ withDefaults(defineProps<{ variant?: 'primary' | 'secondary'; disabled?: boolean
 
 <style scoped>
 .base-button{
-  position:relative;isolation:isolate;min-width:0;height:40px;min-height:40px;
+  position:relative;isolation:isolate;min-width:0;height:var(--control-height);min-height:var(--control-height);
   display:inline-flex;align-items:center;justify-content:center;gap:var(--space-1);
   margin:0;padding:var(--space-2) var(--space-3);overflow:hidden;appearance:none;
   border:1px solid transparent;border-radius:var(--space-2);
@@ -24,7 +24,7 @@ withDefaults(defineProps<{ variant?: 'primary' | 'secondary'; disabled?: boolean
 .base-button:focus-visible{outline:2px solid var(--color-primary);outline-offset:2px}
 .base-button:disabled{opacity:.5;cursor:not-allowed}
 .base-button :deep(svg){position:relative;z-index:1;width:20px;height:20px;flex:none}
-.icon-only{width:40px;min-width:40px;padding:0}
+.icon-only{width:var(--control-height);min-width:var(--control-height);padding:0}
 .icon-only :deep(svg){width:18px;height:18px}
 .base-button :deep(*){position:relative;z-index:1}
 .primary{border-color:var(--color-primary);background:var(--color-primary);color:var(--color-on-primary);box-shadow:var(--shadow-control)}

@@ -28,6 +28,7 @@
   --color-table-heading-text:#093044;
   --color-table-hover:rgba(35,142,195,.04);
   --color-on-primary:#fefefe;
+  --color-overlay:rgba(9,35,52,.38);
 
   /* Prototype semantic statuses. */
   --color-danger:#d01717;
@@ -96,6 +97,7 @@
   --color-table-heading-text:#e5f6ff;
   --color-table-hover:rgba(147,206,224,.06);
   --color-on-primary:#fefefe;
+  --color-overlay:rgba(0,12,20,.62);
   --color-danger:#f42525;
   --color-danger-border:rgba(244,37,37,.36);
   --color-danger-surface:rgba(208,23,23,.2);

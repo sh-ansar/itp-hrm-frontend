@@ -117,7 +117,7 @@ export async function mockApiRequest<T>(path:string,options:RequestInit={}):Prom
   if(m){const pg=Number(u.searchParams.get('page')||1),kind=m[1];let rows:any[]=kind==='departments'?deps:kind==='positions'?positions:kind==='employees'?employees:kind==='personnel-actions'?actions:documents
     if(kind==='employees'){const q=(u.searchParams.get('search')||'').toLowerCase(),s=u.searchParams.get('status')||'all';rows=rows.filter((x:any)=>(s==='all'||x.employment_status===s)&&(!q||json(x).toLowerCase().includes(q)))}
     if(kind==='personnel-actions'&&u.searchParams.get('type'))rows=rows.filter((x:any)=>x.action_type===u.searchParams.get('type'))
-    const extra:any=kind==='departments'?{department_writes_enabled:true}:kind==='positions'?{position_writes_enabled:true}:kind==='employees'?{employee_writes_enabled:true,status_filter:u.searchParams.get('status')||'all',registry_summary:{vacancies:staffing.reduce((sum:any,row:any)=>sum+Number(row.vacant_units||0),0),expiring_contracts:6}}:kind==='personnel-actions'?{personnel_actions_writes_enabled:true}:{document_writes_enabled:true}
+    const extra:any=kind==='departments'?{department_writes_enabled:true}:kind==='positions'?{position_writes_enabled:true}:kind==='employees'?{employee_writes_enabled:true,status_filter:u.searchParams.get('status')||'all',registry_summary:{vacancies:staffing.reduce((sum:any,row:any)=>sum+Number(row.vacant_units||0),0),expiring_contracts:6}}:kind==='personnel-actions'?{personnel_actions_writes_enabled:true,summary:{hire:actions.filter((x:any)=>x.action_type==='hire').length,transfer:actions.filter((x:any)=>x.action_type==='transfer').length,termination:actions.filter((x:any)=>x.action_type==='termination').length}}:{document_writes_enabled:true}
     return page(rows,pg,kind==='employees'||kind==='personnel-actions'||kind==='documents'?25:100,extra) as T}
   m=p.match(/^\/companies\/[^/]+\/employees\/([^/]+)$/)
   if(m&&method==='PUT'){
@@ -128,6 +128,65 @@ export async function mockApiRequest<T>(path:string,options:RequestInit={}):Prom
     return {data:e} as T
   }
   if(m&&method==='GET'){const e:any=employees.find(x=>x.id===m![1]);if(!e)throw new Error('Сотрудник не найден');const ei=employees.indexOf(e);return {data:e,assignments:e.current_department_id?[{id:id(7000+ei),department_id:e.current_department_id,position_id:e.current_position_id,department_name:e.current_department_name,position_name:e.current_position_name,valid_from:e.current_assignment_valid_from,valid_to:null,basis_reference:`Приказ № HR-${120+ei}`,revision:1}]:[],experience:[{id:id(8000+ei),revision:1,experience_type:'Основное место работы',started_on:'2022-03-01',ended_on:null,basis_reference:'Трудовой договор'}],reserve:employeeReserve(e,ei),training:employeeTraining(e,ei),reference_profile:referenceProfileFor(e,ei),meta:{assignments_limit:50,assignments_truncated:false,extended_sections_visible:true,profile_writes_enabled:true,assignment_writes_enabled:true,employee_writes_enabled:true}} as T}
+  m=p.match(/^\/companies\/[^/]+\/employees\/([^/]+)\/personnel-actions\/(hire|transfer|terminate)$/)
+  if(m&&method==='POST'){
+    const employee:any=employees.find(x=>x.id===m![1])
+    if(!employee)throw new Error('Сотрудник не найден')
+    const body=options.body?JSON.parse(String(options.body)):{}
+    const operation=m[2]
+    const sourceDepartmentName=employee.current_department_name??null
+    const sourcePositionName=employee.current_position_name??null
+    const sourceAssignmentId=employee.current_department_id?id(7000+Math.max(0,employees.indexOf(employee))):null
+    let targetDepartmentName:string|null=null
+    let targetPositionName:string|null=null
+    let targetAssignmentId:string|null=null
+
+    if(operation!=='terminate'){
+      const dep:any=deps.find(x=>x.id===body.department_id)
+      const pos:any=positions.find(x=>x.id===body.position_id)
+      if(!dep||!pos)throw new Error('Подразделение или должность не найдены')
+      targetDepartmentName=dep.name
+      targetPositionName=pos.name
+      targetAssignmentId=id(7200+actions.length)
+      employee.current_department_id=dep.id
+      employee.current_department_name=dep.name
+      employee.current_position_id=pos.id
+      employee.current_position_name=pos.name
+      employee.current_assignment_valid_from=body.effective_on
+      employee.employment_status='active'
+    }else{
+      employee.current_department_id=null
+      employee.current_department_name=null
+      employee.current_position_id=null
+      employee.current_position_name=null
+      employee.current_assignment_valid_from=null
+      employee.employment_status='archived'
+    }
+    employee.revision=Number(employee.revision||1)+1
+    const actionType=operation==='terminate'?'termination':operation
+    const action:any={
+      id:id(3300+actions.length),
+      employee_id:employee.id,
+      action_type:actionType,
+      effective_on:body.effective_on,
+      basis_reference:body.basis_reference,
+      notes:body.notes??null,
+      source_assignment_id:operation==='hire'?null:sourceAssignmentId,
+      target_assignment_id:targetAssignmentId,
+      personnel_number:employee.personnel_number,
+      last_name:employee.last_name,
+      first_name:employee.first_name,
+      middle_name:employee.middle_name,
+      source_department_name:operation==='hire'?null:sourceDepartmentName,
+      source_position_name:operation==='hire'?null:sourcePositionName,
+      target_department_name:targetDepartmentName,
+      target_position_name:targetPositionName,
+      created_at:new Date().toISOString(),
+    }
+    actions.unshift(action)
+    return {data:action} as T
+  }
+
   m=p.match(/^\/companies\/[^/]+\/staffing-plans(?:\/([^/]+))?$/)
   if(m){if(m[1])return {data:plan,lines:staffing,meta:{as_of:u.searchParams.get('as_of')||'2026-10-13',staffing_writes_enabled:true}} as T;return page([plan,{...plan,id:id(501),name:'Проект штатного расписания 2027',valid_from:'2027-01-01',status:'draft',revision:1}],1,25,{staffing_writes_enabled:true}) as T}
   if(p.includes('/staffing-history'))return page(Array.from({length:34},(_,i)=>({id:34-i,action:i%6===0?'staffing.plan_approved':i%4===0?'staffing.plan_line_updated':'staffing.plan_line_created',staffing_plan_id:plan.id,staffing_line_id:staffing[i%staffing.length].id,revision:1+i%3,created_at:'2026-10-01T10:30:00+05:00'})),Number(u.searchParams.get('page')||1),25) as T

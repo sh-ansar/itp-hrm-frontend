@@ -88,6 +88,7 @@ export function createDocumentDraft(companyId: string, data: DocumentDraft): Pro
 export function documentFileUrl(companyId: string, documentId: string): string {
   validateId(companyId)
   validateId(documentId)
+  if (import.meta.env.VITE_DEMO_MODE === 'true') return '#demo-document'
   // Same-origin authenticated download; never expose physical storage paths.
   return `${base}/companies/${companyId}/documents/${documentId}/file`
 }
@@ -101,6 +102,10 @@ export async function uploadDocumentPdf(
   validateId(companyId)
   validateId(documentId)
   if (!Number.isSafeInteger(revision) || revision < 1) throw new Error('Обновите документ перед прикреплением файла')
+  if (import.meta.env.VITE_DEMO_MODE === 'true') {
+    await new Promise(resolve => setTimeout(resolve, 120))
+    return { data: { id: documentId, has_file: true, revision: revision + 1 } }
+  }
   if (file.size < 1 || file.size > 5 * 1024 * 1024 || file.type !== 'application/pdf') {
     throw new Error('Выберите PDF-файл размером до 5 МБ')
   }

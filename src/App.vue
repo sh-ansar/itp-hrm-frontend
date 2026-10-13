@@ -66,7 +66,10 @@ function toggleSidebar() {
   catch { /* Privacy settings can disable local storage. */ }
 }
 function toggleGroup(id: string) {
-  if (sidebarCollapsed.value) sidebarCollapsed.value = false
+  if (sidebarCollapsed.value) {
+    sidebarCollapsed.value = false
+    try { window.localStorage.setItem('hrm-sidebar-collapsed', 'false') } catch { /* ignore */ }
+  }
   expandedGroups.value[id] = !expandedGroups.value[id]
 }
 function closeMobileNav() { mobileNavOpen.value = false }
@@ -123,7 +126,7 @@ watch(() => route.query.q, q => {
           </button>
           <div v-show="expandedGroups[group.id] || sidebarCollapsed" :id="'menu-' + group.id" class="nav-items">
             <RouterLink v-for="link in group.items" :key="link.to" class="nav-item"
-              :to="link.to" :title="sidebarCollapsed ? link.label : undefined"
+              :to="link.to" :aria-label="link.label" :title="sidebarCollapsed ? link.label : undefined"
               @click="closeMobileNav">
               <component :is="link.icon" :size="19" :stroke-width="1.8" aria-hidden="true" />
               <span class="nav-label">{{ link.label }}</span>

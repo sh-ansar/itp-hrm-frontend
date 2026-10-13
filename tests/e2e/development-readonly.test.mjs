@@ -38,7 +38,7 @@ test('HR sees real company training/reserve lists, protected notes and profile l
     const employeeLink = page.locator('.development-record-card').filter({ hasText: 'E2E Completed Safety' })
       .getByRole('link', { name: 'Synthetic Employee' })
     await employeeLink.click()
-    await page.waitForURL(/\/employees\/.+\/77777777-7777-4777-8777-777777777777\?tab=training/)
+    await page.waitForURL(/\/employees\/.+\/77777777-7777-4777-8777-777777777777\?tab=development/)
     await page.getByRole('table', { name: 'Обучение сотрудника' }).waitFor()
 
     await page.goto('/reserve')

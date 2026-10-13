@@ -85,7 +85,7 @@ test('employee register opens scoped detail and assignment history', async () =>
     assert.equal(await page.getByRole('button', { name: 'Добавить сотрудника' }).count(), 0)
     await page.locator('.employee-mobile-card').filter({ hasText: 'E2E-001' }).getByRole('link', { name: /Открыть карточку/ }).click()
     await page.locator('.employee-page-heading h1').waitFor()
-    await page.getByText('Synthetic Employee').waitFor()
+    await page.locator('.employee-page-heading h1').filter({ hasText: 'Synthetic Employee' }).waitFor()
     assert.match(await page.locator('main').innerText(), /Synthetic Employee/)
     assert.match(await page.locator('main').innerText(), /Test Engineer/)
     assert.match(await page.locator('main').innerText(), /Visible Finance/)
@@ -138,7 +138,7 @@ test('personnel editor stays hidden while server write flag is disabled', async 
     await page.goto('/employees')
     await page.locator('.employee-mobile-card').filter({ hasText: 'E2E-001' }).getByRole('link', { name: /Открыть карточку/ }).click()
     await page.locator('.employee-page-heading h1').waitFor()
-    await page.getByText('Synthetic Employee').waitFor()
+    await page.locator('.employee-page-heading h1').filter({ hasText: 'Synthetic Employee' }).waitFor()
     assert.equal(await page.getByRole('region', { name:'Добавление кадровых сведений' }).count(), 0)
     assert.equal(await page.getByRole('button', { name:'Сохранить запись' }).count(), 0)
   } finally { await context.close() }

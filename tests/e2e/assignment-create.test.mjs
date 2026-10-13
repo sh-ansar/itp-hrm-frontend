@@ -23,6 +23,7 @@ test('HR creates edits and atomically transfers assignments at mobile width', as
     await page.goto('/employees')
     await page.locator('.employee-mobile-card').filter({ hasText: 'E2E-001' }).getByRole('link', { name: /Открыть карточку/ }).click()
     await page.locator('.employee-page-heading h1').waitFor()
+    await page.getByRole('navigation', { name: 'Разделы карточки сотрудника' }).getByRole('button', { name: 'Трудовые данные' }).click()
 
     await page.getByRole('button', { name: 'Добавить назначение' }).click()
     const form = page.getByRole('region', { name: 'Новое назначение' })

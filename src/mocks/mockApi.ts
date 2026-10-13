@@ -53,12 +53,61 @@ const actions=employees.slice(0,18).map((e,i)=>({id:id(3000+i),employee_id:e.id,
 const training=employees.slice(0,16).map((e,i)=>({id:id(2000+i),employee_id:e.id,revision:1,personnel_number:e.personnel_number,first_name:e.first_name,last_name:e.last_name,middle_name:e.middle_name,development_status:i%4===0?'planned':i%3===0?'ongoing':'completed',training_type:i%2?'external':'internal',training_mode:i%3===0?'remote':i%3===1?'in_person':'on_the_job',topic:['Управление проектами','Excel и аналитика','Охрана труда','Лидерство'][i%4],provider:'ITP Academy',city:'Астана',started_on:'2026-09-10',ended_on:i%4===0?null:'2026-09-12',document_reference:i%4===0?null:`CERT-${202600+i}`}))
 const reserve=employees.slice(4,14).map((e,i)=>({id:id(2100+i),employee_id:e.id,revision:1,personnel_number:e.personnel_number,first_name:e.first_name,last_name:e.last_name,middle_name:e.middle_name,development_status:i>=8?'alumni':'active',target_position:seededPositions[(i+1)%8].name,reserve_level:i%2?'Функциональный':'Корпоративный',reserve_type:i%3?'Среднесрочный':'Оперативный',joined_year:2024+i%3,left_year:i>=8?2026:null,notes:'Индивидуальный план развития'}))
 const documents=employees.slice(0,22).map((e,i)=>({id:id(5000+i),employee_id:e.id,personnel_action_id:i<actions.length?actions[i].id:null,document_type:['order','contract','basis','other'][i%4],document_number:`DOC-2026-${100+i}`,title:['Приказ о приёме','Трудовой договор','Дополнительное соглашение','Приказ о переводе'][i%4],issued_on:'2026-09-15',status:i%4===3?'draft':'active',revision:1,created_at:'2026-10-01T10:00:00+05:00',personnel_number:e.personnel_number,first_name:e.first_name,last_name:e.last_name,has_file:i%4!==3}))
-const employeeReserve=(e:any,i:number)=>reserve.filter(x=>x.employee_id===e.id).length
-  ? reserve.filter(x=>x.employee_id===e.id)
-  : [{id:id(2100+i),employee_id:e.id,revision:1,personnel_number:e.personnel_number,first_name:e.first_name,last_name:e.last_name,middle_name:e.middle_name,development_status:'active',target_position:positions[(i+2)%positions.length].name,reserve_level:'Функциональный',reserve_type:'Среднесрочный',joined_year:2026,left_year:null,notes:'Индивидуальный план развития'}]
-const employeeTraining=(e:any,i:number)=>training.filter(x=>x.employee_id===e.id).length
-  ? training.filter(x=>x.employee_id===e.id)
-  : [{id:id(2000+i),employee_id:e.id,revision:1,personnel_number:e.personnel_number,first_name:e.first_name,last_name:e.last_name,middle_name:e.middle_name,development_status:'ongoing',training_type:'internal',training_mode:'in_person',topic:'Развитие профессиональных компетенций',provider:'Корпоративный университет',city:'Астана',started_on:'2026-10-05',ended_on:'2026-10-07',document_reference:`CERT-${202600+i}`}]
+const experienceByEmployee=new Map<string,any[]>(employees.map((e,i)=>[e.id,[{
+  id:id(8000+i),revision:1,experience_type:'Основное место работы',
+  started_on:'2022-03-01',ended_on:null,basis_reference:'Трудовой договор',
+}]]))
+const assignmentByEmployee=new Map<string,any[]>(employees.map((e,i)=>[e.id,
+  e.current_department_id?[{
+    id:id(7000+i),department_id:e.current_department_id,
+    position_id:e.current_position_id,department_name:e.current_department_name,
+    position_name:e.current_position_name,valid_from:e.current_assignment_valid_from,
+    valid_to:null,basis_reference:`Приказ № HR-${120+i}`,revision:1,
+  }]:[],
+]))
+const reserveFallbacks=new Map<string,any>()
+const trainingFallbacks=new Map<string,any>()
+function fallbackReserve(e:any,i:number){
+  if(!reserveFallbacks.has(e.id))reserveFallbacks.set(e.id,{
+    id:crypto.randomUUID(),employee_id:e.id,revision:1,personnel_number:e.personnel_number,
+    first_name:e.first_name,last_name:e.last_name,middle_name:e.middle_name,
+    development_status:'active',target_position:seededPositions[(i+2)%seededPositions.length].name,
+    reserve_level:'Функциональный',reserve_type:'Среднесрочный',
+    joined_year:2026,left_year:null,notes:'Индивидуальный план развития',
+  })
+  return reserveFallbacks.get(e.id)
+}
+function fallbackTraining(e:any,i:number){
+  if(!trainingFallbacks.has(e.id))trainingFallbacks.set(e.id,{
+    id:crypto.randomUUID(),employee_id:e.id,revision:1,personnel_number:e.personnel_number,
+    first_name:e.first_name,last_name:e.last_name,middle_name:e.middle_name,
+    development_status:'ongoing',training_type:'internal',training_mode:'in_person',
+    topic:'Развитие профессиональных компетенций',provider:'Корпоративный университет',
+    city:'Астана',started_on:'2026-10-05',ended_on:'2026-10-07',
+    document_reference:`CERT-${202600+i}`,
+  })
+  return trainingFallbacks.get(e.id)
+}
+const employeeReserve=(e:any,i:number)=>{
+  const matches=reserve.filter(x=>x.employee_id===e.id)
+  return matches.length?matches:[fallbackReserve(e,i)]
+}
+const employeeTraining=(e:any,i:number)=>{
+  const matches=training.filter(x=>x.employee_id===e.id)
+  return matches.length?matches:[fallbackTraining(e,i)]
+}
+function syncCurrentAssignment(employee:any,assignment:any|null,status:'active'|'archived'|'unassigned'='active'){
+  employee.current_department_id=assignment?.department_id??null
+  employee.current_department_name=assignment?.department_name??null
+  employee.current_position_id=assignment?.position_id??null
+  employee.current_position_name=assignment?.position_name??null
+  employee.current_assignment_valid_from=assignment?.valid_from??null
+  employee.employment_status=assignment?status:status==='archived'?'archived':'unassigned'
+  employee.revision=Number(employee.revision||1)+1
+}
+function overlaps(a:any,b:any){
+  return (a.valid_to??'9999-12-31')>=b.valid_from&&(b.valid_to??'9999-12-31')>=a.valid_from
+}
 const employeeChanges = new Map<string, Array<{id: string; action: string; actor: string; created_at: string}>>()
 function recordEmployeeChange(employeeId: string, action: string) {
   const changes = employeeChanges.get(employeeId) ?? []
@@ -134,6 +183,8 @@ export async function mockApiRequest<T>(path:string,options:RequestInit={}):Prom
   const method=(options.method||'GET').toUpperCase(),u=new URL(path,'https://demo.local'),p=u.pathname
   if(p==='/health') return {status:'ok',service:'itp-hrm-api'} as T
   if(p==='/companies') return page([{id:companyId,name:'ITP HRM Demo',role_code:'hr_specialist',department_scopes:[]}],1,100,{role_management_enabled:false}) as T
+  const scopedCompany=p.match(/^\/companies\/([^/]+)(?:\/|$)/)
+  if(scopedCompany&&scopedCompany[1]!==companyId)throw new Error('Компания недоступна')
   let m=p.match(/^\/companies\/[^/]+\/employees$/)
   if(m&&method==='POST'){
     const body=options.body?JSON.parse(String(options.body)):{}
@@ -311,7 +362,124 @@ export async function mockApiRequest<T>(path:string,options:RequestInit={}):Prom
     recordEmployeeChange(e.id, 'personnel.employee_updated')
     return {data:e} as T
   }
-  if(m&&method==='GET'){const e:any=employees.find(x=>x.id===m![1]);if(!e)throw new Error('Сотрудник не найден');const ei=employees.indexOf(e);return {data:{...e,has_photo:!!getDemoEmployeePhoto(e.id)},assignments:e.current_department_id?[{id:id(7000+ei),department_id:e.current_department_id,position_id:e.current_position_id,department_name:e.current_department_name,position_name:e.current_position_name,valid_from:e.current_assignment_valid_from,valid_to:null,basis_reference:`Приказ № HR-${120+ei}`,revision:1}]:[],experience:[{id:id(8000+ei),revision:1,experience_type:'Основное место работы',started_on:'2022-03-01',ended_on:null,basis_reference:'Трудовой договор'}],reserve:employeeReserve(e,ei),training:employeeTraining(e,ei),reference_profile:referenceProfileFor(e,ei),meta:{assignments_limit:50,assignments_truncated:false,extended_sections_visible:true,profile_writes_enabled:true,assignment_writes_enabled:true,employee_writes_enabled:true}} as T}
+  if(m&&method==='GET'){
+    const e:any=employees.find(x=>x.id===m![1])
+    if(!e)throw new Error('Сотрудник не найден')
+    const ei=employees.indexOf(e)
+    return structuredClone({
+      data:{...e,has_photo:!!getDemoEmployeePhoto(e.id)},
+      assignments:assignmentByEmployee.get(e.id)??[],
+      experience:experienceByEmployee.get(e.id)??[],
+      reserve:employeeReserve(e,ei),
+      training:employeeTraining(e,ei),
+      reference_profile:referenceProfileFor(e,ei),
+      meta:{assignments_limit:50,assignments_truncated:false,extended_sections_visible:true,
+        profile_writes_enabled:true,assignment_writes_enabled:true,employee_writes_enabled:true},
+    }) as T
+  }
+  // The same employee-card forms used against Laravel must actually mutate demo
+  // state, rather than returning a generic success without any saved record.
+  m=p.match(/^\/companies\/[^/]+\/employees\/([^/]+)\/profile\/(experience|reserve|training)(?:\/([^/]+))?$/)
+  if(m&&['POST','PUT'].includes(method)){
+    const employee:any=employees.find(x=>x.id===m![1])
+    if(!employee)throw new Error('Сотрудник не найден')
+    const section=m[2],recordId=m[3]
+    const body=options.body?JSON.parse(String(options.body)):{}
+    const rows:any[]=section==='experience'
+      ?(experienceByEmployee.get(employee.id)??[]):section==='training'?training:reserve
+    const existing:any=recordId?rows.find(x=>x.id===recordId&&
+      (section==='experience'||x.employee_id===employee.id)):null
+    const fallback:any=recordId&&!existing&&section!=='experience'
+      ?(section==='training'?fallbackTraining(employee,employees.indexOf(employee))
+        :fallbackReserve(employee,employees.indexOf(employee))):null
+    const record:any=existing??(fallback?.id===recordId?fallback:null)
+    if(method==='PUT'){
+      if(!recordId||!record)throw new Error('Запись не найдена')
+      if(Number(body.revision)!==Number(record.revision))
+        throw new Error('Запись уже изменена. Обновите карточку перед сохранением')
+    }else if(recordId)throw new Error('Некорректный адрес создания записи')
+    if(section==='experience'&&(!body.experience_type||!body.started_on))
+      throw new Error('Укажите вид стажа и дату начала')
+    if(section==='training'&&(!body.training_type||!body.training_mode||!body.topic||!body.started_on))
+      throw new Error('Заполните обязательные данные обучения')
+    if(section==='reserve'&&(!body.target_position||!body.reserve_level||!body.reserve_type||!body.joined_year))
+      throw new Error('Заполните обязательные данные кадрового резерва')
+    if(body.started_on&&body.ended_on&&body.ended_on<body.started_on)
+      throw new Error('Дата окончания раньше даты начала')
+    if(section==='reserve'&&body.left_year&&Number(body.left_year)<Number(body.joined_year))
+      throw new Error('Год выхода раньше года зачисления')
+    const next:any={
+      ...(record??{}),...body,
+      id:record?.id??crypto.randomUUID(),
+      employee_id:employee.id,
+      revision:record?Number(record.revision)+1:1,
+      personnel_number:employee.personnel_number,
+      last_name:employee.last_name,first_name:employee.first_name,middle_name:employee.middle_name,
+    }
+    if(section==='training')next.development_status=next.ended_on?'completed':next.started_on>new Date().toISOString().slice(0,10)?'planned':'ongoing'
+    if(section==='reserve')next.development_status=next.left_year?'alumni':'active'
+    if(record){
+      if(existing)Object.assign(existing,next)
+      else rows.push(next)
+    }else rows.push(next)
+    if(section==='experience')experienceByEmployee.set(employee.id,rows)
+    recordEmployeeChange(employee.id,record?'personnel.profile_record_updated':'personnel.profile_record_created')
+    return {data:{id:next.id,section,revision:next.revision}} as T
+  }
+  m=p.match(/^\/companies\/[^/]+\/employees\/([^/]+)\/assignments(?:\/([^/]+))?(?:\/(transition))?$/)
+  if(m&&['POST','PUT'].includes(method)){
+    const employee:any=employees.find(x=>x.id===m![1])
+    if(!employee)throw new Error('Сотрудник не найден')
+    const recordId=m[2],isTransition=m[3]==='transition'
+    const body=options.body?JSON.parse(String(options.body)):{}
+    const rows:any[]=assignmentByEmployee.get(employee.id)??[]
+    const current:any=recordId?rows.find(x=>x.id===recordId):null
+    if(recordId&&!current)throw new Error('Назначение не найдено')
+    if(method==='PUT'&&(!recordId||isTransition))throw new Error('Некорректная операция назначения')
+    if(method==='POST'&&recordId&&!isTransition)throw new Error('Некорректная операция назначения')
+    if(current&&Number(body.revision)!==Number(current.revision))
+      throw new Error('Назначение уже изменено. Обновите карточку')
+    if(isTransition&&(current.valid_to!==null||body.valid_from<=current.valid_from))
+      throw new Error('Укажите новую дату после начала действующего назначения')
+    const dep:any=deps.find(x=>x.id===body.department_id)
+    const pos:any=positions.find(x=>x.id===body.position_id)
+    if(!dep||!pos||!/^\d{4}-\d{2}-\d{2}$/.test(body.valid_from??''))
+      throw new Error('Выберите подразделение, должность и дату')
+    const period={valid_from:body.valid_from,valid_to:body.valid_to??null}
+    if(period.valid_to&&period.valid_to<period.valid_from)
+      throw new Error('Дата окончания раньше даты начала')
+    const conflicts=rows.some(row=>row.id!==recordId&&overlaps(row,period))
+    if(conflicts)throw new Error('Период пересекается с существующим назначением')
+    if(isTransition&&rows.some(row=>row.id!==recordId&&row.valid_from>=period.valid_from))
+      throw new Error('Существует более позднее назначение')
+    const next:any={
+      ...(method==='PUT'?current:{}),
+      id:method==='PUT'?current.id:crypto.randomUUID(),
+      department_id:dep.id,position_id:pos.id,
+      department_name:dep.name,position_name:pos.name,
+      valid_from:period.valid_from,valid_to:period.valid_to,
+      basis_reference:body.basis_reference??null,
+      revision:method==='PUT'?Number(current.revision)+1:1,
+    }
+    if(isTransition){
+      const dayBefore=new Date(Date.parse(period.valid_from+'T00:00:00Z')-86_400_000).toISOString().slice(0,10)
+      if(current.valid_from>dayBefore)throw new Error('Дата перевода раньше текущего назначения')
+      current.valid_to=dayBefore
+      current.revision+=1
+      rows.push(next)
+      syncCurrentAssignment(employee,next)
+      assignmentByEmployee.set(employee.id,rows)
+      recordEmployeeChange(employee.id,'personnel.assignment_transitioned')
+      return {data:{closed_assignment:structuredClone(current),new_assignment:structuredClone(next)}} as T
+    }
+    if(method==='PUT')Object.assign(current,next)
+    else rows.push(next)
+    assignmentByEmployee.set(employee.id,rows)
+    if(!period.valid_to)syncCurrentAssignment(employee,next)
+    recordEmployeeChange(employee.id,method==='PUT'?'personnel.assignment_updated':'personnel.assignment_created')
+    return {data:{id:next.id,employee_id:employee.id,valid_from:next.valid_from,valid_to:next.valid_to,revision:next.revision}} as T
+  }
+
   m=p.match(/^\/companies\/[^/]+\/employees\/([^/]+)\/personnel-actions\/(hire|transfer|terminate)$/)
   if(m&&method==='POST'){
     const employee:any=employees.find(x=>x.id===m![1])
@@ -320,33 +488,39 @@ export async function mockApiRequest<T>(path:string,options:RequestInit={}):Prom
     const operation=m[2]
     const sourceDepartmentName=employee.current_department_name??null
     const sourcePositionName=employee.current_position_name??null
-    const sourceAssignmentId=employee.current_department_id?id(7000+Math.max(0,employees.indexOf(employee))):null
+    const assignmentRows:any[]=assignmentByEmployee.get(employee.id)??[]
+    const openAssignment:any=assignmentRows.find(row=>row.valid_to===null)??null
+    const sourceAssignmentId=openAssignment?.id??null
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(body.effective_on??''))
+      throw new Error('Укажите корректную дату кадрового действия')
+    if(operation==='hire'&&openAssignment)throw new Error('Сотрудник уже имеет активное назначение')
+    if(operation!=='hire'&&!openAssignment)throw new Error('У сотрудника нет действующего назначения')
+    if(openAssignment&&body.effective_on<=openAssignment.valid_from)
+      throw new Error('Дата действия должна быть позже начала назначения')
+    const dayBefore=openAssignment
+      ?new Date(Date.parse(body.effective_on+'T00:00:00Z')-86_400_000).toISOString().slice(0,10):null
     let targetDepartmentName:string|null=null
     let targetPositionName:string|null=null
     let targetAssignmentId:string|null=null
-
+    let newAssignment:any=null
     if(operation!=='terminate'){
       const dep:any=deps.find(x=>x.id===body.department_id)
       const pos:any=positions.find(x=>x.id===body.position_id)
       if(!dep||!pos)throw new Error('Подразделение или должность не найдены')
       targetDepartmentName=dep.name
       targetPositionName=pos.name
-      targetAssignmentId=id(7200+actions.length)
-      employee.current_department_id=dep.id
-      employee.current_department_name=dep.name
-      employee.current_position_id=pos.id
-      employee.current_position_name=pos.name
-      employee.current_assignment_valid_from=body.effective_on
-      employee.employment_status='active'
-    }else{
-      employee.current_department_id=null
-      employee.current_department_name=null
-      employee.current_position_id=null
-      employee.current_position_name=null
-      employee.current_assignment_valid_from=null
-      employee.employment_status='archived'
+      newAssignment={
+        id:crypto.randomUUID(),department_id:dep.id,position_id:pos.id,
+        department_name:dep.name,position_name:pos.name,
+        valid_from:body.effective_on,valid_to:null,basis_reference:body.basis_reference??null,revision:1,
+      }
+      targetAssignmentId=newAssignment.id
     }
-    employee.revision=Number(employee.revision||1)+1
+    if(openAssignment){openAssignment.valid_to=dayBefore;openAssignment.revision++}
+    if(newAssignment)assignmentRows.push(newAssignment)
+    assignmentByEmployee.set(employee.id,assignmentRows)
+    syncCurrentAssignment(employee,newAssignment,newAssignment?'active':'archived')
+    recordEmployeeChange(employee.id,'personnel.action_'+operation)
     const actionType=operation==='terminate'?'termination':operation
     const action:any={
       id:id(3300+actions.length),
@@ -445,6 +619,6 @@ export async function mockApiRequest<T>(path:string,options:RequestInit={}):Prom
   if(p.includes('/staffing-history'))return page(Array.from({length:34},(_,i)=>({id:34-i,action:i%6===0?'staffing.plan_approved':i%4===0?'staffing.plan_line_updated':'staffing.plan_line_created',staffing_plan_id:plan.id,staffing_line_id:staffing[i%staffing.length].id,revision:1+i%3,created_at:'2026-10-01T10:30:00+05:00'})),Number(u.searchParams.get('page')||1),25) as T
   m=p.match(/^\/companies\/[^/]+\/development\/(training|reserve)$/)
   if(m){const rows=(m[1]==='training'?training:reserve).filter((x:any)=>{const s=u.searchParams.get('status')||'all',q=(u.searchParams.get('search')||'').toLowerCase();return(s==='all'||x.development_status===s)&&(!q||json(x).toLowerCase().includes(q))}),all=m[1]==='training'?training:reserve;const summary:any={total:all.length};for(const x of all as any[])summary[x.development_status]=(summary[x.development_status]||0)+1;const res:any=page(rows,Number(u.searchParams.get('page')||1),25,{section:m[1],status_filter:u.searchParams.get('status')||'all',summary,profile_writes_enabled:true});return res as T}
-  if(method!=='GET') return {data:{id:id(9999),revision:1,status:'draft'}} as T
+  if(method!=='GET')throw new Error('Операция недоступна в демонстрационной версии')
   throw new Error(`Demo API route not implemented: ${path}`)
 }

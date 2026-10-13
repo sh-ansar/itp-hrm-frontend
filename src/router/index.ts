@@ -13,19 +13,12 @@ import TimesheetsView from '../views/TimesheetsView.vue'
 import LeavesView from '../views/LeavesView.vue'
 import ReportsView from '../views/ReportsView.vue'
 import SettingsView from '../views/SettingsView.vue'
-import ModulePendingView from '../views/ModulePendingView.vue'
 import NotFoundView from '../views/NotFoundView.vue'
 import LoginView from '../views/LoginView.vue'
 import { useSessionStore } from '../stores/session'
 
 export const browserLoginEnabled = import.meta.env.VITE_ENABLE_BROWSER_LOGIN === 'true'
 
-const pending = (path: string, name: string, title: string, description: string) => ({
-  path,
-  name,
-  component: ModulePendingView,
-  props: { title, description },
-})
 
 export const router = createRouter({
   history: createWebHistory(),

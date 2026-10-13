@@ -195,7 +195,8 @@ test('employee card creates and edits training that appears in the shared compan
     // mock-only HR data, which is never stored as sensitive browser storage.
     await page.evaluate(async () => { const { router } = await import('/src/router/index.ts'); await router.push('/learning') })
     await page.getByRole('heading', { name: 'Обучение', level: 1 }).waitFor()
-    await page.getByText(renamed).waitFor()
+    // Both desktop and mobile layouts share this content; assert the visible mobile card.
+    await page.locator('.development-mobile').getByText(renamed, { exact: true }).waitFor()
     assert.deepEqual(errors, [])
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1), false)
   } finally {

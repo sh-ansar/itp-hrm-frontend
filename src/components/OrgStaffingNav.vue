@@ -41,12 +41,12 @@ const currentLabel = computed(() => tabs.find(item => item.id === current.value)
 
 <style scoped>
 .org-staffing-navigation{display:grid;gap:13px;min-width:0}
-.org-breadcrumbs{display:flex;align-items:center;gap:10px;min-width:0;overflow:hidden;white-space:nowrap;color:var(--color-muted);font-size:12px}
+.org-breadcrumbs{display:flex;align-items:center;gap:10px;min-width:0;overflow:hidden;white-space:nowrap;color:var(--color-muted);font-size:var(--font-caption-size)}
 .org-breadcrumbs a{display:inline-flex;align-items:center;gap:6px}
 .org-breadcrumbs a:hover{color:var(--color-primary)}
 .org-breadcrumbs span[aria-current]{overflow:hidden;text-overflow:ellipsis;color:var(--color-text)}
 .org-staffing-tabs{display:flex;align-items:center;gap:4px;max-width:100%;overflow-x:auto;border-bottom:1px solid var(--color-stroke);scrollbar-width:thin}
-.org-staffing-tab{position:relative;display:inline-flex;align-items:center;min-height:39px;padding:11px 16px;color:var(--color-text);font-size:13px;font-weight:600;white-space:nowrap;border-radius:8px 8px 0 0;transition:color .15s,background .15s}
+.org-staffing-tab{position:relative;display:inline-flex;align-items:center;min-height:39px;padding:11px 16px;color:var(--color-text);font-size:var(--font-label-size);font-weight:500;white-space:nowrap;border-radius:8px 8px 0 0;transition:color .15s,background .15s}
 .org-staffing-tab:hover{color:var(--color-primary);background:var(--color-soft)}
 .org-staffing-tab--active{color:var(--color-primary);background:var(--color-surface)}
 .org-staffing-tab--active::after{content:'';position:absolute;left:0;right:0;bottom:0;height:2px;background:var(--color-primary)}

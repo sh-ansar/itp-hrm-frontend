@@ -15,9 +15,6 @@ import { downloadCsv } from '../utils/exportCsv'
 import OrgStaffingNav from '../components/OrgStaffingNav.vue'
 import { buildDepartmentForest } from '../utils/departmentTree'
 import DepartmentForm from '../components/DepartmentForm.vue'
-import { getStaffingPlan, listStaffingPlans, type StaffingPlanLine } from '../api/staffing'
-import { preferredStaffingPlan } from '../utils/staffingPlanChoice'
-import { localTodayISO } from '../utils/localDate'
 import {
   deleteDepartment,
   listCompanies,
@@ -40,7 +37,7 @@ const editorOpen = ref(false)
 const editingDepartment = ref<DepartmentRecord | null>(null)
 const deleteCandidate = ref<DepartmentRecord | null>(null)
 const deleting = ref(false)
-const viewMode = ref('table')
+const viewMode = ref('diagram')
 const searchQuery = ref('')
 const chartZoom = ref(100)
 const orgStaffLines = ref<StaffingPlanLine[]>([])
@@ -135,9 +132,6 @@ const filteredHierarchyRows = computed(() => {
 const extraColumns = [
   { key: 'parentLabel', label: 'Входит в' },
   { key: 'depth', label: 'Уровень' },
-  { key: 'planned_units', label: 'Штатных единиц' },
-  { key: 'occupied_units', label: 'Занято' },
-  { key: 'vacant_units', label: 'Вакантно' },
 ]
 function orgColumnPreferences(): Record<string, boolean> {
   const initial = Object.fromEntries(extraColumns.map(column => [column.key, true]))
@@ -207,32 +201,6 @@ async function loadDepartments() {
   }
 }
 
-async function loadStaffingStats() {
-  const companyId = selectedCompany.value
-  const seq = ++statsGeneration
-  orgStaffLines.value = []
-  staffingPlanLabel.value = ''
-  staffingStatsReady.value = false
-  if (!companyId) { staffingStatsBusy.value = false; return }
-  staffingStatsBusy.value = true
-  try {
-    const response = await listStaffingPlans(companyId)
-    if (seq !== statsGeneration) return
-    const plan = preferredStaffingPlan(response.data, localTodayISO())
-    if (!plan) return
-    const detail = await getStaffingPlan(companyId, plan.id, localTodayISO())
-    if (seq !== statsGeneration) return
-    orgStaffLines.value = detail.lines
-    staffingPlanLabel.value = plan.name
-    staffingStatsReady.value = true
-  } catch {
-    // Staffing access can be more restricted than the organizational directory.
-    // Do not disclose inaccessible totals or block the organization page.
-  } finally {
-    if (seq === statsGeneration) staffingStatsBusy.value = false
-  }
-}
-
 function exportDepartments() {
   downloadCsv('orgstructure.csv', ['Подразделение', 'Родитель'], filteredHierarchyRows.value.map(row => [row.name, row.parentLabel]))
 }
@@ -275,7 +243,6 @@ async function confirmDelete() {
 
 watch(selectedCompany, () => { page.value = 1 })
 watch([selectedCompany, page], loadDepartments)
-watch(selectedCompany, loadStaffingStats)
 onMounted(loadCompanies)
 </script>
 
@@ -287,22 +254,6 @@ onMounted(loadCompanies)
     <BaseLoadingState v-if="loadingCompanies" label="Загрузка компаний" />
     <BaseNotice v-else-if="!companies.length && !error" tone="info">Нет доступных компаний.</BaseNotice>
 
-    <div v-if="selectedCompany" class="org-summary-strip" aria-label="Показатели организационной структуры">
-      <div class="org-summary-item">
-        <span>Подразделения</span><strong>{{ loadingDepartments ? '—' : numberLabel(total) }}</strong>
-      </div>
-      <div class="org-summary-item">
-        <span>Штатные единицы</span><strong>{{ staffingStatsReady ? numberLabel(staffTotals.planned) : '—' }}</strong>
-      </div>
-      <div class="org-summary-item">
-        <span>Занято</span><strong>{{ staffingStatsReady ? numberLabel(staffTotals.occupied) : '—' }}</strong>
-      </div>
-      <div class="org-summary-item org-summary-item--vacant">
-        <span>Вакантно</span><strong>{{ staffingStatsReady ? numberLabel(staffTotals.vacant) : '—' }}</strong>
-      </div>
-      <span v-if="staffingStatsBusy" class="org-summary-caption">Обновляем штатные показатели…</span>
-      <span v-else-if="staffingPlanLabel" class="org-summary-caption">{{ staffingPlanLabel }}</span>
-    </div>
 
     <section v-if="selectedCompany" class="org-content">
       <div class="section-title">
@@ -340,7 +291,7 @@ onMounted(loadCompanies)
             <span class="chart-company-count">{{ total }} подразделений</span>
           </div>
           <div class="chart-branches">
-            <DepartmentTreeNode v-for="node in departmentForest" :key="node.id" :node="node" :counts="staffCountsByDepartment" />
+            <DepartmentTreeNode v-for="node in departmentForest" :key="node.id" :node="node" />
           </div>
         </div>
         <p v-else class="diagram-empty">{{ searchQuery.trim() ? 'Для поиска используйте режим «Таблица».' : 'Подразделений для отображения пока нет.' }}</p>
@@ -356,9 +307,6 @@ onMounted(loadCompanies)
               <span>Уровень {{ Number(row.depth) + 1 }}</span>
             </div>
             <p>{{ row.parentLabel }}</p>
-            <div v-if="staffCountsByDepartment[row.id]" class="org-mobile-item-stats">
-              {{ numberLabel(staffCountsByDepartment[row.id].occupied) }} занято · {{ numberLabel(staffCountsByDepartment[row.id].vacant) }} вакансий
-            </div>
             <div v-if="departmentWritesEnabled" class="org-mobile-actions">
               <BaseButton variant="secondary" @click="editDepartmentRecord(row)"><Pencil :size="15" /> Изменить</BaseButton>
               <BaseButton variant="secondary" @click="deleteCandidate = row"><Trash2 :size="15" /> Удалить</BaseButton>
@@ -384,9 +332,6 @@ onMounted(loadCompanies)
         </template>
         <template #cell-parentLabel="{ value }">{{ value }}</template>
         <template #cell-depth="{ row }">{{ Number(row.depth) + 1 }}</template>
-        <template #cell-planned_units="{ row }">{{ staffingStatsReady ? numberLabel(staffCountsByDepartment[row.id]?.planned ?? 0) : '—' }}</template>
-        <template #cell-occupied_units="{ row }">{{ staffingStatsReady ? numberLabel(staffCountsByDepartment[row.id]?.occupied ?? 0) : '—' }}</template>
-        <template #cell-vacant_units="{ row }">{{ staffingStatsReady ? numberLabel(staffCountsByDepartment[row.id]?.vacant ?? 0) : '—' }}</template>
         <template #cell-actions="{ row }">
           <div class="row-actions">
             <button class="row-icon-action" type="button" :aria-label="'Изменить ' + row.name" @click="editDepartmentRecord(row)"><Pencil :size="16" /></button>
@@ -442,12 +387,6 @@ onMounted(loadCompanies)
 .organization-page{display:grid;grid-template-columns:minmax(0,1fr);gap:18px}
 .org-heading-actions{display:flex;align-items:end;justify-content:flex-end;gap:10px;min-width:0;flex-wrap:nowrap}
 .org-heading-actions :deep(.base-select-field){flex:0 1 200px;width:200px;max-width:200px;min-width:0}
-.org-summary-strip{display:flex;align-items:stretch;min-width:0;background:var(--color-surface);border:1px solid var(--color-stroke);border-radius:8px;overflow:hidden}
-.org-summary-item{display:grid;gap:4px;min-width:150px;padding:13px 18px;border-right:1px solid var(--color-stroke)}
-.org-summary-item span{font-size:11px;line-height:1.25;color:var(--color-muted)}
-.org-summary-item strong{font-size:20px;line-height:1.15;font-weight:650;color:var(--color-text)}
-.org-summary-item--vacant strong{color:var(--color-primary)}
-.org-summary-caption{align-self:center;margin-left:auto;padding:0 18px;max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px;color:var(--color-muted)}
 .org-content{min-width:0}
 .org-mobile-list,.org-mobile-only{display:none}
 
@@ -460,7 +399,6 @@ onMounted(loadCompanies)
 .org-mobile-item-head strong{font-size:14px}
 .org-mobile-item-head span{font-size:12px;white-space:nowrap;color:var(--color-muted)}
 .org-mobile-item p{margin:6px 0;color:var(--color-muted);font-size:12px}
-.org-mobile-item-stats{font-size:12px;color:var(--color-primary);margin-top:8px}
 .org-mobile-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
 
 .structure-tools{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:var(--space-4)}
@@ -473,9 +411,9 @@ onMounted(loadCompanies)
 .chart-zoom button{width:30px;height:30px;border:1px solid var(--color-stroke);border-radius:6px;background:var(--color-surface);color:var(--color-primary)}
 .chart-zoom button:disabled{opacity:.4;cursor:not-allowed}
 .chart-zoom input{width:90px;accent-color:var(--color-primary)}
-.structure-diagram{min-height:320px;padding:28px 24px 36px;background:#fbfdfe;border:1px solid var(--color-stroke);border-radius:8px;overflow:auto}
+.structure-diagram{min-height:320px;padding:28px 24px 36px;background:var(--color-table-heading);border:1px solid var(--color-stroke);border-radius:var(--radius-md);overflow:auto}
 .organization-chart{display:grid;justify-items:center;gap:42px;min-width:980px;padding:4px 10px 12px}
-.chart-company{position:relative;display:grid;justify-items:center;gap:6px;width:300px;padding:16px 18px;background:var(--color-surface);border:1px solid rgba(6,151,224,.28);border-radius:7px;box-shadow:0 3px 12px rgba(9,48,68,.06);text-align:center}
+.chart-company{position:relative;display:grid;justify-items:center;gap:6px;width:300px;padding:16px 18px;background:var(--color-surface);border:1px solid var(--color-stroke-strong);border-radius:var(--radius-md);box-shadow:var(--shadow-card);text-align:center}
 .chart-company::after{content:'';position:absolute;left:50%;bottom:-37px;width:1px;height:36px;background:var(--color-primary-stroke)}
 .chart-company-label{font-size:10px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--color-muted)}
 .chart-company strong{font-size:14px;line-height:1.35}
@@ -498,7 +436,6 @@ onMounted(loadCompanies)
 .delete-copy p{margin:0}
 .delete-actions{display:flex;justify-content:flex-end;gap:var(--space-2)}
 @media(max-width:1100px){
- .org-summary-strip{overflow-x:auto}
  .section-title{grid-template-columns:minmax(0,1fr)}
  .org-heading-actions{justify-content:flex-start;flex-wrap:wrap}
 }
@@ -507,11 +444,6 @@ onMounted(loadCompanies)
  .org-heading-actions{width:100%;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px}
  .org-heading-actions :deep(.base-select-field){width:100%;max-width:none;grid-column:1}
  .org-heading-actions :deep(button:last-child){grid-column:1/-1;width:100%}
- .org-summary-strip{display:grid;grid-template-columns:1fr 1fr;overflow:hidden}
- .org-summary-item{min-width:0;padding:11px 12px;border-right:1px solid var(--color-stroke);border-bottom:1px solid var(--color-stroke)}
- .org-summary-item:nth-child(even){border-right:0}
- .org-summary-item strong{font-size:18px}
- .org-summary-caption{display:none}
  .section-title{display:grid;grid-template-columns:1fr;align-items:stretch}
  .section-title h1{font-size:20px}
  .org-mobile-list{display:grid;gap:10px}

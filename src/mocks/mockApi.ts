@@ -183,6 +183,8 @@ export async function mockApiRequest<T>(path:string,options:RequestInit={}):Prom
   const method=(options.method||'GET').toUpperCase(),u=new URL(path,'https://demo.local'),p=u.pathname
   if(p==='/health') return {status:'ok',service:'itp-hrm-api'} as T
   if(p==='/companies') return page([{id:companyId,name:'ITP HRM Demo',role_code:'hr_specialist',department_scopes:[]}],1,100,{role_management_enabled:false}) as T
+  const scopedCompany=p.match(/^\/companies\/([^/]+)(?:\/|$)/)
+  if(scopedCompany&&scopedCompany[1]!==companyId)throw new Error('Компания недоступна')
   let m=p.match(/^\/companies\/[^/]+\/employees$/)
   if(m&&method==='POST'){
     const body=options.body?JSON.parse(String(options.body)):{}
@@ -486,33 +488,39 @@ export async function mockApiRequest<T>(path:string,options:RequestInit={}):Prom
     const operation=m[2]
     const sourceDepartmentName=employee.current_department_name??null
     const sourcePositionName=employee.current_position_name??null
-    const sourceAssignmentId=employee.current_department_id?id(7000+Math.max(0,employees.indexOf(employee))):null
+    const assignmentRows:any[]=assignmentByEmployee.get(employee.id)??[]
+    const openAssignment:any=assignmentRows.find(row=>row.valid_to===null)??null
+    const sourceAssignmentId=openAssignment?.id??null
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(body.effective_on??''))
+      throw new Error('Укажите корректную дату кадрового действия')
+    if(operation==='hire'&&openAssignment)throw new Error('Сотрудник уже имеет активное назначение')
+    if(operation!=='hire'&&!openAssignment)throw new Error('У сотрудника нет действующего назначения')
+    if(openAssignment&&body.effective_on<=openAssignment.valid_from)
+      throw new Error('Дата действия должна быть позже начала назначения')
+    const dayBefore=openAssignment
+      ?new Date(Date.parse(body.effective_on+'T00:00:00Z')-86_400_000).toISOString().slice(0,10):null
     let targetDepartmentName:string|null=null
     let targetPositionName:string|null=null
     let targetAssignmentId:string|null=null
-
+    let newAssignment:any=null
     if(operation!=='terminate'){
       const dep:any=deps.find(x=>x.id===body.department_id)
       const pos:any=positions.find(x=>x.id===body.position_id)
       if(!dep||!pos)throw new Error('Подразделение или должность не найдены')
       targetDepartmentName=dep.name
       targetPositionName=pos.name
-      targetAssignmentId=id(7200+actions.length)
-      employee.current_department_id=dep.id
-      employee.current_department_name=dep.name
-      employee.current_position_id=pos.id
-      employee.current_position_name=pos.name
-      employee.current_assignment_valid_from=body.effective_on
-      employee.employment_status='active'
-    }else{
-      employee.current_department_id=null
-      employee.current_department_name=null
-      employee.current_position_id=null
-      employee.current_position_name=null
-      employee.current_assignment_valid_from=null
-      employee.employment_status='archived'
+      newAssignment={
+        id:crypto.randomUUID(),department_id:dep.id,position_id:pos.id,
+        department_name:dep.name,position_name:pos.name,
+        valid_from:body.effective_on,valid_to:null,basis_reference:body.basis_reference??null,revision:1,
+      }
+      targetAssignmentId=newAssignment.id
     }
-    employee.revision=Number(employee.revision||1)+1
+    if(openAssignment){openAssignment.valid_to=dayBefore;openAssignment.revision++}
+    if(newAssignment)assignmentRows.push(newAssignment)
+    assignmentByEmployee.set(employee.id,assignmentRows)
+    syncCurrentAssignment(employee,newAssignment,newAssignment?'active':'archived')
+    recordEmployeeChange(employee.id,'personnel.action_'+operation)
     const actionType=operation==='terminate'?'termination':operation
     const action:any={
       id:id(3300+actions.length),
@@ -611,6 +619,6 @@ export async function mockApiRequest<T>(path:string,options:RequestInit={}):Prom
   if(p.includes('/staffing-history'))return page(Array.from({length:34},(_,i)=>({id:34-i,action:i%6===0?'staffing.plan_approved':i%4===0?'staffing.plan_line_updated':'staffing.plan_line_created',staffing_plan_id:plan.id,staffing_line_id:staffing[i%staffing.length].id,revision:1+i%3,created_at:'2026-10-01T10:30:00+05:00'})),Number(u.searchParams.get('page')||1),25) as T
   m=p.match(/^\/companies\/[^/]+\/development\/(training|reserve)$/)
   if(m){const rows=(m[1]==='training'?training:reserve).filter((x:any)=>{const s=u.searchParams.get('status')||'all',q=(u.searchParams.get('search')||'').toLowerCase();return(s==='all'||x.development_status===s)&&(!q||json(x).toLowerCase().includes(q))}),all=m[1]==='training'?training:reserve;const summary:any={total:all.length};for(const x of all as any[])summary[x.development_status]=(summary[x.development_status]||0)+1;const res:any=page(rows,Number(u.searchParams.get('page')||1),25,{section:m[1],status_filter:u.searchParams.get('status')||'all',summary,profile_writes_enabled:true});return res as T}
-  if(method!=='GET') return {data:{id:id(9999),revision:1,status:'draft'}} as T
+  if(method!=='GET')throw new Error('Операция недоступна в демонстрационной версии')
   throw new Error(`Demo API route not implemented: ${path}`)
 }

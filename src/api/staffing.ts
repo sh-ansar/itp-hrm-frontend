@@ -71,10 +71,11 @@ export function listStaffingPlans(companyId: string, page = 1): Promise<Staffing
   return apiRequest<StaffingPlanListResponse>(`/companies/${companyId}/staffing-plans?page=${page}&per_page=25`)
 }
 
-export function getStaffingPlan(companyId: string, planId: string): Promise<StaffingPlanDetailResponse> {
+export function getStaffingPlan(companyId: string, planId: string, asOf?: string): Promise<StaffingPlanDetailResponse> {
   assertUuid(companyId, 'идентификатор компании')
   assertUuid(planId, 'идентификатор штатного расписания')
-  return apiRequest<StaffingPlanDetailResponse>(`/companies/${companyId}/staffing-plans/${planId}`)
+  const query = asOf ? `?as_of=${encodeURIComponent(asOf)}` : ''
+  return apiRequest<StaffingPlanDetailResponse>(`/companies/${companyId}/staffing-plans/${planId}${query}`)
 }
 
 export function createStaffingPlan(

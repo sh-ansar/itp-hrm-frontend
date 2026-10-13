@@ -13,6 +13,7 @@ import EmployeeAssignmentCreateForm from '../components/EmployeeAssignmentCreate
 import EmployeeRecordForm from '../components/EmployeeRecordForm.vue'
 import BaseDialog from '../components/ui/BaseDialog.vue'
 import { getEmployee, type EmployeeAssignment, type EmployeeDetail, type ProfileEditRow, type ProfileSection } from '../api/personnel'
+import { localTodayISO } from '../utils/localDate'
 
 const route = useRoute()
 const profile = ref<EmployeeDetail | null>(null)
@@ -23,11 +24,7 @@ const assignmentEditing = ref<EmployeeAssignment | null>(null)
 const assignmentTransitioning = ref<EmployeeAssignment | null>(null)
 const identityEditOpen = ref(false)
 
-function localDay(): string {
-  const date = new Date()
-  return [date.getFullYear(), String(date.getMonth() + 1).padStart(2, '0'), String(date.getDate()).padStart(2, '0')].join('-')
-}
-const today = localDay()
+const today = localTodayISO()
 const currentAssignment = computed(() => profile.value?.assignments.find(item =>
   item.valid_from <= today && (item.valid_to === null || item.valid_to >= today)) ?? null)
 const plannedAssignment = computed(() => profile.value?.assignments.find(item =>

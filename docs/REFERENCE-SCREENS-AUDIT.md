@@ -46,6 +46,7 @@ The frontend-only Vercel demo may render isolated deterministic mock values to r
 2. Personnel actions journal and drawer are browser-checked on desktop/mobile.
 3. Documents and orders register/drawers are browser-checked on desktop/mobile; keep signing/approval out until backend contracts exist.
 4. Worktime/timesheet demo is browser-checked on desktop/mobile/dark; keep all attendance edits and production totals out until backend contracts exist.
+5. Reports/analytics is browser-checked across all five tabs, desktop/mobile/dark; unavailable sources render as unavailable rather than false zeroes.
 5. Reports/analytics is browser-checked across all five tabs; do not add payroll, IFRS or sickness metrics until scoped contracts exist.
 2. Expand employee identity fields via approved sensitive-data schema before implementing reference photo/personal tabs.
 3. Add org-tree visualization and unified staffing/vacancies tabs.

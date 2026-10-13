@@ -443,6 +443,7 @@ onMounted(load)
   max-width:100%;min-width:0;scroll-behavior:smooth
 }
 .employee-profile :deep(.view-tabs){margin:2px 0 4px}
+.employee-profile :deep(.view-tab){padding-inline:10px;font-size:11px}
 .employee-profile :deep(.table-scroll){border-radius:var(--radius-md)}
 
 .employee-breadcrumb{

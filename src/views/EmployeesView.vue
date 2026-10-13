@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
-import { Archive, Columns3, FolderTree, Plus, Search, Users } from 'lucide-vue-next'
+import { Archive, FolderTree, Plus, Search, Users } from 'lucide-vue-next'
 import { useRoute, useRouter } from 'vue-router'
 import BaseCard from '../components/ui/BaseCard.vue'
 import BaseButton from '../components/ui/BaseButton.vue'
@@ -12,6 +12,7 @@ import BaseLoadingState from '../components/ui/BaseLoadingState.vue'
 import BaseDataTable from '../components/ui/BaseDataTable.vue'
 import BaseDialog from '../components/ui/BaseDialog.vue'
 import BaseViewTabs from '../components/ui/BaseViewTabs.vue'
+import BaseColumnPicker from '../components/ui/BaseColumnPicker.vue'
 import EmployeeRecordForm from '../components/EmployeeRecordForm.vue'
 import { listCompanies, listDepartments, type CompanyRecord } from '../api/organization'
 import {
@@ -237,15 +238,7 @@ onMounted(loadCompanies)
           <BaseButton variant="secondary" @click="grouped = !grouped">
             <FolderTree :size="16" /> {{ grouped ? 'Без группировки' : 'Группировка' }}
           </BaseButton>
-          <details class="column-settings">
-            <summary><Columns3 :size="16" /> Колонки</summary>
-            <div class="column-options">
-              <strong>Показывать колонки</strong>
-              <label v-for="column in optionalColumns" :key="column.key">
-                <input v-model="visibleFields[column.key]" type="checkbox" /> {{ column.label }}
-              </label>
-            </div>
-          </details>
+          <BaseColumnPicker v-model="visibleFields" :columns="optionalColumns" />
           <BaseButton v-if="search" variant="secondary" @click="clearSearch">Сбросить поиск</BaseButton>
         </div>
 
@@ -306,14 +299,6 @@ onMounted(loadCompanies)
 .status-select{flex:0 1 175px;min-width:145px}
 .status-select :deep(label){position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}
 .status-select :deep(select){font-size:13px}
-.column-settings{position:relative}
-.column-settings summary{list-style:none;display:inline-flex;align-items:center;gap:8px;min-height:var(--control-height);padding:9px 14px;border:1px solid var(--color-stroke);border-radius:var(--radius-md);background:var(--color-surface);font-size:13px;font-weight:600;cursor:pointer}
-.column-settings summary::-webkit-details-marker{display:none}
-.column-settings[open] summary{border-color:var(--color-primary)}
-.column-options{position:absolute;top:calc(100% + 6px);right:0;z-index:12;display:grid;gap:12px;width:min(240px,85vw);padding:16px;border:1px solid var(--color-stroke);border-radius:var(--radius-md);box-shadow:var(--shadow-card);background:var(--color-surface)}
-.column-options strong{font-size:13px}
-.column-options label{display:flex;align-items:center;gap:10px;font-size:13px;cursor:pointer}
-.column-options input{accent-color:var(--color-primary)}
 .name-cell{min-width:180px;display:grid;gap:4px}
 .name-cell a{font-weight:600;color:var(--color-text)}
 .name-cell a:hover{color:var(--color-primary);text-decoration:underline}

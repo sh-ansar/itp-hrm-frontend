@@ -87,6 +87,8 @@ test('employee register opens scoped detail and assignment history', async () =>
     await page.locator('.employee-page-heading h1').waitFor()
     await page.locator('.employee-page-heading h1').filter({ hasText: 'Synthetic Employee' }).waitFor()
     assert.match(await page.locator('main').innerText(), /Synthetic Employee/)
+    await page.getByRole('navigation', { name: 'Разделы карточки сотрудника' })
+      .getByRole('button', { name: 'Трудовые данные' }).click()
     assert.match(await page.locator('main').innerText(), /Test Engineer/)
     assert.match(await page.locator('main').innerText(), /Visible Finance/)
     assert.equal(await page.getByRole('button', { name: 'Изменить карточку' }).count(), 0)
@@ -179,7 +181,7 @@ test('personnel action journal is readable but writes stay hidden in read-only m
     await page.getByRole('heading', { name:'Главная' }).waitFor()
     await page.goto('/personnel-actions')
     await page.getByRole('heading', { name:'Кадровые процессы', exact:true }).waitFor()
-    await page.getByText('Кадровых действий пока нет').waitFor()
+    await page.locator('.action-mobile-empty').getByText('Кадровых действий пока нет.').waitFor()
     assert.equal(await page.getByRole('button', { name:'Новое действие' }).count(), 0)
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1), false)
   } finally { await context.close() }

@@ -22,6 +22,10 @@ test('BNT-style shell supports collapse, navigation groups and topbar employee s
     await login(page)
     await page.getByRole('button', { name: 'Свернуть меню' }).click()
     assert.equal(await page.locator('.app-shell').evaluate(el => el.classList.contains('app-shell--collapsed')), true)
+    await page.waitForFunction(() => {
+      const sidebar = document.querySelector('.sidebar')
+      return sidebar && sidebar.getBoundingClientRect().width <= 75
+    }, { timeout: 2500 })
     const sidebar = await page.locator('.sidebar').boundingBox()
     assert.ok(sidebar && sidebar.width <= 75, 'Sidebar collapses to icon rail')
     await page.getByRole('navigation', { name: 'Главная навигация' }).getByRole('link', { name: 'Сотрудники' }).click()

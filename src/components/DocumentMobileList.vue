@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { FileText, Paperclip } from 'lucide-vue-next'
+import { FileCheck2, Paperclip } from 'lucide-vue-next'
 import BaseButton from './ui/BaseButton.vue'
-import { documentTypeLabel, type DocumentRow } from '../api/documents'
+import type { DocumentRow } from '../api/documents'
+import { documentFileUrl, documentTypeLabel } from '../api/documents'
 
 const props = defineProps<{
   rows: DocumentRow[]
@@ -9,17 +10,16 @@ const props = defineProps<{
   writesEnabled: boolean
   loading?: boolean
 }>()
-const emit = defineEmits<{ upload: [row: DocumentRow]; open: [row: DocumentRow] }>()
+const emit = defineEmits<{ upload: [row: DocumentRow] }>()
+const demoMode = import.meta.env.VITE_DEMO_MODE === 'true'
 
-function employeeName(row: DocumentRow) {
-  return [row.last_name,row.first_name].filter(Boolean).join(' ')
+function employeeName(row: DocumentRow): string {
+  return [row.last_name, row.first_name].filter(Boolean).join(' ')
 }
-function statusLabel(value: string) {
-  if (value === 'draft') return 'Черновик'
-  if (value === 'active') return 'Активный'
-  return value || '—'
+function statusLabel(status: string): string {
+  return status === 'draft' ? 'Черновик' : 'Документ'
 }
-function displayDate(value: string | null) {
+function displayDate(value: string | null): string {
   if (!value || !/^\d{4}-\d{2}-\d{2}/.test(value)) return '—'
   return value.slice(8,10)+'.'+value.slice(5,7)+'.'+value.slice(0,4)
 }
@@ -32,29 +32,41 @@ function displayDate(value: string | null) {
 
     <article v-for="row in rows" :key="row.id" class="document-mobile-card">
       <header>
-        <span class="document-type"><FileText :size="15" /> {{ documentTypeLabel(row.document_type) }}</span>
-        <time>{{ displayDate(row.issued_on) }}</time>
+        <div>
+          <span class="document-type">{{ documentTypeLabel(row.document_type) }}</span>
+          <strong>{{ row.title }}</strong>
+          <small>№ {{ row.document_number || 'без номера' }}</small>
+        </div>
+        <span class="status-pill" :class="{ 'status-pill--draft': row.status === 'draft' }">
+          {{ statusLabel(row.status) }}
+        </span>
       </header>
 
-      <div class="document-mobile-title">
-        <strong>{{ row.title }}</strong>
-        <span>№ {{ row.document_number || 'без номера' }}</span>
-      </div>
-
-      <RouterLink class="document-employee"
-        :to="{ name:'employee-detail', params:{ company:companyId, employee:row.employee_id }, query:{ tab:'documents' } }">
-        <span><strong>{{ employeeName(row) }}</strong><small>{{ row.personnel_number }}</small></span>
-        <span class="document-open">Открыть карточку</span>
-      </RouterLink>
+      <dl>
+        <div><dt>Дата</dt><dd>{{ displayDate(row.issued_on) }}</dd></div>
+        <div>
+          <dt>Сотрудник</dt>
+          <dd>
+            <RouterLink :to="{ name:'employee-detail', params:{ company:companyId, employee:row.employee_id }, query:{ tab:'documents' } }">
+              {{ employeeName(row) }}
+            </RouterLink>
+            <span>{{ row.personnel_number }}</span>
+          </dd>
+        </div>
+        <div v-if="row.personnel_action_id">
+          <dt>Связь</dt><dd>Кадровое действие</dd>
+        </div>
+      </dl>
 
       <footer>
-        <span class="status-pill" :class="{ 'status-pill--draft': row.status === 'draft' }">{{ statusLabel(row.status) }}</span>
-        <BaseButton v-if="row.has_file" variant="secondary" @click="emit('open',row)">
-          <Paperclip :size="14" /> PDF
+        <span v-if="row.has_file && demoMode" class="file-ready"><FileCheck2 :size="15" /> PDF прикреплён</span>
+        <a v-else-if="row.has_file" class="download-link" :href="documentFileUrl(companyId,row.id)" target="_blank" rel="noopener">
+          <FileCheck2 :size="15" /> Открыть PDF
+        </a>
+        <BaseButton v-else-if="writesEnabled && row.status === 'draft'" variant="secondary" @click="emit('upload',row)">
+          <Paperclip :size="15" /> Прикрепить PDF
         </BaseButton>
-        <BaseButton v-else-if="writesEnabled && row.status === 'draft'" variant="secondary"
-          @click="emit('upload',row)">Прикрепить PDF</BaseButton>
-        <span v-else class="file-empty">Без PDF</span>
+        <span v-else class="file-missing">PDF не прикреплён</span>
       </footer>
     </article>
   </div>
@@ -64,26 +76,27 @@ function displayDate(value: string | null) {
 .document-mobile-list{display:grid;gap:10px}
 .document-mobile-empty{margin:0;padding:22px 10px;text-align:center;color:var(--color-muted);font-size:var(--font-caption-size)}
 .document-mobile-card{
-  display:grid;gap:11px;min-width:0;padding:13px;border:1px solid var(--color-stroke);
+  display:grid;gap:12px;min-width:0;padding:13px;border:1px solid var(--color-stroke);
   border-radius:var(--radius-md);background:var(--color-surface);box-shadow:var(--shadow-card)
 }
-.document-mobile-card header{display:flex;align-items:center;justify-content:space-between;gap:10px}
-.document-type{display:inline-flex;align-items:center;gap:5px;color:var(--color-primary);font-size:11px;font-weight:600}
-.document-mobile-card time{color:var(--color-muted);font-size:11px;white-space:nowrap}
-.document-mobile-title{display:grid;gap:3px;min-width:0}
-.document-mobile-title strong{color:var(--color-text);font-size:14px;line-height:1.35;overflow-wrap:anywhere}
-.document-mobile-title span{color:var(--color-muted);font-size:11px}
-.document-employee{
-  display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px;
-  border-radius:var(--radius-sm);background:var(--color-soft)
-}
-.document-employee>span:first-child{display:grid;gap:2px;min-width:0}
-.document-employee strong{color:var(--color-text);font-size:12px;line-height:1.35}
-.document-employee small{color:var(--color-muted);font-size:10px}
-.document-open{flex:none;color:var(--color-primary);font-size:10px;font-weight:600}
-.document-mobile-card footer{display:flex;align-items:center;justify-content:space-between;gap:10px;padding-top:9px;border-top:1px solid var(--color-stroke)}
-.status-pill{display:inline-flex;padding:5px 9px;border-radius:999px;background:var(--color-success-surface);color:var(--color-success);font-size:10px;font-weight:700}
+.document-mobile-card header{display:flex;align-items:start;justify-content:space-between;gap:10px}
+.document-mobile-card header>div{display:grid;gap:3px;min-width:0}
+.document-type{color:var(--color-primary);font-size:10px;line-height:1.3;font-weight:700}
+.document-mobile-card header strong{color:var(--color-text);font-size:13px;line-height:1.4;overflow-wrap:anywhere}
+.document-mobile-card header small{color:var(--color-muted);font-size:10px}
+.status-pill{display:inline-flex;flex:none;padding:5px 8px;border-radius:999px;background:var(--color-success-surface);color:var(--color-success);font-size:10px;font-weight:700}
 .status-pill--draft{background:var(--color-accent-soft);color:var(--color-primary)}
-.file-empty{color:var(--color-muted);font-size:11px}
-.document-mobile-card footer :deep(.base-button){height:34px;min-height:34px;font-size:11px}
+.document-mobile-card dl{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:0}
+.document-mobile-card dl div{display:grid;gap:4px;min-width:0;padding:9px;background:var(--color-soft);border-radius:var(--radius-sm)}
+.document-mobile-card dl div:nth-child(2){grid-column:span 2}
+.document-mobile-card dt{color:var(--color-muted);font-size:10px}
+.document-mobile-card dd{display:grid;gap:2px;margin:0;color:var(--color-text);font-size:12px;line-height:1.4;overflow-wrap:anywhere}
+.document-mobile-card dd a{color:var(--color-text);font-weight:600}
+.document-mobile-card dd a:hover{color:var(--color-primary)}
+.document-mobile-card dd span{color:var(--color-muted);font-size:10px}
+.document-mobile-card footer{display:flex;align-items:center;justify-content:flex-end;padding-top:10px;border-top:1px solid var(--color-stroke)}
+.file-ready,.download-link,.file-missing{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:600}
+.file-ready,.download-link{color:var(--color-primary)}
+.file-missing{color:var(--color-muted)}
+@media(max-width:420px){.document-mobile-card dl{grid-template-columns:1fr}.document-mobile-card dl div:nth-child(2){grid-column:auto}.document-mobile-card footer :deep(.base-button){width:100%}}
 </style>

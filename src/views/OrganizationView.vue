@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
-import { Pencil, Plus, Trash2, Search } from 'lucide-vue-next'
+import { Minus, Pencil, Plus, Trash2, Search } from 'lucide-vue-next'
 import BaseDataTable from '../components/ui/BaseDataTable.vue'
 import BaseLoadingState from '../components/ui/BaseLoadingState.vue'
 import BaseNotice from '../components/ui/BaseNotice.vue'
@@ -248,9 +248,11 @@ onMounted(loadCompanies)
         <label class="structure-search"><Search :size="17" aria-hidden="true" /><span class="visually-hidden">Поиск подразделений</span><input v-model="searchQuery" type="search" placeholder="Поиск подразделений" /></label>
         <BaseColumnPicker v-if="viewMode === 'table'" v-model="shownOrgColumns" :columns="extraColumns" title="Колонки" />
         <div v-if="viewMode === 'diagram'" class="chart-zoom">
-          <button type="button" aria-label="Уменьшить схему" :disabled="chartZoom <= 70" @click="chartZoom = Math.max(70, chartZoom - 10)">−</button>
+          <BaseButton icon-only variant="secondary" aria-label="Уменьшить схему"
+            :disabled="chartZoom <= 70" @click="chartZoom = Math.max(70, chartZoom - 10)"><Minus :size="16" /></BaseButton>
           <input v-model.number="chartZoom" type="range" min="70" max="130" step="10" aria-label="Масштаб схемы" />
-          <button type="button" aria-label="Увеличить схему" :disabled="chartZoom >= 130" @click="chartZoom = Math.min(130, chartZoom + 10)">+</button>
+          <BaseButton icon-only variant="secondary" aria-label="Увеличить схему"
+            :disabled="chartZoom >= 130" @click="chartZoom = Math.min(130, chartZoom + 10)"><Plus :size="16" /></BaseButton>
         </div>
       </div>
       <BaseNotice v-if="total > departments.length" tone="info">
@@ -309,8 +311,8 @@ onMounted(loadCompanies)
         <template #cell-depth="{ row }">{{ Number(row.depth) + 1 }}</template>
         <template #cell-actions="{ row }">
           <div class="row-actions">
-            <button class="row-icon-action" type="button" :aria-label="'Изменить ' + row.name" @click="editDepartmentRecord(row)"><Pencil :size="16" /></button>
-            <button class="row-icon-action" type="button" :aria-label="'Удалить ' + row.name" @click="deleteCandidate = row"><Trash2 :size="16" /></button>
+            <BaseButton icon-only variant="secondary" :aria-label="'Изменить ' + row.name" @click="editDepartmentRecord(row)"><Pencil :size="16" /></BaseButton>
+            <BaseButton icon-only variant="secondary" :aria-label="'Удалить ' + row.name" @click="deleteCandidate = row"><Trash2 :size="16" /></BaseButton>
           </div>
         </template>
           </BaseDataTable>
@@ -383,8 +385,7 @@ onMounted(loadCompanies)
 .structure-search input{width:220px;max-width:100%;border:0;background:transparent;color:var(--color-text);outline:none;font:inherit;font-size:13px}
 .visually-hidden{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}
 .chart-zoom{display:flex;align-items:center;gap:7px}
-.chart-zoom button{width:30px;height:30px;border:1px solid var(--color-stroke);border-radius:6px;background:var(--color-surface);color:var(--color-primary)}
-.chart-zoom button:disabled{opacity:.4;cursor:not-allowed}
+.chart-zoom :deep(.base-button){width:32px;min-width:32px;height:32px;min-height:32px;color:var(--color-primary)}
 .chart-zoom input{width:90px;accent-color:var(--color-primary)}
 .structure-diagram{min-height:320px;padding:28px 24px 36px;background:var(--color-table-heading);border:1px solid var(--color-stroke);border-radius:var(--radius-md);overflow:auto}
 .organization-chart{display:grid;justify-items:center;gap:42px;min-width:980px;padding:4px 10px 12px}
@@ -412,9 +413,8 @@ onMounted(loadCompanies)
 .hierarchy-label{display:inline-flex;align-items:center;gap:6px;padding-inline-start:clamp(0px,calc(var(--depth) * 15px),180px);max-width:100%;min-width:160px;overflow-wrap:anywhere}
 .branch-mark{color:var(--color-muted)}
 .row-actions{display:flex;align-items:center;gap:6px;flex-wrap:nowrap;min-width:max-content}
-.row-icon-action{display:grid;place-items:center;width:32px;height:32px;border:0;border-radius:6px;color:var(--color-muted);background:transparent;cursor:pointer}
-.row-icon-action:hover{color:var(--color-primary);background:var(--color-accent-soft)}
-.row-icon-action:focus-visible{outline:3px solid var(--color-focus)}
+.row-actions :deep(.base-button){width:32px;min-width:32px;height:32px;min-height:32px;color:var(--color-muted)}
+.row-actions :deep(.base-button:hover){color:var(--color-primary)}
 .org-desktop-table :deep(.table-scroll){border-radius:7px}
 .org-desktop-table :deep(.table-scroll th){padding:11px 12px;font-size:12px}
 .org-desktop-table :deep(.table-scroll td){padding:10px 12px;font-size:13px}

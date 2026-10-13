@@ -16,7 +16,7 @@ button:focus-visible,a:focus-visible{outline:2px solid var(--color-primary);outl
 .main{min-width:0;max-width:100%;width:100%}
 .content{
   width:100%;max-width:none;min-width:0;
-  margin:0;padding:var(--space-5) var(--shell-gutter) var(--shell-gutter);
+  margin:0;padding:0 var(--shell-gutter) var(--shell-gutter);
   background:var(--color-page);
 }
 .page-title{
@@ -32,10 +32,10 @@ button:focus-visible,a:focus-visible{outline:2px solid var(--color-primary);outl
   .cards{grid-template-columns:repeat(2,minmax(0,1fr))}
 }
 @media(max-width:959px){
-  .content{padding:var(--space-4) var(--shell-gutter) var(--space-6);min-width:0;max-width:100vw}
+  .content{padding:0 var(--shell-gutter) var(--space-6);min-width:0;max-width:100vw}
 }
 @media(max-width:600px){
-  .content{padding:var(--space-4) 14px 30px}
+  .content{padding:0 14px 30px}
   .cards{grid-template-columns:1fr}
 }
 @media(prefers-reduced-motion:reduce){

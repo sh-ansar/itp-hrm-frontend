@@ -8,10 +8,10 @@ const focusModules = [
   { to: '/organization', title: 'Оргструктура', description: 'Компании и доступная иерархия подразделений', icon: Network, status: 'Подключено' },
   { to: '/staffing', title: 'Штатное расписание', description: 'Утверждённые версии, плановые ставки, занятость и вакансии', icon: BriefcaseBusiness, status: 'Подключено' },
   { to: '/personnel-actions', title: 'Кадровые действия', description: 'Атомарные операции приёма, перевода и увольнения с журналом', icon: UserRoundCheck, status: 'Подключено' },
+  { to: '/documents', title: 'Документы и приказы', description: 'Защищённый реестр, черновики документов и приватные PDF', icon: FileText, status: 'Первый этап' },
 ]
 
 const nextModules = [
-  { to: '/documents', label: 'Документы и приказы', icon: FileText },
   { to: '/leaves', label: 'Отпуска' },
   { to: '/timesheets', label: 'Табельный учёт' },
   { to: '/reports', label: 'Отчёты и аналитика' },
@@ -28,7 +28,7 @@ const nextModules = [
       <BaseCard class="hero-card">
         <p class="eyebrow">Текущий контур</p>
         <h2>Кадровый учёт уже подключён к реальным API</h2>
-        <p class="muted">Реестр сотрудников, назначения, стаж, обучение, кадровый резерв, штатное расписание и журнал кадровых действий подключены к backend. Следующий этап — защищённые документы, приказы и согласования.</p>
+        <p class="muted">Реестр сотрудников, назначения, стаж, обучение, кадровый резерв, штатное расписание и журнал кадровых действий подключены к backend. Следующий этап — согласования, утверждение и юридически значимый жизненный цикл приказов.</p>
         <RouterLink class="primary-link" to="/employees">Перейти к сотрудникам <ArrowRight :size="17" /></RouterLink>
       </BaseCard>
       <BaseCard>

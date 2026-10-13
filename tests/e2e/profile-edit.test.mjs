@@ -25,6 +25,7 @@ test('HR creates and edits a training record, then sees stale revision conflict 
     await page.goto('/employees')
     await page.getByRole('row', { name: /E2E-001/ }).getByRole('link', { name: 'Открыть' }).click()
     await page.getByRole('heading', { name: 'Карточка сотрудника' }).waitFor()
+    await page.getByRole('button', { name: 'Добавить сведения' }).click()
     const creator = page.getByRole('region', { name: 'Добавление кадровых сведений' })
     await creator.waitFor()
     await creator.getByRole('group', { name: 'Раздел карточки' })

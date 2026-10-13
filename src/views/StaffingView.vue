@@ -103,7 +103,6 @@ const filteredLines = computed(() => {
   const term = searchLines.value.trim().toLocaleLowerCase('ru')
   return (detail.value?.lines ?? []).filter(line => {
     if (activeView.value === 'vacant' && Number(line.vacant_units) <= 0) return false
-    if (activeView.value === 'overstaffed' && Number(line.overstaffed_units) <= 0) return false
     if (!term) return true
     return (line.department_name + ' ' + line.position_name).toLocaleLowerCase('ru').includes(term)
   })
@@ -322,7 +321,7 @@ onMounted(refreshCompanies)
        :description="activeView === 'vacant' ? 'Открытые штатные единицы по подразделениям.' : activeView === 'changes' ? 'Версии и периоды действия штатного расписания.' : 'Штатные единицы, ставки и занятость.'"
     >
       <BaseButton v-if="activeView === 'changes' ? historyRows.length : filteredLines.length" variant="secondary" @click="exportCurrentRows">Экспорт CSV</BaseButton>
-      <BaseButton v-if="staffingWritesEnabled" @click="createPlanOpen = true">
+      <BaseButton v-if="staffingWritesEnabled && activeView === 'all'" @click="createPlanOpen = true">
         <Plus :size="17" /> Новая версия
       </BaseButton>
     </BasePageHeading>
@@ -467,7 +466,7 @@ onMounted(refreshCompanies)
           :group-by="grouped ? groupLines : undefined"
           row-key="id"
           caption="Строки штатного расписания"
-          :empty-title="activeView === 'vacant' ? 'Вакансий нет' : activeView === 'overstaffed' ? 'Сверхштатных позиций нет' : 'Штатные единицы не найдены'"
+          :empty-title="activeView === 'vacant' ? 'Вакансий нет' : 'Штатные единицы не найдены'"
           :empty-description="searchLines ? 'Уточните поисковый запрос.' : 'Для выбранного представления нет записей.'"
         >
           <template #cell-planned_units="{ value }">{{ formatUnits(value) }}</template>
@@ -527,7 +526,7 @@ onMounted(refreshCompanies)
 <style scoped>
 .staffing-page{display:grid;grid-template-columns:minmax(0,1fr);gap:var(--space-4)}
 .staffing-mobile-only,.staffing-history-mobile{display:none}
-.staffing-history-card{min-width:0;padding:14px;border:1px solid var(--color-stroke);border-radius:8px;background:var(--color-surface)}
+.staffing-history-card{min-width:0;padding:14px;border:1px solid var(--color-stroke);border-radius:var(--radius-md);background:var(--color-surface);box-shadow:var(--shadow-card)}
 .staffing-history-card-heading{display:flex;align-items:start;justify-content:space-between;gap:12px}
 .staffing-history-card-heading strong{font-size:14px;line-height:1.4}
 .staffing-history-card-heading span{font-size:11px;white-space:nowrap;color:var(--color-muted)}
@@ -540,7 +539,7 @@ onMounted(refreshCompanies)
  .staffing-history-mobile{display:grid;gap:10px}
  .line-toolbar :deep(.column-settings){display:none}
 }
-.staffing-page :deep(.base-card){box-shadow:0 1px 3px rgba(9,48,68,.035)}
+.staffing-page :deep(.base-card){box-shadow:var(--shadow-card)}
 .staffing-page :deep(.page-heading){margin-bottom:0}
 .toolbar{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-items:end;gap:var(--space-4)}
 .empty-state{display:grid;justify-items:center;text-align:center;gap:10px;padding:40px 20px;color:var(--color-muted)}
@@ -557,7 +556,7 @@ onMounted(refreshCompanies)
 .plan-status.approved{background:var(--color-success-surface);color:var(--color-success)}
 .plan-title .muted{margin:8px 0 0;font-size:13px}
 .plan-actions{display:flex;gap:8px;flex-wrap:wrap}
-.staffing-summary-strip{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));background:var(--color-surface);border:1px solid var(--color-stroke);border-radius:8px;overflow:hidden}
+.staffing-summary-strip{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));background:var(--color-surface);border:1px solid var(--color-stroke);border-radius:var(--radius-md);overflow:hidden;box-shadow:var(--shadow-card)}
 .staffing-summary-item{display:grid;gap:4px;padding:13px 18px;border-right:1px solid var(--color-stroke)}
 .staffing-summary-item:last-child{border-right:0}
 .staffing-summary-item span{font-size:11px;line-height:1.25;color:var(--color-muted)}
@@ -568,11 +567,11 @@ onMounted(refreshCompanies)
 .section-copy{margin:5px 0 0;color:var(--color-muted);font-size:12px;line-height:1.45}
 .line-toolbar{display:flex;align-items:end;gap:var(--space-2);flex-wrap:wrap;margin-bottom:var(--space-3)}
 .line-toolbar .line-search{min-width:230px;flex:1}
-.staffing-page :deep(.table-scroll){border-radius:6px}
+.staffing-page :deep(.table-scroll){border-radius:var(--radius-md)}
 .staffing-page :deep(.table-scroll th){padding:11px 12px;background:var(--color-table-heading)}
 .staffing-page :deep(.table-scroll td){padding:10px 12px}
 .staffing-page :deep(.field label){font-size:12px}
-.staffing-page :deep(.base-card){border-radius:8px}
+.staffing-page :deep(.base-card){border-radius:var(--radius-md)}
 .line-toolbar :deep(button){display:inline-flex;gap:7px;align-items:center;justify-content:center}
 .line-hint{color:var(--color-muted);font-size:12px;line-height:1.5;margin:0 0 var(--space-3)}
 .salary{display:inline-flex;align-items:center;gap:6px;white-space:nowrap}

@@ -54,7 +54,7 @@ async function load() {
     companyName.value = company.name
 
     const results = await Promise.allSettled([
-      listEmployees(company.id),
+      listEmployees(company.id, 1, '', 'active'),
       listDepartments(company.id),
       listPersonnelActions(company.id),
       listStaffingPlans(company.id),

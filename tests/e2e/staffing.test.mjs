@@ -36,7 +36,7 @@ test('HR creates staffs and approves a real staffing-plan version at mobile widt
     await planDialog.getByRole('button', { name: 'Создать версию' }).click()
 
     await page.getByRole('heading', { name: 'E2E штат 2026', exact: true }).waitFor()
-    await page.getByText('Черновик').first().waitFor()
+    await page.locator('.plan-status', { hasText: 'Черновик' }).waitFor()
 
     await page.getByRole('button', { name: 'Добавить строку' }).click()
     const lineDialog = page.getByRole('dialog', { name: 'Новая штатная единица' })
@@ -69,7 +69,7 @@ test('HR creates staffs and approves a real staffing-plan version at mobile widt
     await approveDialog.waitFor()
     await approveDialog.getByRole('button', { name: 'Утвердить' }).click()
 
-    await page.getByText('Утверждено').first().waitFor()
+    await page.locator('.plan-status', { hasText: 'Утверждено' }).waitFor()
     assert.equal(await page.getByRole('button', { name: 'Добавить строку' }).count(), 0)
     assert.equal(await page.getByRole('button', { name: 'Изменить' }).count(), 0)
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1), false)

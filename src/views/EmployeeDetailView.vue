@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
-import { BadgeCheck, BookOpenCheck, BriefcaseBusiness, Clock3, Pencil, ShieldCheck, UserRound } from 'lucide-vue-next'
+import { BadgeCheck, BookOpenCheck, BriefcaseBusiness, Clock3, Pencil, Plus, ShieldCheck, UserRound } from 'lucide-vue-next'
 import { useRoute } from 'vue-router'
 import BaseCard from '../components/ui/BaseCard.vue'
 import BasePageHeading from '../components/ui/BasePageHeading.vue'
@@ -23,6 +23,8 @@ const editing = ref<{ section: ProfileSection; record: ProfileEditRow } | null>(
 const assignmentEditing = ref<EmployeeAssignment | null>(null)
 const assignmentTransitioning = ref<EmployeeAssignment | null>(null)
 const identityEditOpen = ref(false)
+const assignmentCreateOpen = ref(false)
+const profileCreateOpen = ref(false)
 
 const today = localTodayISO()
 const currentAssignment = computed(() => profile.value?.assignments.find(item =>
@@ -61,6 +63,8 @@ async function load() {
   assignmentEditing.value = null
   assignmentTransitioning.value = null
   identityEditOpen.value = false
+  assignmentCreateOpen.value = false
+  profileCreateOpen.value = false
   error.value = ''
   profile.value = null
   try {
@@ -82,7 +86,6 @@ onMounted(load)
     <BasePageHeading title="Карточка сотрудника" description="Единая карточка кадровых сведений, назначений и развития">
       <RouterLink class="back-link" to="/employees">К реестру</RouterLink>
       <BaseButton v-if="profile?.meta.employee_writes_enabled" variant="secondary" @click="identityEditOpen = true"><Pencil :size="16" /> Изменить карточку</BaseButton>
-      <BaseButton variant="secondary" :disabled="loading" @click="load">Обновить</BaseButton>
     </BasePageHeading>
 
     <BaseNotice v-if="error" tone="error">{{ error }}</BaseNotice>
@@ -119,6 +122,9 @@ onMounted(load)
         <a v-if="profile.meta.extended_sections_visible" href="#training"><BookOpenCheck :size="16" /> Обучение</a>
         <a v-if="profile.meta.extended_sections_visible" href="#reserve"><ShieldCheck :size="16" /> Кадровый резерв</a>
       </nav>
+      <div v-if="profile.meta.profile_writes_enabled" class="profile-toolbar">
+        <BaseButton @click="profileCreateOpen = true"><Plus :size="16" /> Добавить сведения</BaseButton>
+      </div>
 
       <BaseCard id="employment">
         <div class="section-header">
@@ -126,9 +132,14 @@ onMounted(load)
             <p class="section-kicker">Работа</p>
             <h2>Назначения и кадровое положение</h2>
           </div>
-          <div v-if="currentAssignment" class="current-assignment">
-            <UserRound :size="17" />
-            <span><strong>{{ currentAssignment.position_name }}</strong><small>{{ currentAssignment.department_name }}</small></span>
+          <div class="section-controls">
+            <div v-if="currentAssignment" class="current-assignment">
+              <UserRound :size="17" />
+              <span><strong>{{ currentAssignment.position_name }}</strong><small>{{ currentAssignment.department_name }}</small></span>
+            </div>
+            <BaseButton v-if="profile.meta.assignment_writes_enabled" @click="assignmentCreateOpen = true">
+              <Plus :size="16" /> Добавить назначение
+            </BaseButton>
           </div>
         </div>
         <BaseDataTable :columns="columns" :rows="profile.assignments" row-key="id"
@@ -144,41 +155,10 @@ onMounted(load)
         </BaseDataTable>
         <BaseNotice v-if="profile.meta.assignments_truncated" tone="info">Отображены первые 100 назначений. Полная история требует отдельного просмотра.</BaseNotice>
 
-        <div class="embedded-form">
-          <EmployeeAssignmentCreateForm
-            v-if="profile.meta.assignment_writes_enabled && !assignmentEditing && !assignmentTransitioning"
-            :company-id="String(route.params.company)"
-            :employee-id="String(route.params.employee)"
-            @saved="load"
-          />
-          <EmployeeAssignmentCreateForm
-            v-if="profile.meta.assignment_writes_enabled && assignmentEditing"
-            :key="assignmentEditing.id + ':' + assignmentEditing.revision"
-            :edit="assignmentEditing"
-            :company-id="String(route.params.company)"
-            :employee-id="String(route.params.employee)"
-            @saved="load"
-            @cancelled="assignmentEditing = null"
-          />
-          <EmployeeAssignmentCreateForm
-            v-if="profile.meta.assignment_writes_enabled && assignmentTransitioning"
-            :key="'transition:' + assignmentTransitioning.id + ':' + assignmentTransitioning.revision"
-            :transition-from="assignmentTransitioning"
-            :company-id="String(route.params.company)"
-            :employee-id="String(route.params.employee)"
-            @saved="load"
-            @cancelled="assignmentTransitioning = null"
-          />
-        </div>
+
       </BaseCard>
 
-      <BaseCard v-if="profile.meta.profile_writes_enabled" class="profile-action-card">
-        <div class="section-header compact">
-          <div><p class="section-kicker">Развитие</p><h2>Добавить сведения в карточку</h2></div>
-          <span class="muted">Стаж · резерв · обучение</span>
-        </div>
-        <EmployeeProfileCreateForm :company-id="String(route.params.company)" :employee-id="String(route.params.employee)" @saved="load" />
-      </BaseCard>
+
 
       <template v-if="profile.meta.extended_sections_visible">
         <BaseCard id="experience">
@@ -188,10 +168,7 @@ onMounted(load)
             empty-title="Сведения о стаже отсутствуют" empty-description="Периоды стажа ещё не внесены.">
             <template #cell-edit="{ row }"><BaseButton variant="secondary" @click="beginEdit('experience', row)">Изменить</BaseButton></template>
           </BaseDataTable>
-          <EmployeeProfileCreateForm v-if="editing?.section === 'experience' && profile.meta.profile_writes_enabled"
-            :key="editing.record.id + ':' + editing.record.revision" :edit="editing"
-            :company-id="String(route.params.company)" :employee-id="String(route.params.employee)"
-            @saved="load" @cancelled="editing = null" />
+
         </BaseCard>
 
         <BaseCard id="training">
@@ -201,10 +178,7 @@ onMounted(load)
             empty-title="Обучение не зарегистрировано" empty-description="Данных о дополнительном обучении пока нет.">
             <template #cell-edit="{ row }"><BaseButton variant="secondary" @click="beginEdit('training', row)">Изменить</BaseButton></template>
           </BaseDataTable>
-          <EmployeeProfileCreateForm v-if="editing?.section === 'training' && profile.meta.profile_writes_enabled"
-            :key="editing.record.id + ':' + editing.record.revision" :edit="editing"
-            :company-id="String(route.params.company)" :employee-id="String(route.params.employee)"
-            @saved="load" @cancelled="editing = null" />
+
         </BaseCard>
 
         <BaseCard id="reserve">
@@ -214,13 +188,44 @@ onMounted(load)
             empty-title="Записей резерва нет" empty-description="Сотрудник не включён в записи кадрового резерва.">
             <template #cell-edit="{ row }"><BaseButton variant="secondary" @click="beginEdit('reserve', row)">Изменить</BaseButton></template>
           </BaseDataTable>
-          <EmployeeProfileCreateForm v-if="editing?.section === 'reserve' && profile.meta.profile_writes_enabled"
-            :key="editing.record.id + ':' + editing.record.revision" :edit="editing"
-            :company-id="String(route.params.company)" :employee-id="String(route.params.employee)"
-            @saved="load" @cancelled="editing = null" />
+
         </BaseCard>
       </template>
     </template>
+
+    <BaseDialog :open="assignmentCreateOpen" title="Новое назначение" @close="assignmentCreateOpen = false">
+      <EmployeeAssignmentCreateForm v-if="assignmentCreateOpen && profile?.meta.assignment_writes_enabled"
+        :company-id="String(route.params.company)" :employee-id="String(route.params.employee)"
+        @saved="load" @cancelled="assignmentCreateOpen = false" />
+    </BaseDialog>
+
+    <BaseDialog :open="assignmentEditing !== null" title="Редактирование назначения" @close="assignmentEditing = null">
+      <EmployeeAssignmentCreateForm v-if="assignmentEditing"
+        :key="assignmentEditing.id + ':' + assignmentEditing.revision"
+        :edit="assignmentEditing" :company-id="String(route.params.company)"
+        :employee-id="String(route.params.employee)" @saved="load" @cancelled="assignmentEditing = null" />
+    </BaseDialog>
+
+    <BaseDialog :open="assignmentTransitioning !== null" title="Перевод сотрудника" @close="assignmentTransitioning = null">
+      <EmployeeAssignmentCreateForm v-if="assignmentTransitioning"
+        :key="assignmentTransitioning.id + ':' + assignmentTransitioning.revision"
+        :transition-from="assignmentTransitioning"
+        :company-id="String(route.params.company)" :employee-id="String(route.params.employee)"
+        @saved="load" @cancelled="assignmentTransitioning = null" />
+    </BaseDialog>
+
+    <BaseDialog :open="profileCreateOpen" title="Добавить сведения" @close="profileCreateOpen = false">
+      <EmployeeProfileCreateForm v-if="profileCreateOpen && profile?.meta.profile_writes_enabled"
+        :company-id="String(route.params.company)" :employee-id="String(route.params.employee)"
+        @saved="load" />
+    </BaseDialog>
+
+    <BaseDialog :open="editing !== null" title="Изменить сведения" @close="editing = null">
+      <EmployeeProfileCreateForm v-if="editing && profile?.meta.profile_writes_enabled"
+        :key="editing.record.id + ':' + editing.record.revision" :edit="editing"
+        :company-id="String(route.params.company)" :employee-id="String(route.params.employee)"
+        @saved="load" @cancelled="editing = null" />
+    </BaseDialog>
 
     <BaseDialog :open="identityEditOpen" title="Основные данные сотрудника" @close="identityEditOpen = false">
       <EmployeeRecordForm
@@ -263,7 +268,10 @@ onMounted(load)
 .current-assignment span{display:grid;gap:2px}
 .current-assignment small{font-size:11px;color:var(--color-muted)}
 .counter{font-size:12px;color:var(--color-muted);padding:6px 9px;border-radius:999px;background:var(--color-soft)}
-.embedded-form{margin-top:var(--space-5);padding-top:var(--space-5);border-top:1px solid var(--color-stroke)}
+.section-controls{display:flex;align-items:center;gap:var(--space-3);flex-wrap:wrap}
+.section-controls :deep(button),.profile-toolbar :deep(button){display:inline-flex;align-items:center;justify-content:center;gap:8px}
+.profile-toolbar{display:flex;justify-content:flex-end}
+
 .row-actions{display:flex;gap:var(--space-2);flex-wrap:wrap}
 .back-link{display:inline-flex;align-items:center;color:var(--color-primary);font-weight:600;padding:var(--space-2)}
 .back-link:focus-visible{outline:3px solid var(--color-focus)}

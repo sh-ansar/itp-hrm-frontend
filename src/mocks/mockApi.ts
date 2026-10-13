@@ -89,6 +89,13 @@ export async function mockApiRequest<T>(path:string,options:RequestInit={}):Prom
     const extra:any=kind==='departments'?{department_writes_enabled:true}:kind==='positions'?{position_writes_enabled:true}:kind==='employees'?{employee_writes_enabled:true,status_filter:u.searchParams.get('status')||'all'}:kind==='personnel-actions'?{personnel_actions_writes_enabled:true}:{document_writes_enabled:true}
     return page(rows,pg,kind==='employees'||kind==='personnel-actions'||kind==='documents'?25:100,extra) as T}
   m=p.match(/^\/companies\/[^/]+\/employees\/([^/]+)$/)
+  if(m&&method==='PUT'){
+    const e:any=employees.find(x=>x.id===m![1])
+    if(!e)throw new Error('Сотрудник не найден')
+    const body=options.body?JSON.parse(String(options.body)):{}
+    Object.assign(e,body,{revision:Number(e.revision||1)+1})
+    return {data:e} as T
+  }
   if(m&&method==='GET'){const e:any=employees.find(x=>x.id===m![1]);if(!e)throw new Error('Сотрудник не найден');const ei=employees.indexOf(e);return {data:e,assignments:e.current_department_id?[{id:id(7000+ei),department_id:e.current_department_id,position_id:e.current_position_id,department_name:e.current_department_name,position_name:e.current_position_name,valid_from:e.current_assignment_valid_from,valid_to:null,basis_reference:`Приказ № HR-${120+ei}`,revision:1}]:[],experience:[{id:id(8000+ei),revision:1,experience_type:'Основное место работы',started_on:'2022-03-01',ended_on:null,basis_reference:'Трудовой договор'}],reserve:employeeReserve(e,ei),training:employeeTraining(e,ei),reference_profile:referenceProfileFor(e,ei),meta:{assignments_limit:50,assignments_truncated:false,extended_sections_visible:true,profile_writes_enabled:true,assignment_writes_enabled:true,employee_writes_enabled:true}} as T}
   m=p.match(/^\/companies\/[^/]+\/staffing-plans(?:\/([^/]+))?$/)
   if(m){if(m[1])return {data:plan,lines:staffing,meta:{as_of:u.searchParams.get('as_of')||'2026-10-13',staffing_writes_enabled:true}} as T;return page([plan,{...plan,id:id(501),name:'Проект штатного расписания 2027',valid_from:'2027-01-01',status:'draft',revision:1}],1,25,{staffing_writes_enabled:true}) as T}

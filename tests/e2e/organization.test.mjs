@@ -156,7 +156,7 @@ test('position directory is visible but write controls stay hidden in read-only 
     await page.getByLabel('Пароль').fill('SyntheticE2E-Only!2026')
     await page.getByRole('button', { name: 'Войти' }).click()
     await page.getByRole('heading', { name: 'Главная' }).waitFor()
-    await page.goto('/directories')
+    await page.goto('/directories/positions')
     await page.getByRole('heading', { name: 'Справочники' }).waitFor()
     const position = page.locator('.position-card').filter({ hasText: 'Test Engineer' })
     await position.waitFor()

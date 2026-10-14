@@ -31,7 +31,7 @@ const documentsTotal=ref<number|null>(null)
 const documentExpiryAvailable=ref(false)
 const hiresThisMonth=ref<number|null>(null)
 const employeeQuery=ref('')
-const employeeStatus=ref<EmploymentFilter>('active')
+const employeeStatus=ref('active')
 const vacancyQuery=ref('')
 const vacancySearch=ref('')
 const vacancyDepartment=ref('all')
@@ -52,7 +52,7 @@ const employeeRows=computed<EmployeeRow[]>(()=>employees.value.slice(0,6).map(e=
     :e.employment_status==='archived'?'В архиве'
       :e.employment_status==='unassigned'?'Без назначения':'Работает',
 })))
-const staffStatusTone=(status:unknown)=>status==='active'?'success'
+const staffStatusTone=(status:unknown):'success'|'info'|'danger'|'warning'=>status==='active'?'success'
   :status==='planned'?'info':status==='archived'?'danger':'warning'
 const actionRows=computed<ActionRow[]>(()=>actions.value.slice(0,5).map(a=>({
   ...a,
@@ -118,7 +118,7 @@ async function refreshEmployees(){
   staffLoading.value=true
   staffError.value=''
   try{
-    const result=await listEmployees(companyId.value,1,employeeQuery.value,employeeStatus.value)
+    const result=await listEmployees(companyId.value,1,employeeQuery.value,employeeStatus.value as EmploymentFilter)
     if(myGeneration!==staffGeneration)return
     employees.value=result.data
     personnelTotal.value=result.meta.total

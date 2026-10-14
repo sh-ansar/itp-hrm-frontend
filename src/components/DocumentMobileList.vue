@@ -1,10 +1,15 @@
 <script setup lang="ts">
+import { useWorkspaceI18n } from '../composables/useWorkspaceI18n'
+import { useUiFormatters } from '../composables/useUiFormatters'
 import { FileCheck2, Paperclip } from 'lucide-vue-next'
 import BaseButton from './ui/BaseButton.vue'
 import BaseStatusPill from './ui/BaseStatusPill.vue'
 import type { DocumentRow } from '../api/documents'
 import { documentFileUrl, documentTypeLabel } from '../api/documents'
 import { getDemoDocumentUrl } from '../mocks/demoDocumentFiles'
+
+const { tr } = useWorkspaceI18n()
+const fmt = useUiFormatters()
 
 const props = defineProps<{
   rows: DocumentRow[]
@@ -19,25 +24,24 @@ function employeeName(row: DocumentRow): string {
   return [row.last_name, row.first_name].filter(Boolean).join(' ')
 }
 function statusLabel(status: string): string {
-  return status === 'draft' ? 'Черновик' : 'Документ'
+  return tr(status === 'draft' ? 'Черновик' : 'Документ')
 }
 function displayDate(value: string | null): string {
-  if (!value || !/^\d{4}-\d{2}-\d{2}/.test(value)) return '—'
-  return value.slice(8,10)+'.'+value.slice(5,7)+'.'+value.slice(0,4)
+  return fmt.date(value)
 }
 </script>
 
 <template>
   <div class="document-mobile-list">
-    <p v-if="loading" class="document-mobile-empty">Загрузка документов…</p>
-    <p v-else-if="!rows.length" class="document-mobile-empty">Документы не найдены.</p>
+    <p v-if="loading" class="document-mobile-empty">{{ tr('Загрузка документов…') }}</p>
+    <p v-else-if="!rows.length" class="document-mobile-empty">{{ tr('Документы не найдены.') }}</p>
 
     <article v-for="row in rows" :key="row.id" class="document-mobile-card">
       <header>
         <div>
           <span class="document-type">{{ documentTypeLabel(row.document_type) }}</span>
           <strong>{{ row.title }}</strong>
-          <small>№ {{ row.document_number || 'без номера' }}</small>
+          <small>№ {{ row.document_number || tr('без номера') }}</small>
         </div>
         <BaseStatusPill :tone="row.status === 'draft' ? 'info' : 'success'">
           {{ statusLabel(row.status) }}
@@ -45,9 +49,9 @@ function displayDate(value: string | null): string {
       </header>
 
       <dl>
-        <div><dt>Дата</dt><dd>{{ displayDate(row.issued_on) }}</dd></div>
+        <div><dt>{{ tr('Дата') }}</dt><dd>{{ displayDate(row.issued_on) }}</dd></div>
         <div>
-          <dt>Сотрудник</dt>
+          <dt>{{ tr('Сотрудник') }}</dt>
           <dd>
             <RouterLink :to="{ name:'employee-detail', params:{ company:companyId, employee:row.employee_id }, query:{ tab:'documents' } }">
               {{ employeeName(row) }}
@@ -56,25 +60,21 @@ function displayDate(value: string | null): string {
           </dd>
         </div>
         <div v-if="row.personnel_action_id">
-          <dt>Связь</dt><dd>Кадровое действие</dd>
+          <dt>{{ tr('Связь') }}</dt><dd>{{ tr('Кадровое действие') }}</dd>
         </div>
       </dl>
 
       <footer>
         <a v-if="row.has_file && demoMode && getDemoDocumentUrl(row.id)"
           class="download-link" :href="documentFileUrl(companyId, row.id)" target="_blank" rel="noopener">
-          <FileCheck2 :size="15" /> Открыть PDF
-        </a>
+          <FileCheck2 :size="15" /> {{ tr('Открыть PDF') }}</a>
         <span v-else-if="row.has_file && demoMode" class="file-ready">
-          <FileCheck2 :size="15" /> Демо: файл недоступен
-        </span>
+          <FileCheck2 :size="15" /> {{ tr('Демо: файл недоступен') }}</span>
         <a v-else-if="row.has_file" class="download-link" :href="documentFileUrl(companyId,row.id)" target="_blank" rel="noopener">
-          <FileCheck2 :size="15" /> Открыть PDF
-        </a>
+          <FileCheck2 :size="15" /> {{ tr('Открыть PDF') }}</a>
         <BaseButton v-else-if="writesEnabled && row.status === 'draft'" variant="secondary" @click="emit('upload',row)">
-          <Paperclip :size="15" /> Прикрепить PDF
-        </BaseButton>
-        <span v-else class="file-missing">PDF не прикреплён</span>
+          <Paperclip :size="15" /> {{ tr('Прикрепить PDF') }}</BaseButton>
+        <span v-else class="file-missing">{{ tr('PDF не прикреплён') }}</span>
       </footer>
     </article>
   </div>

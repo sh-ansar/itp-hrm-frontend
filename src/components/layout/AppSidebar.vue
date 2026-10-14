@@ -41,7 +41,7 @@ function closeMobile() { if (props.mobileOpen) emit('update:mobileOpen', false) 
 
     <nav class="sidebar-nav" aria-label="Главная навигация">
       <RouterLink v-for="link in primary" :key="link.to" class="nav-item"
-        :class="{ 'is-active': active(link.to) }"
+        :class="{ 'is-active': active(link.to), 'router-link-active': active(link.to) }"
         :to="link.to" :aria-label="link.label"
         :aria-current="active(link.to) ? 'page' : undefined"
         :title="ui.sidebarCollapsed && !mobileOpen ? link.label : undefined"
@@ -51,7 +51,7 @@ function closeMobile() { if (props.mobileOpen) emit('update:mobileOpen', false) 
       </RouterLink>
       <div class="nav-divider" role="separator" aria-label="Сервисные разделы"></div>
       <RouterLink v-for="link in services" :key="link.to" class="nav-item"
-        :class="{ 'is-active': active(link.to) }"
+        :class="{ 'is-active': active(link.to), 'router-link-active': active(link.to) }"
         :to="link.to" :aria-label="link.label"
         :aria-current="active(link.to) ? 'page' : undefined"
         :title="ui.sidebarCollapsed && !mobileOpen ? link.label : undefined"

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useWorkspaceI18n } from '../composables/useWorkspaceI18n'
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { CheckCircle2, CircleDollarSign, FolderTree, Pencil, Plus, UsersRound } from 'lucide-vue-next'
@@ -32,6 +33,8 @@ import {
   type StaffingPlanLine,
   type StaffingPlanRecord,
 } from '../api/staffing'
+
+const { tr } = useWorkspaceI18n()
 
 const route = useRoute()
 const router = useRouter()
@@ -320,35 +323,34 @@ onMounted(refreshCompanies)
     <OrgStaffingNav />
     <BaseNotice v-if="error" tone="error">{{ error }}</BaseNotice>
 
-    <BaseLoadingState v-if="companyBusy" label="Загрузка компаний" />
-    <BaseNotice v-else-if="!companies.length && !error" tone="info">Нет доступных компаний.</BaseNotice>
+    <BaseLoadingState v-if="companyBusy" :label="tr('Загрузка компаний')" />
+    <BaseNotice v-else-if="!companies.length && !error" tone="info">{{ tr('Нет доступных компаний.') }}</BaseNotice>
 
     <div v-else class="staffing-heading">
       <h1>
-        {{ activeView === 'vacant' ? 'Вакантные позиции' : activeView === 'changes' ? 'Изменения штатного расписания' : 'Штатное расписание' }}
+        {{ activeView === 'vacant' ? tr('Вакантные позиции') : activeView === 'changes' ? tr('Изменения штатного расписания') : tr('Штатное расписание') }}
       </h1>
       <div class="staffing-heading-actions">
-        <BaseSelectField v-model="company" label="Компания" :options="companies" />
+        <BaseSelectField v-model="company" :label="tr('Компания')" :options="companies" />
         <BaseSelectField
           v-if="activeView !== 'changes' && plans.length"
           v-model="selectedPlanId"
-          label="Версия штатного расписания"
+          :label="tr('Версия штатного расписания')"
           :options="planOptions"
           :disabled="planBusy"
         />
         <BaseButton v-if="activeView === 'changes' ? historyRows.length : filteredLines.length"
-          variant="secondary" @click="exportCurrentRows">Экспорт CSV</BaseButton>
+          variant="secondary" @click="exportCurrentRows">{{ tr('Экспорт CSV') }}</BaseButton>
         <BaseButton v-if="staffingWritesEnabled && activeView === 'all'" @click="createPlanOpen = true">
-          <Plus :size="17" /> Новая версия
-        </BaseButton>
+          <Plus :size="17" /> {{ tr('Новая версия') }}</BaseButton>
       </div>
     </div>
 
     <BaseCard v-if="activeView === 'changes' && company">
       <div class="section-heading">
         <div>
-          <h2>Реестр изменений штатного расписания</h2>
-          <p class="section-copy">История операций со штатными позициями и версиями расписания.</p>
+          <h2>{{ tr('Реестр изменений штатного расписания') }}</h2>
+          <p class="section-copy">{{ tr('История операций со штатными позициями и версиями расписания.') }}</p>
         </div>
         <span class="muted">{{ historyTotal }} событий</span>
       </div>
@@ -359,11 +361,11 @@ onMounted(refreshCompanies)
         :columns="changeColumns"
         :loading="historyBusy"
         row-key="id"
-        caption="История изменений штатного расписания"
-        empty-title="История изменений пуста"
-        empty-description="Здесь появятся события создания, изменения и утверждения расписания."
+        :caption="tr('История изменений штатного расписания')"
+        :empty-title="tr('История изменений пуста')"
+        :empty-description="tr('Здесь появятся события создания, изменения и утверждения расписания.')"
       >
-        <template #cell-action="{ value }">{{ historyActions[String(value)] ?? value }}</template>
+        <template #cell-action="{ value }">{{ tr(historyActions[String(value)] ?? String(value)) }}</template>
         <template #cell-staffing_plan_id="{ value }">
           <span class="history-reference">{{ value ? plans.find(plan => plan.id === value)?.name ?? String(value).slice(0, 8) : '—' }}</span>
         </template>
@@ -371,14 +373,14 @@ onMounted(refreshCompanies)
         </BaseDataTable>
       </div>
       <div class="staffing-history-mobile">
-        <BaseLoadingState v-if="historyBusy" label="Загрузка истории изменений" />
-        <p v-else-if="!historyRows.length" class="staffing-history-empty">История изменений пока пуста.</p>
+        <BaseLoadingState v-if="historyBusy" :label="tr('Загрузка истории изменений')" />
+        <p v-else-if="!historyRows.length" class="staffing-history-empty">{{ tr('История изменений пока пуста.') }}</p>
         <article v-for="event in historyRows" :key="event.id" class="staffing-history-card">
           <div class="staffing-history-card-heading">
             <strong>{{ historyActions[event.action] ?? event.action }}</strong>
             <span>№ {{ event.id }}</span>
           </div>
-          <p>{{ plans.find(plan => plan.id === event.staffing_plan_id)?.name ?? (event.staffing_plan_id ? 'Версия ' + event.staffing_plan_id.slice(0, 8) : 'Без версии') }}</p>
+          <p>{{ plans.find(plan => plan.id === event.staffing_plan_id)?.name ?? (event.staffing_plan_id ? tr('Версия ') + event.staffing_plan_id.slice(0, 8) : tr('Без версии')) }}</p>
           <div class="staffing-history-card-foot">
             <span>{{ fmt.dateTime(event.created_at) }}</span>
             <span v-if="event.revision != null">Ревизия {{ event.revision }}</span>
@@ -389,74 +391,74 @@ onMounted(refreshCompanies)
         :page="historyPage"
         :last-page="historyLastPage"
         :loading="historyBusy"
-        caption="Страницы истории штатного расписания"
+        :caption="tr('Страницы истории штатного расписания')"
         @previous="historyPage--"
         @next="historyPage++"
       />
     </BaseCard>
 
-    <BaseLoadingState v-if="activeView !== 'changes' && (planBusy || detailBusy)" label="Загрузка штатного расписания" />
+    <BaseLoadingState v-if="activeView !== 'changes' && (planBusy || detailBusy)" :label="tr('Загрузка штатного расписания')" />
 
     <BaseCard v-else-if="activeView !== 'changes' && company && !plans.length">
       <div class="empty-state">
         <UsersRound :size="30" />
-        <h2>Штатное расписание ещё не создано</h2>
-        <p>Создайте первую версию, затем добавьте подразделения, должности и количество ставок.</p>
-        <BaseButton v-if="staffingWritesEnabled" @click="createPlanOpen = true"><Plus :size="17" /> Создать первую версию</BaseButton>
+        <h2>{{ tr('Штатное расписание ещё не создано') }}</h2>
+        <p>{{ tr('Создайте первую версию, затем добавьте подразделения, должности и количество ставок.') }}</p>
+        <BaseButton v-if="staffingWritesEnabled" @click="createPlanOpen = true"><Plus :size="17" /> {{ tr('Создать первую версию') }}</BaseButton>
       </div>
     </BaseCard>
 
     <template v-else-if="activeView !== 'changes' && detail && selectedPlan">
       <BaseCard class="plan-header">
         <div class="snapshot-row">
-          <BaseFormField v-model="asOf" label="Дата среза занятости" type="date" :disabled="detailBusy" />
-          <BaseButton variant="secondary" :disabled="detailBusy || !asOf" @click="loadDetail">Показать на дату</BaseButton>
+          <BaseFormField v-model="asOf" :label="tr('Дата среза занятости')" type="date" :disabled="detailBusy" />
+          <BaseButton variant="secondary" :disabled="detailBusy || !asOf" @click="loadDetail">{{ tr('Показать на дату') }}</BaseButton>
         </div>
         <div class="plan-title">
           <div>
             <div class="title-row">
               <h2>{{ selectedPlan.name }}</h2>
               <span class="plan-status" :class="{ approved: selectedPlan.status === 'approved' }">
-                {{ selectedPlan.status === 'approved' ? 'Утверждено' : 'Черновик' }}
+                {{ selectedPlan.status === 'approved' ? tr('Утверждено') : tr('Черновик') }}
               </span>
             </div>
             <p class="muted">
-              {{ selectedPlan.valid_from }} — {{ selectedPlan.valid_to ?? 'без даты окончания' }}
+              {{ selectedPlan.valid_from }} — {{ selectedPlan.valid_to ?? tr('без даты окончания') }}
               · занятость на {{ detail.meta.as_of }}
             </p>
           </div>
           <div class="plan-actions">
-            <BaseButton v-if="canEdit && activeView === 'all'" variant="secondary" @click="createLine"><Plus :size="17" /> Добавить строку</BaseButton>
-            <BaseButton v-if="canEdit && detail.lines.length && activeView === 'all'" @click="approveOpen = true"><CheckCircle2 :size="17" /> Утвердить</BaseButton>
+            <BaseButton v-if="canEdit && activeView === 'all'" variant="secondary" @click="createLine"><Plus :size="17" /> {{ tr('Добавить строку') }}</BaseButton>
+            <BaseButton v-if="canEdit && detail.lines.length && activeView === 'all'" @click="approveOpen = true"><CheckCircle2 :size="17" /> {{ tr('Утвердить') }}</BaseButton>
           </div>
         </div>
       </BaseCard>
 
-      <div class="staffing-summary-strip" aria-label="Показатели штатного расписания">
-        <div class="staffing-summary-item"><span>Плановых ставок</span><strong>{{ formatUnits(totals.planned) }}</strong></div>
-        <div class="staffing-summary-item"><span>Занято</span><strong>{{ formatUnits(totals.occupied) }}</strong></div>
-        <div class="staffing-summary-item staffing-summary-item--accent"><span>Вакантно</span><strong>{{ formatUnits(totals.vacant) }}</strong></div>
-        <div class="staffing-summary-item"><span>Сверх штата</span><strong>{{ formatUnits(totals.overstaffed) }}</strong></div>
+      <div class="staffing-summary-strip" :aria-label="tr('Показатели штатного расписания')">
+        <div class="staffing-summary-item"><span>{{ tr('Плановых ставок') }}</span><strong>{{ formatUnits(totals.planned) }}</strong></div>
+        <div class="staffing-summary-item"><span>{{ tr('Занято') }}</span><strong>{{ formatUnits(totals.occupied) }}</strong></div>
+        <div class="staffing-summary-item staffing-summary-item--accent"><span>{{ tr('Вакантно') }}</span><strong>{{ formatUnits(totals.vacant) }}</strong></div>
+        <div class="staffing-summary-item"><span>{{ tr('Сверх штата') }}</span><strong>{{ formatUnits(totals.overstaffed) }}</strong></div>
       </div>
 
       <BaseCard>
         <div class="section-heading">
           <div>
-            <h2>{{ activeView === 'vacant' ? 'Вакантные позиции' : 'Штатное расписание' }}</h2>
-            <p class="section-copy">{{ activeView === 'vacant' ? 'Открытые позиции по подразделениям.' : 'Должности, ставки и текущая занятость.' }}</p>
+            <h2>{{ activeView === 'vacant' ? tr('Вакантные позиции') : tr('Штатное расписание') }}</h2>
+            <p class="section-copy">{{ activeView === 'vacant' ? tr('Открытые позиции по подразделениям.') : tr('Должности, ставки и текущая занятость.') }}</p>
           </div>
           <span class="muted">{{ filteredLines.length }} из {{ detail.lines.length }} строк</span>
         </div>
 
-        <div class="line-toolbar" aria-label="Фильтры штатного расписания">
-          <BaseFormField v-model="searchLines" class="line-search" label="Поиск штатных единиц"
-            placeholder="Подразделение или должность" />
+        <div class="line-toolbar" :aria-label="tr('Фильтры штатного расписания')">
+          <BaseFormField v-model="searchLines" class="line-search" :label="tr('Поиск штатных единиц')"
+            :placeholder="tr('Подразделение или должность')" />
           <BaseButton variant="secondary" @click="grouped = !grouped">
-            <FolderTree :size="16" /> {{ grouped ? 'Без группировки' : 'Группировка' }}
+            <FolderTree :size="16" /> {{ grouped ? tr('Без группировки') : tr('Группировка') }}
           </BaseButton>
           <BaseColumnPicker v-model="shownColumns" :columns="optionalLineColumns" />
         </div>
-        <p v-if="grouped" class="line-hint">Группировка по подразделениям выбранной версии штатного расписания.</p>
+        <p v-if="grouped" class="line-hint">{{ tr('Группировка по подразделениям выбранной версии штатного расписания.') }}</p>
 
         <div class="staffing-desktop-table">
           <BaseDataTable
@@ -464,9 +466,9 @@ onMounted(refreshCompanies)
           :columns="visibleLineColumns"
           :group-by="grouped ? groupLines : undefined"
           row-key="id"
-          caption="Строки штатного расписания"
-          :empty-title="activeView === 'vacant' ? 'Вакансий нет' : 'Штатные единицы не найдены'"
-          :empty-description="searchLines ? 'Уточните поисковый запрос.' : 'Для выбранного представления нет записей.'"
+          :caption="tr('Строки штатного расписания')"
+          :empty-title="activeView === 'vacant' ? tr('Вакансий нет') : tr('Штатные единицы не найдены')"
+          :empty-description="searchLines ? tr('Уточните поисковый запрос.') : tr('Для выбранного представления нет записей.')"
         >
           <template #cell-planned_units="{ value }">{{ formatUnits(value) }}</template>
           <template #cell-occupied_units="{ value }">{{ formatUnits(value) }}</template>
@@ -476,11 +478,11 @@ onMounted(refreshCompanies)
           </template>
           <template #cell-status="{ row }">
             <span v-if="row.overstaffed_units > 0" class="line-status danger">Сверх штата +{{ formatUnits(row.overstaffed_units) }}</span>
-            <span v-else-if="row.vacant_units > 0" class="line-status warning">Есть вакансии</span>
-            <span v-else class="line-status success">Укомплектовано</span>
+            <span v-else-if="row.vacant_units > 0" class="line-status warning">{{ tr('Есть вакансии') }}</span>
+            <span v-else class="line-status success">{{ tr('Укомплектовано') }}</span>
           </template>
           <template #cell-actions="{ row }">
-            <BaseButton v-if="canEdit" variant="secondary" @click="editLine(row)"><Pencil :size="15" /> Изменить</BaseButton>
+            <BaseButton v-if="canEdit" variant="secondary" @click="editLine(row)"><Pencil :size="15" /> {{ tr('Изменить') }}</BaseButton>
           </template>
           </BaseDataTable>
         </div>
@@ -492,13 +494,13 @@ onMounted(refreshCompanies)
       </BaseCard>
     </template>
 
-    <BaseDrawer :open="createPlanOpen" title="Новая версия штатного расписания"
-      description="Период действия и параметры новой версии" @close="createPlanOpen = false">
+    <BaseDrawer :open="createPlanOpen" :title="tr('Новая версия штатного расписания')"
+      :description="tr('Период действия и параметры новой версии')" @close="createPlanOpen = false">
       <StaffingPlanForm v-if="company" :company-id="company" @saved="planCreated" @cancelled="createPlanOpen = false" />
     </BaseDrawer>
 
-    <BaseDrawer :open="lineEditorOpen" :title="editingLine ? 'Изменить штатную единицу' : 'Новая штатная единица'"
-      description="Структурная позиция и параметры ставки" @close="lineEditorOpen = false">
+    <BaseDrawer :open="lineEditorOpen" :title="editingLine ? tr('Изменить штатную единицу') : tr('Новая штатная единица')"
+      :description="tr('Структурная позиция и параметры ставки')" @close="lineEditorOpen = false">
       <StaffingLineForm
         v-if="company && selectedPlanId"
         :key="editingLine?.id ?? 'new'"
@@ -510,14 +512,14 @@ onMounted(refreshCompanies)
       />
     </BaseDrawer>
 
-    <BaseDialog :open="approveOpen" title="Утвердить штатное расписание" @close="approveOpen = false">
+    <BaseDialog :open="approveOpen" :title="tr('Утвердить штатное расписание')" @close="approveOpen = false">
       <div class="approve-copy">
-        <BaseNotice tone="warning">После утверждения эту версию нельзя будет редактировать. Для изменений нужно будет создать новую версию.</BaseNotice>
+        <BaseNotice tone="warning">{{ tr('После утверждения эту версию нельзя будет редактировать. Для изменений нужно будет создать новую версию.') }}</BaseNotice>
         <p><strong>{{ selectedPlan?.name }}</strong></p>
-        <p class="muted">Проверьте ставки и период действия перед утверждением.</p>
+        <p class="muted">{{ tr('Проверьте ставки и период действия перед утверждением.') }}</p>
         <div class="approve-actions">
-          <BaseButton variant="secondary" @click="approveOpen = false">Отмена</BaseButton>
-          <BaseButton @click="approvePlan">Утвердить</BaseButton>
+          <BaseButton variant="secondary" @click="approveOpen = false">{{ tr('Отмена') }}</BaseButton>
+          <BaseButton @click="approvePlan">{{ tr('Утвердить') }}</BaseButton>
         </div>
       </div>
     </BaseDialog>

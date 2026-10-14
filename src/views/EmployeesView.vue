@@ -257,17 +257,34 @@ const templateOptions = computed(() => [
 const registryChips = computed(() => [
   ...(search.value ? [{ id: 'search', label: 'Поиск: ' + search.value }] : []),
   ...(statusFilter.value !== 'active' ? [{ id: 'status', label: 'Статус: ' + (statusOptions.find(item => item.id === statusFilter.value)?.label ?? statusFilter.value) }] : []),
-  ...(grouped.value ? [{ id: 'group', label: 'По подразделениям' }] : []),
+  ...(departmentFilter.value !== 'all' ? [{ id: 'department', label: 'Подразделение: ' + departmentFilter.value }] : []),
+  ...(positionFilter.value !== 'all' ? [{ id: 'position', label: 'Должность: ' + positionFilter.value }] : []),
+  ...(objectFilter.value !== 'all' ? [{ id: 'object', label: 'Объект: ' + objectFilter.value }] : []),
+  ...(categoryFilter.value !== 'all' ? [{ id: 'category', label: 'Категория: ' + categoryFilter.value }] : []),
+  ...(genderFilter.value !== 'all' ? [{ id: 'gender', label: 'Пол: ' + (genderFilterOptions.find(item => item.id === genderFilter.value)?.name ?? genderFilter.value) }] : []),
+  ...(groupMode.value !== 'none' ? [{ id: 'group', label: 'Группировка: ' + groupModeLabels[groupMode.value] }] : []),
 ])
 function clearChip(id: string) {
   if (id === 'search') clearSearch()
   if (id === 'status') setStatus('active')
-  if (id === 'group') grouped.value = false
+  if (id === 'department') departmentFilter.value = 'all'
+  if (id === 'position') positionFilter.value = 'all'
+  if (id === 'object') objectFilter.value = 'all'
+  if (id === 'category') categoryFilter.value = 'all'
+  if (id === 'gender') genderFilter.value = 'all'
+  if (id === 'group') groupMode.value = 'none'
+  page.value = 1
 }
 function clearRegistryFilters() {
   searchDraft.value = ''
-  grouped.value = false
+  groupMode.value = 'none'
+  departmentFilter.value = 'all'
+  positionFilter.value = 'all'
+  objectFilter.value = 'all'
+  categoryFilter.value = 'all'
+  genderFilter.value = 'all'
   filtersOpen.value = false
+  page.value = 1
   router.replace({
     name: 'employees',
     query: { ...route.query, q: undefined, status: undefined },
@@ -314,8 +331,15 @@ const rowActionOptions = [
 function savePreset() {
   try {
     localStorage.setItem(PRESET_KEY, JSON.stringify({
-      columns: visibleFields.value, grouped: grouped.value,
-      status: statusFilter.value, perPage: pageSize.value,
+      columns: visibleFields.value,
+      groupMode: groupMode.value,
+      status: statusFilter.value,
+      department: departmentFilter.value,
+      position: positionFilter.value,
+      object: objectFilter.value,
+      category: categoryFilter.value,
+      gender: genderFilter.value,
+      perPage: pageSize.value,
     }))
     presetAvailable.value = true
     presetNotice.value = 'Вид сохранён только в этом браузере'
@@ -326,7 +350,11 @@ function applyPreset() {
     const raw = localStorage.getItem(PRESET_KEY)
     if (!raw) return
     const preset = JSON.parse(raw) as Record<string, unknown>
-    if (typeof preset.grouped === 'boolean') grouped.value = preset.grouped
+    if (typeof preset.groupMode === 'string' && ['none', 'department', 'category', 'object'].includes(preset.groupMode))
+      groupMode.value = preset.groupMode as GroupMode
+    // Compatibility with the previous single "grouped by department" preset.
+    if (typeof preset.grouped === 'boolean' && !('groupMode' in preset))
+      groupMode.value = preset.grouped ? 'department' : 'none'
     if (typeof preset.columns === 'object' && preset.columns !== null) {
       const values = preset.columns as Record<string, unknown>
       visibleFields.value = {
@@ -340,6 +368,12 @@ function applyPreset() {
     if (typeof preset.status === 'string' &&
       ['all', 'active', 'planned', 'archived', 'unassigned'].includes(preset.status))
       setStatus(preset.status as EmploymentFilter)
+    if (typeof preset.department === 'string') departmentFilter.value = preset.department
+    if (typeof preset.position === 'string') positionFilter.value = preset.position
+    if (typeof preset.object === 'string') objectFilter.value = preset.object
+    if (typeof preset.category === 'string') categoryFilter.value = preset.category
+    if (typeof preset.gender === 'string') genderFilter.value = preset.gender
+    page.value = 1
     presetNotice.value = 'Сохранённый вид применён'
   } catch { presetNotice.value = 'Не удалось прочитать сохранённый вид' }
 }

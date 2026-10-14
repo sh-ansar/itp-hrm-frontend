@@ -3,6 +3,11 @@ import { computed, nextTick, ref, watch } from 'vue'
 import BaseEmptyState from './BaseEmptyState.vue'
 import BaseLoadingState from './BaseLoadingState.vue'
 
+type ColumnFilter =
+  | { kind: 'contains'; text: string }
+  | { kind: 'choices'; values: string[] }
+type FilterOption = { value: string; label: string; count: number }
+
 /**
  * HRM table standard: the same structure, typography, selection and working
  * column controls on every screen. Search/sort operate on the LOADED rows only.
@@ -31,6 +36,7 @@ const props = withDefaults(defineProps<{
   selectedKeys?: string[]
   minTableWidth?: number
   density?: 'comfortable' | 'compact'
+  selectionLabel?: string
 }>(), {
   loading: false,
   emptyTitle: 'Данные не найдены',
@@ -39,14 +45,16 @@ const props = withDefaults(defineProps<{
   selectable: false,
   selectedKeys: () => [],
   density: 'comfortable',
+  selectionLabel: 'Выбрать строку',
 })
 
 const emit = defineEmits<{ 'update:selectedKeys': [keys: string[]] }>()
 const activeSort = ref<string | null>(null)
 const sortDirection = ref<'asc' | 'desc'>('asc')
-const activeFilters = ref<Record<string, string>>({})
+const activeFilters = ref<Record<string, ColumnFilter>>({})
 const editingColumn = ref<string | null>(null)
 const filterDraft = ref('')
+const draftChoices = ref<string[]>([])
 const filterInput = ref<HTMLInputElement | null>(null)
 const collation = new Intl.Collator('ru', { numeric: true, sensitivity: 'base' })
 const forbiddenActionKeys = new Set(['selection', 'select', 'actions', 'action', 'details', 'detail', 'edit', 'file'])
@@ -87,21 +95,71 @@ function sortBy(key: string) {
 }
 function filterValue(row: T, column: string): string {
   const value = row[column]
-  if (value !== null && value !== undefined) return String(value).toLocaleLowerCase('ru')
-  // Some views render a composite 'employee' slot rather than a native property.
-  if (column === 'employee' || column === 'full_name') {
-    return [row.last_name, row.first_name, row.middle_name, row.personnel_number]
-      .filter(Boolean).join(' ').toLocaleLowerCase('ru')
-  }
-  return ''
+  if (value !== undefined && value !== null) return String(value)
+  // Composite employee column can be a custom slot without a corresponding record field.
+  if (column === 'employee' || column === 'full_name')
+    return [row.last_name, row.first_name, row.middle_name, row.personnel_number].filter(Boolean).join(' ')
+  return '—'
 }
-const filteredRows = computed(() => {
-  const filters = Object.entries(activeFilters.value).filter(([key, value]) =>
-    value.trim() && visibleColumns.value.some(column => column.key === key))
-  if (!filters.length) return props.rows
-  return props.rows.filter(row => filters.every(([key, value]) =>
-    filterValue(row, key).includes(value.toLocaleLowerCase('ru').trim())))
+function filterLabel(key: string, value: string): string {
+  if (key === 'gender') return value === 'male' ? 'Мужчина' : value === 'female' ? 'Женщина' : value
+  if (/^\\d{4}-\\d{2}-\\d{2}$/.test(value) && (key.includes('date') || key.endsWith('_on') || key.endsWith('_from'))) {
+    const [year, month, day] = value.split('-')
+    return day + '.' + month + '.' + year
+  }
+  return value
+}
+function matchesFilter(row: T, key: string, condition: ColumnFilter): boolean {
+  const actual = filterValue(row, key)
+  return condition.kind === 'choices'
+    ? condition.values.includes(actual)
+    : actual.toLocaleLowerCase('ru').includes(condition.text.trim().toLocaleLowerCase('ru'))
+}
+function matchesFilters(row: T, except?: string): boolean {
+  return Object.entries(activeFilters.value).every(([key, condition]) =>
+    key === except || !visibleColumns.value.some(col => col.key === key)
+      || matchesFilter(row, key, condition))
+}
+const filteredRows = computed(() => props.rows.filter(row => matchesFilters(row)))
+// Faceted choices: other active filters narrow the available values, but a
+// column never hides its own options just because its filter is selected.
+const availableOptions = computed<FilterOption[]>(() => {
+  const key = editingColumn.value
+  if (!key) return []
+  const counts = new Map<string, number>()
+  for (const row of props.rows) {
+    if (!matchesFilters(row, key)) continue
+    const value = filterValue(row, key)
+    counts.set(value, (counts.get(value) ?? 0) + 1)
+  }
+  for (const value of draftChoices.value) if (!counts.has(value)) counts.set(value, 0)
+  return [...counts.entries()]
+    .map(([value, count]) => ({ value, label: filterLabel(key, value), count }))
+    .sort((a, b) => collation.compare(a.label, b.label))
 })
+const matchingOptions = computed(() => {
+  const term = filterDraft.value.trim().toLocaleLowerCase('ru')
+  return term ? availableOptions.value.filter(option =>
+    option.label.toLocaleLowerCase('ru').includes(term) || option.value.toLocaleLowerCase('ru').includes(term))
+    : availableOptions.value
+})
+const allMatchingChecked = computed(() => matchingOptions.value.length > 0
+  && matchingOptions.value.every(option => draftChoices.value.includes(option.value)))
+function toggleDraftChoice(value: string, checked: boolean) {
+  draftChoices.value = checked
+    ? [...new Set([...draftChoices.value, value])]
+    : draftChoices.value.filter(item => item !== value)
+}
+function toggleAllMatching(checked: boolean) {
+  const matched = new Set(matchingOptions.value.map(option => option.value))
+  draftChoices.value = checked
+    ? [...new Set([...draftChoices.value, ...matched])]
+    : draftChoices.value.filter(value => !matched.has(value))
+}
+function resetDraft() {
+  draftChoices.value = []
+  filterDraft.value = ''
+}
 const orderedRows = computed(() => {
   if (!activeSort.value || !visibleColumns.value.some(column => column.key === activeSort.value && canSort(column)))
     return filteredRows.value
@@ -137,7 +195,7 @@ const displayRows = computed<Entry[]>(() => {
   ])
 })
 const hasRows = computed(() => !props.loading && orderedRows.value.length > 0)
-const anyFilters = computed(() => Object.values(activeFilters.value).some(Boolean))
+const anyFilters = computed(() => Object.keys(activeFilters.value).length > 0)
 const selectedVisible = computed(() => orderedRows.value.filter(row => selectedSet.value.has(String(row[props.rowKey]))))
 const allSelected = computed(() => orderedRows.value.length > 0 && selectedVisible.value.length === orderedRows.value.length)
 const someSelected = computed(() => selectedVisible.value.length > 0 && !allSelected.value)
@@ -163,19 +221,23 @@ function rowName(row: T) {
   return String(value ?? '')
 }
 async function toggleFilter(key: string) {
-  editingColumn.value = editingColumn.value === key ? null : key
-  if (editingColumn.value) {
-    filterDraft.value = activeFilters.value[key] ?? ''
-    await nextTick()
-    filterInput.value?.focus()
+  if (editingColumn.value === key) {
+    editingColumn.value = null
+    return
   }
+  editingColumn.value = key
+  const active = activeFilters.value[key]
+  filterDraft.value = active?.kind === 'contains' ? active.text : ''
+  draftChoices.value = active?.kind === 'choices' ? [...active.values] : []
+  await nextTick()
+  filterInput.value?.focus()
 }
 function applyFilter() {
   const key = editingColumn.value
   if (!key) return
-  const text = filterDraft.value.trim()
   const next = { ...activeFilters.value }
-  if (text) next[key] = text
+  if (draftChoices.value.length) next[key] = { kind: 'choices', values: [...draftChoices.value] }
+  else if (filterDraft.value.trim()) next[key] = { kind: 'contains', text: filterDraft.value.trim() }
   else delete next[key]
   activeFilters.value = next
   editingColumn.value = null
@@ -184,13 +246,13 @@ function clearColumnFilter(key: string) {
   const next = { ...activeFilters.value }
   delete next[key]
   activeFilters.value = next
-  filterDraft.value = ''
+  resetDraft()
   editingColumn.value = null
 }
 function clearFilters() {
   activeFilters.value = {}
   editingColumn.value = null
-  filterDraft.value = ''
+  resetDraft()
 }
 watch(() => props.columns.map(column => column.key).join(','), () => {
   if (activeSort.value && !visibleColumns.value.some(column => column.key === activeSort.value)) activeSort.value = null
@@ -205,17 +267,43 @@ watch(() => props.columns.map(column => column.key).join(','), () => {
   <div class="base-data-table" :class="{ 'base-data-table--compact': density === 'compact' }">
     <div v-if="filterColumn" class="table-filter-panel" role="group"
       :aria-label="'Фильтр столбца: ' + filterColumn.label">
+      <div class="filter-panel-title">
+        <strong>Фильтр: {{ filterColumn.label }}</strong>
+        <button class="filter-close" type="button" aria-label="Закрыть фильтр" @click="editingColumn=null">×</button>
+      </div>
       <label class="filter-field">
-        <span>Фильтр: {{ filterColumn.label }}</span>
+        <span>Поиск значений</span>
         <input ref="filterInput" v-model="filterDraft" type="search"
           :aria-label="'Значение фильтра: ' + filterColumn.label"
-          placeholder="Введите значение" @keydown.enter.prevent="applyFilter" @keydown.esc="editingColumn=null" />
+          placeholder="Найти значение…" @keydown.enter.prevent="applyFilter" @keydown.esc="editingColumn=null" />
       </label>
-      <button class="filter-apply" type="button" @click="applyFilter">Применить</button>
-      <button v-if="activeFilters[filterColumn.key]" class="filter-clear" type="button"
-        @click="clearColumnFilter(filterColumn.key)">Сбросить</button>
-      <button class="filter-close" type="button" aria-label="Закрыть фильтр" @click="editingColumn=null">×</button>
-      <span class="filter-hint">Поиск по загруженным строкам</span>
+      <div class="filter-choices-header">
+        <label class="filter-choice">
+          <input type="checkbox" :checked="allMatchingChecked"
+            :disabled="!matchingOptions.length"
+            :aria-label="'Выбрать все значения: ' + filterColumn.label"
+            @change="toggleAllMatching(($event.target as HTMLInputElement).checked)" />
+          <span>Выбрать все найденные</span>
+        </label>
+        <span>{{ draftChoices.length }} выбрано</span>
+      </div>
+      <div class="filter-choices" role="group" :aria-label="'Значения столбца: ' + filterColumn.label">
+        <label v-for="option in matchingOptions" :key="option.value" class="filter-choice">
+          <input type="checkbox" :checked="draftChoices.includes(option.value)"
+            :aria-label="'Значение: ' + option.label"
+            @change="toggleDraftChoice(option.value, ($event.target as HTMLInputElement).checked)" />
+          <span class="filter-option-label">{{ option.label }}</span>
+          <small>{{ option.count }}</small>
+        </label>
+        <span v-if="!matchingOptions.length" class="filter-empty">Значений не найдено</span>
+      </div>
+      <div class="filter-panel-actions">
+        <button class="filter-apply" type="button" @click="applyFilter">Применить</button>
+        <button class="filter-clear" type="button" @click="resetDraft">Очистить выбор</button>
+        <button v-if="activeFilters[filterColumn.key]" class="filter-clear" type="button"
+          @click="clearColumnFilter(filterColumn.key)">Сбросить фильтр</button>
+      </div>
+      <span class="filter-hint">Галочки выбирают точные значения. Поиск без галочек фильтрует текст. Только загруженные строки.</span>
     </div>
     <div v-if="anyFilters" class="filter-summary" role="status">
       <span>Фильтр: {{ orderedRows.length }} из {{ rows.length }} загруженных строк</span>
@@ -231,7 +319,7 @@ watch(() => props.columns.map(column => column.key).join(','), () => {
           <tr>
             <th v-if="showSelection" class="selection-column" scope="col">
               <input type="checkbox" :checked="allSelected" :indeterminate="someSelected"
-                :aria-label="'Выбрать все строки на странице: ' + caption"
+                :aria-label="'Выбрать все видимые строки: ' + caption"
                 :disabled="orderedRows.length === 0"
                 @change="selectAll(($event.target as HTMLInputElement).checked)" />
             </th>
@@ -276,7 +364,7 @@ watch(() => props.columns.map(column => column.key).join(','), () => {
             <tr v-else :data-row-key="entry.key" :class="{ 'table-row--selected': selectedSet.has(entry.key) }">
               <td v-if="showSelection" class="selection-column">
                 <input type="checkbox" :checked="selectedSet.has(entry.key)"
-                  :aria-label="'Выбрать сотрудника: ' + rowName(entry.record)"
+                  :aria-label="selectionLabel + ': ' + rowName(entry.record)"
                   @change="selectRow(entry.record, ($event.target as HTMLInputElement).checked)" />
               </td>
               <td v-for="column in visibleColumns" :key="column.key"
@@ -356,26 +444,40 @@ tbody tr.table-row--selected{background:var(--color-accent-soft)}
 .table-align--right{text-align:right}
 .table-align--center{text-align:center}
 .table-filter-panel{
-  display:flex;align-items:end;gap:9px;flex-wrap:wrap;
-  min-height:64px;margin-bottom:8px;padding:10px 12px;
-  border:1px solid var(--color-table-border,var(--color-stroke-strong));
-  border-radius:var(--radius-md);background:var(--color-surface);
+  display:grid;gap:10px;min-width:0;max-width:100%;padding:13px;
+  margin:0 0 9px;border:1px solid var(--color-table-border,var(--color-stroke-strong));
+  border-radius:var(--radius-md);background:var(--color-surface);box-shadow:var(--shadow-card);
 }
-.filter-field{display:grid;gap:4px;flex:1 1 175px;min-width:125px}
-.filter-field span{color:var(--color-text);font-size:11px;line-height:16px;font-weight:600}
+.filter-panel-title{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.filter-panel-title strong{font-size:13px;line-height:18px;color:var(--color-text)}
+.filter-field{display:grid;gap:5px;min-width:0}
+.filter-field span{color:var(--color-muted);font-size:11px;line-height:16px}
 .filter-field input{
-  width:100%;min-height:33px;padding:6px 9px;
+  width:100%;min-height:34px;padding:6px 10px;
   border:1px solid var(--color-stroke-strong);border-radius:var(--radius-sm);
   background:var(--color-surface);color:var(--color-text);font-size:12px;
 }
+.filter-choices-header{display:flex;align-items:center;justify-content:space-between;gap:9px;color:var(--color-muted);font-size:11px}
+.filter-choice{display:flex;align-items:center;gap:9px;min-height:30px;color:var(--color-text);font-size:12px;cursor:pointer}
+.filter-choice input{width:16px;height:16px;flex:none;margin:0;accent-color:var(--color-primary);cursor:pointer}
+.filter-choice small{margin-left:auto;color:var(--color-muted);font-size:11px}
+.filter-option-label{min-width:0;overflow-wrap:anywhere}
+.filter-choices{
+  display:grid;align-content:start;gap:3px;max-height:210px;
+  min-height:38px;overflow-y:auto;overflow-x:hidden;padding:7px 10px;
+  border:1px solid var(--color-stroke);border-radius:var(--radius-sm);
+  scrollbar-width:thin;scrollbar-color:var(--color-stroke-strong) transparent;
+}
+.filter-empty{color:var(--color-muted);font-size:12px;padding:8px 0}
+.filter-panel-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .filter-apply,.filter-clear,.filter-close,.filter-summary button{
-  min-height:33px;padding:6px 11px;border:1px solid var(--color-stroke-strong);
+  min-height:32px;padding:5px 10px;border:1px solid var(--color-stroke-strong);
   border-radius:var(--radius-sm);background:var(--color-surface);
   color:var(--color-text);font-size:12px;line-height:18px;cursor:pointer;
 }
 .filter-apply{background:var(--color-primary);border-color:var(--color-primary);color:var(--color-on-primary)}
-.filter-close{font-size:19px;padding:5px 10px}
-.filter-hint{align-self:center;color:var(--color-muted);font-size:11px}
+.filter-close{width:28px;height:28px;padding:3px;font-size:19px}
+.filter-hint{color:var(--color-muted);font-size:11px;line-height:16px}
 .filter-summary{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:0 0 8px;color:var(--color-muted);font-size:11px}
 .filter-summary button{min-height:27px;padding:3px 9px;color:var(--color-primary)}
 .base-data-table--compact thead th{height:41px;min-height:41px}

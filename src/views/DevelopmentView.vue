@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useActiveCompanySelection } from '../composables/useActiveCompanySelection'
 import { computed, onMounted, ref, watch } from 'vue'
 import { BookOpenCheck, Plus, Search, ShieldCheck } from 'lucide-vue-next'
 import BaseButton from '../components/ui/BaseButton.vue'
@@ -30,6 +31,7 @@ import {
 const props = defineProps<{ section: DevelopmentSection }>()
 const companies = ref<CompanyRecord[]>([])
 const company = ref('')
+const { preferCompany } = useActiveCompanySelection(company)
 const companiesBusy = ref(false)
 const loading = ref(false)
 const error = ref('')
@@ -144,7 +146,7 @@ async function loadCompanies() {
     const data = await listCompanies()
     companies.value = data.data
     if (!companies.value.some(item => item.id === company.value)) {
-      company.value = data.data[0]?.id ?? ''
+      company.value = preferCompany(companies.value)
     }
   } catch (cause) {
     error.value = cause instanceof Error ? cause.message : 'Не удалось загрузить компании'

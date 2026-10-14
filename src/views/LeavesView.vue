@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useActiveCompanySelection } from '../composables/useActiveCompanySelection'
 import { computed, onMounted, ref, watch } from 'vue'
 import { CalendarDays, Clock3, TriangleAlert, UsersRound } from 'lucide-vue-next'
 import BaseCard from '../components/ui/BaseCard.vue'
@@ -31,6 +32,7 @@ const { t: leaveT } = useLeaveWorkflowI18n()
 const managementOpen = ref(false)
 const companies = ref<CompanyRecord[]>([])
 const company = ref('')
+const { preferCompany } = useActiveCompanySelection(company)
 const year = ref(localTodayISO().slice(0, 4))
 const activeTab = ref<LeaveTab>('schedule')
 const employees = ref<EmployeeRecord[]>([])
@@ -138,7 +140,7 @@ async function loadCompanies() {
   try {
     const result = await listCompanies()
     companies.value = result.data
-    if (!companies.value.some(item => item.id === company.value)) company.value = result.data[0]?.id ?? ''
+    if (!companies.value.some(item => item.id === company.value)) company.value = preferCompany(companies.value)
   } catch (cause) {
     error.value = cause instanceof Error ? cause.message : 'Не удалось загрузить компании'
     companies.value = []

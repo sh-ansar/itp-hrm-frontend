@@ -605,7 +605,7 @@ onMounted(() => {
         <div class="register-heading">
           <div class="register-title">
             <h1>{{ activeTab === 'archive' ? 'Архив сотрудников' : 'Реестр сотрудников' }}
-              <span>({{ employeeLoading ? '…' : registryRows.length }} из {{ total }})</span>
+              <span>({{ employeeLoading ? '…' : registryRows.length }} из {{ displayTotal }})</span>
             </h1>
             <p v-if="companies.length===1">{{ currentCompany?.name }}</p>
           </div>
@@ -645,19 +645,27 @@ onMounted(() => {
           <BaseButton variant="secondary" @click="filtersOpen = !filtersOpen" :aria-expanded="filtersOpen">
             <img src="/prototype-icons/Filter.svg" alt="" class="toolbar-icon" /> Фильтры
           </BaseButton>
-          <BaseButton variant="secondary" @click="grouped = !grouped" :aria-pressed="grouped">
-            <FolderTree :size="16" /> {{ grouped ? 'Без группировки' : 'Группировка' }}
-          </BaseButton>
+          <BaseActionDropdown
+            :label="groupMode === 'none' ? 'Группировка' : groupModeLabels[groupMode]"
+            :options="groupOptions" @select="setGroupMode" />
           <BaseColumnPicker v-model="visibleFields" :columns="optionalColumns" title="Настройка колонок" />
           <div class="registry-toolbar-spacer"></div>
           <BaseActionDropdown label="Шаблоны" :options="templateOptions" @select="presetAction" />
         </div>
 
         <div v-if="filtersOpen" class="registry-filters">
-          <BaseSelectField class="status-select"
+          <BaseSelectField
             :model-value="statusFilter" label="Статус сотрудника" :options="statusSelectOptions"
             @update:model-value="setStatus($event as EmploymentFilter)" />
-          <BaseButton v-if="statusFilter !== 'active'" variant="secondary" @click="setStatus('active')">Сбросить фильтр</BaseButton>
+          <BaseSelectField v-model="departmentFilter" label="Подразделение" :options="departmentFilterOptions" />
+          <BaseSelectField v-model="positionFilter" label="Должность" :options="positionFilterOptions" />
+          <BaseSelectField v-model="categoryFilter" label="Категория сотрудника" :options="categoryFilterOptions" />
+          <BaseSelectField v-model="objectFilter" label="Объект" :options="objectFilterOptions" />
+          <BaseSelectField v-model="genderFilter" label="Пол" :options="genderFilterOptions" />
+          <BaseButton
+            v-if="statusFilter !== 'active' || departmentFilter !== 'all' || positionFilter !== 'all'
+              || categoryFilter !== 'all' || objectFilter !== 'all' || genderFilter !== 'all'"
+            variant="secondary" @click="clearRegistryFilters">Сбросить фильтры</BaseButton>
         </div>
 
         <BaseFilterSummary :items="registryChips" label="Активные фильтры реестра"
@@ -665,10 +673,10 @@ onMounted(() => {
         <p v-if="presetNotice" role="status" class="registry-preset-notice">{{ presetNotice }}</p>
         <BaseTableBulkActions :count="selectedOnPage.length" subject="сотрудников"
           :options="selectedActions" @execute="executeSelectedAction" @clear="selectedIds = []" />
-        <p v-if="grouped" class="scope-hint">Сгруппированы записи текущей страницы. Фильтры и количество сотрудников рассчитываются по всему реестру.</p>
+        <p v-if="groupMode !== 'none'" class="scope-hint">Группировка: {{ groupModeLabels[groupMode] }}. В demo фильтры применяются ко всему реестру; на реальном backend — к доступной выборке.</p>
 
         <div class="registry-desktop-table">
-          <BaseDataTable :rows="registryRows" :columns="visibleColumns" :group-by="grouped ? groupEmployees : undefined"
+          <BaseDataTable :rows="registryRows" :columns="visibleColumns" :group-by="groupMode !== 'none' ? groupEmployees : undefined"
           selectable selection-label="Выбрать сотрудника" v-model:selected-keys="selectedIds"
           row-key="id" caption="Реестр сотрудников выбранной компании" :loading="employeeLoading"
           :empty-title="activeTab === 'archive' ? 'В архиве сотрудников нет' : 'Сотрудники не найдены'"
@@ -703,14 +711,14 @@ onMounted(() => {
         </div>
         <div class="registry-mobile-list">
           <EmployeeMobileList :rows="registryRows" :company-id="selectedCompany" :selected-ids="selectedIds"
-            :loading="employeeLoading" :grouped="grouped" @select="toggleSelection" />
+            :loading="employeeLoading" :grouped="groupMode === 'department'" @select="toggleSelection" />
         </div>
         <div class="registry-bottomline">
           <span class="registry-selection" aria-live="polite">
             Выбрано на странице: {{ selectedOnPage.length }} из {{ registryRows.length }}
           </span>
-          <BasePagination :page="page" :last-page="lastPage" :loading="employeeLoading"
-            :total="total" :page-size="pageSize"
+          <BasePagination :page="page" :last-page="displayLastPage" :loading="employeeLoading"
+            :total="displayTotal" :page-size="pageSize"
             caption="Страницы реестра сотрудников"
             @previous="page--" @next="page++" @select-page="page=$event"
             @change-page-size="changePageSize" />

@@ -309,8 +309,6 @@ onMounted(loadCompanies)
 .workspace-title p{margin:4px 0 0;color:var(--color-muted);font-size:10px}
 .workspace-title a{display:inline-flex;align-items:center;gap:5px;color:var(--color-primary);font-size:11px;font-weight:700}
 .workspace-desktop{min-width:0}
-.workspace-desktop :deep(.table-scroll){overflow-x:auto;overflow-y:hidden}
-.workspace-desktop :deep(table){min-width:620px}
 .employee-cell{display:grid;gap:3px;min-width:0}
 .employee-cell a{color:var(--color-text);font-weight:600;overflow-wrap:anywhere}
 .employee-cell a:hover{color:var(--color-primary)}

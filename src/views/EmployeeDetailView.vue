@@ -100,10 +100,23 @@ const genderLabel = computed(() => profile.value?.data.gender === 'male' ? 'Му
 function money(value: number | null | undefined, currency = 'KZT'): string {
   return value == null ? '—' : `${Number(value).toLocaleString('ru-RU')} ${currency}`
 }
+function ageFromBirthDate(value: string | null | undefined): string {
+  if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value.slice(0, 10))) return '—'
+  const born = new Date(value.slice(0, 10) + 'T12:00:00')
+  const now = new Date()
+  let years = now.getFullYear() - born.getFullYear()
+  const month = now.getMonth() - born.getMonth()
+  if (month < 0 || (month === 0 && now.getDate() < born.getDate())) years -= 1
+  return years >= 0 ? String(years) : '—'
+}
+
 const personalFields = computed<EmployeeDisplayField[]>(() => [
   { label: 'ИИН', value: reference.value?.personal.iin },
+  { label: 'Логин', value: reference.value?.personal.login },
   { label: 'Дата рождения', value: formatDate(profile.value?.data.birth_date) },
+  { label: 'Возраст', value: ageFromBirthDate(profile.value?.data.birth_date) },
   { label: 'Пол', value: genderLabel.value },
+  { label: 'Национальность', value: reference.value?.personal.nationality },
   { label: 'Гражданство', value: reference.value?.personal.citizenship },
   { label: 'Семейное положение', value: reference.value?.personal.marital_status },
   { label: 'Табельный номер', value: profile.value?.data.personnel_number },
@@ -113,58 +126,276 @@ const contactFields = computed<EmployeeDisplayField[]>(() => [
   { label: 'Телефон', value: profile.value?.data.phone },
   { label: 'Адрес проживания', value: reference.value?.personal.residence_address ?? profile.value?.data.address, wide: true },
   { label: 'Адрес регистрации', value: reference.value?.personal.registration_address, wide: true },
+  { label: 'Подъезд', value: reference.value?.personal.address_entrance },
+  { label: 'Этаж', value: reference.value?.personal.address_floor },
+  { label: 'Квартира', value: reference.value?.personal.address_apartment },
   { label: 'Контактное лицо', value: reference.value?.personal.emergency_contact_name },
   { label: 'Телефон контактного лица', value: reference.value?.personal.emergency_contact_phone },
 ])
 const documentFields = computed<EmployeeDisplayField[]>(() => [
+  { label: 'Национальность', value: reference.value?.personal.nationality },
+  { label: 'Персональный номер', value: reference.value?.identity_document.personal_number },
+  { label: 'Страна выдачи', value: reference.value?.identity_document.country_of_issue },
+  { label: 'Гражданство', value: reference.value?.personal.citizenship },
   { label: 'Тип документа', value: reference.value?.identity_document.type },
   { label: 'Номер документа', value: reference.value?.identity_document.number },
+  { label: 'Кем выдан', value: reference.value?.identity_document.issued_by, wide: true },
   { label: 'Дата выдачи', value: formatDate(reference.value?.identity_document.issued_on) },
   { label: 'Действителен до', value: formatDate(reference.value?.identity_document.expires_on) },
-  { label: 'Кем выдан', value: reference.value?.identity_document.issued_by, wide: true },
+  { label: 'Файл документа', value: reference.value?.identity_document.attachment_name, wide: true },
 ])
-const bankingFields = computed<EmployeeDisplayField[]>(() => [
-  { label: 'Банк', value: reference.value?.banking.bank_name },
-  { label: 'IBAN', value: reference.value?.banking.iban, wide: true },
-  { label: 'Зарплатный счёт', value: reference.value?.banking.payroll_account },
+const birthPlaceFields = computed<EmployeeDisplayField[]>(() => [
+  { label: 'Место рождения', value: reference.value?.personal.place_of_birth, wide: true },
+  { label: 'Свидетельство о рождении', value: reference.value?.personal.birth_certificate_attachment, wide: true },
 ])
-const organizationFields = computed<EmployeeDisplayField[]>(() => [
+const militaryFields = computed<EmployeeDisplayField[]>(() => [
+  { label: 'Статус воинского учёта', value: reference.value?.military?.status },
+  { label: 'Категория учёта', value: reference.value?.military?.category },
+  { label: 'Военный билет', value: reference.value?.military?.document_reference, wide: true },
+  { label: 'Общий комментарий', value: reference.value?.military?.comment, wide: true },
+])
+const familyColumns = [
+  { key: 'relationship', label: 'Степень родства' },
+  { key: 'full_name', label: 'ФИО' },
+  { key: 'birth_date', label: 'Дата рождения' },
+  { key: 'document_reference', label: 'Документ' },
+]
+
+const organizationPositionFields = computed<EmployeeDisplayField[]>(() => [
+  { label: 'Компания', value: reference.value?.organization?.company_name },
   { label: 'Подразделение', value: currentAssignment.value?.department_name ?? plannedAssignment.value?.department_name },
   { label: 'Должность', value: currentAssignment.value?.position_name ?? plannedAssignment.value?.position_name },
+  { label: 'Категория сотрудника', value: reference.value?.organization?.employee_category },
+  { label: 'Тип персонала', value: reference.value?.organization?.personnel_type },
   { label: 'Дата назначения', value: formatDate(currentAssignment.value?.valid_from ?? plannedAssignment.value?.valid_from) },
+  { label: 'Основное место работы', value: reference.value?.organization?.primary_workplace },
+])
+const workplaceFields = computed<EmployeeDisplayField[]>(() => [
   { label: 'Объект', value: profile.value?.data.work_site },
   { label: 'Рабочая зона', value: profile.value?.data.work_zone },
-  { label: 'Бригада / команда', value: profile.value?.data.work_team },
+  { label: 'Участок / площадка', value: reference.value?.organization?.site_area },
+  { label: 'Местоположение', value: reference.value?.organization?.location, wide: true },
+  { label: 'Статус доступа', value: reference.value?.organization?.access_status },
+  { label: 'Номер пропуска', value: reference.value?.organization?.pass_number },
+  { label: 'Дата выдачи пропуска', value: formatDate(reference.value?.organization?.pass_issued_on) },
+])
+const teamFields = computed<EmployeeDisplayField[]>(() => [
+  { label: 'Бригада / команда', value: reference.value?.organization?.brigade ?? profile.value?.data.work_team },
+  { label: 'Бригадир', value: reference.value?.organization?.brigadier },
+  { label: 'Руководитель подразделения', value: reference.value?.organization?.department_manager },
   { label: 'Непосредственный руководитель', value: profile.value?.data.supervisor_name, wide: true },
+  { label: 'Статус закрепления', value: reference.value?.organization?.assignment_status },
+  { label: 'Дата закрепления', value: formatDate(reference.value?.organization?.assignment_date) },
+])
+const staffingStatusFields = computed<EmployeeDisplayField[]>(() => [
   { label: 'Статус сотрудника', value: employmentStatus.value },
+  { label: 'Архивный сотрудник', value: reference.value?.organization?.archived },
+  { label: 'Штатная позиция', value: reference.value?.organization?.staffing_position ?? currentAssignment.value?.position_name },
+  { label: 'Код штатной позиции', value: reference.value?.organization?.staffing_position_code },
+  { label: 'Причина изменения статуса', value: reference.value?.organization?.status_change_reason, wide: true },
+  { label: 'Дата изменения статуса', value: formatDate(reference.value?.organization?.status_change_date) },
+  { label: 'Вид занятости', value: reference.value?.organization?.employment_type },
+  { label: 'В должности с', value: formatDate(reference.value?.organization?.position_since) },
 ])
-const employmentFields = computed<EmployeeDisplayField[]>(() => [
+
+const contractFields = computed<EmployeeDisplayField[]>(() => [
   { label: 'Номер договора', value: reference.value?.employment.contract_number },
-  { label: 'Дата договора', value: formatDate(reference.value?.employment.contract_date) },
-  { label: 'Вид договора', value: reference.value?.employment.contract_type },
-  { label: 'Тип занятости', value: reference.value?.employment.employment_type },
-  { label: 'Основание приёма', value: currentAssignment.value?.basis_reference ?? plannedAssignment.value?.basis_reference },
-  { label: 'Испытательный срок до', value: formatDate(reference.value?.employment.probation_until) },
-  { label: 'График работы', value: reference.value?.employment.work_schedule, wide: true },
+  { label: 'Тип договора', value: reference.value?.employment.contract_type },
+  { label: 'Действует с', value: formatDate(reference.value?.employment.valid_from ?? reference.value?.employment.contract_date) },
+  { label: 'Действует до', value: formatDate(reference.value?.employment.valid_to) },
+  { label: 'Испытательный срок', value: reference.value?.employment.probation_enabled },
+  { label: 'Испытание с', value: formatDate(reference.value?.employment.probation_from) },
+  { label: 'Испытание до', value: formatDate(reference.value?.employment.probation_until) },
+  { label: 'Основание приёма', value: reference.value?.employment.hire_basis ?? currentAssignment.value?.basis_reference ?? plannedAssignment.value?.basis_reference, wide: true },
+  { label: 'Дата приёма', value: formatDate(reference.value?.employment.hire_date) },
+  { label: 'Вид занятости', value: reference.value?.employment.employment_type },
+  { label: 'Трудовой договор', value: reference.value?.employment.contract_attachment, wide: true },
 ])
-const payrollFields = computed<EmployeeDisplayField[]>(() => [
-  { label: 'Оклад', value: money(reference.value?.payroll.salary, reference.value?.payroll.currency ?? 'KZT') },
+const seniorityFields = computed<EmployeeDisplayField[]>(() => [
+  { label: 'Общий стаж', value: reference.value?.employment.total_seniority },
+  { label: 'Стаж в компании', value: reference.value?.employment.company_seniority },
+  { label: 'Стаж в текущей должности', value: reference.value?.employment.position_seniority },
+  { label: 'Стаж на объекте', value: reference.value?.employment.site_seniority },
+  { label: 'Специальный стаж', value: reference.value?.employment.special_seniority },
+])
+const workingConditionFields = computed<EmployeeDisplayField[]>(() => [
+  { label: 'Условия труда', value: reference.value?.working_conditions?.condition_type },
+  { label: 'Код условий труда', value: reference.value?.working_conditions?.condition_code },
+  { label: 'Код позиции списка', value: reference.value?.working_conditions?.list_position_code },
+  { label: 'Компенсации и льготы', value: reference.value?.working_conditions?.compensation, wide: true },
+  { label: 'Основание', value: reference.value?.working_conditions?.basis, wide: true },
+  { label: 'Действует с', value: formatDate(reference.value?.working_conditions?.valid_from) },
+  { label: 'Действует до', value: formatDate(reference.value?.working_conditions?.valid_to) },
+  { label: 'Документ', value: reference.value?.working_conditions?.attachment_name, wide: true },
+])
+const combinationFields = computed<EmployeeDisplayField[]>(() => [
+  { label: 'Совмещение', value: reference.value?.combination?.enabled },
+  { label: 'С даты', value: formatDate(reference.value?.combination?.valid_from) },
+  { label: 'По дату', value: formatDate(reference.value?.combination?.valid_to) },
+  { label: 'Совмещаемая должность', value: reference.value?.combination?.position },
+  { label: 'Причина', value: reference.value?.combination?.reason, wide: true },
+  { label: 'Замещаемый сотрудник', value: reference.value?.combination?.replaced_employee },
+  { label: 'Основание', value: reference.value?.combination?.basis, wide: true },
+  { label: 'Дополнительные обязанности', value: reference.value?.combination?.duties, wide: true },
+  { label: 'Материальная ответственность', value: reference.value?.combination?.material_responsibility },
+  { label: 'Документ', value: reference.value?.combination?.material_attachment, wide: true },
+])
+const terminationFields = computed<EmployeeDisplayField[]>(() => [
+  { label: 'Договор прекращён', value: reference.value?.termination?.terminated },
+  { label: 'Дата прекращения', value: formatDate(reference.value?.termination?.termination_date) },
+  { label: 'Основание', value: reference.value?.termination?.basis, wide: true },
+  { label: 'Группа основания', value: reference.value?.termination?.basis_group },
+  { label: 'Причина', value: reference.value?.termination?.reason, wide: true },
+  { label: 'Комментарий', value: reference.value?.termination?.comment, wide: true },
+  { label: 'Документ', value: reference.value?.termination?.attachment_name, wide: true },
+])
+
+const payConditionFields = computed<EmployeeDisplayField[]>(() => [
+  { label: 'Вид оплаты', value: reference.value?.payroll.payment_type },
+  { label: 'Валюта', value: reference.value?.payroll.currency },
+  { label: 'Базовая ставка', value: reference.value?.payroll.base_rate ?? money(reference.value?.payroll.salary, reference.value?.payroll.currency ?? 'KZT') },
+  { label: 'Расчётный период', value: reference.value?.payroll.settlement_period },
+  { label: 'Метод расчёта', value: reference.value?.payroll.calculation_method, wide: true },
+  { label: 'Источник данных', value: reference.value?.payroll.data_source, wide: true },
   { label: 'Периодичность выплат', value: reference.value?.payroll.payment_frequency },
   { label: 'Следующая выплата', value: formatDate(reference.value?.payroll.next_payment_date) },
-  { label: 'Банк', value: reference.value?.banking.bank_name },
-  { label: 'IBAN', value: reference.value?.banking.iban, wide: true },
 ])
+const bankTaxFields = computed<EmployeeDisplayField[]>(() => [
+  { label: 'Банк', value: reference.value?.banking.bank_name },
+  { label: 'IBAN / счёт', value: reference.value?.banking.iban, wide: true },
+  { label: 'Зарплатный счёт', value: reference.value?.banking.payroll_account },
+  { label: 'Получатель', value: reference.value?.banking.recipient, wide: true },
+  { label: 'Медицинское страхование', value: reference.value?.banking.medical_insurance },
+  { label: 'Налоговый статус', value: reference.value?.banking.tax_status },
+  { label: 'Пенсионные начисления', value: reference.value?.banking.pension_accruals },
+  { label: 'Документ', value: reference.value?.banking.attachment_name, wide: true },
+])
+const payrollAdjustmentColumns = [
+  { key: 'kind', label: 'Вид' },
+  { key: 'name', label: 'Начисление / удержание' },
+  { key: 'period', label: 'Период' },
+  { key: 'amount', label: 'Сумма' },
+  { key: 'hours', label: 'Часы' },
+  { key: 'basis', label: 'Основание' },
+]
+const payrollHistoryColumns = [
+  { key: 'period', label: 'Период' },
+  { key: 'accrued', label: 'Начислено' },
+  { key: 'withheld', label: 'Удержано' },
+  { key: 'paid', label: 'Выплачено' },
+  { key: 'worked_hours', label: 'Часы' },
+  { key: 'worked_days', label: 'Дни' },
+]
+const payrollSummaryFields = computed<EmployeeDisplayField[]>(() => {
+  const current = reference.value?.payroll_history?.[0]
+  return [
+    { label: 'Начислено', value: current ? money(current.accrued, reference.value?.payroll.currency ?? 'KZT') : null },
+    { label: 'Удержано', value: current ? money(current.withheld, reference.value?.payroll.currency ?? 'KZT') : null },
+    { label: 'К выплате', value: current ? money(current.paid, reference.value?.payroll.currency ?? 'KZT') : null },
+    { label: 'Отработано часов', value: current?.worked_hours },
+    { label: 'Отработано дней', value: current?.worked_days },
+    { label: 'Расчётный период', value: current?.period },
+  ]
+})
+
 const scheduleFields = computed<EmployeeDisplayField[]>(() => [
-  { label: 'График', value: reference.value?.schedule.schedule_name },
-  { label: 'Смена', value: reference.value?.schedule.shift },
+  { label: 'Производственный календарь', value: reference.value?.schedule.production_calendar, wide: true },
+  { label: 'График / режим', value: reference.value?.schedule.schedule_name },
+  { label: 'Тип графика', value: reference.value?.schedule.schedule_type },
+  { label: 'Метод учёта времени', value: reference.value?.schedule.time_accounting },
+  { label: 'Смена по умолчанию', value: reference.value?.schedule.shift },
+  { label: 'Продолжительность смены', value: reference.value?.schedule.shift_duration },
   { label: 'Часов в неделю', value: reference.value?.schedule.hours_per_week },
+  { label: 'Действует с', value: formatDate(reference.value?.schedule.valid_from) },
+  { label: 'Действует до', value: formatDate(reference.value?.schedule.valid_to) },
+  { label: 'Основание', value: reference.value?.schedule.basis, wide: true },
+  { label: 'Ночные смены', value: reference.value?.schedule.night_shifts },
+  { label: 'Работа в выходные / праздники', value: reference.value?.schedule.weekend_work, wide: true },
+])
+const leaveSummaryFields = computed<EmployeeDisplayField[]>(() => [
+  { label: 'Положено дней', value: reference.value?.leave_summary?.entitled_days },
+  { label: 'Использовано', value: reference.value?.leave_summary?.used_days },
+  { label: 'Остаток', value: reference.value?.leave_summary?.balance_days },
+  { label: 'Запланировано до', value: formatDate(reference.value?.leave_summary?.planned_until) },
+  { label: 'Расчётный год', value: reference.value?.leave_summary?.settlement_year },
+  { label: 'Рабочий год с', value: formatDate(reference.value?.leave_summary?.work_year_from) },
+  { label: 'Рабочий год по', value: formatDate(reference.value?.leave_summary?.work_year_to) },
+  { label: 'Метод расчёта остатка', value: reference.value?.leave_summary?.balance_method },
+  { label: 'Источник', value: reference.value?.leave_summary?.data_source, wide: true },
+])
+const currentTimesheetFields = computed<EmployeeDisplayField[]>(() => [
   { label: 'Табельный период', value: reference.value?.schedule.timesheet_month },
   { label: 'План часов', value: reference.value?.schedule.planned_hours },
   { label: 'Отработано часов', value: reference.value?.schedule.worked_hours },
+  { label: 'Отклонение', value: reference.value?.schedule.planned_hours != null && reference.value?.schedule.worked_hours != null
+    ? reference.value.schedule.worked_hours - reference.value.schedule.planned_hours : null },
 ])
+const leaveLimitColumns = [
+  { key: 'leave_type', label: 'Вид отсутствия / отпуска' },
+  { key: 'accrual_method', label: 'Метод начисления' },
+  { key: 'entitled_days', label: 'Положено' },
+  { key: 'used_days', label: 'Использовано' },
+  { key: 'balance_days', label: 'Остаток' },
+  { key: 'basis', label: 'Основание' },
+]
+const attendanceColumns = [
+  { key: 'event_type', label: 'Событие' },
+  { key: 'reason', label: 'Причина' },
+  { key: 'period', label: 'Период' },
+  { key: 'days', label: 'Дни' },
+  { key: 'hours', label: 'Часы' },
+  { key: 'source', label: 'Источник' },
+  { key: 'status', label: 'Статус' },
+]
+const timesheetHistoryColumns = [
+  { key: 'period', label: 'Период' },
+  { key: 'planned_hours', label: 'План' },
+  { key: 'worked_hours', label: 'Отработано' },
+  { key: 'deviation_hours', label: 'Отклонение' },
+  { key: 'work_days', label: 'Рабочие дни' },
+  { key: 'night_hours', label: 'Ночные часы' },
+  { key: 'overtime_hours', label: 'Сверхурочно' },
+  { key: 'absences_days', label: 'Неявки, дни' },
+]
+
+const reserveSummaryFields = computed<EmployeeDisplayField[]>(() => [
+  { label: 'Статус резерва', value: reference.value?.reserve_profile?.status },
+  { label: 'Соответствие требованиям', value: reference.value?.reserve_profile?.match_percent == null ? null : reference.value.reserve_profile.match_percent + '%' },
+  { label: 'Образование', value: reference.value?.reserve_profile?.education },
+  { label: 'План обучения', value: reference.value?.reserve_profile?.learning_plan },
+])
+const reserveDetailFields = computed<EmployeeDisplayField[]>(() => [
+  { label: 'Включён в резерв', value: reference.value?.reserve_profile?.enabled },
+  { label: 'Целевая должность', value: reference.value?.reserve_profile?.target_position },
+  { label: 'Дата включения', value: formatDate(reference.value?.reserve_profile?.included_on) },
+  { label: 'Дата пересмотра', value: formatDate(reference.value?.reserve_profile?.review_on) },
+  { label: 'Уровень резерва', value: reference.value?.reserve_profile?.reserve_level },
+  { label: 'Вид резерва', value: reference.value?.reserve_profile?.reserve_type },
+  { label: 'Основание', value: reference.value?.reserve_profile?.basis, wide: true },
+  { label: 'Документ-основание', value: reference.value?.reserve_profile?.basis_document, wide: true },
+  { label: 'Комментарий', value: reference.value?.reserve_profile?.comment, wide: true },
+])
+const educationColumns = [
+  { key: 'education_type', label: 'Вид образования' },
+  { key: 'organization', label: 'Организация' },
+  { key: 'specialization', label: 'Специальность / программа' },
+  { key: 'started_on', label: 'Начало' },
+  { key: 'ended_on', label: 'Окончание' },
+  { key: 'document_reference', label: 'Документ' },
+]
+const fitColumns = [
+  { key: 'criterion', label: 'Критерий' },
+  { key: 'requirement', label: 'Требование' },
+  { key: 'fact', label: 'Факт' },
+  { key: 'score_percent', label: 'Соответствие' },
+  { key: 'recommendation', label: 'Рекомендация' },
+]
+
 const documentColumns = [
   { key: 'title', label: 'Документ' },
+  { key: 'file_name', label: 'Файл' },
   { key: 'number', label: 'Номер' },
+  { key: 'document_type', label: 'Тип' },
   { key: 'issued_on', label: 'Дата' },
   { key: 'status', label: 'Статус' },
 ]
@@ -183,9 +414,13 @@ function historyActionLabel(action: string): string {
   return labels[action] ?? action
 }
 const historyColumns = [
+  { key: 'created_at', label: 'Дата и время' },
+  { key: 'section', label: 'Раздел' },
   { key: 'action', label: 'Изменение' },
-  { key: 'actor', label: 'Кто изменил' },
-  { key: 'created_at', label: 'Дата' },
+  { key: 'before', label: 'Было' },
+  { key: 'after', label: 'Стало' },
+  { key: 'result', label: 'Результат системы' },
+  { key: 'actor', label: 'Автор' },
 ]
 
 function beginEdit(section: ProfileSection, record: ProfileEditRow) {
@@ -304,14 +539,33 @@ onMounted(load)
         <EmployeeProfileSection title="Документы, удостоверяющие личность">
           <EmployeeDataGrid :fields="documentFields" />
         </EmployeeProfileSection>
-        <EmployeeProfileSection title="Банковские реквизиты">
-          <EmployeeDataGrid :fields="bankingFields" />
+        <EmployeeProfileSection title="Место рождения">
+          <EmployeeDataGrid :fields="birthPlaceFields" />
+        </EmployeeProfileSection>
+        <EmployeeProfileSection title="Семейные данные">
+          <BaseDataTable density="compact" :rows="reference?.family ?? []" :columns="familyColumns" row-key="id"
+            caption="Сведения о родственниках сотрудника" empty-title="Семейные данные не внесены"
+            empty-description="Для сотрудника пока нет доступных сведений о родственниках.">
+            <template #cell-birth_date="{ value }">{{ formatDate(typeof value === 'string' ? value : null) }}</template>
+          </BaseDataTable>
+        </EmployeeProfileSection>
+        <EmployeeProfileSection title="Воинский учёт">
+          <EmployeeDataGrid :fields="militaryFields" />
         </EmployeeProfileSection>
       </template>
 
       <template v-if="activeSection === 'organization' && profile.meta.extended_sections_visible">
-        <EmployeeProfileSection title="Организационные данные">
-          <EmployeeDataGrid :fields="organizationFields" />
+        <EmployeeProfileSection title="Подразделение и должность">
+          <EmployeeDataGrid :fields="organizationPositionFields" />
+        </EmployeeProfileSection>
+        <EmployeeProfileSection title="Объект и место работы">
+          <EmployeeDataGrid :fields="workplaceFields" />
+        </EmployeeProfileSection>
+        <EmployeeProfileSection title="Бригада и руководитель">
+          <EmployeeDataGrid :fields="teamFields" />
+        </EmployeeProfileSection>
+        <EmployeeProfileSection title="Статус и штатная позиция">
+          <EmployeeDataGrid :fields="staffingStatusFields" />
         </EmployeeProfileSection>
       </template>
       <div v-if="profile.meta.profile_writes_enabled && activeSection === 'development'" class="profile-toolbar">
@@ -319,14 +573,15 @@ onMounted(load)
       </div>
 
       <template v-if="activeSection === 'employment'">
-        <EmployeeProfileSection title="Трудовой договор и приём">
+        <EmployeeProfileSection title="Договор и приём">
           <template v-if="profile.meta.assignment_writes_enabled" #actions>
             <BaseButton @click="assignmentCreateOpen = true"><Plus :size="16" /> Добавить назначение</BaseButton>
           </template>
-          <EmployeeDataGrid :fields="employmentFields" />
+          <EmployeeDataGrid :fields="contractFields" />
         </EmployeeProfileSection>
 
         <EmployeeProfileSection title="Стаж и трудовой опыт">
+          <EmployeeDataGrid :fields="seniorityFields" />
           <h3 class="assignment-history-title">История назначений</h3>
           <BaseDataTable density="compact" :columns="columns" :rows="profile.assignments" row-key="id"
             caption="Доступная история назначений" empty-title="Назначений не найдено"
@@ -351,8 +606,19 @@ onMounted(load)
             <template #cell-edit="{ row }"><BaseButton variant="secondary" @click="beginEdit('experience', row)">Изменить</BaseButton></template>
           </BaseDataTable>
         </EmployeeProfileSection>
-      </template>
 
+        <EmployeeProfileSection title="Условия труда и персонифицированный учёт">
+          <EmployeeDataGrid :fields="workingConditionFields" />
+        </EmployeeProfileSection>
+
+        <EmployeeProfileSection title="Совмещение и дополнительные обязанности">
+          <EmployeeDataGrid :fields="combinationFields" />
+        </EmployeeProfileSection>
+
+        <EmployeeProfileSection title="Прекращение договора">
+          <EmployeeDataGrid :fields="terminationFields" />
+        </EmployeeProfileSection>
+      </template>
       <template v-if="profile.meta.extended_sections_visible">
         <EmployeeProfileSection v-if="activeSection === 'documents'" title="Документы сотрудника">
           <BaseDataTable density="compact" :rows="reference?.documents ?? []" :columns="documentColumns" row-key="id"
@@ -364,29 +630,115 @@ onMounted(load)
         </EmployeeProfileSection>
 
         <template v-if="activeSection === 'payroll'">
-          <EmployeeProfileSection title="Расчёты и начисления">
-            <EmployeeDataGrid :fields="payrollFields" />
+          <EmployeeProfileSection title="Условия оплаты">
+            <EmployeeDataGrid :fields="payConditionFields" />
           </EmployeeProfileSection>
-          <EmployeeProfileSection title="Банковские реквизиты">
-            <EmployeeDataGrid :fields="bankingFields" />
+
+          <EmployeeProfileSection title="Надбавки, компенсации и удержания">
+            <BaseDataTable density="compact" :rows="reference?.payroll_adjustments ?? []"
+              :columns="payrollAdjustmentColumns" row-key="id"
+              caption="Начисления и удержания сотрудника"
+              empty-title="Начисления не найдены"
+              empty-description="Для сотрудника пока нет доступных начислений и удержаний.">
+              <template #cell-amount="{ value }">{{ money(Number(value), reference?.payroll.currency ?? 'KZT') }}</template>
+            </BaseDataTable>
+          </EmployeeProfileSection>
+
+          <EmployeeProfileSection title="Расчётный лист">
+            <EmployeeDataGrid :fields="payrollSummaryFields" />
+          </EmployeeProfileSection>
+
+          <EmployeeProfileSection title="Динамика выплат и отработанных часов">
+            <BaseDataTable density="compact" :rows="reference?.payroll_history ?? []"
+              :columns="payrollHistoryColumns" row-key="id"
+              caption="История начислений и рабочего времени"
+              empty-title="История начислений пуста"
+              empty-description="Нет данных за предыдущие расчётные периоды.">
+              <template #cell-accrued="{ value }">{{ money(Number(value), reference?.payroll.currency ?? 'KZT') }}</template>
+              <template #cell-withheld="{ value }">{{ money(Number(value), reference?.payroll.currency ?? 'KZT') }}</template>
+              <template #cell-paid="{ value }">{{ money(Number(value), reference?.payroll.currency ?? 'KZT') }}</template>
+            </BaseDataTable>
+          </EmployeeProfileSection>
+
+          <EmployeeProfileSection title="Банковские и налоговые данные">
+            <EmployeeDataGrid :fields="bankTaxFields" />
           </EmployeeProfileSection>
         </template>
 
         <template v-if="activeSection === 'schedule'">
-          <EmployeeProfileSection title="График работы и табель">
+          <EmployeeProfileSection title="График работы">
             <EmployeeDataGrid :fields="scheduleFields" />
+          </EmployeeProfileSection>
+
+          <EmployeeProfileSection title="Отпуска и лимиты отсутствий">
+            <EmployeeDataGrid :fields="leaveSummaryFields" />
+            <h3 class="assignment-history-title">Лимиты и остатки</h3>
+            <BaseDataTable density="compact" :rows="reference?.leave_limits ?? []"
+              :columns="leaveLimitColumns" row-key="id"
+              caption="Лимиты отпусков и отсутствий"
+              empty-title="Лимиты не заданы"
+              empty-description="Для сотрудника не найдены доступные лимиты отпусков.">
+            </BaseDataTable>
+          </EmployeeProfileSection>
+
+          <EmployeeProfileSection title="Табель за период">
+            <EmployeeDataGrid :fields="currentTimesheetFields" />
+          </EmployeeProfileSection>
+
+          <EmployeeProfileSection title="Явки, неявки и отсутствия">
+            <BaseDataTable density="compact" :rows="reference?.attendance_events ?? []"
+              :columns="attendanceColumns" row-key="id"
+              caption="События посещаемости и рабочего времени"
+              empty-title="Событий нет"
+              empty-description="Для выбранного сотрудника события рабочего времени не зарегистрированы.">
+            </BaseDataTable>
+          </EmployeeProfileSection>
+
+          <EmployeeProfileSection title="История табелей">
+            <BaseDataTable density="compact" :rows="reference?.timesheet_history ?? []"
+              :columns="timesheetHistoryColumns" row-key="id"
+              caption="История табелей сотрудника"
+              empty-title="История табелей пуста"
+              empty-description="Для сотрудника пока нет архивных табелей.">
+            </BaseDataTable>
           </EmployeeProfileSection>
         </template>
 
         <template v-if="activeSection === 'development'">
           <EmployeeProfileSection title="Кадровый резерв">
+            <EmployeeDataGrid :fields="reserveSummaryFields" />
+            <h3 class="assignment-history-title">Параметры резерва</h3>
+            <EmployeeDataGrid :fields="reserveDetailFields" />
+            <h3 class="assignment-history-title">История кадрового резерва</h3>
             <BaseDataTable density="compact" :rows="profile.reserve" row-key="id" caption="Кадровый резерв сотрудника"
               :columns="[{key:'target_position',label:'Резервируемая должность'},{key:'reserve_level',label:'Уровень'},{key:'reserve_type',label:'Вид'},{key:'joined_year',label:'Год зачисления'},{key:'left_year',label:'Год исключения'}, ...(profile.meta.profile_writes_enabled ? [{key:'edit',label:'Действия'}] : [])]"
               empty-title="Записей резерва нет" empty-description="Сотрудник пока не включён в кадровый резерв.">
               <template #cell-edit="{ row }"><BaseButton variant="secondary" @click="beginEdit('reserve', row)">Изменить</BaseButton></template>
             </BaseDataTable>
           </EmployeeProfileSection>
-          <EmployeeProfileSection title="Обучение и повышение квалификации">
+
+          <EmployeeProfileSection title="Образование и квалификация">
+            <BaseDataTable density="compact" :rows="reference?.education ?? []"
+              :columns="educationColumns" row-key="id"
+              caption="Образование и квалификация сотрудника"
+              empty-title="Сведения об образовании отсутствуют"
+              empty-description="Для сотрудника пока нет записей об образовании и квалификации.">
+              <template #cell-started_on="{ value }">{{ formatDate(typeof value === 'string' ? value : null) }}</template>
+              <template #cell-ended_on="{ value }">{{ formatDate(typeof value === 'string' ? value : null) }}</template>
+            </BaseDataTable>
+          </EmployeeProfileSection>
+
+          <EmployeeProfileSection title="Оценка соответствия и решения комиссии">
+            <BaseDataTable density="compact" :rows="reference?.fit_assessment ?? []"
+              :columns="fitColumns" row-key="id"
+              caption="Оценка соответствия требованиям кадрового резерва"
+              empty-title="Оценка не проведена"
+              empty-description="Для сотрудника пока нет результатов оценки.">
+              <template #cell-score_percent="{ value }">{{ value }}%</template>
+            </BaseDataTable>
+          </EmployeeProfileSection>
+
+          <EmployeeProfileSection title="Дополнительное обучение">
             <BaseDataTable density="compact" :rows="profile.training" row-key="id" caption="Обучение сотрудника"
               :columns="[{key:'training_type',label:'Вид'},{key:'training_mode',label:'Формат'},{key:'topic',label:'Тема'},{key:'provider',label:'Центр обучения'},{key:'city',label:'Город'},{key:'started_on',label:'Начало'},{key:'ended_on',label:'Окончание'},{key:'document_reference',label:'Документ'}, ...(profile.meta.profile_writes_enabled ? [{key:'edit',label:'Действия'}] : [])]"
               empty-title="Обучение не зарегистрировано" empty-description="Добавьте сведения об обучении сотрудника.">

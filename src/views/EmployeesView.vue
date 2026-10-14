@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { FolderTree, Maximize2, Minimize2, Plus, Search } from 'lucide-vue-next'
+import { Maximize2, Minimize2, Plus, Search } from 'lucide-vue-next'
 import { useRoute, useRouter } from 'vue-router'
 import BaseCard from '../components/ui/BaseCard.vue'
 import BaseKpiGrid from '../components/ui/BaseKpiGrid.vue'
@@ -30,6 +30,7 @@ import {
 } from '../api/personnel'
 
 type EmployeeRow = EmployeeRecord & { full_name: string; status_label: string }
+type GroupMode = 'none' | 'department' | 'category' | 'object'
 const router = useRouter()
 const route = useRoute()
 const companies = ref<CompanyRecord[]>([])
@@ -48,8 +49,14 @@ const pageSize = ref(10)
 const presetAvailable = ref(false)
 const presetNotice = ref('')
 const statusFilter = ref<EmploymentFilter>('active')
-const grouped = ref(false)
+const groupMode = ref<GroupMode>('none')
 const filtersOpen = ref(false)
+const departmentFilter = ref('all')
+const positionFilter = ref('all')
+const objectFilter = ref('all')
+const categoryFilter = ref('all')
+const genderFilter = ref('all')
+const demoMode = import.meta.env.VITE_DEMO_MODE === 'true'
 const selectedIds = ref<string[]>([])
 const error = ref('')
 const page = ref(1)
@@ -92,17 +99,37 @@ const columns = [
   { key: 'birth_date', label: 'Дата рождения' },
   { key: 'current_assignment_valid_from', label: 'Дата назначения' },
   { key: 'gender', label: 'Пол' },
+  { key: 'employee_category', label: 'Категория' },
+  { key: 'personnel_type', label: 'Тип персонала' },
   { key: 'current_position_name', label: 'Должность' },
   { key: 'current_department_name', label: 'Подразделение' },
+  { key: 'work_site', label: 'Объект' },
+  { key: 'work_zone', label: 'Рабочая зона' },
+  { key: 'work_team', label: 'Бригада / команда' },
+  { key: 'supervisor_name', label: 'Руководитель' },
+  { key: 'contract_type', label: 'Вид договора' },
+  { key: 'email', label: 'Email' },
+  { key: 'phone', label: 'Телефон' },
   { key: 'status_label', label: 'Статус' },
   { key: 'details', label: 'Действие' },
 ]
 const extendedRegistry = computed(() => ['company_admin', 'hr_specialist'].includes(currentCompany.value?.role_code ?? ''))
-const privateColumns = ['birth_date', 'gender']
-const optionalColumns = computed(() => columns.filter(column => !['full_name', 'details'].includes(column.key) && (extendedRegistry.value || !privateColumns.includes(column.key))))
-const columnKeys = ['birth_date', 'gender', 'personnel_number', 'current_position_name', 'current_department_name', 'current_assignment_valid_from', 'status_label']
+const privateColumns = ['birth_date', 'gender', 'email', 'phone']
+const optionalColumns = computed(() => columns.filter(column =>
+  !['full_name', 'details'].includes(column.key) &&
+  (extendedRegistry.value || !privateColumns.includes(column.key))))
+const columnKeys = [
+  'birth_date', 'gender', 'personnel_number', 'employee_category', 'personnel_type',
+  'current_position_name', 'current_department_name', 'current_assignment_valid_from',
+  'work_site', 'work_zone', 'work_team', 'supervisor_name', 'contract_type',
+  'email', 'phone', 'status_label',
+]
 function savedColumnPreferences(): Record<string, boolean> {
-  const initial = Object.fromEntries(columnKeys.map(key => [key, !['current_position_name', 'current_department_name'].includes(key)]))
+  const defaultVisible = new Set([
+    'birth_date', 'gender', 'personnel_number', 'current_assignment_valid_from',
+    'employee_category', 'current_position_name', 'current_department_name', 'status_label',
+  ])
+  const initial = Object.fromEntries(columnKeys.map(key => [key, defaultVisible.has(key)]))
   try {
     const saved = JSON.parse(localStorage.getItem('hrm-employee-columns-v1') || '{}') as Record<string, unknown>
     for (const key of columnKeys) if (typeof saved[key] === 'boolean') initial[key] = saved[key]
@@ -111,9 +138,11 @@ function savedColumnPreferences(): Record<string, boolean> {
 }
 const visibleFields = ref<Record<string, boolean>>(savedColumnPreferences())
 const visibleColumns = computed(() =>
-  columns.filter(column => (extendedRegistry.value || !privateColumns.includes(column.key)) && (['full_name', 'details'].includes(column.key) || visibleFields.value[column.key] !== false)))
+  columns.filter(column => (extendedRegistry.value || !privateColumns.includes(column.key)) &&
+    (['full_name', 'details'].includes(column.key) || visibleFields.value[column.key] !== false)))
 const currentCompany = computed(() => companies.value.find(item => item.id === selectedCompany.value))
-const registryRows = computed<EmployeeRow[]>(() => employees.value.map(employee => {
+
+const allRegistryRows = computed<EmployeeRow[]>(() => employees.value.map(employee => {
   const state: EmploymentStatus = employee.employment_status
     ?? (employee.current_position_name ? 'active' : 'unassigned')
   return {
@@ -122,13 +151,62 @@ const registryRows = computed<EmployeeRow[]>(() => employees.value.map(employee 
     status_label: statusLabels[state],
   }
 }))
+function uniqueOptions(values: Array<string | null | undefined>, allLabel: string) {
+  const names = [...new Set(values.filter((value): value is string => Boolean(value && value.trim())))]
+    .sort((a, b) => a.localeCompare(b, 'ru'))
+  return [{ id: 'all', name: allLabel }, ...names.map(name => ({ id: name, name }))]
+}
+const departmentFilterOptions = computed(() =>
+  uniqueOptions(allRegistryRows.value.map(row => row.current_department_name), 'Все подразделения'))
+const positionFilterOptions = computed(() =>
+  uniqueOptions(allRegistryRows.value.map(row => row.current_position_name), 'Все должности'))
+const objectFilterOptions = computed(() =>
+  uniqueOptions(allRegistryRows.value.map(row => row.work_site), 'Все объекты'))
+const categoryFilterOptions = computed(() =>
+  uniqueOptions(allRegistryRows.value.map(row => row.employee_category), 'Все категории'))
+const genderFilterOptions = [
+  { id: 'all', name: 'Любой пол' },
+  { id: 'male', name: 'Мужчина' },
+  { id: 'female', name: 'Женщина' },
+  { id: 'unset', name: 'Не указан' },
+]
+const filteredRegistryRows = computed(() => allRegistryRows.value.filter(row =>
+  (departmentFilter.value === 'all' || row.current_department_name === departmentFilter.value) &&
+  (positionFilter.value === 'all' || row.current_position_name === positionFilter.value) &&
+  (objectFilter.value === 'all' || row.work_site === objectFilter.value) &&
+  (categoryFilter.value === 'all' || row.employee_category === categoryFilter.value) &&
+  (genderFilter.value === 'all' ||
+    (genderFilter.value === 'unset' ? !row.gender : row.gender === genderFilter.value))
+))
+const registryRows = computed<EmployeeRow[]>(() => {
+  if (!demoMode) return filteredRegistryRows.value
+  const startIndex = (page.value - 1) * pageSize.value
+  return filteredRegistryRows.value.slice(startIndex, startIndex + pageSize.value)
+})
 function displayDate(value: unknown): string {
   if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}/.test(value)) return '—'
   const [year, month, day] = value.slice(0, 10).split('-')
   return day + '.' + month + '.' + year
 }
-const groupEmployees = (row: EmployeeRow) => row.current_department_name || 'Без подразделения'
-const allPageSelected = computed(() => registryRows.value.length > 0 && registryRows.value.every(row => selectedIds.value.includes(row.id)))
+const groupModeLabels: Record<GroupMode, string> = {
+  none: 'Без группировки',
+  department: 'По подразделениям',
+  category: 'По категориям',
+  object: 'По объектам',
+}
+const groupOptions = (Object.entries(groupModeLabels) as Array<[GroupMode, string]>)
+  .map(([id, label]) => ({ id, label }))
+function setGroupMode(id: string) {
+  if (['none', 'department', 'category', 'object'].includes(id)) groupMode.value = id as GroupMode
+}
+const groupEmployees = (row: EmployeeRow) => {
+  if (groupMode.value === 'department') return row.current_department_name || 'Без подразделения'
+  if (groupMode.value === 'category') return row.employee_category || 'Без категории'
+  if (groupMode.value === 'object') return row.work_site || 'Без объекта'
+  return ''
+}
+const allPageSelected = computed(() => registryRows.value.length > 0 &&
+  registryRows.value.every(row => selectedIds.value.includes(row.id)))
 const selectedOnPage = computed(() => registryRows.value.filter(row => selectedIds.value.includes(row.id)))
 const selectedActions = computed(() => [
   { id: 'export_csv', label: 'Экспортировать выбранных в CSV' },
@@ -179,17 +257,34 @@ const templateOptions = computed(() => [
 const registryChips = computed(() => [
   ...(search.value ? [{ id: 'search', label: 'Поиск: ' + search.value }] : []),
   ...(statusFilter.value !== 'active' ? [{ id: 'status', label: 'Статус: ' + (statusOptions.find(item => item.id === statusFilter.value)?.label ?? statusFilter.value) }] : []),
-  ...(grouped.value ? [{ id: 'group', label: 'По подразделениям' }] : []),
+  ...(departmentFilter.value !== 'all' ? [{ id: 'department', label: 'Подразделение: ' + departmentFilter.value }] : []),
+  ...(positionFilter.value !== 'all' ? [{ id: 'position', label: 'Должность: ' + positionFilter.value }] : []),
+  ...(objectFilter.value !== 'all' ? [{ id: 'object', label: 'Объект: ' + objectFilter.value }] : []),
+  ...(categoryFilter.value !== 'all' ? [{ id: 'category', label: 'Категория: ' + categoryFilter.value }] : []),
+  ...(genderFilter.value !== 'all' ? [{ id: 'gender', label: 'Пол: ' + (genderFilterOptions.find(item => item.id === genderFilter.value)?.name ?? genderFilter.value) }] : []),
+  ...(groupMode.value !== 'none' ? [{ id: 'group', label: 'Группировка: ' + groupModeLabels[groupMode.value] }] : []),
 ])
 function clearChip(id: string) {
   if (id === 'search') clearSearch()
   if (id === 'status') setStatus('active')
-  if (id === 'group') grouped.value = false
+  if (id === 'department') departmentFilter.value = 'all'
+  if (id === 'position') positionFilter.value = 'all'
+  if (id === 'object') objectFilter.value = 'all'
+  if (id === 'category') categoryFilter.value = 'all'
+  if (id === 'gender') genderFilter.value = 'all'
+  if (id === 'group') groupMode.value = 'none'
+  page.value = 1
 }
 function clearRegistryFilters() {
   searchDraft.value = ''
-  grouped.value = false
+  groupMode.value = 'none'
+  departmentFilter.value = 'all'
+  positionFilter.value = 'all'
+  objectFilter.value = 'all'
+  categoryFilter.value = 'all'
+  genderFilter.value = 'all'
   filtersOpen.value = false
+  page.value = 1
   router.replace({
     name: 'employees',
     query: { ...route.query, q: undefined, status: undefined },
@@ -236,8 +331,15 @@ const rowActionOptions = [
 function savePreset() {
   try {
     localStorage.setItem(PRESET_KEY, JSON.stringify({
-      columns: visibleFields.value, grouped: grouped.value,
-      status: statusFilter.value, perPage: pageSize.value,
+      columns: visibleFields.value,
+      groupMode: groupMode.value,
+      status: statusFilter.value,
+      department: departmentFilter.value,
+      position: positionFilter.value,
+      object: objectFilter.value,
+      category: categoryFilter.value,
+      gender: genderFilter.value,
+      perPage: pageSize.value,
     }))
     presetAvailable.value = true
     presetNotice.value = 'Вид сохранён только в этом браузере'
@@ -248,7 +350,11 @@ function applyPreset() {
     const raw = localStorage.getItem(PRESET_KEY)
     if (!raw) return
     const preset = JSON.parse(raw) as Record<string, unknown>
-    if (typeof preset.grouped === 'boolean') grouped.value = preset.grouped
+    if (typeof preset.groupMode === 'string' && ['none', 'department', 'category', 'object'].includes(preset.groupMode))
+      groupMode.value = preset.groupMode as GroupMode
+    // Compatibility with the previous single "grouped by department" preset.
+    if (typeof preset.grouped === 'boolean' && !('groupMode' in preset))
+      groupMode.value = preset.grouped ? 'department' : 'none'
     if (typeof preset.columns === 'object' && preset.columns !== null) {
       const values = preset.columns as Record<string, unknown>
       visibleFields.value = {
@@ -262,6 +368,12 @@ function applyPreset() {
     if (typeof preset.status === 'string' &&
       ['all', 'active', 'planned', 'archived', 'unassigned'].includes(preset.status))
       setStatus(preset.status as EmploymentFilter)
+    if (typeof preset.department === 'string') departmentFilter.value = preset.department
+    if (typeof preset.position === 'string') positionFilter.value = preset.position
+    if (typeof preset.object === 'string') objectFilter.value = preset.object
+    if (typeof preset.category === 'string') categoryFilter.value = preset.category
+    if (typeof preset.gender === 'string') genderFilter.value = preset.gender
+    page.value = 1
     presetNotice.value = 'Сохранённый вид применён'
   } catch { presetNotice.value = 'Не удалось прочитать сохранённый вид' }
 }
@@ -390,7 +502,13 @@ async function loadEmployees() {
   employeeLoading.value = true
   error.value = ''
   try {
-    const response = await listEmployees(company, page.value, search.value, statusFilter.value, pageSize.value)
+    const response = await listEmployees(
+      company,
+      demoMode ? 1 : page.value,
+      search.value,
+      statusFilter.value,
+      demoMode ? 100 : pageSize.value,
+    )
     if (current !== generation) return
     employees.value = response.data
     total.value = response.meta.total
@@ -437,7 +555,19 @@ watch(() => route.query.status, value => {
     ? candidate as EmploymentFilter : 'active'
   page.value = 1
 }, { immediate: true })
+watch([departmentFilter, positionFilter, objectFilter, categoryFilter, genderFilter], () => {
+  page.value = 1
+  selectedIds.value = []
+})
 watch([selectedCompany, page, search, statusFilter, pageSize], loadEmployees)
+const displayTotal = computed(() => demoMode ? filteredRegistryRows.value.length : total.value)
+const displayLastPage = computed(() => demoMode
+  ? Math.max(1, Math.ceil(displayTotal.value / pageSize.value))
+  : lastPage.value)
+watch(displayLastPage, value => {
+  if (page.value > value) page.value = value
+})
+
 onMounted(() => {
   loadCompanies()
   window.addEventListener('keydown', handleEscape)
@@ -475,7 +605,7 @@ onMounted(() => {
         <div class="register-heading">
           <div class="register-title">
             <h1>{{ activeTab === 'archive' ? 'Архив сотрудников' : 'Реестр сотрудников' }}
-              <span>({{ employeeLoading ? '…' : registryRows.length }} из {{ total }})</span>
+              <span>({{ employeeLoading ? '…' : registryRows.length }} из {{ displayTotal }})</span>
             </h1>
             <p v-if="companies.length===1">{{ currentCompany?.name }}</p>
           </div>
@@ -515,19 +645,27 @@ onMounted(() => {
           <BaseButton variant="secondary" @click="filtersOpen = !filtersOpen" :aria-expanded="filtersOpen">
             <img src="/prototype-icons/Filter.svg" alt="" class="toolbar-icon" /> Фильтры
           </BaseButton>
-          <BaseButton variant="secondary" @click="grouped = !grouped" :aria-pressed="grouped">
-            <FolderTree :size="16" /> {{ grouped ? 'Без группировки' : 'Группировка' }}
-          </BaseButton>
+          <BaseActionDropdown
+            :label="groupMode === 'none' ? 'Группировка' : groupModeLabels[groupMode]"
+            :options="groupOptions" @select="setGroupMode" />
           <BaseColumnPicker v-model="visibleFields" :columns="optionalColumns" title="Настройка колонок" />
           <div class="registry-toolbar-spacer"></div>
           <BaseActionDropdown label="Шаблоны" :options="templateOptions" @select="presetAction" />
         </div>
 
         <div v-if="filtersOpen" class="registry-filters">
-          <BaseSelectField class="status-select"
+          <BaseSelectField
             :model-value="statusFilter" label="Статус сотрудника" :options="statusSelectOptions"
             @update:model-value="setStatus($event as EmploymentFilter)" />
-          <BaseButton v-if="statusFilter !== 'active'" variant="secondary" @click="setStatus('active')">Сбросить фильтр</BaseButton>
+          <BaseSelectField v-model="departmentFilter" label="Подразделение" :options="departmentFilterOptions" />
+          <BaseSelectField v-model="positionFilter" label="Должность" :options="positionFilterOptions" />
+          <BaseSelectField v-model="categoryFilter" label="Категория сотрудника" :options="categoryFilterOptions" />
+          <BaseSelectField v-model="objectFilter" label="Объект" :options="objectFilterOptions" />
+          <BaseSelectField v-model="genderFilter" label="Пол" :options="genderFilterOptions" />
+          <BaseButton
+            v-if="statusFilter !== 'active' || departmentFilter !== 'all' || positionFilter !== 'all'
+              || categoryFilter !== 'all' || objectFilter !== 'all' || genderFilter !== 'all'"
+            variant="secondary" @click="clearRegistryFilters">Сбросить фильтры</BaseButton>
         </div>
 
         <BaseFilterSummary :items="registryChips" label="Активные фильтры реестра"
@@ -535,10 +673,10 @@ onMounted(() => {
         <p v-if="presetNotice" role="status" class="registry-preset-notice">{{ presetNotice }}</p>
         <BaseTableBulkActions :count="selectedOnPage.length" subject="сотрудников"
           :options="selectedActions" @execute="executeSelectedAction" @clear="selectedIds = []" />
-        <p v-if="grouped" class="scope-hint">Сгруппированы записи текущей страницы. Фильтры и количество сотрудников рассчитываются по всему реестру.</p>
+        <p v-if="groupMode !== 'none'" class="scope-hint">Группировка: {{ groupModeLabels[groupMode] }}. Фильтры применены к текущему реестру.</p>
 
         <div class="registry-desktop-table">
-          <BaseDataTable :rows="registryRows" :columns="visibleColumns" :group-by="grouped ? groupEmployees : undefined"
+          <BaseDataTable :rows="registryRows" :columns="visibleColumns" :group-by="groupMode !== 'none' ? groupEmployees : undefined"
           selectable selection-label="Выбрать сотрудника" v-model:selected-keys="selectedIds"
           row-key="id" caption="Реестр сотрудников выбранной компании" :loading="employeeLoading"
           :empty-title="activeTab === 'archive' ? 'В архиве сотрудников нет' : 'Сотрудники не найдены'"
@@ -573,14 +711,14 @@ onMounted(() => {
         </div>
         <div class="registry-mobile-list">
           <EmployeeMobileList :rows="registryRows" :company-id="selectedCompany" :selected-ids="selectedIds"
-            :loading="employeeLoading" :grouped="grouped" @select="toggleSelection" />
+            :loading="employeeLoading" :grouped="groupMode === 'department'" @select="toggleSelection" />
         </div>
         <div class="registry-bottomline">
           <span class="registry-selection" aria-live="polite">
             Выбрано на странице: {{ selectedOnPage.length }} из {{ registryRows.length }}
           </span>
-          <BasePagination :page="page" :last-page="lastPage" :loading="employeeLoading"
-            :total="total" :page-size="pageSize"
+          <BasePagination :page="page" :last-page="displayLastPage" :loading="employeeLoading"
+            :total="displayTotal" :page-size="pageSize"
             caption="Страницы реестра сотрудников"
             @previous="page--" @next="page++" @select-page="page=$event"
             @change-page-size="changePageSize" />

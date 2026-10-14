@@ -29,6 +29,9 @@ export interface EmployeeRecord extends Record<string, unknown> {
   current_department_name?: string | null
   current_position_name?: string | null
   current_assignment_valid_from?: string | null
+  employee_category?: string | null
+  personnel_type?: string | null
+  contract_type?: string | null
 }
 
 export interface EmployeeListResponse extends PagedResponse<EmployeeRecord> {
@@ -70,39 +73,156 @@ export interface EmployeeAssignment extends Record<string, unknown> {
 export interface EmployeeReferenceProfile {
   personal: {
     iin?: string | null
+    login?: string | null
+    nationality?: string | null
     citizenship?: string | null
     marital_status?: string | null
     registration_address?: string | null
     residence_address?: string | null
+    address_entrance?: string | null
+    address_floor?: string | null
+    address_apartment?: string | null
+    place_of_birth?: string | null
+    birth_certificate_attachment?: string | null
     emergency_contact_name?: string | null
     emergency_contact_phone?: string | null
   }
   identity_document: {
     type?: string | null
     number?: string | null
+    personal_number?: string | null
+    country_of_issue?: string | null
     issued_on?: string | null
     expires_on?: string | null
     issued_by?: string | null
+    attachment_name?: string | null
+  }
+  family?: Array<{
+    id: string
+    relationship: string
+    full_name: string
+    birth_date?: string | null
+    document_reference?: string | null
+  }>
+  military?: {
+    status?: string | null
+    category?: string | null
+    document_reference?: string | null
+    comment?: string | null
   }
   banking: {
     bank_name?: string | null
     iban?: string | null
     payroll_account?: string | null
+    recipient?: string | null
+    medical_insurance?: string | null
+    tax_status?: string | null
+    pension_accruals?: string | null
+    attachment_name?: string | null
+  }
+  organization?: {
+    company_name?: string | null
+    employee_category?: string | null
+    personnel_type?: string | null
+    primary_workplace?: string | null
+    site_area?: string | null
+    location?: string | null
+    access_status?: string | null
+    pass_number?: string | null
+    pass_issued_on?: string | null
+    brigade?: string | null
+    brigadier?: string | null
+    department_manager?: string | null
+    assignment_status?: string | null
+    assignment_date?: string | null
+    archived?: string | null
+    staffing_position?: string | null
+    staffing_position_code?: string | null
+    status_change_reason?: string | null
+    status_change_date?: string | null
+    employment_type?: string | null
+    position_since?: string | null
   }
   employment: {
     contract_number?: string | null
     contract_date?: string | null
     contract_type?: string | null
     employment_type?: string | null
+    valid_from?: string | null
+    valid_to?: string | null
+    probation_enabled?: string | null
+    probation_from?: string | null
     probation_until?: string | null
+    hire_basis?: string | null
+    hire_date?: string | null
+    contract_attachment?: string | null
     work_schedule?: string | null
+    total_seniority?: string | null
+    company_seniority?: string | null
+    position_seniority?: string | null
+    site_seniority?: string | null
+    special_seniority?: string | null
+  }
+  working_conditions?: {
+    condition_type?: string | null
+    condition_code?: string | null
+    list_position_code?: string | null
+    compensation?: string | null
+    basis?: string | null
+    valid_from?: string | null
+    valid_to?: string | null
+    attachment_name?: string | null
+  }
+  combination?: {
+    enabled?: string | null
+    valid_from?: string | null
+    valid_to?: string | null
+    position?: string | null
+    reason?: string | null
+    replaced_employee?: string | null
+    basis?: string | null
+    duties?: string | null
+    material_responsibility?: string | null
+    material_attachment?: string | null
+  }
+  termination?: {
+    terminated?: string | null
+    termination_date?: string | null
+    basis?: string | null
+    basis_group?: string | null
+    reason?: string | null
+    comment?: string | null
+    attachment_name?: string | null
   }
   payroll: {
     salary?: number | null
     currency?: string | null
     payment_frequency?: string | null
     next_payment_date?: string | null
+    payment_type?: string | null
+    base_rate?: string | null
+    settlement_period?: string | null
+    calculation_method?: string | null
+    data_source?: string | null
   }
+  payroll_adjustments?: Array<{
+    id: string
+    kind: string
+    name: string
+    period: string
+    amount: number
+    hours?: number | null
+    basis?: string | null
+  }>
+  payroll_history?: Array<{
+    id: string
+    period: string
+    accrued: number
+    withheld: number
+    paid: number
+    worked_hours: number
+    worked_days: number
+  }>
   schedule: {
     schedule_name?: string | null
     shift?: string | null
@@ -110,19 +230,107 @@ export interface EmployeeReferenceProfile {
     timesheet_month?: string | null
     planned_hours?: number | null
     worked_hours?: number | null
+    production_calendar?: string | null
+    schedule_type?: string | null
+    time_accounting?: string | null
+    shift_duration?: string | null
+    valid_from?: string | null
+    valid_to?: string | null
+    basis?: string | null
+    night_shifts?: string | null
+    weekend_work?: string | null
   }
+  leave_summary?: {
+    entitled_days?: number | null
+    used_days?: number | null
+    balance_days?: number | null
+    planned_until?: string | null
+    settlement_year?: string | null
+    work_year_from?: string | null
+    work_year_to?: string | null
+    balance_method?: string | null
+    data_source?: string | null
+  }
+  leave_limits?: Array<{
+    id: string
+    leave_type: string
+    accrual_method: string
+    entitled_days: number
+    used_days: number
+    balance_days: number
+    basis?: string | null
+  }>
+  timesheet_history?: Array<{
+    id: string
+    period: string
+    planned_hours: number
+    worked_hours: number
+    deviation_hours: number
+    work_days: number
+    night_hours: number
+    overtime_hours: number
+    absences_days: number
+  }>
+  attendance_events?: Array<{
+    id: string
+    event_type: string
+    reason: string
+    period: string
+    days?: number | null
+    hours?: number | null
+    source?: string | null
+    status?: string | null
+  }>
+  reserve_profile?: {
+    status?: string | null
+    match_percent?: number | null
+    education?: string | null
+    learning_plan?: string | null
+    enabled?: string | null
+    target_position?: string | null
+    included_on?: string | null
+    review_on?: string | null
+    reserve_level?: string | null
+    reserve_type?: string | null
+    basis?: string | null
+    basis_document?: string | null
+    comment?: string | null
+  }
+  education?: Array<{
+    id: string
+    education_type: string
+    organization: string
+    started_on?: string | null
+    ended_on?: string | null
+    specialization?: string | null
+    document_reference?: string | null
+  }>
+  fit_assessment?: Array<{
+    id: string
+    criterion: string
+    requirement: string
+    fact: string
+    score_percent: number
+    recommendation: string
+  }>
   documents: Array<{
     id: string
     title: string
     number: string
     issued_on: string | null
     status: string
+    document_type?: string | null
+    file_name?: string | null
   }>
   history: Array<{
     id: string
     action: string
     actor: string
     created_at: string
+    section?: string | null
+    before?: string | null
+    after?: string | null
+    result?: string | null
   }>
 }
 

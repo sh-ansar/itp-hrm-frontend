@@ -29,6 +29,9 @@ export interface EmployeeRecord extends Record<string, unknown> {
   current_department_name?: string | null
   current_position_name?: string | null
   current_assignment_valid_from?: string | null
+  employee_category?: string | null
+  personnel_type?: string | null
+  contract_type?: string | null
 }
 
 export interface EmployeeListResponse extends PagedResponse<EmployeeRecord> {

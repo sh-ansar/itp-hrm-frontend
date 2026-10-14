@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useWorkspaceI18n } from '../composables/useWorkspaceI18n'
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { Minus, Pencil, Plus, Trash2, Search, UserPlus } from 'lucide-vue-next'
@@ -31,6 +32,8 @@ import {
   type CompanyRecord,
   type DepartmentRecord,
 } from '../api/organization'
+
+const { tr } = useWorkspaceI18n()
 
 const router = useRouter()
 const companies = ref<CompanyRecord[]>([])
@@ -68,9 +71,9 @@ const orgMetrics = ref({
 let orgMetricGeneration = 0
 const occupancyDescription = computed(() => {
   if (orgMetrics.value.planned === null || orgMetrics.value.occupied === null || orgMetrics.value.planned <= 0)
-    return 'Нет утверждённого штатного среза'
+    return tr('Нет утверждённого штатного среза')
   const percent = Math.round(100 * orgMetrics.value.occupied / orgMetrics.value.planned)
-  return percent + '% от штатных единиц занято'
+  return percent + tr('% от штатных единиц занято')
 })
 const departmentForest = computed(() => {
   const forest = buildDepartmentForest(diagramDepartments.value)
@@ -353,75 +356,72 @@ onMounted(loadCompanies)
     <OrgStaffingNav />
     <BaseNotice v-if="error" tone="error">{{ error }}</BaseNotice>
 
-    <BaseLoadingState v-if="loadingCompanies" label="Загрузка компаний" />
-    <BaseNotice v-else-if="!companies.length && !error" tone="info">Нет доступных компаний.</BaseNotice>
+    <BaseLoadingState v-if="loadingCompanies" :label="tr('Загрузка компаний')" />
+    <BaseNotice v-else-if="!companies.length && !error" tone="info">{{ tr('Нет доступных компаний.') }}</BaseNotice>
 
 
     <section v-if="selectedCompany" class="org-content">
-      <BaseKpiGrid class="org-metrics" label="Показатели организационной структуры">
-        <BaseRegistryMetricCard title="Подразделения" :value="total"
-          description="структурных подразделений в доступном контуре"
+      <BaseKpiGrid class="org-metrics" :label="tr('Показатели организационной структуры')">
+        <BaseRegistryMetricCard :title="tr('Подразделения')" :value="total"
+          :description="tr('структурных подразделений в доступном контуре')"
           icon="/prototype-icons/Info.svg" />
-        <BaseRegistryMetricCard title="Штатные единицы" :value="orgMetrics.planned"
-          description="по утверждённому штатному расписанию"
+        <BaseRegistryMetricCard :title="tr('Штатные единицы')" :value="orgMetrics.planned"
+          :description="tr('по утверждённому штатному расписанию')"
           icon="/prototype-icons/Info.svg" to="/staffing" />
-        <BaseRegistryMetricCard title="Занято" :value="orgMetrics.occupied"
+        <BaseRegistryMetricCard :title="tr('Занято')" :value="orgMetrics.occupied"
           :description="occupancyDescription"
           icon="/prototype-icons/Info.svg" />
-        <BaseRegistryMetricCard title="Вакантные позиции" :value="orgMetrics.vacant"
-          description="открытых штатных единиц на текущую дату"
+        <BaseRegistryMetricCard :title="tr('Вакантные позиции')" :value="orgMetrics.vacant"
+          :description="tr('открытых штатных единиц на текущую дату')"
           icon="/prototype-icons/Link-External.svg" to="/staffing?view=vacant" />
       </BaseKpiGrid>
       <div class="section-title">
-        <h1>Организационная структура <span class="structure-total">({{ total }})</span></h1>
+        <h1>{{ tr('Организационная структура') }}<span class="structure-total">({{ total }})</span></h1>
         <div class="org-heading-actions">
-          <BaseSelectField v-model="selectedCompany" label="Компания" :options="companies" />
-          <BaseButton v-if="filteredHierarchyRows.length" variant="secondary" @click="exportDepartments">Экспорт CSV</BaseButton>
+          <BaseSelectField v-model="selectedCompany" :label="tr('Компания')" :options="companies" />
+          <BaseButton v-if="filteredHierarchyRows.length" variant="secondary" @click="exportDepartments">{{ tr('Экспорт CSV') }}</BaseButton>
           <BaseButton v-if="employeeWritesEnabled" variant="secondary" @click="addEmployeeOpen = true">
-            <UserPlus :size="17" /> Добавить сотрудника
-          </BaseButton>
+            <UserPlus :size="17" /> {{ tr('Добавить сотрудника') }}</BaseButton>
           <BaseButton v-if="departmentWritesEnabled" @click="createDepartmentRecord">
-            <Plus :size="17" /> Добавить подразделение
-          </BaseButton>
+            <Plus :size="17" /> {{ tr('Добавить подразделение') }}</BaseButton>
         </div>
       </div>
 
       <div class="structure-tools">
         <BaseViewTabs v-model="viewMode" class="structure-tabs"
-        :options="viewModes" label="Представление организационной структуры" />
-        <label class="structure-search"><Search :size="17" aria-hidden="true" /><span class="visually-hidden">Поиск подразделений</span><input v-model="searchQuery" type="search" placeholder="Поиск подразделений" /></label>
-        <BaseColumnPicker v-if="viewMode === 'table'" v-model="shownOrgColumns" :columns="extraColumns" title="Колонки" />
+        :options="viewModes" :label="tr('Представление организационной структуры')" />
+        <label class="structure-search"><Search :size="17" aria-hidden="true" /><span class="visually-hidden">{{ tr('Поиск подразделений') }}</span><input v-model="searchQuery" type="search" :placeholder="tr('Поиск подразделений')" /></label>
+        <BaseColumnPicker v-if="viewMode === 'table'" v-model="shownOrgColumns" :columns="extraColumns" :title="tr('Колонки')" />
         <div v-if="viewMode === 'diagram'" class="chart-zoom">
-          <BaseButton icon-only variant="secondary" aria-label="Уменьшить схему"
+          <BaseButton icon-only variant="secondary" :aria-label="tr('Уменьшить схему')"
             :disabled="chartZoom <= 70" @click="chartZoom = Math.max(70, chartZoom - 10)"><Minus :size="16" /></BaseButton>
-          <input v-model.number="chartZoom" type="range" min="70" max="130" step="10" aria-label="Масштаб схемы" />
-          <BaseButton icon-only variant="secondary" aria-label="Увеличить схему"
+          <input v-model.number="chartZoom" type="range" min="70" max="130" step="10" :aria-label="tr('Масштаб схемы')" />
+          <BaseButton icon-only variant="secondary" :aria-label="tr('Увеличить схему')"
             :disabled="chartZoom >= 130" @click="chartZoom = Math.min(130, chartZoom + 10)"><Plus :size="16" /></BaseButton>
         </div>
-        <label v-if="viewMode === 'diagram'" class="expand-levels"><input v-model="expandedLevels" type="checkbox" /> Раскрыть нижестоящий уровень</label>
+        <label v-if="viewMode === 'diagram'" class="expand-levels"><input v-model="expandedLevels" type="checkbox" /> {{ tr('Раскрыть нижестоящий уровень') }}</label>
       </div>
       <BaseNotice v-if="viewMode === 'table' && total > departments.length" tone="info">
-        Показана текущая страница. Невидимые подразделения и родительские связи не раскрываются.
-      </BaseNotice>
+        {{ tr('Показана текущая страница. Невидимые подразделения и родительские связи не раскрываются.') }}</BaseNotice>
       <BaseNotice v-if="viewMode === 'diagram' && diagramError" tone="error">{{ diagramError }}</BaseNotice>
       <BaseNotice v-if="viewMode === 'diagram' && diagramPartial" tone="warning">
         Схема слишком велика: показаны первые {{ diagramDepartments.length }} подразделений из доступных {{ total }}.
       </BaseNotice>
 
-      <div v-if="viewMode === 'diagram'" class="structure-diagram" role="region" tabindex="0" aria-label="Схема подразделений компании">
-        <BaseLoadingState v-if="diagramLoading" label="Загрузка полной структуры" />
+      <div v-if="viewMode === 'diagram'" class="structure-diagram" role="region" tabindex="0" :aria-label="tr('Схема подразделений компании')">
+        <BaseLoadingState v-if="diagramLoading" :label="tr('Загрузка полной структуры')" />
         <div v-else-if="visibleDepartmentForest.length" class="organization-chart" :style="{ zoom: chartZoom + '%' }">
           <div class="chart-branches">
             <DepartmentTreeNode v-for="node in visibleDepartmentForest" :key="node.id + ':' + searchQuery" :node="node" :company-id="selectedCompany" :expand-all="expandedLevels" />
           </div>
         </div>
-        <p v-else class="diagram-empty">{{ searchQuery.trim() ? 'Подразделения по запросу не найдены.' : 'Подразделений для отображения пока нет.' }}</p>
+        <p v-else class="diagram-empty">{{ searchQuery.trim() ? tr('Подразделения по запросу не найдены.') : tr('Подразделений для отображения пока нет.') }}</p>
       </div>
 
       <div v-else class="org-table-view">
-        <BaseLoadingState v-if="loadingDepartments" class="org-mobile-only" label="Загрузка подразделений" />
+        <BaseLoadingState v-if="loadingDepartments" class="org-mobile-only" :label="tr('Загрузка подразделений')" />
         <div v-else class="org-mobile-list">
-          <p v-if="!filteredHierarchyRows.length" class="diagram-empty">Подразделения не найдены.</p>
+          <p v-if="!filteredHierarchyRows.length" class="diagram-empty">{{ tr('Подразделения не найдены.') }}</p>
           <article v-for="row in filteredHierarchyRows" :key="row.id" class="org-mobile-item">
             <div class="org-mobile-item-head">
               <strong>{{ row.name }}</strong>
@@ -429,8 +429,8 @@ onMounted(loadCompanies)
             </div>
             <p>{{ row.parentLabel }}</p>
             <div v-if="departmentWritesEnabled" class="org-mobile-actions">
-              <BaseButton variant="secondary" @click="editDepartmentRecord(row)"><Pencil :size="15" /> Изменить</BaseButton>
-              <BaseButton variant="secondary" @click="deleteCandidate = row"><Trash2 :size="15" /> Удалить</BaseButton>
+              <BaseButton variant="secondary" @click="editDepartmentRecord(row)"><Pencil :size="15" /> {{ tr('Изменить') }}</BaseButton>
+              <BaseButton variant="secondary" @click="deleteCandidate = row"><Trash2 :size="15" /> {{ tr('Удалить') }}</BaseButton>
             </div>
           </article>
         </div>
@@ -438,12 +438,12 @@ onMounted(loadCompanies)
           <BaseDataTable
         row-key="id"
 
-        caption="Подразделения компании"
+        :caption="tr('Подразделения компании')"
         :loading="loadingDepartments"
         :columns="columns"
         :rows="filteredHierarchyRows"
-        empty-title="Подразделения не найдены"
-        empty-description="Для выбранной компании нет доступных подразделений."
+        :empty-title="tr('Подразделения не найдены')"
+        :empty-description="tr('Для выбранной компании нет доступных подразделений.')"
       >
         <template #cell-name="{ row }">
           <span class="hierarchy-label" :style="{ '--depth': Math.min(Number(row.depth), 12) }">
@@ -455,8 +455,8 @@ onMounted(loadCompanies)
         <template #cell-depth="{ row }">{{ Number(row.depth) + 1 }}</template>
         <template #cell-actions="{ row }">
           <div class="row-actions">
-            <BaseButton icon-only variant="secondary" :aria-label="'Изменить ' + row.name" @click="editDepartmentRecord(row)"><Pencil :size="16" /></BaseButton>
-            <BaseButton icon-only variant="secondary" :aria-label="'Удалить ' + row.name" @click="deleteCandidate = row"><Trash2 :size="16" /></BaseButton>
+            <BaseButton icon-only variant="secondary" :aria-label="tr('Изменить ') + row.name" @click="editDepartmentRecord(row)"><Pencil :size="16" /></BaseButton>
+            <BaseButton icon-only variant="secondary" :aria-label="tr('Удалить ') + row.name" @click="deleteCandidate = row"><Trash2 :size="16" /></BaseButton>
           </div>
         </template>
           </BaseDataTable>
@@ -467,7 +467,7 @@ onMounted(loadCompanies)
         :page="page"
         :last-page="lastPage"
         :loading="loadingDepartments"
-        caption="Страницы подразделений"
+        :caption="tr('Страницы подразделений')"
         @previous="page--"
         @next="page++"
       />
@@ -475,8 +475,8 @@ onMounted(loadCompanies)
 
     <BaseDrawer
       :open="editorOpen"
-      :title="editingDepartment ? 'Изменить подразделение' : 'Новое подразделение'"
-      description="Структурная единица организационной схемы"
+      :title="editingDepartment ? tr('Изменить подразделение') : tr('Новое подразделение')"
+      :description="tr('Структурная единица организационной схемы')"
       @close="editorOpen = false"
     >
       <DepartmentForm
@@ -490,22 +490,21 @@ onMounted(loadCompanies)
       />
     </BaseDrawer>
 
-    <BaseDrawer :open="addEmployeeOpen" title="Добавить сотрудника"
-      description="Создание новой карточки сотрудника в выбранной компании"
+    <BaseDrawer :open="addEmployeeOpen" :title="tr('Добавить сотрудника')"
+      :description="tr('Создание новой карточки сотрудника в выбранной компании')"
       @close="addEmployeeOpen = false">
       <EmployeeRecordForm v-if="selectedCompany" :company-id="selectedCompany"
         @saved="employeeCreated" @cancelled="addEmployeeOpen = false" />
     </BaseDrawer>
 
-    <BaseDialog :open="!!deleteCandidate" title="Удалить подразделение" @close="deleteCandidate = null">
+    <BaseDialog :open="!!deleteCandidate" :title="tr('Удалить подразделение')" @close="deleteCandidate = null">
       <div class="delete-copy">
         <BaseNotice tone="warning">
-          Удаление доступно только для пустого подразделения без дочерних подразделений, истории назначений и строк штатного расписания.
-        </BaseNotice>
+          {{ tr('Удаление доступно только для пустого подразделения без дочерних подразделений, истории назначений и строк штатного расписания.') }}</BaseNotice>
         <p v-if="deleteCandidate"><strong>{{ deleteCandidate.name }}</strong></p>
         <div class="delete-actions">
-          <BaseButton variant="secondary" :disabled="deleting" @click="deleteCandidate = null">Отмена</BaseButton>
-          <BaseButton :disabled="deleting" @click="confirmDelete">{{ deleting ? 'Удаление…' : 'Удалить' }}</BaseButton>
+          <BaseButton variant="secondary" :disabled="deleting" @click="deleteCandidate = null">{{ tr('Отмена') }}</BaseButton>
+          <BaseButton :disabled="deleting" @click="confirmDelete">{{ deleting ? tr('Удаление…') : tr('Удалить') }}</BaseButton>
         </div>
       </div>
     </BaseDialog>

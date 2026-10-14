@@ -55,7 +55,7 @@ for (const [locale, expected] of Object.entries(locales)) {
       await page.getByRole('button', { name: expected.personal, exact: true }).click()
       const birth = page.locator('.employee-data-field').filter({ hasText: expected.birth }).first()
       await birth.waitFor()
-      assert.match((await birth.locator('strong').innerText()).trim(), /^\\d{4}-\\d{2}-\\d{2}$/)
+      assert.match((await birth.locator('strong').innerText()).trim(), /^\d{4}-\d{2}-\d{2}$/)
       assert.deepEqual(errors, [], 'No browser runtime errors')
     } finally {
       await context.close()

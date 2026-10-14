@@ -1,8 +1,11 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
-import { FolderTree, Plus, Search } from 'lucide-vue-next'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { FolderTree, Maximize2, Minimize2, Plus, Search } from 'lucide-vue-next'
 import { useRoute, useRouter } from 'vue-router'
 import BaseCard from '../components/ui/BaseCard.vue'
+import BaseKpiGrid from '../components/ui/BaseKpiGrid.vue'
+import BaseRegistryMetricCard from '../components/ui/BaseRegistryMetricCard.vue'
+import BaseActionDropdown from '../components/ui/BaseActionDropdown.vue'
 import BaseButton from '../components/ui/BaseButton.vue'
 import BaseSelectField from '../components/ui/BaseSelectField.vue'
 import BasePagination from '../components/ui/BasePagination.vue'
@@ -18,6 +21,9 @@ import EmployeeRecordForm from '../components/EmployeeRecordForm.vue'
 import EmployeeMobileList from '../components/EmployeeMobileList.vue'
 import { downloadCsv } from '../utils/exportCsv'
 import { listCompanies, listDepartments, type CompanyRecord } from '../api/organization'
+import { getStaffingPlan, listStaffingPlans } from '../api/staffing'
+import { preferredApprovedStaffingPlan } from '../utils/staffingPlanChoice'
+import { localTodayISO } from '../utils/localDate'
 import {
   listEmployees, type EmployeeRecord, type EmploymentFilter, type EmploymentStatus,
 } from '../api/personnel'
@@ -34,6 +40,12 @@ const employeeWritesEnabled = ref(false)
 const createOpen = ref(false)
 const search = ref('')
 const searchDraft = ref('')
+const searchInput = ref<HTMLInputElement | null>(null)
+const searchOpen = ref(false)
+const fullscreen = ref(false)
+const pageSize = ref(10)
+const presetAvailable = ref(false)
+const presetNotice = ref('')
 const statusFilter = ref<EmploymentFilter>('active')
 const grouped = ref(false)
 const filtersOpen = ref(false)
@@ -42,7 +54,17 @@ const error = ref('')
 const page = ref(1)
 const total = ref(0)
 const lastPage = ref(1)
-const counters = ref({ active: null as number | null, archived: null as number | null, departments: null as number | null, vacancies: null as number | null, expiring: null as number | null })
+const counters = ref({
+  active: null as number | null,
+  archived: null as number | null,
+  departments: null as number | null,
+  vacancies: null as number | null,
+  plannedUnits: null as number | null,
+  expiring: null as number | null,
+})
+const vacancyPercent = computed(() =>
+  counters.value.vacancies !== null && counters.value.plannedUnits !== null && counters.value.plannedUnits > 0
+    ? 100 * counters.value.vacancies / counters.value.plannedUnits : null)
 let generation = 0
 let counterGeneration = 0
 
@@ -66,10 +88,10 @@ const columns = [
   { key: 'full_name', label: 'ФИО / Отдел' },
   { key: 'personnel_number', label: 'Таб. №' },
   { key: 'birth_date', label: 'Дата рождения' },
+  { key: 'current_assignment_valid_from', label: 'Дата назначения' },
   { key: 'gender', label: 'Пол' },
   { key: 'current_position_name', label: 'Должность' },
   { key: 'current_department_name', label: 'Подразделение' },
-  { key: 'current_assignment_valid_from', label: 'Дата назначения' },
   { key: 'status_label', label: 'Статус' },
   { key: 'details', label: 'Действие' },
 ]
@@ -166,24 +188,37 @@ function clearSearch() {
 async function loadCounters() {
   const company = selectedCompany.value
   const current = ++counterGeneration
-  counters.value = { active: null, archived: null, departments: null, vacancies: null, expiring: null }
+  counters.value = { active: null, archived: null, departments: null, vacancies: null, plannedUnits: null, expiring: null }
   if (!company) return
-  const result = await Promise.allSettled([
-    listEmployees(company, 1, '', 'active'),
-    listEmployees(company, 1, '', 'archived'),
+  const [activeResult, archivedResult, departmentResult, plansResult] = await Promise.allSettled([
+    listEmployees(company, 1, '', 'active', 1),
+    listEmployees(company, 1, '', 'archived', 1),
     listDepartments(company),
+    listStaffingPlans(company),
   ])
   if (current !== counterGeneration) return
-  const summary = result[0].status === 'fulfilled' ? result[0].value.meta.registry_summary : undefined
-  counters.value = {
-    active: result[0].status === 'fulfilled' ? result[0].value.meta.total : null,
-    archived: result[1].status === 'fulfilled' ? result[1].value.meta.total : null,
-    departments: result[2].status === 'fulfilled' ? result[2].value.meta.total : null,
-    vacancies: summary?.vacancies ?? null,
-    expiring: summary?.expiring_contracts ?? null,
+  const currentCounters = {
+    active: activeResult.status === 'fulfilled' ? activeResult.value.meta.total : null,
+    archived: archivedResult.status === 'fulfilled' ? archivedResult.value.meta.total : null,
+    departments: departmentResult.status === 'fulfilled' ? departmentResult.value.meta.total : null,
+    vacancies: null as number | null,
+    plannedUnits: null as number | null,
+    // Contracts do not have an authoritative expiry-date API yet.
+    expiring: null as number | null,
   }
+  if (plansResult.status === 'fulfilled') {
+    const approved = preferredApprovedStaffingPlan(plansResult.value.data)
+    if (approved) {
+      try {
+        const detail = await getStaffingPlan(company, approved.id, localTodayISO())
+        if (current !== counterGeneration) return
+        currentCounters.vacancies = detail.lines.reduce((sum, row) => sum + Number(row.vacant_units || 0), 0)
+        currentCounters.plannedUnits = detail.lines.reduce((sum, row) => sum + Number(row.planned_units || 0), 0)
+      } catch { /* A staffing permission/error must not invent vacancy totals. */ }
+    }
+  }
+  if (current === counterGeneration) counters.value = currentCounters
 }
-
 async function loadCompanies() {
   companyLoading.value = true
   error.value = ''
@@ -212,7 +247,7 @@ async function loadEmployees() {
   employeeLoading.value = true
   error.value = ''
   try {
-    const response = await listEmployees(company, page.value, search.value, statusFilter.value)
+    const response = await listEmployees(company, page.value, search.value, statusFilter.value, pageSize.value)
     if (current !== generation) return
     employees.value = response.data
     total.value = response.meta.total
@@ -249,7 +284,7 @@ watch(() => route.query.status, value => {
     ? candidate as EmploymentFilter : 'active'
   page.value = 1
 }, { immediate: true })
-watch([selectedCompany, page, search, statusFilter], loadEmployees)
+watch([selectedCompany, page, search, statusFilter, pageSize], loadEmployees)
 onMounted(loadCompanies)
 </script>
 

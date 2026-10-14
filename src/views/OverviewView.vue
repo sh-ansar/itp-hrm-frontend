@@ -9,6 +9,7 @@ import DashboardMetricCard from '../components/ui/DashboardMetricCard.vue'
 import BaseKpiGrid from '../components/ui/BaseKpiGrid.vue'
 import DashboardSectionHeading from '../components/ui/DashboardSectionHeading.vue'
 import DashboardTableToolbar from '../components/ui/DashboardTableToolbar.vue'
+import HomeOnboardingWizard from '../components/HomeOnboardingWizard.vue'
 import { listCompanies } from '../api/organization'
 import { listEmployees, type EmployeeRecord, type EmploymentFilter } from '../api/personnel'
 import { listPersonnelActions, type PersonnelActionRow } from '../api/personnelActions'
@@ -44,6 +45,9 @@ const staffCount=ref<number|null>(null)
 const allEmployeeCount=ref<number|null>(null)
 const selectedEmployeeKeys=ref<string[]>([])
 const selectedVacancyKeys=ref<string[]>([])
+const demoMode=import.meta.env.VITE_DEMO_MODE==='true'
+const onboardingCompleted=ref(false)
+const ONBOARDING_KEY='hrm-onboarding-completed-v1'
 
 const employeeOptions=[
   {id:'active',label:'Работают'},
@@ -52,6 +56,16 @@ const employeeOptions=[
   {id:'unassigned',label:'Без назначения'},
   {id:'archived',label:'Архив'},
 ]
+const onboardingEmployee=computed(()=>employees.value[0]??null)
+const onboardingEmployeeName=computed(()=> {
+  const employee=onboardingEmployee.value
+  return employee?[employee.last_name,employee.first_name,employee.middle_name].filter(Boolean).join(' '):''
+})
+const showOnboarding=computed(()=>demoMode&&!onboardingCompleted.value)
+function completeOnboarding(){
+  onboardingCompleted.value=true
+  try{window.localStorage.setItem(ONBOARDING_KEY,'true')}catch{/* Demo can continue without storage. */}
+}
 const employeeRows=computed<EmployeeRow[]>(()=>employees.value.slice(0,6).map(e=>({
   ...e,
   full_name:[e.last_name,e.first_name,e.middle_name].filter(Boolean).join(' '),
@@ -222,13 +236,25 @@ async function load(){
     error.value=cause instanceof Error?cause.message:'Не удалось открыть главную страницу'
   }finally{loading.value=false}
 }
-onMounted(load)
+onMounted(()=>{
+  try{onboardingCompleted.value=window.localStorage.getItem(ONBOARDING_KEY)==='true'}
+  catch{onboardingCompleted.value=false}
+  void load()
+})
 </script>
 
 <template>
   <section class="overview-page">
     <h1 class="overview-sr-only">Главная</h1>
     <BaseNotice v-if="error" tone="error">{{ error }}</BaseNotice>
+    <HomeOnboardingWizard v-if="showOnboarding"
+      :company-name="companyName||'ITP HRM'"
+      :employee-name="onboardingEmployeeName"
+      :employee-email="onboardingEmployee?.email||''"
+      :department-name="onboardingEmployee?.current_department_name||''"
+      :position-name="onboardingEmployee?.current_position_name||''"
+      @completed="completeOnboarding" />
+    <template v-else>
     <BaseKpiGrid class="overview-metrics" label="Основные показатели компании">
       <DashboardMetricCard title="Вакантные позиции" color="amber"
         :value="staffingError?'—':formatUnits(vacantUnits)" :percent="staffingError?null:vacancyShare"
@@ -326,6 +352,7 @@ onMounted(load)
         </template>
       </BaseDataTable>
     </section>
+    </template>
   </section>
 </template>
 

@@ -4,6 +4,7 @@ import OrganizationView from '../views/OrganizationView.vue'
 import EmployeesView from '../views/EmployeesView.vue'
 import StaffingView from '../views/StaffingView.vue'
 import DirectoriesView from '../views/DirectoriesView.vue'
+import DirectoryHubView from '../views/DirectoryHubView.vue'
 import PersonnelActionsView from '../views/PersonnelActionsView.vue'
 import DocumentsView from '../views/DocumentsView.vue'
 import DevelopmentView from '../views/DevelopmentView.vue'
@@ -32,7 +33,8 @@ export const router = createRouter({
     { path: '/staffing', name: 'staffing', component: StaffingView },
     { path: '/personnel-actions', name: 'personnel-actions', component: PersonnelActionsView },
     { path: '/documents', name: 'documents', component: DocumentsView },
-    { path: '/directories', name: 'directories', component: DirectoriesView },
+    { path: '/directories', name: 'directories', component: DirectoryHubView },
+    { path: '/directories/positions', name: 'positions-directory', component: DirectoriesView },
     { path: '/learning', name: 'learning', component: DevelopmentView, props: { section: 'training' } },
     { path: '/reserve', name: 'reserve', component: DevelopmentView, props: { section: 'reserve' } },
     { path: '/leaves', name: 'leaves', component: LeavesView },

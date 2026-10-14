@@ -120,7 +120,7 @@ function matchesFilter(row: T, key: string, condition: ColumnFilter): boolean {
   const actual = filterValue(row, key)
   return condition.kind === 'choices'
     ? condition.values.includes(actual)
-    : actual.toLocaleLowerCase('ru').includes(condition.text.trim().toLocaleLowerCase('ru'))
+    : actual.toLocaleLowerCase(localeTag(preferences.locale)).includes(condition.text.trim().toLocaleLowerCase(localeTag(preferences.locale)))
 }
 function matchesFilters(row: T, except?: string): boolean {
   return Object.entries(activeFilters.value).every(([key, condition]) =>
@@ -145,9 +145,9 @@ const availableOptions = computed<FilterOption[]>(() => {
     .sort((a, b) => collation.value.compare(a.label, b.label))
 })
 const matchingOptions = computed(() => {
-  const term = filterDraft.value.trim().toLocaleLowerCase('ru')
+  const term = filterDraft.value.trim().toLocaleLowerCase(localeTag(preferences.locale))
   return term ? availableOptions.value.filter(option =>
-    option.label.toLocaleLowerCase('ru').includes(term) || option.value.toLocaleLowerCase('ru').includes(term))
+    option.label.toLocaleLowerCase(localeTag(preferences.locale)).includes(term) || option.value.toLocaleLowerCase(localeTag(preferences.locale)).includes(term))
     : availableOptions.value
 })
 const allMatchingChecked = computed(() => matchingOptions.value.length > 0

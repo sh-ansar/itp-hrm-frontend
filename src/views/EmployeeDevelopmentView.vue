@@ -50,7 +50,7 @@ const error = ref('')
 const page = ref(1)
 const lastPage = ref(1)
 const total = ref(0)
-const pageSize = ref(10)
+const pageSize = ref('10')
 const searchDraft = ref('')
 const search = ref('')
 const groupMode = ref<GroupMode>('none')
@@ -213,7 +213,7 @@ function templateAction(id:string){
   if(id==='save'){
     try{
       localStorage.setItem(PRESET_KEY,JSON.stringify({
-        columns:visibleColumns.value,groupMode:groupMode.value,status:statusFilter.value,pageSize:pageSize.value,
+        columns:visibleColumns.value,groupMode:groupMode.value,status:statusFilter.value,pageSize:Number(pageSize.value),
       }))
       presetAvailable.value=true
       presetNotice.value='Вид сохранён в этом браузере'
@@ -226,7 +226,7 @@ function templateAction(id:string){
       if(saved.columns)visibleColumns.value={...visibleColumns.value,...saved.columns}
       if(saved.groupMode&&['none','department','status'].includes(saved.groupMode))groupMode.value=saved.groupMode
       if(saved.status&&statusOptions.some(item=>item.id===saved.status))statusFilter.value=saved.status
-      if(saved.pageSize&&[10,15,25,50].includes(saved.pageSize))pageSize.value=saved.pageSize
+      if(saved.pageSize&&[10,15,25,50].includes(saved.pageSize))pageSize.value=String(saved.pageSize)
       presetNotice.value='Сохранённый вид применён'
     }catch{presetNotice.value='Не удалось применить вид'}
   }
@@ -270,7 +270,7 @@ async function loadWorkspace(){
   loading.value=true;error.value=''
   try{
     const [peopleResult,trainingResult,reserveResult]=await Promise.all([
-      listEmployees(companyId,page.value,search.value,'active',pageSize.value),
+      listEmployees(companyId,page.value,search.value,'active',Number(pageSize.value)),
       loadAllDevelopment<TrainingRow>('training'),
       loadAllDevelopment<ReserveRow>('reserve'),
     ])
@@ -365,7 +365,7 @@ onMounted(()=>{
       <div class="development-pagination">
         <span>Всего {{ total }} строк, показать</span>
         <BaseSelectField v-model="pageSize" label="Строк на странице"
-          :options="[{id:10,name:'10 на странице'},{id:15,name:'15 на странице'},{id:25,name:'25 на странице'},{id:50,name:'50 на странице'}]" />
+          :options="[{id:'10',name:'10 на странице'},{id:'15',name:'15 на странице'},{id:'25',name:'25 на странице'},{id:'50',name:'50 на странице'}]" />
         <BasePagination :page="page" :last-page="lastPage" :loading="loading"
           caption="Страницы кадрового резерва и обучения" @previous="page--" @next="page++" />
       </div>

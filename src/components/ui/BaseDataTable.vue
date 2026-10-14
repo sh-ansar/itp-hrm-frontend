@@ -1,11 +1,12 @@
 <script setup lang="ts" generic="T extends Record<string, unknown>">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import BaseEmptyState from './BaseEmptyState.vue'
 import BaseLoadingState from './BaseLoadingState.vue'
 
 interface TableColumn {
   key: string
   label: string
+  sortable?: boolean
 }
 
 const props = withDefaults(defineProps<{
@@ -25,14 +26,35 @@ const props = withDefaults(defineProps<{
 })
 
 const hasRows = computed(() => !props.loading && props.rows.length > 0)
+const activeSort = ref<string | null>(null)
+const sortDirection = ref<'asc' | 'desc'>('asc')
+const collation = new Intl.Collator('ru', { numeric: true, sensitivity: 'base' })
+function sortBy(key: string) {
+  if (activeSort.value === key) sortDirection.value = sortDirection.value === 'asc' ? 'desc' : 'asc'
+  else { activeSort.value = key; sortDirection.value = 'asc' }
+}
+const orderedRows = computed(() => {
+  if (!activeSort.value) return props.rows
+  const key = activeSort.value
+  return [...props.rows].sort((a, b) => {
+    const left = a[key]
+    const right = b[key]
+    if (left === right) return 0
+    if (left === null || left === undefined) return 1
+    if (right === null || right === undefined) return -1
+    const compare = typeof left === 'number' && typeof right === 'number'
+      ? left - right : collation.compare(String(left), String(right))
+    return sortDirection.value === 'asc' ? compare : -compare
+  })
+})
 type Entry = { kind: 'group'; key: string; label: string; count: number }
   | { kind: 'record'; key: string; record: T }
 const displayRows = computed<Entry[]>(() => {
-  if (!props.groupBy) return props.rows.map(record => ({
+  if (!props.groupBy) return orderedRows.value.map(record => ({
     kind: 'record' as const, key: String(record[props.rowKey]), record,
   }))
   const groups = new Map<string, T[]>()
-  for (const row of props.rows) {
+  for (const row of orderedRows.value) {
     const label = props.groupBy(row) || 'Без подразделения'
     if (!groups.has(label)) groups.set(label, [])
     groups.get(label)!.push(row)
@@ -53,7 +75,13 @@ const displayRows = computed<Entry[]>(() => {
     <table>
       <caption class="sr-only">{{ caption }}</caption>
       <thead>
-        <tr><th v-for="column in columns" :key="column.key" scope="col">{{ column.label }}</th></tr>
+        <tr><th v-for="column in columns" :key="column.key" scope="col"
+          :aria-sort="column.sortable ? (activeSort === column.key ? (sortDirection === 'asc' ? 'ascending' : 'descending') : 'none') : undefined">
+          <button v-if="column.sortable" class="sortable-heading" type="button" :aria-label="'Сортировать: '+column.label" @click="sortBy(column.key)">
+            <span>{{ column.label }}</span><img src="/prototype-icons/Sort.svg" alt="" aria-hidden="true" />
+          </button>
+          <template v-else>{{ column.label }}</template>
+        </th></tr>
       </thead>
       <tbody>
         <template v-for="entry in displayRows" :key="entry.key">
@@ -89,6 +117,10 @@ th{
   font-size:var(--font-table-size);font-weight:500;white-space:nowrap;
   border-bottom:1px solid var(--color-stroke);
 }
+.sortable-heading{display:inline-flex;align-items:center;justify-content:space-between;gap:10px;width:100%;padding:0;border:0;background:transparent;color:inherit;text-align:left;font:inherit;cursor:pointer}
+.sortable-heading:hover{color:var(--color-primary)}
+.sortable-heading img{width:15px;height:15px;flex:none;opacity:.72}
+:root[data-theme="dark"] .sortable-heading img{filter:brightness(0) invert(.8)}
 td{padding:10px 12px;border-bottom:1px solid var(--color-stroke);border-right:1px solid var(--color-stroke);color:var(--color-text);overflow-wrap:anywhere;vertical-align:middle}
 tbody tr:last-child td{border-bottom:0}
 th:not(:last-child){border-right:1px solid var(--color-stroke)}

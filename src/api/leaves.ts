@@ -47,6 +47,7 @@ export interface LeaveResponse {
       shifted: number
     }
     leave_writes_enabled: boolean
+    can_manage_leave_requests?: boolean
     current_page: number
     last_page: number
     per_page: number
@@ -70,4 +71,111 @@ export function getLeaves(
     per_page: '100',
   })
   return apiRequest<LeaveResponse>(`/companies/${companyId}/leaves?${params.toString()}`)
+}
+
+
+// B69: the schedule (GET /leaves) is approved-only; these are separate drafts/decisions.
+export interface LeaveTypeRecord {
+  id: string
+  code: string
+  name: string
+  annual_days: number | null
+  balance_method: 'calendar_days' | 'working_days'
+  revision: number
+}
+export interface LeaveTypesResponse {
+  data: LeaveTypeRecord[]
+  meta: { can_manage_leave_types: boolean }
+}
+export type LeaveRequestStatus = 'draft' | 'submitted' | 'approved' | 'rejected' | 'cancelled'
+export interface LeaveRequestRecord {
+  id: string
+  employee_id: string
+  leave_type_id: string
+  leave_type_name: string
+  last_name: string
+  first_name: string
+  middle_name: string | null
+  planned_started_on: string
+  planned_ended_on: string
+  planned_days: number
+  status: LeaveRequestStatus
+  revision: number
+  note: string | null
+  decision_comment: string | null
+  published_leave_id: string | null
+  created_by_user_id: number
+}
+export interface LeaveRequestsResponse {
+  data: LeaveRequestRecord[]
+  meta: {
+    current_page: number
+    last_page: number
+    total: number
+    can_approve_leave_requests: boolean
+  }
+}
+export interface LeavePlanInput {
+  employee_id: string
+  leave_type_id: string
+  planned_started_on: string
+  planned_ended_on: string
+  note: string | null
+}
+export interface LeaveTypeInput {
+  code: string
+  name: string
+  annual_days: number | null
+  balance_method: 'calendar_days' | 'working_days'
+}
+
+function companyPath(companyId: string): string {
+  if (!uuid.test(companyId)) throw new Error('Некорректный идентификатор компании')
+  return '/companies/' + companyId
+}
+function requestPath(companyId: string, id: string): string {
+  if (!uuid.test(id)) throw new Error('Некорректный идентификатор заявки')
+  return companyPath(companyId) + '/leave-requests/' + id
+}
+export function getLeaveTypes(companyId: string): Promise<LeaveTypesResponse> {
+  return apiRequest<LeaveTypesResponse>(companyPath(companyId) + '/leave-types')
+}
+export function createLeaveType(companyId: string, data: LeaveTypeInput): Promise<{ data: LeaveTypeRecord }> {
+  return apiRequest(companyPath(companyId) + '/leave-types', { method: 'POST', body: JSON.stringify(data) })
+}
+export function getLeaveRequests(companyId: string, page = 1): Promise<LeaveRequestsResponse> {
+  if (!Number.isSafeInteger(page) || page < 1) throw new Error('Некорректная страница')
+  return apiRequest(companyPath(companyId) + '/leave-requests?page=' + page)
+}
+export function createLeaveRequest(companyId: string, data: LeavePlanInput): Promise<{ data: LeaveRequestRecord }> {
+  return apiRequest(companyPath(companyId) + '/leave-requests', { method: 'POST', body: JSON.stringify(data) })
+}
+export function updateLeaveRequest(
+  companyId: string, requestId: string, data: LeavePlanInput, revision: number,
+): Promise<{ data: LeaveRequestRecord }> {
+  return apiRequest(requestPath(companyId, requestId), {
+    method: 'PUT', body: JSON.stringify({ ...data, revision }),
+  })
+}
+export function submitLeaveRequest(
+  companyId: string, requestId: string, revision: number,
+): Promise<{ data: LeaveRequestRecord }> {
+  return apiRequest(requestPath(companyId, requestId) + '/submit', {
+    method: 'POST', body: JSON.stringify({ revision }),
+  })
+}
+export function cancelLeaveRequest(
+  companyId: string, requestId: string, revision: number,
+): Promise<{ data: LeaveRequestRecord }> {
+  return apiRequest(requestPath(companyId, requestId) + '/cancel', {
+    method: 'POST', body: JSON.stringify({ revision }),
+  })
+}
+export function decideLeaveRequest(
+  companyId: string, requestId: string, revision: number, decision: 'approved' | 'rejected',
+  comment: string | null,
+): Promise<{ data: LeaveRequestRecord }> {
+  return apiRequest(requestPath(companyId, requestId) + '/decision', {
+    method: 'POST', body: JSON.stringify({ revision, decision, comment }),
+  })
 }

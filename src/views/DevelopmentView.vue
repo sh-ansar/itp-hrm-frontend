@@ -274,7 +274,7 @@ onMounted(loadCompanies)
         </form>
 
         <div class="development-desktop">
-          <BaseDataTable :rows="rows" :columns="columns" row-key="id" :loading="loading"
+          <BaseDataTable :rows="rows" :columns="columns" row-key="id" :loading="loading" :min-table-width="1050"
             :caption="isTraining ? 'Общий реестр обучения' : 'Общий реестр кадрового резерва'"
             :empty-title="search ? 'Ничего не найдено' : 'Записей по фильтру нет'"
             :empty-description="search ? 'Уточните запрос или сбросьте поиск.' : 'Записи появятся после внесения их в карточки сотрудников.'">
@@ -403,8 +403,6 @@ onMounted(loadCompanies)
 .records-search{display:grid;grid-template-columns:minmax(0,1fr) auto auto;align-items:end;gap:8px;margin-bottom:14px}
 .records-search :deep(.field){max-width:none}
 .development-desktop{min-width:0}
-.development-desktop :deep(.table-scroll){max-width:100%;overflow-x:auto;overflow-y:hidden}
-.development-desktop :deep(table){min-width:1050px}
 .employee-cell,.subject-cell{display:grid;gap:3px;min-width:0;overflow-wrap:anywhere}
 .employee-cell a{color:var(--color-text);font-weight:600;text-decoration:none}
 .employee-cell a:hover{color:var(--color-primary)}

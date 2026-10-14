@@ -4,6 +4,7 @@ import { Plus } from 'lucide-vue-next'
 import { useRoute } from 'vue-router'
 import EmployeeProfileSection from '../components/EmployeeProfileSection.vue'
 import EmployeePhoto from '../components/EmployeePhoto.vue'
+import EmployeeDocumentsPanel from '../components/EmployeeDocumentsPanel.vue'
 import EmployeeDataGrid from '../components/EmployeeDataGrid.vue'
 import BaseButton from '../components/ui/BaseButton.vue'
 import BaseDataTable from '../components/ui/BaseDataTable.vue'
@@ -391,14 +392,6 @@ const fitColumns = [
   { key: 'recommendation', label: 'Рекомендация' },
 ]
 
-const documentColumns = [
-  { key: 'title', label: 'Документ' },
-  { key: 'file_name', label: 'Файл' },
-  { key: 'number', label: 'Номер' },
-  { key: 'document_type', label: 'Тип' },
-  { key: 'issued_on', label: 'Дата' },
-  { key: 'status', label: 'Статус' },
-]
 function historyActionLabel(action: string): string {
   const labels: Record<string, string> = {
     'personnel.employee_photo_updated': 'Обновлено фото сотрудника',
@@ -621,12 +614,7 @@ onMounted(load)
       </template>
       <template v-if="profile.meta.extended_sections_visible">
         <EmployeeProfileSection v-if="activeSection === 'documents'" title="Документы сотрудника">
-          <BaseDataTable density="compact" :rows="reference?.documents ?? []" :columns="documentColumns" row-key="id"
-            caption="Документы сотрудника" empty-title="Документы не добавлены"
-            empty-description="В карточке пока нет доступных документов.">
-            <template #cell-issued_on="{ value }">{{ formatDate(typeof value === 'string' ? value : null) }}</template>
-          </BaseDataTable>
-          <RouterLink class="related-module-link" to="/documents">Открыть общий реестр документов</RouterLink>
+          <EmployeeDocumentsPanel :documents="reference?.documents ?? []" />
         </EmployeeProfileSection>
 
         <template v-if="activeSection === 'payroll'">

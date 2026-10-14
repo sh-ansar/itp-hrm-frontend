@@ -4,6 +4,7 @@ import { FileCheck2, FilePlus2, FileText, Paperclip } from 'lucide-vue-next'
 import BaseButton from '../components/ui/BaseButton.vue'
 import BaseCard from '../components/ui/BaseCard.vue'
 import BaseDataTable from '../components/ui/BaseDataTable.vue'
+import BaseStatusPill from '../components/ui/BaseStatusPill.vue'
 import BaseDialog from '../components/ui/BaseDialog.vue'
 import BaseLoadingState from '../components/ui/BaseLoadingState.vue'
 import BaseNotice from '../components/ui/BaseNotice.vue'
@@ -242,9 +243,9 @@ onMounted(loadCompanies)
               <span class="relation-label">{{ row.personnel_action_id ? 'Кадровое действие' : '—' }}</span>
             </template>
             <template #cell-status="{ row }">
-              <span class="status-pill" :class="{ 'status-pill--draft': row.status === 'draft' }">
+              <BaseStatusPill :tone="row.status === 'draft' ? 'info' : 'success'">
                 {{ statusLabel(row.status) }}
-              </span>
+              </BaseStatusPill>
             </template>
             <template #cell-file="{ row }">
               <a v-if="row.has_file && demoMode && getDemoDocumentUrl(row.id)" class="download-link"
@@ -320,8 +321,6 @@ onMounted(loadCompanies)
 .document-name span,.employee-name span{font-size:11px;color:var(--color-muted)}
 .type-label{font-size:12px;font-weight:600;white-space:nowrap}
 .relation-label{font-size:11px;color:var(--color-muted);white-space:nowrap}
-.status-pill{display:inline-flex;padding:5px 9px;border-radius:999px;background:var(--color-success-surface);color:var(--color-success);font-size:10px;font-weight:700;white-space:nowrap}
-.status-pill--draft{background:var(--color-accent-soft);color:var(--color-primary)}
 .download-link,.file-ready{display:inline-flex;align-items:center;gap:6px;font-size:11px;color:var(--color-primary);font-weight:700;white-space:nowrap}
 .download-link{text-decoration:underline;text-underline-offset:3px}
 .download-link:focus-visible{outline:3px solid var(--color-focus)}

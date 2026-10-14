@@ -13,6 +13,7 @@ import TimesheetsView from '../views/TimesheetsView.vue'
 import LeavesView from '../views/LeavesView.vue'
 import ReportsView from '../views/ReportsView.vue'
 import SettingsView from '../views/SettingsView.vue'
+import RolesView from '../views/RolesView.vue'
 import NotFoundView from '../views/NotFoundView.vue'
 import LoginView from '../views/LoginView.vue'
 import { useSessionStore } from '../stores/session'
@@ -38,6 +39,7 @@ export const router = createRouter({
     { path: '/leaves', name: 'leaves', component: LeavesView },
     { path: '/timesheets', name: 'timesheets', component: TimesheetsView },
     { path: '/reports', name: 'reports', component: ReportsView },
+    { path: '/roles', name: 'roles', component: RolesView },
     { path: '/settings', name: 'settings', component: SettingsView },
     { path: '/:pathMatch(.*)*', name: 'not-found', component: NotFoundView },
   ],

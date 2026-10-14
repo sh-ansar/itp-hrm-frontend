@@ -10,6 +10,7 @@ import BaseSelectField from './ui/BaseSelectField.vue'
 import BaseStatusPill from './ui/BaseStatusPill.vue'
 import BaseTableBulkActions from './ui/BaseTableBulkActions.vue'
 import { downloadCsv } from '../utils/exportCsv'
+import { useUiFormatters } from '../composables/useUiFormatters'
 
 type EmployeeDocument = {
   id: string
@@ -24,6 +25,7 @@ type DocumentRow = EmployeeDocument & { folder: string }
 type GroupMode = 'folder' | 'type' | 'none'
 
 const props = defineProps<{ documents: EmployeeDocument[] }>()
+const fmt = useUiFormatters()
 
 const search = ref('')
 const typeFilter = ref('all')
@@ -59,9 +61,7 @@ function folderFor(document: EmployeeDocument): string {
   return 'Прочие документы'
 }
 function displayDate(value: string | null): string {
-  if (!value || !/^\d{4}-\d{2}-\d{2}/.test(value)) return '—'
-  const [year, month, day] = value.slice(0, 10).split('-')
-  return day + '.' + month + '.' + year
+  return value ? fmt.date(value) : '—'
 }
 const rows = computed<DocumentRow[]>(() => props.documents.map(document => ({
   ...document,

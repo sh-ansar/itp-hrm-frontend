@@ -10,7 +10,7 @@ after(async () => { await browser?.close() })
 const expectedNavigation = [
   'Главная', 'Сотрудники', 'Оргструктура и штатка', 'Кадровые процессы',
   'Графики и табель', 'Отпуска', 'Документы и приказы',
-  'Отчёты и аналитика', 'Справочники', 'Настройки',
+  'Отчёты и аналитика', 'Справочники', 'Роли и права', 'Настройки',
 ]
 
 test('the prototype shell has real navigation, aligned topbar and no overflow at all sizes', async () => {

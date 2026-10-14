@@ -128,3 +128,46 @@ test('Georgian is selectable at runtime, persists and stays legible in dark them
     await context.close()
   }
 })
+
+test('Georgian dark theme has no pale page overlay or horizontal viewport overflow', async () => {
+  for (const width of [375, 768, 1440]) {
+    const context = await browser.newContext({ baseURL, viewport: { width, height: 900 } })
+    const page = await context.newPage()
+    const errors = []
+    page.on('pageerror', error => errors.push(error.message))
+    try {
+      await page.addInitScript(() => {
+        localStorage.setItem('hrm-theme', 'dark')
+        localStorage.setItem('hrm-locale', 'ka')
+      })
+      for (const path of ['/employees', '/organization', '/staffing', '/documents', employeeUrl]) {
+        await page.goto(path)
+        await page.locator('main#main-content h1').first().waitFor()
+        const visual = await page.evaluate(() => {
+          const appMain = document.querySelector('main#main-content')
+          const body = getComputedStyle(document.body)
+          const content = appMain ? getComputedStyle(appMain) : null
+          return {
+            theme: document.documentElement.dataset.theme,
+            lang: document.documentElement.lang,
+            foreground: body.color,
+            background: body.backgroundColor,
+            contentBackground: content?.backgroundColor,
+            overflow: Math.max(document.documentElement.scrollWidth, document.body.scrollWidth) - innerWidth,
+            overlay: Boolean(document.querySelector('.drawer-overlay, .nav-backdrop')),
+          }
+        })
+        assert.equal(visual.theme, 'dark', 'Dark theme lost on ' + path)
+        assert.equal(visual.lang, 'ka', 'Georgian locale lost on ' + path)
+        assert.equal(visual.background, 'rgb(9, 38, 52)', 'Wrong page background on ' + path)
+        assert.equal(visual.contentBackground, 'rgb(9, 38, 52)', 'Wrong content surface on ' + path)
+        assert.equal(visual.foreground, 'rgb(229, 246, 255)', 'Wrong foreground on ' + path)
+        assert.ok(visual.overflow <= 1, 'Horizontal overflow on ' + path + ' at ' + width + ': ' + visual.overflow)
+        assert.equal(visual.overlay, false, 'Unexpected overlay on ' + path)
+      }
+      assert.deepEqual(errors, [], 'Georgian dark mode must not trigger runtime errors')
+    } finally {
+      await context.close()
+    }
+  }
+})

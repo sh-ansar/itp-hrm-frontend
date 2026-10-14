@@ -9,6 +9,7 @@ after(async () => { await browser?.close() })
 const baseURL = 'http://127.0.0.1:5173'
 const routes = [
   ['/', 'Главная'],
+  ['/onboarding', 'Добро пожаловать в систему'],
   ['/employees', 'Реестр сотрудников'],
   ['/employees-development', 'Кадровый резерв и обучение'],
   ['/organization', 'Организационная структура'],

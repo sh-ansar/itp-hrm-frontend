@@ -11,10 +11,14 @@ const props = withDefaults(defineProps<{
   companyName?: string
   employeeName?: string
   employeeEmail?: string
+  departmentName?: string
+  positionName?: string
 }>(), {
   companyName: 'ITP HRM',
   employeeName: '',
   employeeEmail: '',
+  departmentName: '',
+  positionName: '',
 })
 
 const emit = defineEmits<{ completed: [] }>()
@@ -25,11 +29,13 @@ const fullName = ref(props.employeeName || '')
 const city = ref('Астана')
 const email = ref(props.employeeEmail || '')
 const phone = ref('')
-const department = ref('Отдел не назначен')
-const position = ref('Должность не назначена')
+const department = ref(props.departmentName || 'Отдел не назначен')
+const position = ref(props.positionName || 'Должность не назначена')
 
 watch(() => props.employeeName, value => { if (!fullName.value && value) fullName.value = value })
 watch(() => props.employeeEmail, value => { if (!email.value && value) email.value = value })
+watch(() => props.departmentName, value => { department.value = value || 'Отдел не назначен' })
+watch(() => props.positionName, value => { position.value = value || 'Должность не назначена' })
 
 const access = ref({
   corporateMail: true,

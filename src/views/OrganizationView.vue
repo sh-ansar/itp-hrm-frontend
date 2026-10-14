@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useActiveCompanySelection } from '../composables/useActiveCompanySelection'
 import { useWorkspaceI18n } from '../composables/useWorkspaceI18n'
 import { useUiFormatters } from '../composables/useUiFormatters'
 import { computed, onMounted, ref, watch } from 'vue'
@@ -41,6 +42,7 @@ const router = useRouter()
 const companies = ref<CompanyRecord[]>([])
 const departments = ref<DepartmentRecord[]>([])
 const selectedCompany = ref('')
+const { preferCompany } = useActiveCompanySelection(selectedCompany)
 const loadingCompanies = ref(false)
 const loadingDepartments = ref(false)
 const departmentWritesEnabled = ref(false)
@@ -187,7 +189,7 @@ async function loadCompanies() {
     const result = await listCompanies()
     companies.value = result.data
     if (!companies.value.some(item => item.id === selectedCompany.value)) {
-      selectedCompany.value = companies.value[0]?.id ?? ''
+      selectedCompany.value = preferCompany(companies.value)
     }
   } catch (cause) {
     error.value = cause instanceof Error ? cause.message : 'Не удалось загрузить организации'

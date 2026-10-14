@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useActiveCompanySelection } from '../composables/useActiveCompanySelection'
 import { useWorkspaceI18n } from '../composables/useWorkspaceI18n'
 import { useUiFormatters } from '../composables/useUiFormatters'
 import { computed, onMounted, ref, watch } from 'vue'
@@ -33,6 +34,7 @@ const fmt = useUiFormatters()
 
 const companies = ref<CompanyRecord[]>([])
 const company = ref('')
+const { preferCompany } = useActiveCompanySelection(company)
 const companiesBusy = ref(false)
 const documentsBusy = ref(false)
 const rows = ref<DocumentRow[]>([])
@@ -84,7 +86,7 @@ async function loadCompanies() {
     const result = await listCompanies()
     companies.value = result.data
     if (!companies.value.some(item => item.id === company.value)) {
-      company.value = companies.value[0]?.id ?? ''
+      company.value = preferCompany(companies.value)
     } else {
       await loadDocuments()
     }

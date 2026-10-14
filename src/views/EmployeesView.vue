@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useActiveCompanySelection } from '../composables/useActiveCompanySelection'
 import { useWorkspaceI18n } from '../composables/useWorkspaceI18n'
 import { useUiFormatters } from '../composables/useUiFormatters'
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
@@ -42,6 +43,7 @@ const route = useRoute()
 const companies = ref<CompanyRecord[]>([])
 const employees = ref<EmployeeRecord[]>([])
 const selectedCompany = ref('')
+const { preferCompany } = useActiveCompanySelection(selectedCompany)
 const companyLoading = ref(false)
 const employeeLoading = ref(false)
 const employeeWritesEnabled = ref(false)
@@ -526,7 +528,7 @@ async function loadCompanies() {
     const result = await listCompanies()
     companies.value = result.data
     if (!companies.value.some(item => item.id === selectedCompany.value))
-      selectedCompany.value = companies.value[0]?.id ?? ''
+      selectedCompany.value = preferCompany(companies.value)
   } catch (cause) {
     companies.value = []
     selectedCompany.value = ''

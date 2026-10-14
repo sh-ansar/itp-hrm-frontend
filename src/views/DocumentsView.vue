@@ -217,7 +217,7 @@ onMounted(loadCompanies)
             <h2>{{ tr('Кадровые документы') }}</h2>
             <p>{{ tr('Черновики, приказы, договоры и основания сотрудников.') }}</p>
           </div>
-          <span>{{ total }} записей</span>
+          <span>{{ fmt.number(total, 0) }} {{ tr('записей') }}</span>
         </div>
 
         <div class="documents-desktop">

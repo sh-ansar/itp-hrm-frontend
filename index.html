@@ -4,7 +4,36 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>ITP HRM</title>
-  <link rel="stylesheet" href="/boot-fallback.css"/>
+  <!-- Critical styles must not depend on a separate DNS request. The generated Vite CSS
+       still owns the full application, while these styles keep startup and theme contrast
+       readable if a stylesheet request fails or is cached out of sequence. -->
+  <style>
+    :root{color:#093044;background:#f8fafb}
+    :root[data-theme="dark"]{color:#e5f6ff;background:#092634}
+    body{margin:0;min-height:100vh;min-height:100dvh;color:#093044;background:#f8fafb}
+    :root[data-theme="dark"] body{color:#e5f6ff;background:#092634}
+    .boot-status{
+      box-sizing:border-box;min-height:100vh;min-height:100dvh;display:flex;
+      align-items:center;justify-content:center;padding:20px;
+      background:var(--color-page,#f8fafb);color:var(--color-text,#093044);
+      font-family:"Golos Text","Segoe UI",Arial,sans-serif;
+    }
+    .boot-status__card{
+      box-sizing:border-box;display:flex;flex-direction:column;gap:10px;max-width:410px;width:100%;
+      padding:24px;border:1px solid var(--color-stroke,rgba(68,112,134,.12));
+      border-radius:10px;background:var(--color-surface,#fff);text-align:center;
+      box-shadow:0 2px 6px rgba(20,58,74,.07);
+    }
+    .boot-status__card strong{font-size:22px;line-height:28px}
+    .boot-status__card p{margin:0;font-size:14px;line-height:20px}
+    .boot-status__card small{color:var(--color-muted,#7199ac);font-size:12px;line-height:18px}
+    :root[data-theme="dark"] .boot-status{
+      background:var(--color-page,#092634);color:var(--color-text,#e5f6ff)
+    }
+    :root[data-theme="dark"] .boot-status__card{
+      background:var(--color-surface,#032130);border-color:rgba(141,192,216,.12)
+    }
+  </style>
 </head>
 <body>
   <div id="app">

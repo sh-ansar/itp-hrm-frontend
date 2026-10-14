@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { useWorkspaceI18n } from '../../composables/useWorkspaceI18n'
+const { tr } = useWorkspaceI18n()
 
 type FilterOption = { value: string; label: string; count: number }
 const props = defineProps<{
@@ -96,38 +98,38 @@ watch(() => [props.options.length, props.query], async () => {
 <template>
   <Teleport to="body">
     <section ref="panel" class="hrm-column-filter-popover" role="group"
-      :aria-label="'Фильтр столбца: ' + label" :style="panelPosition">
+      :aria-label="tr('Фильтр столбца:') + ' ' + tr(label)" :style="panelPosition">
       <label class="filter-search">
         <img src="/prototype-icons/Search.svg" alt="" aria-hidden="true" />
         <input ref="queryField" :value="query" type="search"
-          :aria-label="'Значение фильтра: ' + label"
-          placeholder="Поиск" autocomplete="off"
+          :aria-label="tr('Значение фильтра:') + ' ' + tr(label)"
+           :placeholder="tr('Поиск')" autocomplete="off"
           @input="emit('update:query', ($event.target as HTMLInputElement).value)"
           @keydown.enter.prevent="emit('apply')" />
-        <button type="button" :aria-label="query ? 'Очистить поиск' : 'Закрыть фильтр'"
+        <button type="button" :aria-label="query ? tr('Очистить поиск') : tr('Закрыть фильтр')"
           @click="query ? emit('update:query', '') : emit('close')">×</button>
       </label>
       <div class="filter-divider" aria-hidden="true"></div>
-      <div class="filter-choice-list" role="group" :aria-label="'Значения столбца: ' + label">
+      <div class="filter-choice-list" role="group" :aria-label="tr('Значения столбца:') + ' ' + tr(label)">
         <label class="filter-choice filter-choice--all">
-          <input type="checkbox" :checked="allChecked" :aria-label="'Выбрать все значения: ' + label"
+          <input type="checkbox" :checked="allChecked" :aria-label="tr('Выбрать все значения:') + ' ' + tr(label)"
             @change="emit('toggleAll', ($event.target as HTMLInputElement).checked)" />
-          <span>Все</span>
+          <span>{{ tr('Все') }}</span>
         </label>
         <label v-for="option in options" :key="option.value" class="filter-choice">
           <input type="checkbox" :checked="selected.includes(option.value)"
-            :aria-label="'Значение: ' + option.label"
+            :aria-label="tr('Значение:') + ' ' + tr(option.label)"
             @change="emit('toggle', option.value, ($event.target as HTMLInputElement).checked)" />
-          <span class="option-label">{{ option.label }}</span>
+          <span class="option-label">{{ tr(option.label) }}</span>
           <small>{{ option.count }}</small>
         </label>
-        <p v-if="!options.length" class="filter-empty">Значений не найдено</p>
+        <p v-if="!options.length" class="filter-empty">{{ tr('Значений не найдено') }}</p>
       </div>
       <div class="filter-footer">
-        <button class="filter-apply" type="button" @click="emit('apply')">Применить</button>
-        <button class="filter-reset" type="button" @click="emit('reset')">{{ applied ? 'Сбросить фильтр' : 'Очистить выбор' }}</button>
+        <button class="filter-apply" type="button" @click="emit('apply')">{{ tr('Применить') }}</button>
+        <button class="filter-reset" type="button" @click="emit('reset')">{{ tr(applied ? 'Сбросить фильтр' : 'Очистить выбор') }}</button>
       </div>
-      <p class="filter-scope">Значения загруженной страницы</p>
+      <p class="filter-scope">{{ tr('Значения загруженной страницы') }}</p>
     </section>
   </Teleport>
 </template>

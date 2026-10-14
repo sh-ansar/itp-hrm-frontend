@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { ref, useId } from 'vue'
+import { useWorkspaceI18n } from '../composables/useWorkspaceI18n'
+const { tr } = useWorkspaceI18n()
 
 const props = withDefaults(defineProps<{
   title: string
@@ -13,11 +15,11 @@ const contentId = useId()
 <template>
   <section class="employee-profile-section">
     <header class="section-heading">
-      <h2>{{ title }}</h2>
+      <h2>{{ tr(title) }}</h2>
       <div class="section-actions">
         <slot name="actions" />
         <button type="button" class="expand-button" :aria-expanded="expanded"
-          :aria-controls="contentId" :aria-label="expanded ? 'Свернуть: ' + title : 'Развернуть: ' + title"
+          :aria-controls="contentId" :aria-label="(expanded ? tr('Свернуть:') : tr('Развернуть:')) + ' ' + tr(title)"
           @click="expanded = !expanded">
           <span class="chevron" :class="{ 'chevron--expanded': expanded }" aria-hidden="true"></span>
         </button>

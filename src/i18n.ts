@@ -126,6 +126,9 @@ const ru: Messages = {
   'onboarding.back': 'Назад',
   'onboarding.next': 'Продолжить',
   'onboarding.finish': 'Приступить к работе',
+  'onboarding.dashboardTitle': 'Первичная настройка профиля',
+  'onboarding.dashboardHelp': 'Проверьте личные данные, доступы и рабочее место перед началом работы.',
+  'onboarding.dashboardAction': 'Продолжить настройку',
 }
 
 const kk: Messages = {
@@ -251,6 +254,9 @@ const kk: Messages = {
   'onboarding.back': 'Артқа',
   'onboarding.next': 'Жалғастыру',
   'onboarding.finish': 'Жұмысты бастау',
+  'onboarding.dashboardTitle': 'Профильді алғашқы баптау',
+  'onboarding.dashboardHelp': 'Жұмысты бастамас бұрын жеке деректерді, қолжетімділіктерді және жұмыс орнын тексеріңіз.',
+  'onboarding.dashboardAction': 'Баптауды жалғастыру',
 }
 
 const en: Messages = {
@@ -376,6 +382,9 @@ const en: Messages = {
   'onboarding.back': 'Back',
   'onboarding.next': 'Continue',
   'onboarding.finish': 'Start working',
+  'onboarding.dashboardTitle': 'Initial profile setup',
+  'onboarding.dashboardHelp': 'Review personal details, access and workplace readiness before you start.',
+  'onboarding.dashboardAction': 'Continue setup',
 }
 
 const messages: Record<UiLocale, Messages> = { ru, kk, en }

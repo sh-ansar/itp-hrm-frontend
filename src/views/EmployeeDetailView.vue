@@ -17,10 +17,12 @@ import BaseDialog from '../components/ui/BaseDialog.vue'
 import BaseViewTabs from '../components/ui/BaseViewTabs.vue'
 import { getEmployee, type EmployeeAssignment, type EmployeeDetail, type ProfileEditRow, type ProfileSection } from '../api/personnel'
 import { localTodayISO } from '../utils/localDate'
+import { useUiFormatters } from '../composables/useUiFormatters'
 
 type EmployeeDisplayField = { label: string; value: string | number | null | undefined; wide?: boolean; muted?: boolean }
 
 const route = useRoute()
+const fmt = useUiFormatters()
 const profile = ref<EmployeeDetail | null>(null)
 const loading = ref(false)
 const error = ref('')
@@ -58,11 +60,7 @@ function normalizeProfileTab(requested: unknown): string {
 }
 
 function formatDate(value: string | null | undefined): string {
-  if (!value) return '—'
-  const plain = value.slice(0, 10)
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(plain)) return value
-  const date = new Date(plain + 'T12:00:00')
-  return Number.isNaN(date.getTime()) ? value : new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' }).format(date)
+  return value ? fmt.date(value) : '—'
 }
 
 function trainingModeLabel(value: unknown): string {
@@ -99,7 +97,7 @@ const initials = computed(() => {
 const reference = computed(() => profile.value?.reference_profile)
 const genderLabel = computed(() => profile.value?.data.gender === 'male' ? 'Мужчина' : profile.value?.data.gender === 'female' ? 'Женщина' : '—')
 function money(value: number | null | undefined, currency = 'KZT'): string {
-  return value == null ? '—' : `${Number(value).toLocaleString('ru-RU')} ${currency}`
+  return value == null ? '—' : `${fmt.number(Number(value), 0)} ${currency}`
 }
 function ageFromBirthDate(value: string | null | undefined): string {
   if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value.slice(0, 10))) return '—'
@@ -745,7 +743,7 @@ onMounted(load)
             empty-title="История изменений пуста"
             empty-description="Для карточки ещё нет доступных событий.">
             <template #cell-action="{ value }">{{ historyActionLabel(String(value)) }}</template>
-            <template #cell-created_at="{ value }">{{ new Date(String(value)).toLocaleString('ru-RU') }}</template>
+            <template #cell-created_at="{ value }">{{ fmt.dateTime(String(value)) }}</template>
           </BaseDataTable>
           <BaseNotice v-if="profile.meta.history_truncated" tone="info">Показаны последние {{ profile.meta.history_limit ?? 100 }} изменений.</BaseNotice>
         </EmployeeProfileSection>

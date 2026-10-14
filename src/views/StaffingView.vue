@@ -352,7 +352,7 @@ onMounted(refreshCompanies)
           <h2>{{ tr('Реестр изменений штатного расписания') }}</h2>
           <p class="section-copy">{{ tr('История операций со штатными позициями и версиями расписания.') }}</p>
         </div>
-        <span class="muted">{{ historyTotal }} событий</span>
+        <span class="muted">{{ fmt.number(historyTotal, 0) }} {{ tr('событий') }}</span>
       </div>
       <BaseNotice v-if="historyError" tone="error">{{ historyError }}</BaseNotice>
       <div class="staffing-history-desktop">
@@ -377,13 +377,13 @@ onMounted(refreshCompanies)
         <p v-else-if="!historyRows.length" class="staffing-history-empty">{{ tr('История изменений пока пуста.') }}</p>
         <article v-for="event in historyRows" :key="event.id" class="staffing-history-card">
           <div class="staffing-history-card-heading">
-            <strong>{{ historyActions[event.action] ?? event.action }}</strong>
+            <strong>{{ tr(historyActions[event.action] ?? event.action) }}</strong>
             <span>№ {{ event.id }}</span>
           </div>
           <p>{{ plans.find(plan => plan.id === event.staffing_plan_id)?.name ?? (event.staffing_plan_id ? tr('Версия ') + event.staffing_plan_id.slice(0, 8) : tr('Без версии')) }}</p>
           <div class="staffing-history-card-foot">
             <span>{{ fmt.dateTime(event.created_at) }}</span>
-            <span v-if="event.revision != null">Ревизия {{ event.revision }}</span>
+            <span v-if="event.revision != null">{{ tr('Ревизия') }} {{ fmt.number(event.revision, 0) }}</span>
           </div>
         </article>
       </div>
@@ -423,8 +423,8 @@ onMounted(refreshCompanies)
               </span>
             </div>
             <p class="muted">
-              {{ selectedPlan.valid_from }} — {{ selectedPlan.valid_to ?? tr('без даты окончания') }}
-              · занятость на {{ detail.meta.as_of }}
+              {{ fmt.date(selectedPlan.valid_from) }} — {{ selectedPlan.valid_to ? fmt.date(selectedPlan.valid_to) : tr('без даты окончания') }}
+              · {{ tr('занятость на') }} {{ fmt.date(detail.meta.as_of) }}
             </p>
           </div>
           <div class="plan-actions">
@@ -447,7 +447,7 @@ onMounted(refreshCompanies)
             <h2>{{ activeView === 'vacant' ? tr('Вакантные позиции') : tr('Штатное расписание') }}</h2>
             <p class="section-copy">{{ activeView === 'vacant' ? tr('Открытые позиции по подразделениям.') : tr('Должности, ставки и текущая занятость.') }}</p>
           </div>
-          <span class="muted">{{ filteredLines.length }} из {{ detail.lines.length }} строк</span>
+          <span class="muted">{{ fmt.number(filteredLines.length, 0) }} {{ tr('из') }} {{ fmt.number(detail.lines.length, 0) }} {{ tr('строк') }}</span>
         </div>
 
         <div class="line-toolbar" :aria-label="tr('Фильтры штатного расписания')">
@@ -477,7 +477,7 @@ onMounted(refreshCompanies)
             <span class="salary"><CircleDollarSign :size="15" /> {{ formatSalary(row) }}</span>
           </template>
           <template #cell-status="{ row }">
-            <span v-if="row.overstaffed_units > 0" class="line-status danger">Сверх штата +{{ formatUnits(row.overstaffed_units) }}</span>
+            <span v-if="row.overstaffed_units > 0" class="line-status danger">{{ tr('Сверх штата') }} +{{ formatUnits(row.overstaffed_units) }}</span>
             <span v-else-if="row.vacant_units > 0" class="line-status warning">{{ tr('Есть вакансии') }}</span>
             <span v-else class="line-status success">{{ tr('Укомплектовано') }}</span>
           </template>

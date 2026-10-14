@@ -16,7 +16,7 @@ This report describes code parity and test coverage. It is **not** a claim of a 
 
 ## Localization contract
 
-- The interface vocabulary (not API business values) resolves via `useWorkspaceI18n`: RU source copy with KK, EN and KA (Georgian) variants. Georgian includes all **668** reviewed workspace translations, plus **71** shell/navigation/Settings keys. The stored language code is `ka`, header displays `GE`, and `ka-GE` formats the localized date/time parts.
+- The interface vocabulary (not API business values) resolves via `useWorkspaceI18n`: RU source copy with KK, EN and KA (Georgian) variants. Georgian includes all **673** reviewed workspace translations, plus **71** shell/navigation/Settings keys. The stored language code is `ka`, header displays `GE`, and `ka-GE` formats the localized date/time parts.
 - Dates, date/time and numbers are formatted via `useUiFormatters`, including employee register and document register mobile views; no hard-coded RU `dd.mm.yyyy` remains in those modules.
 - Table collation and filter case folding follow the saved locale; stored selection IDs and API model fields remain unchanged.
 - Single source of truth for table accessibility and filters is the shared UI components, not five separate implementations.

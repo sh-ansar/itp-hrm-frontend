@@ -562,14 +562,15 @@ onMounted(load)
       </div>
 
       <template v-if="activeSection === 'employment'">
-        <EmployeeProfileSection title="Трудовой договор и приём">
+        <EmployeeProfileSection title="Договор и приём">
           <template v-if="profile.meta.assignment_writes_enabled" #actions>
             <BaseButton @click="assignmentCreateOpen = true"><Plus :size="16" /> Добавить назначение</BaseButton>
           </template>
-          <EmployeeDataGrid :fields="employmentFields" />
+          <EmployeeDataGrid :fields="contractFields" />
         </EmployeeProfileSection>
 
         <EmployeeProfileSection title="Стаж и трудовой опыт">
+          <EmployeeDataGrid :fields="seniorityFields" />
           <h3 class="assignment-history-title">История назначений</h3>
           <BaseDataTable density="compact" :columns="columns" :rows="profile.assignments" row-key="id"
             caption="Доступная история назначений" empty-title="Назначений не найдено"
@@ -594,8 +595,19 @@ onMounted(load)
             <template #cell-edit="{ row }"><BaseButton variant="secondary" @click="beginEdit('experience', row)">Изменить</BaseButton></template>
           </BaseDataTable>
         </EmployeeProfileSection>
-      </template>
 
+        <EmployeeProfileSection title="Условия труда и персонифицированный учёт">
+          <EmployeeDataGrid :fields="workingConditionFields" />
+        </EmployeeProfileSection>
+
+        <EmployeeProfileSection title="Совмещение и дополнительные обязанности">
+          <EmployeeDataGrid :fields="combinationFields" />
+        </EmployeeProfileSection>
+
+        <EmployeeProfileSection title="Прекращение договора">
+          <EmployeeDataGrid :fields="terminationFields" />
+        </EmployeeProfileSection>
+      </template>
       <template v-if="profile.meta.extended_sections_visible">
         <EmployeeProfileSection v-if="activeSection === 'documents'" title="Документы сотрудника">
           <BaseDataTable density="compact" :rows="reference?.documents ?? []" :columns="documentColumns" row-key="id"

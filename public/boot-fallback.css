@@ -1,0 +1,17 @@
+/* A visible fallback BEFORE Vue, Pinia or routing initializes.
+   Vue replaces #app children after a successful mount. */
+.boot-status{
+  box-sizing:border-box;min-height:100vh;min-height:100dvh;
+  display:grid;place-items:center;padding:20px;
+  background:var(--color-page,#f8fafb);color:var(--color-text,#093044);
+  font-family:"Golos Text","Segoe UI",Arial,sans-serif;
+}
+.boot-status__card{
+  box-sizing:border-box;display:grid;gap:10px;max-width:410px;width:100%;
+  padding:24px;border:1px solid var(--color-stroke,rgba(68,112,134,.12));
+  border-radius:10px;background:var(--color-surface,#fff);
+  text-align:center;box-shadow:0 2px 6px rgba(20,58,74,.07);
+}
+.boot-status__card strong{font-size:22px;line-height:28px}
+.boot-status__card p{margin:0;font-size:14px;line-height:20px}
+.boot-status__card small{color:var(--color-muted,#7199ac);font-size:12px;line-height:18px}

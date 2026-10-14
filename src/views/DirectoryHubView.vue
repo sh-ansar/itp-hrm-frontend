@@ -170,6 +170,7 @@ function saveRecord(){
 
 <template>
   <section class="directory-hub">
+    <h1 class="directory-sr-only">Справочники</h1>
     <div class="directory-breadcrumb">
       <img src="/prototype-icons/Home.svg" alt="" aria-hidden="true" />
       <span>/</span><strong>Справочники</strong><span>/</span>
@@ -264,6 +265,7 @@ function saveRecord(){
 
 <style scoped>
 .directory-hub{display:grid;grid-template-columns:minmax(0,1fr);gap:14px;min-width:0;max-width:100%}
+.directory-sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap;border:0}
 .directory-breadcrumb{display:flex;align-items:center;gap:9px;min-height:22px;color:var(--color-muted);font-size:12px}
 .directory-breadcrumb img{width:15px;height:15px}.directory-breadcrumb strong{color:var(--color-text);font-weight:500}
 .directory-layout{display:grid;grid-template-columns:minmax(235px,300px) minmax(0,1fr);gap:14px;align-items:start}

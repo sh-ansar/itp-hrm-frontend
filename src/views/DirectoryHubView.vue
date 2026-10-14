@@ -1,13 +1,12 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { Plus, Search } from 'lucide-vue-next'
+import { ChevronDown, Plus, Search } from 'lucide-vue-next'
 import BaseButton from '../components/ui/BaseButton.vue'
 import BaseCard from '../components/ui/BaseCard.vue'
 import BaseDataTable from '../components/ui/BaseDataTable.vue'
-import BaseDialog from '../components/ui/BaseDialog.vue'
+import BaseDrawer from '../components/ui/BaseDrawer.vue'
 import BaseFilterSummary from '../components/ui/BaseFilterSummary.vue'
-import BaseKpiGrid from '../components/ui/BaseKpiGrid.vue'
-import BaseRegistryMetricCard from '../components/ui/BaseRegistryMetricCard.vue'
+import BaseNotice from '../components/ui/BaseNotice.vue'
 import BaseSelectField from '../components/ui/BaseSelectField.vue'
 import BaseStatusPill from '../components/ui/BaseStatusPill.vue'
 import BaseViewTabs from '../components/ui/BaseViewTabs.vue'
@@ -35,55 +34,67 @@ const newCode = ref('')
 const success = ref('')
 
 const tabs = [
+  { id: 'leave', label: 'Отпуска и лимиты' },
   { id: 'labor', label: 'Условия труда, надбавки и компенсации' },
   { id: 'tariffs', label: 'Тарифы и начисления' },
   { id: 'development', label: 'Развитие и подбор кадров' },
   { id: 'documents', label: 'Документы и основания' },
-  { id: 'positions', label: 'Должности' },
 ]
 
 const groups: Record<string, GroupDefinition[]> = {
+  leave: [
+    { id: 'leave-types', label: 'Виды отпусков', description: 'ежегодные, дополнительные, социальные и специальные отпуска' },
+    { id: 'leave-limits', label: 'Лимиты отпусков', description: 'правила начисления, переносы и ограничения' },
+    { id: 'absence-types', label: 'Виды отсутствий', description: 'больничные, командировки, отгулы и другие причины' },
+    { id: 'balance-methods', label: 'Методы расчёта баланса', description: 'календарные, рабочие дни и индивидуальные правила' },
+  ],
   labor: [
-    { id: 'work-conditions', label: 'Виды условий труда', description: 'Нормальные, вредные и особые условия труда' },
-    { id: 'allowance-types', label: 'Виды надбавок', description: 'Надбавки за условия, квалификацию и стаж' },
-    { id: 'compensations', label: 'Компенсации', description: 'Компенсационные выплаты и льготы' },
-    { id: 'benefits', label: 'Льготы', description: 'Дополнительные дни, питание и прочие льготы' },
-    { id: 'condition-bases', label: 'Основания условий труда', description: 'Карты, приказы и нормативные основания' },
+    { id: 'work-conditions', label: 'Виды условий труда', description: 'нормальные, вредные и особые условия труда' },
+    { id: 'allowance-types', label: 'Виды надбавок', description: 'за условия, квалификацию, стаж и режим работы' },
+    { id: 'compensations', label: 'Компенсации', description: 'компенсационные выплаты и возмещения' },
+    { id: 'benefits', label: 'Льготы', description: 'дополнительные дни, питание и другие льготы' },
+    { id: 'condition-bases', label: 'Основания условий труда', description: 'карты, приказы и нормативные основания' },
   ],
   tariffs: [
-    { id: 'tariff-types', label: 'Виды тарифов', description: 'Категории и типы тарифов' },
-    { id: 'calculation-units', label: 'Единицы расчёта', description: 'Час, смена, тонна, рейс и другие единицы' },
-    { id: 'position-schemes', label: 'Тарифные схемы должностей', description: 'Схемы тарификации по должностям' },
-    { id: 'base-tariffing', label: 'Основная тарификация', description: 'Базовые правила начисления' },
-    { id: 'tariff-methods', label: 'Способы тарификации', description: 'Повременная, сдельная и смешанная схемы' },
-    { id: 'tariffs', label: 'Тарифы', description: 'Действующие ставки и значения' },
-    { id: 'cargo-types', label: 'Виды грузов', description: 'Классификация грузов для расчётов' },
+    { id: 'tariff-types', label: 'Виды тарифов', description: 'по грузам, дополнительные работы, доплаты, внутрипортовые работы' },
+    { id: 'calculation-units', label: 'Единицы расчёта', description: 'тонна, час, смена, операция, месяц' },
+    { id: 'position-schemes', label: 'Тарифные схемы должностей', description: 'какие тарифы могут применяться к конкретной должности' },
+    { id: 'base-tariffing', label: 'Основания тарификации', description: 'почему применяется тот или иной тариф' },
+    { id: 'tariff-methods', label: 'Способы тарификации', description: 'надбавка %, по факту, GEL, комбинированный' },
+    { id: 'tariffs', label: 'Тарифы', description: 'конкретные тарифные строки и группы' },
+    { id: 'cargo-types', label: 'Виды грузов', description: 'сахар-сырец, зерновые, нефтепродукты, навалочные грузы' },
   ],
   development: [
-    { id: 'training-types', label: 'Виды обучения', description: 'Внутреннее, внешнее и обязательное обучение' },
-    { id: 'training-modes', label: 'Форматы обучения', description: 'Очное, дистанционное и на рабочем месте' },
-    { id: 'reserve-levels', label: 'Уровни кадрового резерва', description: 'Корпоративный и функциональный уровни' },
-    { id: 'reserve-types', label: 'Виды кадрового резерва', description: 'Оперативный и среднесрочный резерв' },
-    { id: 'recruiting-sources', label: 'Источники подбора', description: 'Каналы и источники кандидатов' },
+    { id: 'training-types', label: 'Виды обучения', description: 'внутреннее, внешнее и обязательное обучение' },
+    { id: 'training-modes', label: 'Форматы обучения', description: 'очное, дистанционное и на рабочем месте' },
+    { id: 'reserve-levels', label: 'Уровни кадрового резерва', description: 'корпоративный и функциональный уровни' },
+    { id: 'reserve-types', label: 'Виды кадрового резерва', description: 'оперативный и среднесрочный резерв' },
+    { id: 'recruiting-sources', label: 'Источники подбора', description: 'каналы и источники кандидатов' },
   ],
   documents: [
-    { id: 'document-types', label: 'Виды документов', description: 'Договоры, приказы, основания и приложения' },
-    { id: 'document-statuses', label: 'Статусы документов', description: 'Черновик, действует, подписан, закрыт' },
-    { id: 'personnel-bases', label: 'Основания кадровых действий', description: 'Основания приёма, перевода и увольнения' },
-    { id: 'order-types', label: 'Типы приказов', description: 'Классификация кадровых приказов' },
+    { id: 'document-types', label: 'Виды документов', description: 'договоры, приказы, основания и приложения' },
+    { id: 'document-statuses', label: 'Статусы документов', description: 'черновик, действует, подписан, закрыт' },
+    { id: 'personnel-bases', label: 'Основания кадровых действий', description: 'приём, перевод, увольнение и иные основания' },
+    { id: 'order-types', label: 'Типы приказов', description: 'классификация кадровых приказов' },
   ],
 }
 
 const seeded: CatalogRecord[] = [
-  { id:'r-001',group:'tariff-types',code:'TRF-TYPE-001',name:'Базовый тариф',category:'Тариф',unit:'KZT',status:'active',value:'Базовый' },
-  { id:'r-002',group:'tariff-types',code:'TRF-TYPE-002',name:'Повышенный тариф',category:'Тариф',unit:'KZT',status:'active',value:'Повышенный' },
-  { id:'r-003',group:'tariff-types',code:'TRF-TYPE-003',name:'Ночной тариф',category:'Тариф',unit:'KZT',status:'active',value:'Ночной' },
+  { id:'l-001',group:'leave-types',code:'LEAVE-ANNUAL',name:'Ежегодный оплачиваемый отпуск',category:'Отпуск',unit:'дней',status:'active',value:'24' },
+  { id:'l-002',group:'leave-types',code:'LEAVE-EXTRA',name:'Дополнительный отпуск',category:'Отпуск',unit:'дней',status:'active',value:'7' },
+  { id:'l-003',group:'leave-limits',code:'LIMIT-CARRY',name:'Перенос остатка',category:'Лимит',unit:'дней',status:'active',value:'12' },
+  { id:'l-004',group:'absence-types',code:'ABS-SICK',name:'Временная нетрудоспособность',category:'Отсутствие',unit:'дней',status:'active',value:null },
+  { id:'l-005',group:'balance-methods',code:'BAL-WORK',name:'По рабочим дням',category:'Метод',unit:'—',status:'active',value:null },
+
+  { id:'r-001',group:'tariff-types',code:'TRF-TYPE-001',name:'По грузам',category:'Тариф',unit:'KZT',status:'active',value:'Базовый' },
+  { id:'r-002',group:'tariff-types',code:'TRF-TYPE-002',name:'Дополнительные работы',category:'Тариф',unit:'KZT',status:'active',value:'Повышенный' },
+  { id:'r-003',group:'tariff-types',code:'TRF-TYPE-003',name:'Внутрипортовые работы',category:'Тариф',unit:'KZT',status:'active',value:'Ночной' },
   { id:'r-004',group:'calculation-units',code:'UNIT-HOUR',name:'Час',category:'Единица',unit:'час',status:'active',value:'1' },
   { id:'r-005',group:'calculation-units',code:'UNIT-SHIFT',name:'Смена',category:'Единица',unit:'смена',status:'active',value:'1' },
   { id:'r-006',group:'calculation-units',code:'UNIT-TON',name:'Тонна',category:'Единица',unit:'т',status:'active',value:'1' },
   { id:'r-007',group:'position-schemes',code:'SCH-ENG-01',name:'Инженерная схема',category:'Должности',unit:'месяц',status:'active',value:'5 уровней' },
   { id:'r-008',group:'position-schemes',code:'SCH-OPS-01',name:'Производственная схема',category:'Должности',unit:'час',status:'active',value:'8 уровней' },
-  { id:'r-009',group:'base-tariffing',code:'BASE-2026',name:'Основная тарификация 2026',category:'Правило',unit:'KZT',status:'active',value:'2026' },
+  { id:'r-009',group:'base-tariffing',code:'BASE-2026',name:'Основная тарификация 2026',category:'Основание',unit:'KZT',status:'active',value:'2026' },
   { id:'r-010',group:'tariff-methods',code:'METHOD-TIME',name:'Повременная',category:'Метод',unit:'час',status:'active',value:'По табелю' },
   { id:'r-011',group:'tariff-methods',code:'METHOD-PIECE',name:'Сдельная',category:'Метод',unit:'ед.',status:'active',value:'По объёму' },
   { id:'r-012',group:'tariffs',code:'TRF-ENG-L3',name:'Инженер L3',category:'Ставка',unit:'KZT/мес',status:'active',value:'620 000' },
@@ -118,7 +129,12 @@ const seeded: CatalogRecord[] = [
 const records = ref<CatalogRecord[]>(seeded)
 
 const currentGroups = computed(() => groups[activeSection.value] ?? [])
-const currentGroup = computed(() => currentGroups.value.find(item => item.id === activeGroup.value) ?? currentGroups.value[0] ?? null)
+const currentGroup = computed(() => currentGroups.value.find(item => item.id === activeGroup.value) ?? null)
+const splitIndex = computed(() => Math.ceil(currentGroups.value.length / 2))
+const groupColumns = computed(() => [
+  currentGroups.value.slice(0, splitIndex.value),
+  currentGroups.value.slice(splitIndex.value),
+])
 const statusOptions = [
   { id:'all',name:'Все статусы' },
   { id:'active',name:'Активные' },
@@ -130,10 +146,6 @@ const visibleRows = computed(() => records.value.filter(row =>
   && (statusFilter.value === 'all' || row.status === statusFilter.value)
   && (!search.value.trim() || [row.code,row.name,row.category,row.unit,row.value ?? ''].join(' ').toLowerCase().includes(search.value.trim().toLowerCase()))
 ))
-const sectionRecordCount = computed(() => records.value.filter(row => currentGroups.value.some(group => group.id === row.group)).length)
-const activeCount = computed(() => records.value.filter(row => currentGroups.value.some(group => group.id === row.group) && row.status === 'active').length)
-const groupsWithData = computed(() => currentGroups.value.filter(group => records.value.some(row => row.group === group.id)).length)
-const draftCount = computed(() => records.value.filter(row => currentGroups.value.some(group => group.id === row.group) && row.status === 'draft').length)
 const filterChips = computed(() => [
   ...(search.value ? [{id:'search',label:'Поиск: '+search.value}] : []),
   ...(statusFilter.value !== 'all' ? [{id:'status',label:'Статус: '+(statusOptions.find(item=>item.id===statusFilter.value)?.name ?? statusFilter.value)}] : []),
@@ -146,14 +158,19 @@ const columns = [
   { key:'value',label:'Значение' },
   { key:'status',label:'Статус' },
 ]
+
 function selectSection(id:string){
+  if (!groups[id]) return
   activeSection.value=id
-  if(id==='positions') return
   activeGroup.value=groups[id]?.[0]?.id ?? ''
   search.value=''
   statusFilter.value='all'
 }
-function selectGroup(id:string){activeGroup.value=id;search.value='';statusFilter.value='all'}
+function toggleGroup(id:string){
+  activeGroup.value = activeGroup.value === id ? '' : id
+  search.value=''
+  statusFilter.value='all'
+}
 function clearFilter(id:string){if(id==='search')search.value='';if(id==='status')statusFilter.value='all'}
 function clearFilters(){search.value='';statusFilter.value='all'}
 function openCreate(){newName.value='';newCode.value='';createOpen.value=true;success.value=''}
@@ -166,6 +183,7 @@ function saveRecord(){
   createOpen.value=false
   success.value='Запись добавлена в справочник.'
 }
+function recordCount(groupId:string){return records.value.filter(row=>row.group===groupId).length}
 </script>
 
 <template>
@@ -181,85 +199,73 @@ function saveRecord(){
       @update:model-value="selectSection" />
     <BaseNotice v-if="success" tone="success">{{ success }}</BaseNotice>
 
-    <template v-if="activeSection === 'positions'">
-      <BaseCard class="positions-link-card">
-        <div>
-          <h1>Должности</h1>
-          <p>Справочник должностей компании сохранён как отдельный рабочий реестр.</p>
-        </div>
-        <RouterLink class="positions-link" to="/directories/positions">Открыть справочник должностей →</RouterLink>
-      </BaseCard>
-    </template>
+    <div class="directory-context">
+      <div>
+        <strong>{{ tabs.find(tab=>tab.id===activeSection)?.label }}</strong>
+        <span>{{ currentGroups.length }} справочников в группе</span>
+      </div>
+      <RouterLink class="positions-link" to="/directories/positions">Справочник должностей</RouterLink>
+    </div>
 
-    <template v-else>
-      <BaseKpiGrid label="Сводка по справочникам">
-        <BaseRegistryMetricCard title="Записей справочника" :value="sectionRecordCount"
-          description="во всех реестрах раздела" icon="/prototype-icons/Info.svg" />
-        <BaseRegistryMetricCard title="Активные справочники" :value="groupsWithData"
-          description="реестров содержат данные" icon="/prototype-icons/Info.svg" />
-        <BaseRegistryMetricCard title="Активные записи" :value="activeCount"
-          description="используются в расчётах и процессах" icon="/prototype-icons/Info.svg" />
-        <BaseRegistryMetricCard title="Черновики" :value="draftCount"
-          description="ожидают публикации" icon="/prototype-icons/Info.svg" />
-      </BaseKpiGrid>
-
-      <div class="directory-layout">
-        <BaseCard class="directory-tree">
-          <div class="tree-heading">
-            <div><h2>{{ tabs.find(tab=>tab.id===activeSection)?.label }}</h2><span>{{ currentGroups.length }} справочников</span></div>
-          </div>
-          <BaseButton v-for="group in currentGroups" :key="group.id" type="button" variant="secondary" class="tree-item"
-            :class="{active:activeGroup===group.id}" @click="selectGroup(group.id)">
-            <span><strong>{{ group.label }}</strong><small>{{ group.description }}</small></span>
-            <em>{{ records.filter(row=>row.group===group.id).length }}</em>
+    <div class="directory-columns">
+      <div v-for="(column,columnIndex) in groupColumns" :key="columnIndex" class="directory-column">
+        <BaseCard v-for="group in column" :key="group.id" class="directory-accordion"
+          :class="{ 'directory-accordion--open': activeGroup === group.id }">
+          <BaseButton type="button" variant="secondary" class="accordion-trigger"
+            :aria-expanded="activeGroup === group.id" @click="toggleGroup(group.id)">
+            <span>
+              <strong>{{ group.label }}</strong>
+              <small>{{ group.description }}</small>
+            </span>
+            <span class="accordion-meta">{{ recordCount(group.id) }}</span>
+            <ChevronDown :size="17" :class="{ rotated: activeGroup === group.id }" aria-hidden="true" />
           </BaseButton>
-        </BaseCard>
 
-        <BaseCard class="directory-register">
-          <div class="register-heading">
-            <div>
-              <h1>{{ currentGroup?.label }}</h1>
-              <p>{{ currentGroup?.description }}</p>
+          <div v-if="activeGroup === group.id" class="accordion-content">
+            <div class="directory-toolbar">
+              <label class="directory-search">
+                <Search :size="16" aria-hidden="true" />
+                <input v-model="search" type="search" placeholder="Поиск" aria-label="Поиск по справочнику" />
+              </label>
+              <BaseSelectField v-model="statusFilter" label="Статус" :options="statusOptions" />
+              <BaseButton :disabled="!demoMode" @click="openCreate"><Plus :size="16" /> Добавить</BaseButton>
             </div>
-            <BaseButton :disabled="!demoMode" @click="openCreate"><Plus :size="16" /> Добавить</BaseButton>
-          </div>
+            <BaseFilterSummary :items="filterChips" label="Активные фильтры"
+              @remove="clearFilter" @clear="clearFilters" />
 
-          <div class="directory-toolbar">
-            <label class="directory-search">
-              <Search :size="16" aria-hidden="true" />
-              <input v-model="search" type="search" placeholder="Поиск" aria-label="Поиск по справочнику" />
-            </label>
-            <BaseSelectField v-model="statusFilter" label="Статус" :options="statusOptions" />
+            <div class="directory-table-scroll">
+              <BaseDataTable :rows="visibleRows" :columns="columns" row-key="id"
+                density="compact" :caption="group.label"
+                empty-title="Записей нет"
+                empty-description="Добавьте первую запись или измените фильтры.">
+                <template #cell-value="{value}">{{ value || '—' }}</template>
+                <template #cell-status="{row}">
+                  <BaseStatusPill :tone="row.status==='active'?'success':row.status==='draft'?'warning':'danger'">
+                    {{ row.status==='active'?'Активно':row.status==='draft'?'Черновик':'Неактивно' }}
+                  </BaseStatusPill>
+                </template>
+              </BaseDataTable>
+            </div>
           </div>
-          <BaseFilterSummary :items="filterChips" label="Активные фильтры"
-            @remove="clearFilter" @clear="clearFilters" />
-
-          <BaseDataTable :rows="visibleRows" :columns="columns" row-key="id"
-            :caption="currentGroup?.label || 'Справочник'"
-            empty-title="Записей нет"
-            empty-description="Добавьте первую запись или измените фильтры.">
-            <template #cell-value="{value}">{{ value || '—' }}</template>
-            <template #cell-status="{row}">
-              <BaseStatusPill :tone="row.status==='active'?'success':row.status==='draft'?'warning':'danger'">
-                {{ row.status==='active'?'Активно':row.status==='draft'?'Черновик':'Неактивно' }}
-              </BaseStatusPill>
-            </template>
-          </BaseDataTable>
         </BaseCard>
       </div>
-    </template>
+    </div>
 
-    <BaseDialog :open="createOpen" :title="'Новая запись — '+(currentGroup?.label ?? '')" @close="createOpen=false">
+    <BaseDrawer :open="createOpen" :title="'Новая запись — '+(currentGroup?.label ?? '')"
+      description="Демо-запись справочника. Серверный контракт будет подключён отдельно."
+      @close="createOpen=false">
       <form class="directory-create-form" @submit.prevent="saveRecord">
         <label><span>Код</span><input v-model="newCode" type="text" required /></label>
         <label><span>Наименование</span><input v-model="newName" type="text" required /></label>
-        <BaseNotice tone="info">Расширенные поля конкретного справочника будут подключены к серверному контракту после согласования модели данных.</BaseNotice>
+        <BaseNotice tone="info">
+          Расширенные поля конкретного справочника будут подключены к серверному контракту после согласования модели данных.
+        </BaseNotice>
         <div class="create-actions">
           <BaseButton type="button" variant="secondary" @click="createOpen=false">Отмена</BaseButton>
           <BaseButton type="submit" :disabled="!demoMode || !newName.trim() || !newCode.trim()">Сохранить</BaseButton>
         </div>
       </form>
-    </BaseDialog>
+    </BaseDrawer>
   </section>
 </template>
 
@@ -268,18 +274,41 @@ function saveRecord(){
 .directory-sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap;border:0}
 .directory-breadcrumb{display:flex;align-items:center;gap:9px;min-height:22px;color:var(--color-muted);font-size:12px}
 .directory-breadcrumb img{width:15px;height:15px}.directory-breadcrumb strong{color:var(--color-text);font-weight:500}
-.directory-layout{display:grid;grid-template-columns:minmax(235px,300px) minmax(0,1fr);gap:14px;align-items:start}
-.directory-tree{padding:0;overflow:hidden}.tree-heading{padding:14px 15px;border-bottom:1px solid var(--color-stroke)}
-.tree-heading>div{display:grid;gap:2px}.tree-heading h2{margin:0;font-size:14px;line-height:20px}.tree-heading span{color:var(--color-muted);font-size:10px}
-.tree-item{width:100%;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:11px 14px;border:0;border-bottom:1px solid var(--color-stroke);background:transparent;color:var(--color-text);text-align:left}
-.tree-item:last-child{border-bottom:0}.tree-item:hover{background:var(--color-hover)}.tree-item.active{background:var(--color-accent-soft);color:var(--color-primary)}
-.tree-item>span{display:grid;gap:2px;min-width:0}.tree-item strong{font-size:11px;line-height:16px}.tree-item small{color:var(--color-muted);font-size:9px;line-height:13px}.tree-item em{font-style:normal;color:var(--color-muted);font-size:10px}
-.directory-register{min-width:0}.register-heading{display:flex;align-items:end;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-bottom:14px}.register-heading h1{margin:0;font-size:19px;line-height:26px}.register-heading p{margin:3px 0 0;color:var(--color-muted);font-size:11px}
-.directory-toolbar{display:grid;grid-template-columns:minmax(220px,1fr) 190px;gap:10px;align-items:end;margin-bottom:9px}
-.directory-search{height:var(--control-height);display:flex;align-items:center;gap:8px;padding:0 11px;border:1px solid var(--color-stroke);border-radius:8px;background:var(--color-surface-raised);box-shadow:var(--shadow-control);color:var(--color-muted)}
-.directory-search input{width:100%;min-width:0;border:0;outline:0;background:transparent;color:var(--color-text);font:inherit;font-size:12px}
-.positions-link-card{display:flex;align-items:center;justify-content:space-between;gap:20px;flex-wrap:wrap}.positions-link-card h1{margin:0;font-size:20px}.positions-link-card p{margin:5px 0 0;color:var(--color-muted);font-size:12px}.positions-link{color:var(--color-primary);font-size:12px;font-weight:700;text-decoration:underline;text-underline-offset:3px}
-.directory-create-form{display:grid;gap:16px}.directory-create-form label{display:grid;gap:7px}.directory-create-form label span{font-size:12px;font-weight:600}.directory-create-form input{height:var(--control-height);padding:0 11px;border:1px solid var(--color-stroke);border-radius:8px;background:var(--color-surface-raised);color:var(--color-text);font:inherit}.create-actions{display:flex;justify-content:flex-end;gap:9px;padding-top:6px}
-@media(max-width:880px){.directory-layout{grid-template-columns:1fr}.directory-tree{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}.tree-heading{grid-column:1/-1}.tree-item{border-right:1px solid var(--color-stroke)}}
-@media(max-width:620px){.directory-tree{grid-template-columns:1fr}.tree-heading{grid-column:auto}.directory-toolbar{grid-template-columns:1fr}.positions-link-card{align-items:flex-start}.create-actions :deep(.base-button){flex:1}}
+.directory-context{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap}
+.directory-context>div{display:grid;gap:2px}.directory-context strong{font-size:13px}.directory-context span{color:var(--color-muted);font-size:10px}
+.positions-link{display:inline-flex;align-items:center;min-height:34px;padding:7px 10px;border:1px solid var(--color-stroke);border-radius:8px;background:var(--color-surface);box-shadow:var(--shadow-control);color:var(--color-text);font-size:11px;font-weight:650}
+.positions-link:hover{background:var(--color-soft);border-color:var(--color-primary-stroke)}
+.directory-columns{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;align-items:start}
+.directory-column{display:grid;gap:9px;align-content:start;min-width:0}
+.directory-accordion{min-width:0;padding:0;overflow:hidden}
+.accordion-trigger{width:100%;display:grid;grid-template-columns:minmax(0,1fr) auto auto;align-items:center;gap:10px;padding:15px 16px;border:0;background:transparent;color:var(--color-text);text-align:left;cursor:pointer}
+.accordion-trigger:hover{background:var(--color-soft)}
+.accordion-trigger>span:first-child{display:grid;gap:3px;min-width:0}
+.accordion-trigger strong{font-size:14px;line-height:20px;font-weight:650}
+.accordion-trigger small{color:var(--color-muted);font-size:10px;line-height:14px;overflow-wrap:anywhere}
+.accordion-meta{display:grid;place-items:center;min-width:24px;height:24px;padding:0 6px;border-radius:999px;background:var(--color-soft);color:var(--color-muted);font-size:10px}
+.accordion-trigger svg{transition:transform .15s}.accordion-trigger svg.rotated{transform:rotate(180deg)}
+.accordion-content{display:grid;gap:9px;padding:0 16px 16px;border-top:1px solid var(--color-stroke)}
+.directory-toolbar{display:grid;grid-template-columns:minmax(170px,1fr) 155px auto;gap:8px;align-items:end;padding-top:14px}
+.directory-search{height:var(--control-height);display:flex;align-items:center;gap:8px;padding:0 10px;border:1px solid var(--color-stroke);border-radius:8px;background:var(--color-surface-raised);box-shadow:var(--shadow-control);color:var(--color-muted)}
+.directory-search input{width:100%;min-width:0;border:0;outline:0;background:transparent;color:var(--color-text);font:inherit;font-size:11px}
+.directory-table-scroll{min-width:0;overflow-x:auto;overflow-y:hidden;overscroll-behavior-inline:contain}
+.directory-table-scroll :deep(table){min-width:680px}
+.directory-create-form{display:grid;gap:16px;min-height:calc(100dvh - 160px)}
+.directory-create-form label{display:grid;gap:7px}.directory-create-form label span{font-size:12px;font-weight:600}
+.directory-create-form input{height:var(--control-height);padding:0 11px;border:1px solid var(--color-stroke);border-radius:8px;background:var(--color-surface-raised);color:var(--color-text);font:inherit}
+.create-actions{display:flex;justify-content:flex-end;gap:9px;margin-top:auto;padding-top:12px;border-top:1px solid var(--color-stroke)}
+@media(prefers-reduced-motion:reduce){.accordion-trigger svg{transition:none}}
+@media(max-width:920px){
+  .directory-columns{grid-template-columns:1fr}
+}
+@media(max-width:620px){
+  .directory-context{align-items:flex-start}
+  .positions-link{width:100%;justify-content:center}
+  .directory-toolbar{grid-template-columns:1fr}
+  .directory-toolbar :deep(.base-button){width:100%}
+  .accordion-trigger{padding:13px 12px}
+  .accordion-content{padding:0 12px 12px}
+  .create-actions :deep(.base-button){flex:1}
+}
 </style>

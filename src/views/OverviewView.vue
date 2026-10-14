@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import BaseDataTable from '../components/ui/BaseDataTable.vue'
+import BaseTableBulkActions from '../components/ui/BaseTableBulkActions.vue'
 import BaseNotice from '../components/ui/BaseNotice.vue'
 import BaseStatusPill from '../components/ui/BaseStatusPill.vue'
 import DashboardMetricCard from '../components/ui/DashboardMetricCard.vue'
@@ -13,9 +15,11 @@ import { listDocuments } from '../api/documents'
 import { getStaffingPlan, listStaffingPlans, type StaffingPlanLine } from '../api/staffing'
 import { preferredApprovedStaffingPlan } from '../utils/staffingPlanChoice'
 import { localTodayISO } from '../utils/localDate'
+import { downloadCsv } from '../utils/exportCsv'
 
 type EmployeeRow = EmployeeRecord & { full_name:string; gender_label:string; status_label:string }
 type ActionRow = PersonnelActionRow & { full_name:string; action_label:string }
+const router = useRouter()
 const companyId=ref('')
 const companyName=ref('')
 const loading=ref(true)
@@ -36,6 +40,8 @@ const vacancyQuery=ref('')
 const vacancySearch=ref('')
 const vacancyDepartment=ref('all')
 const staffCount=ref(0)
+const selectedEmployeeKeys=ref<string[]>([])
+const selectedVacancyKeys=ref<string[]>([])
 
 const employeeOptions=[
   {id:'active',label:'Работают'},
@@ -70,6 +76,38 @@ const visibleVacancies=computed(()=>vacancyRows.value.filter(row=>
   (vacancyDepartment.value==='all'||row.department_id===vacancyDepartment.value)
   &&(!vacancySearch.value||[row.position_name,row.department_name].join(' ').toLowerCase().includes(vacancySearch.value.toLowerCase()))
 ).slice(0,6))
+const selectedEmployeeRows=computed(()=>employeeRows.value.filter(row=>selectedEmployeeKeys.value.includes(row.id)))
+const selectedVacancyRows=computed(()=>visibleVacancies.value.filter(row=>selectedVacancyKeys.value.includes(row.id)))
+const employeeBulkOptions=computed(()=>[
+  {id:'export_csv',label:'Экспорт выбранных сотрудников в CSV'},
+  ...(selectedEmployeeRows.value.length === 1 ? [{id:'open_card',label:'Открыть карточку сотрудника'}] : []),
+])
+const vacancyBulkOptions=[
+  {id:'export_csv',label:'Экспорт выбранных вакансий в CSV'},
+  {id:'open_staffing',label:'Открыть штатное расписание'},
+]
+function executeEmployeeAction(action:string){
+  if(action==='export_csv'){
+    downloadCsv('overview-selected-employees.csv',
+      ['ФИО','Табельный номер','Подразделение','Должность','Статус'],
+      selectedEmployeeRows.value.map(row=>[
+        row.full_name,row.personnel_number,row.current_department_name,row.current_position_name,row.status_label]))
+  }else if(action==='open_card'&&selectedEmployeeRows.value.length===1){
+    void router.push({name:'employee-detail',params:{company:companyId.value,employee:selectedEmployeeRows.value[0]!.id}})
+  }
+}
+function executeVacancyAction(action:string){
+  if(action==='export_csv'){
+    downloadCsv('overview-selected-vacancies.csv',
+      ['Должность','Подразделение','Ставок','Занято','Вакантно'],
+      selectedVacancyRows.value.map(row=>[row.position_name,row.department_name,
+        row.planned_units,row.occupied_units,row.vacant_units]))
+  }else if(action==='open_staffing'){
+    void router.push('/staffing?view=vacant')
+  }
+}
+watch(employeeRows,()=>{selectedEmployeeKeys.value=[]})
+watch(visibleVacancies,()=>{selectedVacancyKeys.value=[]})
 const plannedUnits=computed(()=>staffing.value.reduce((s,row)=>s+Number(row.planned_units||0),0))
 const vacantUnits=computed(()=>staffing.value.reduce((s,row)=>s+Number(row.vacant_units||0),0))
 const vacancyShare=computed(()=>plannedUnits.value>0?100*vacantUnits.value/plannedUnits.value:null)
@@ -209,7 +247,10 @@ onMounted(load)
         </template>
       </DashboardSectionHeading>
       <BaseNotice v-if="staffError" tone="error">{{ staffError }}</BaseNotice>
+      <BaseTableBulkActions :count="selectedEmployeeRows.length" subject="сотрудников"
+        :options="employeeBulkOptions" @execute="executeEmployeeAction" @clear="selectedEmployeeKeys=[]" />
       <BaseDataTable :rows="employeeRows" :columns="employeeColumns" row-key="id"
+        selectable selection-label="Выбрать сотрудника" v-model:selected-keys="selectedEmployeeKeys"
         :loading="loading||staffLoading" caption="Реестр сотрудников на главной"
         empty-title="Сотрудники не найдены" empty-description="Измените запрос или фильтры, чтобы увидеть сотрудников.">
         <template #cell-full_name="{row}">
@@ -242,7 +283,10 @@ onMounted(load)
         </template>
       </DashboardSectionHeading>
       <BaseNotice v-if="staffingError" tone="error">{{ staffingError }}</BaseNotice>
+      <BaseTableBulkActions :count="selectedVacancyRows.length" subject="вакансий"
+        :options="vacancyBulkOptions" @execute="executeVacancyAction" @clear="selectedVacancyKeys=[]" />
       <BaseDataTable :rows="visibleVacancies" :columns="vacancyColumns" row-key="id"
+        selectable selection-label="Выбрать вакансию" v-model:selected-keys="selectedVacancyKeys"
         :loading="loading" caption="Вакантные штатные позиции на главной"
         empty-title="Вакантных позиций нет"
         empty-description="В текущей версии штатного расписания нет подходящих вакансий.">

@@ -24,7 +24,8 @@
   --color-accent-soft:#e5f6ff;
   --color-hover:rgba(35,142,195,.06);
   --color-focus:#82b8f5;
-  --color-table-heading:#f8fafb;
+  --color-table-heading:#edf4f8;
+  --color-table-border:rgba(90,139,166,.18);
   --color-table-heading-text:#093044;
   --color-table-hover:rgba(35,142,195,.04);
   --color-on-primary:#fefefe;
@@ -93,7 +94,8 @@
   --color-accent-soft:rgba(0,136,204,.2);
   --color-hover:rgba(147,206,224,.08);
   --color-focus:#57b0de;
-  --color-table-heading:#0b2b3a;
+  --color-table-heading:#123747;
+  --color-table-border:rgba(141,192,216,.20);
   --color-table-heading-text:#e5f6ff;
   --color-table-hover:rgba(147,206,224,.06);
   --color-on-primary:#fefefe;

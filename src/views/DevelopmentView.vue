@@ -4,6 +4,7 @@ import { BookOpenCheck, Plus, Search, ShieldCheck } from 'lucide-vue-next'
 import BaseButton from '../components/ui/BaseButton.vue'
 import BaseCard from '../components/ui/BaseCard.vue'
 import BaseDataTable from '../components/ui/BaseDataTable.vue'
+import BaseStatusPill from '../components/ui/BaseStatusPill.vue'
 import BaseDialog from '../components/ui/BaseDialog.vue'
 import BaseFormField from '../components/ui/BaseFormField.vue'
 import BaseLoadingState from '../components/ui/BaseLoadingState.vue'
@@ -273,7 +274,7 @@ onMounted(loadCompanies)
         </form>
 
         <div class="development-desktop">
-          <BaseDataTable :rows="rows" :columns="columns" row-key="id" :loading="loading"
+          <BaseDataTable :rows="rows" :columns="columns" row-key="id" :loading="loading" :min-table-width="1050"
             :caption="isTraining ? 'Общий реестр обучения' : 'Общий реестр кадрового резерва'"
             :empty-title="search ? 'Ничего не найдено' : 'Записей по фильтру нет'"
             :empty-description="search ? 'Уточните запрос или сбросьте поиск.' : 'Записи появятся после внесения их в карточки сотрудников.'">
@@ -293,9 +294,11 @@ onMounted(loadCompanies)
             <template #cell-document_reference="{ value }">{{ value || '—' }}</template>
             <template #cell-left_year="{ value }">{{ value || '—' }}</template>
             <template #cell-development_status="{ row }">
-              <span class="status-pill" :class="'status-pill--' + row.development_status">
+              <BaseStatusPill :tone="['ongoing', 'active'].includes(row.development_status) ? 'success'
+                : row.development_status === 'planned' ? 'info'
+                : row.development_status === 'alumni' ? 'warning' : 'neutral'">
                 {{ developmentStatusName(section, row.development_status) }}
-              </span>
+              </BaseStatusPill>
             </template>
             <template #cell-edit="{ row }">
               <BaseButton variant="secondary" @click="editTraining(row)">Изменить</BaseButton>
@@ -310,9 +313,11 @@ onMounted(loadCompanies)
                 <RouterLink :to="employeeRoute(row)">{{ nameOf(row) }}</RouterLink>
                 <span>{{ row.personnel_number }}</span>
               </div>
-              <span class="status-pill" :class="'status-pill--' + row.development_status">
+              <BaseStatusPill :tone="['ongoing', 'active'].includes(row.development_status) ? 'success'
+                : row.development_status === 'planned' ? 'info'
+                : row.development_status === 'alumni' ? 'warning' : 'neutral'">
                 {{ developmentStatusName(section, row.development_status) }}
-              </span>
+              </BaseStatusPill>
             </header>
 
             <template v-if="isTraining">
@@ -398,18 +403,11 @@ onMounted(loadCompanies)
 .records-search{display:grid;grid-template-columns:minmax(0,1fr) auto auto;align-items:end;gap:8px;margin-bottom:14px}
 .records-search :deep(.field){max-width:none}
 .development-desktop{min-width:0}
-.development-desktop :deep(.table-scroll){max-width:100%;overflow-x:auto;overflow-y:hidden}
-.development-desktop :deep(table){min-width:1050px}
 .employee-cell,.subject-cell{display:grid;gap:3px;min-width:0;overflow-wrap:anywhere}
 .employee-cell a{color:var(--color-text);font-weight:600;text-decoration:none}
 .employee-cell a:hover{color:var(--color-primary)}
 .employee-cell span,.subject-cell span{color:var(--color-muted);font-size:10px}
 .subject-cell strong{font-weight:600}
-.status-pill{display:inline-flex;padding:5px 8px;border-radius:999px;background:var(--color-soft);color:var(--color-muted);font-size:10px;font-weight:700;white-space:nowrap}
-.status-pill--ongoing,.status-pill--active{background:var(--color-success-surface);color:var(--color-success)}
-.status-pill--planned{background:var(--color-accent-soft);color:var(--color-primary)}
-.status-pill--completed{background:var(--color-soft);color:var(--color-muted)}
-.status-pill--alumni{background:var(--color-warning-surface);color:var(--color-warning)}
 .development-mobile{display:none}
 .development-record-card{display:grid;gap:11px;padding:13px;border:1px solid var(--color-stroke);border-radius:var(--radius-md);background:var(--color-surface);box-shadow:var(--shadow-card)}
 .development-record-card header{display:flex;align-items:start;justify-content:space-between;gap:10px}

@@ -567,9 +567,6 @@ onMounted(refreshCompanies)
 .line-toolbar .line-search{min-width:230px;flex:1}
 .line-search :deep(label){position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap}
 .line-search :deep(input){font-size:13px}
-.staffing-page :deep(.table-scroll){border-radius:var(--radius-md)}
-.staffing-page :deep(.table-scroll th){padding:11px 12px;background:var(--color-table-heading)}
-.staffing-page :deep(.table-scroll td){padding:10px 12px}
 .staffing-page :deep(.field label){font-size:12px}
 .staffing-page :deep(.base-card){border-radius:var(--radius-md)}
 .line-toolbar :deep(button){display:inline-flex;gap:7px;align-items:center;justify-content:center}

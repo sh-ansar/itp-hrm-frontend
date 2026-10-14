@@ -328,7 +328,7 @@ onMounted(load)
 
         <EmployeeProfileSection title="Стаж и трудовой опыт">
           <h3 class="assignment-history-title">История назначений</h3>
-          <BaseDataTable :columns="columns" :rows="profile.assignments" row-key="id"
+          <BaseDataTable density="compact" :columns="columns" :rows="profile.assignments" row-key="id"
             caption="Доступная история назначений" empty-title="Назначений не найдено"
             empty-description="Для сотрудника нет доступных кадровых назначений.">
             <template #cell-valid_from="{ value }">{{ formatDate(typeof value === 'string' ? value : null) }}</template>
@@ -343,7 +343,7 @@ onMounted(load)
           <BaseNotice v-if="profile.meta.assignments_truncated" tone="info">Показаны первые 100 назначений. Для полной истории требуется отдельный просмотр.</BaseNotice>
 
           <h3 class="assignment-history-title">Периоды стажа</h3>
-          <BaseDataTable :rows="profile.experience" row-key="id" caption="Периоды трудового стажа"
+          <BaseDataTable density="compact" :rows="profile.experience" row-key="id" caption="Периоды трудового стажа"
             :columns="[{key:'experience_type',label:'Вид стажа'},{key:'started_on',label:'Начало'},{key:'ended_on',label:'Окончание'},{key:'basis_reference',label:'Основание'}, ...(profile.meta.profile_writes_enabled ? [{key:'edit',label:'Действия'}] : [])]"
             empty-title="Сведения о стаже отсутствуют" empty-description="Периоды стажа ещё не внесены.">
             <template #cell-started_on="{ value }">{{ formatDate(typeof value === 'string' ? value : null) }}</template>
@@ -355,7 +355,7 @@ onMounted(load)
 
       <template v-if="profile.meta.extended_sections_visible">
         <EmployeeProfileSection v-if="activeSection === 'documents'" title="Документы сотрудника">
-          <BaseDataTable :rows="reference?.documents ?? []" :columns="documentColumns" row-key="id"
+          <BaseDataTable density="compact" :rows="reference?.documents ?? []" :columns="documentColumns" row-key="id"
             caption="Документы сотрудника" empty-title="Документы не добавлены"
             empty-description="В карточке пока нет доступных документов.">
             <template #cell-issued_on="{ value }">{{ formatDate(typeof value === 'string' ? value : null) }}</template>
@@ -380,14 +380,14 @@ onMounted(load)
 
         <template v-if="activeSection === 'development'">
           <EmployeeProfileSection title="Кадровый резерв">
-            <BaseDataTable :rows="profile.reserve" row-key="id" caption="Кадровый резерв сотрудника"
+            <BaseDataTable density="compact" :rows="profile.reserve" row-key="id" caption="Кадровый резерв сотрудника"
               :columns="[{key:'target_position',label:'Резервируемая должность'},{key:'reserve_level',label:'Уровень'},{key:'reserve_type',label:'Вид'},{key:'joined_year',label:'Год зачисления'},{key:'left_year',label:'Год исключения'}, ...(profile.meta.profile_writes_enabled ? [{key:'edit',label:'Действия'}] : [])]"
               empty-title="Записей резерва нет" empty-description="Сотрудник пока не включён в кадровый резерв.">
               <template #cell-edit="{ row }"><BaseButton variant="secondary" @click="beginEdit('reserve', row)">Изменить</BaseButton></template>
             </BaseDataTable>
           </EmployeeProfileSection>
           <EmployeeProfileSection title="Обучение и повышение квалификации">
-            <BaseDataTable :rows="profile.training" row-key="id" caption="Обучение сотрудника"
+            <BaseDataTable density="compact" :rows="profile.training" row-key="id" caption="Обучение сотрудника"
               :columns="[{key:'training_type',label:'Вид'},{key:'training_mode',label:'Формат'},{key:'topic',label:'Тема'},{key:'provider',label:'Центр обучения'},{key:'city',label:'Город'},{key:'started_on',label:'Начало'},{key:'ended_on',label:'Окончание'},{key:'document_reference',label:'Документ'}, ...(profile.meta.profile_writes_enabled ? [{key:'edit',label:'Действия'}] : [])]"
               empty-title="Обучение не зарегистрировано" empty-description="Добавьте сведения об обучении сотрудника.">
               <template #cell-training_type="{ value }">{{ trainingTypeLabel(value) }}</template>
@@ -400,7 +400,7 @@ onMounted(load)
         </template>
 
         <EmployeeProfileSection v-if="activeSection === 'history'" title="История изменений">
-          <BaseDataTable :rows="profile.history ?? reference?.history ?? []" :columns="historyColumns" row-key="id"
+          <BaseDataTable density="compact" :rows="profile.history ?? reference?.history ?? []" :columns="historyColumns" row-key="id"
             caption="История изменений карточки сотрудника"
             empty-title="История изменений пуста"
             empty-description="Для карточки ещё нет доступных событий.">
@@ -477,19 +477,6 @@ onMounted(load)
   min-height:36px;
   padding:8px 12px;
   font-size:11px;
-  line-height:17px;
-}
-.employee-profile :deep(.table-scroll){
-  max-width:100%;overflow-x:auto;overflow-y:hidden;
-  border-radius:var(--radius-md);
-}
-.employee-profile :deep(table){
-  font-size:12px;
-}
-.employee-profile :deep(th),
-.employee-profile :deep(td){
-  padding:9px 11px;
-  font-size:12px;
   line-height:17px;
 }
 .employee-breadcrumb{

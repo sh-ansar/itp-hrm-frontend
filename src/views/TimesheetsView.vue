@@ -3,6 +3,7 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { CalendarDays, Clock3, TriangleAlert, UsersRound } from 'lucide-vue-next'
 import BaseCard from '../components/ui/BaseCard.vue'
 import BaseDataTable from '../components/ui/BaseDataTable.vue'
+import BaseStatusPill from '../components/ui/BaseStatusPill.vue'
 import BaseFormField from '../components/ui/BaseFormField.vue'
 import BaseLoadingState from '../components/ui/BaseLoadingState.vue'
 import BaseNotice from '../components/ui/BaseNotice.vue'
@@ -512,10 +513,9 @@ onMounted(loadCompanies)
             <template #cell-absence_hours="{ value }">{{ hoursLabel(value) }}<template v-if="typeof value === 'number'"> ч</template></template>
             <template #cell-overtime_hours="{ value }">{{ hoursLabel(value) }}<template v-if="typeof value === 'number'"> ч</template></template>
             <template #cell-status="{ row }">
-              <span class="status-pill"
-                :class="{ 'status-pill--attention': row.status === 'attention', 'status-pill--missing': row.status === 'missing' }">
+              <BaseStatusPill :tone="row.status === 'attention' ? 'warning' : row.status === 'missing' ? 'neutral' : 'success'">
                 {{ statusLabel(row) }}
-              </span>
+              </BaseStatusPill>
             </template>
           </BaseDataTable>
         </div>
@@ -529,10 +529,9 @@ onMounted(loadCompanies)
                 </RouterLink>
                 <span>{{ row.personnel_number }} · {{ row.position }}</span>
               </div>
-              <span class="status-pill"
-                :class="{ 'status-pill--attention': row.status === 'attention', 'status-pill--missing': row.status === 'missing' }">
+              <BaseStatusPill :tone="row.status === 'attention' ? 'warning' : row.status === 'missing' ? 'neutral' : 'success'">
                 {{ statusLabel(row) }}
-              </span>
+              </BaseStatusPill>
             </header>
             <p>{{ row.schedule }} · {{ row.department }}</p>
             <dl>
@@ -628,9 +627,9 @@ onMounted(loadCompanies)
             <template #cell-days="{ value }">{{ value }} дн.</template>
             <template #cell-hours="{ value }">{{ hoursLabel(value) }}<template v-if="typeof value === 'number'"> ч</template></template>
             <template #cell-status="{ row }">
-              <span class="status-pill" :class="{ 'status-pill--planned': row.status === 'planned' }">
+              <BaseStatusPill :tone="row.status === 'planned' ? 'info' : 'success'">
                 {{ absenceStatusLabel(row.status) }}
-              </span>
+              </BaseStatusPill>
             </template>
           </BaseDataTable>
         </div>
@@ -640,9 +639,9 @@ onMounted(loadCompanies)
               <RouterLink :to="{ name:'employee-detail', params:{ company, employee:row.employee_id }, query:{ tab:'schedule' } }">
                 {{ row.full_name }}
               </RouterLink>
-              <span class="status-pill" :class="{ 'status-pill--planned': row.status === 'planned' }">
+              <BaseStatusPill :tone="row.status === 'planned' ? 'info' : 'success'">
                 {{ absenceStatusLabel(row.status) }}
-              </span>
+              </BaseStatusPill>
             </header>
             <p>{{ row.reason }}</p>
             <dl>
@@ -682,9 +681,6 @@ onMounted(loadCompanies)
 .employee-cell a{color:var(--color-text);font-size:13px;font-weight:600}
 .employee-cell a:hover{color:var(--color-primary)}
 .employee-cell span{color:var(--color-muted);font-size:10px}
-.status-pill{display:inline-flex;align-items:center;padding:5px 8px;border-radius:999px;background:var(--color-success-surface);color:var(--color-success);font-size:10px;font-weight:700;white-space:nowrap}
-.status-pill--attention{background:var(--color-warning-surface);color:var(--color-warning)}
-.status-pill--planned{background:var(--color-accent-soft);color:var(--color-primary)}\n.status-pill--missing{background:var(--color-soft);color:var(--color-muted)}
 .worktime-mobile{display:none}
 .worktime-card,.schedule-card,.absence-card{
   display:grid;gap:10px;padding:13px;border:1px solid var(--color-stroke);

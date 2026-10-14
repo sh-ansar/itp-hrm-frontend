@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { FileCheck2, Paperclip } from 'lucide-vue-next'
 import BaseButton from './ui/BaseButton.vue'
+import BaseStatusPill from './ui/BaseStatusPill.vue'
 import type { DocumentRow } from '../api/documents'
 import { documentFileUrl, documentTypeLabel } from '../api/documents'
 import { getDemoDocumentUrl } from '../mocks/demoDocumentFiles'
@@ -38,9 +39,9 @@ function displayDate(value: string | null): string {
           <strong>{{ row.title }}</strong>
           <small>№ {{ row.document_number || 'без номера' }}</small>
         </div>
-        <span class="status-pill" :class="{ 'status-pill--draft': row.status === 'draft' }">
+        <BaseStatusPill :tone="row.status === 'draft' ? 'info' : 'success'">
           {{ statusLabel(row.status) }}
-        </span>
+        </BaseStatusPill>
       </header>
 
       <dl>
@@ -91,8 +92,6 @@ function displayDate(value: string | null): string {
 .document-type{color:var(--color-primary);font-size:10px;line-height:1.3;font-weight:700}
 .document-mobile-card header strong{color:var(--color-text);font-size:13px;line-height:1.4;overflow-wrap:anywhere}
 .document-mobile-card header small{color:var(--color-muted);font-size:10px}
-.status-pill{display:inline-flex;flex:none;padding:5px 8px;border-radius:999px;background:var(--color-success-surface);color:var(--color-success);font-size:10px;font-weight:700}
-.status-pill--draft{background:var(--color-accent-soft);color:var(--color-primary)}
 .document-mobile-card dl{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:0}
 .document-mobile-card dl div{display:grid;gap:4px;min-width:0;padding:9px;background:var(--color-soft);border-radius:var(--radius-sm)}
 .document-mobile-card dl div:nth-child(2){grid-column:span 2}

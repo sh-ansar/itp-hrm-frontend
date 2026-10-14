@@ -3,6 +3,7 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { CalendarDays, Clock3, TriangleAlert, UsersRound } from 'lucide-vue-next'
 import BaseCard from '../components/ui/BaseCard.vue'
 import BaseDataTable from '../components/ui/BaseDataTable.vue'
+import BaseStatusPill from '../components/ui/BaseStatusPill.vue'
 import BaseLoadingState from '../components/ui/BaseLoadingState.vue'
 import BaseNotice from '../components/ui/BaseNotice.vue'
 import BaseSelectField from '../components/ui/BaseSelectField.vue'
@@ -123,9 +124,6 @@ function statusLabel(status: DemoLeaveStatus): string {
   return status === 'planned' ? 'Запланирован'
     : status === 'ongoing' ? 'В отпуске'
     : 'Завершён'
-}
-function statusClass(status: DemoLeaveStatus): string {
-  return 'status-pill--' + status
 }
 
 async function loadCompanies() {
@@ -289,7 +287,7 @@ onMounted(loadCompanies)
             <template #cell-period="{ row }">{{ period(row) }}</template>
             <template #cell-days="{ value }">{{ value }} дн.</template>
             <template #cell-status="{ row }">
-              <span class="status-pill" :class="statusClass(row.status)">{{ statusLabel(row.status) }}</span>
+              <BaseStatusPill :tone="row.status === 'completed' ? 'success' : row.status === 'ongoing' ? 'warning' : 'info'">{{ statusLabel(row.status) }}</BaseStatusPill>
             </template>
             <template #cell-schedule_state="{ row }">
               <span class="schedule-state" :class="{ 'schedule-state--shifted': row.schedule_state === 'shifted' }">
@@ -308,7 +306,7 @@ onMounted(loadCompanies)
                 </RouterLink>
                 <span>{{ row.personnel_number }} · {{ row.position }}</span>
               </div>
-              <span class="status-pill" :class="statusClass(row.status)">{{ statusLabel(row.status) }}</span>
+              <BaseStatusPill :tone="row.status === 'completed' ? 'success' : row.status === 'ongoing' ? 'warning' : 'info'">{{ statusLabel(row.status) }}</BaseStatusPill>
             </header>
             <p>{{ row.leave_type }}</p>
             <dl>
@@ -382,10 +380,7 @@ onMounted(loadCompanies)
 .employee-cell a{color:var(--color-text);font-size:12px;font-weight:600}
 .employee-cell a:hover{color:var(--color-primary)}
 .employee-cell span{color:var(--color-muted);font-size:10px}
-.status-pill,.schedule-state{display:inline-flex;padding:5px 8px;border-radius:999px;font-size:10px;font-weight:700;white-space:nowrap}
-.status-pill--planned{background:var(--color-accent-soft);color:var(--color-primary)}
-.status-pill--ongoing{background:var(--color-warning-surface);color:var(--color-warning)}
-.status-pill--completed{background:var(--color-success-surface);color:var(--color-success)}
+.schedule-state{display:inline-flex;padding:5px 8px;border-radius:999px;font-size:10px;font-weight:700;white-space:nowrap}
 .schedule-state{background:var(--color-success-surface);color:var(--color-success)}
 .schedule-state--shifted{background:var(--color-warning-surface);color:var(--color-warning)}
 .leaves-mobile{display:none}

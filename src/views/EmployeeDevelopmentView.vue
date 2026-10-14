@@ -4,6 +4,7 @@ import { ArrowRight, BookOpenCheck, ShieldCheck } from 'lucide-vue-next'
 import { useRouter } from 'vue-router'
 import BaseCard from '../components/ui/BaseCard.vue'
 import BaseDataTable from '../components/ui/BaseDataTable.vue'
+import BaseStatusPill from '../components/ui/BaseStatusPill.vue'
 import BaseLoadingState from '../components/ui/BaseLoadingState.vue'
 import BaseNotice from '../components/ui/BaseNotice.vue'
 import BaseSelectField from '../components/ui/BaseSelectField.vue'
@@ -188,9 +189,11 @@ onMounted(loadCompanies)
                 </div>
               </template>
               <template #cell-development_status="{ row }">
-                <span class="status-pill" :class="'status-pill--'+row.development_status">
+                <BaseStatusPill :tone="['ongoing','active'].includes(row.development_status) ? 'success'
+                  : row.development_status === 'planned' ? 'info'
+                  : row.development_status === 'alumni' ? 'warning' : 'neutral'">
                   {{ developmentStatusName('reserve',row.development_status) }}
-                </span>
+                </BaseStatusPill>
               </template>
             </BaseDataTable>
           </div>
@@ -202,9 +205,11 @@ onMounted(loadCompanies)
                   <RouterLink :to="employeeRoute(row.employee_id)">{{ personName(row) }}</RouterLink>
                   <span>{{ row.personnel_number }}</span>
                 </div>
-                <span class="status-pill" :class="'status-pill--'+row.development_status">
+                <BaseStatusPill :tone="['ongoing','active'].includes(row.development_status) ? 'success'
+                  : row.development_status === 'planned' ? 'info'
+                  : row.development_status === 'alumni' ? 'warning' : 'neutral'">
                   {{ developmentStatusName('reserve',row.development_status) }}
-                </span>
+                </BaseStatusPill>
               </header>
               <strong>{{ row.target_position }}</strong>
               <dl>
@@ -245,9 +250,11 @@ onMounted(loadCompanies)
               <template #cell-training_mode="{ value }">{{ trainingModeName(String(value)) }}</template>
               <template #cell-started_on="{ row }">{{ trainingPeriod(row) }}</template>
               <template #cell-development_status="{ row }">
-                <span class="status-pill" :class="'status-pill--'+row.development_status">
+                <BaseStatusPill :tone="['ongoing','active'].includes(row.development_status) ? 'success'
+                  : row.development_status === 'planned' ? 'info'
+                  : row.development_status === 'alumni' ? 'warning' : 'neutral'">
                   {{ developmentStatusName('training',row.development_status) }}
-                </span>
+                </BaseStatusPill>
               </template>
             </BaseDataTable>
           </div>
@@ -259,9 +266,11 @@ onMounted(loadCompanies)
                   <RouterLink :to="employeeRoute(row.employee_id)">{{ personName(row) }}</RouterLink>
                   <span>{{ row.personnel_number }}</span>
                 </div>
-                <span class="status-pill" :class="'status-pill--'+row.development_status">
+                <BaseStatusPill :tone="['ongoing','active'].includes(row.development_status) ? 'success'
+                  : row.development_status === 'planned' ? 'info'
+                  : row.development_status === 'alumni' ? 'warning' : 'neutral'">
                   {{ developmentStatusName('training',row.development_status) }}
-                </span>
+                </BaseStatusPill>
               </header>
               <strong>{{ row.topic }}</strong>
               <dl>
@@ -300,17 +309,10 @@ onMounted(loadCompanies)
 .workspace-title p{margin:4px 0 0;color:var(--color-muted);font-size:10px}
 .workspace-title a{display:inline-flex;align-items:center;gap:5px;color:var(--color-primary);font-size:11px;font-weight:700}
 .workspace-desktop{min-width:0}
-.workspace-desktop :deep(.table-scroll){overflow-x:auto;overflow-y:hidden}
-.workspace-desktop :deep(table){min-width:620px}
 .employee-cell{display:grid;gap:3px;min-width:0}
 .employee-cell a{color:var(--color-text);font-weight:600;overflow-wrap:anywhere}
 .employee-cell a:hover{color:var(--color-primary)}
 .employee-cell span{color:var(--color-muted);font-size:10px}
-.status-pill{display:inline-flex;padding:5px 8px;border-radius:999px;background:var(--color-soft);font-size:10px;font-weight:700;white-space:nowrap}
-.status-pill--active,.status-pill--ongoing{background:var(--color-success-surface);color:var(--color-success)}
-.status-pill--planned{background:var(--color-accent-soft);color:var(--color-primary)}
-.status-pill--completed{background:var(--color-soft);color:var(--color-muted)}
-.status-pill--alumni{background:var(--color-warning-surface);color:var(--color-warning)}
 .workspace-mobile{display:none}
 .workspace-mobile-card{display:grid;gap:10px;padding:12px;border:1px solid var(--color-stroke);border-radius:var(--radius-md);background:var(--color-surface)}
 .workspace-mobile-card header{display:flex;align-items:start;justify-content:space-between;gap:10px}

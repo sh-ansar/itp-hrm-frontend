@@ -433,75 +433,90 @@ onMounted(() => {
     <BaseViewTabs :model-value="activeTab" :options="tabOptions" label="Разделы реестра сотрудников"
       @update:model-value="setTab" />
 
-    <div class="registry-metrics" aria-label="Сводка по персоналу">
-      <BaseCard class="registry-metric">
-        <span>Сотрудники</span>
-        <img src="/prototype-icons/Info.svg" class="registry-info-icon" alt="" aria-hidden="true" />
-        <strong>{{ counters.active ?? '—' }}</strong>
-        <small>активных сотрудников</small>
-      </BaseCard>
-      <BaseCard class="registry-metric">
-        <span>Отделы</span>
-        <img src="/prototype-icons/Info.svg" class="registry-info-icon" alt="" aria-hidden="true" />
-        <strong>{{ counters.departments ?? '—' }}</strong>
-        <small>структурных подразделений</small>
-      </BaseCard>
-      <BaseCard v-if="counters.vacancies !== null" class="registry-metric">
-        <span>Вакантные позиции</span>
-        <img src="/prototype-icons/Link-External.svg" class="registry-info-icon" alt="" aria-hidden="true" />
-        <strong>{{ counters.vacancies }}</strong>
-        <small>открытых штатных единиц</small>
-      </BaseCard>
-      <BaseCard v-if="counters.expiring !== null" class="registry-metric">
-        <span>Истекающие договоры</span>
-        <img src="/prototype-icons/Filter.svg" class="registry-info-icon" alt="" aria-hidden="true" />
-        <strong>{{ counters.expiring }}</strong>
-        <small>требуют внимания</small>
-      </BaseCard>
-    </div>
+    <BaseKpiGrid class="registry-metrics" label="Сводка по персоналу">
+      <BaseRegistryMetricCard title="Сотрудники" :value="counters.active"
+        description="активных сотрудников работают в компании"
+        icon="/prototype-icons/Info.svg" />
+      <BaseRegistryMetricCard title="Отделы" :value="counters.departments"
+        description="структурных подразделений в компании"
+        icon="/prototype-icons/Info.svg" to="/organization" />
+      <BaseRegistryMetricCard title="Вакантные позиции" :value="counters.vacancies"
+        kind="ring" :percentage="vacancyPercent"
+        :description="counters.plannedUnits === null ? 'Нет данных утверждённого штата' : 'из '+counters.plannedUnits+' штатных единиц'"
+        icon="/prototype-icons/Link-External.svg" to="/staffing?view=vacant" />
+      <BaseRegistryMetricCard title="Истекающие договоры" :value="counters.expiring"
+        description="сроки договоров пока не учитываются в API"
+        icon="/prototype-icons/Info.svg" tone="danger" />
+    </BaseKpiGrid>
 
-    <BaseCard class="registry-card">
+    <BaseCard class="registry-card" :class="{ 'registry-card--fullscreen': fullscreen }">
       <BaseLoadingState v-if="companyLoading" label="Загрузка доступных компаний" />
       <template v-else-if="companies.length">
         <div class="register-heading">
-          <div>
-            <h1>{{ activeTab === 'archive' ? 'Архив сотрудников' : 'Реестр сотрудников' }} <span>({{ employeeLoading ? '…' : total }})</span></h1>
-            <p>{{ currentCompany?.name }} · {{ employeeLoading ? 'Загрузка записей…' : 'отображается ' + registryRows.length + ' из ' + total }}</p>
+          <div class="register-title">
+            <h1>{{ activeTab === 'archive' ? 'Архив сотрудников' : 'Реестр сотрудников' }}
+              <span>({{ employeeLoading ? '…' : registryRows.length }} из {{ total }})</span>
+            </h1>
+            <p v-if="companies.length===1">{{ currentCompany?.name }}</p>
           </div>
           <div class="register-actions">
-            <BaseButton v-if="employeeWritesEnabled && activeTab === 'register'" @click="createOpen = true"><Plus :size="16" /> Добавить сотрудника</BaseButton>
-            <div class="company-select"><BaseSelectField v-model="selectedCompany" label="Компания" :options="companies" /></div>
+            <BaseActionDropdown label="Экспорт" :options="exportOptions" @select="doExport" />
+            <BaseActionDropdown label="Действия" variant="primary"
+              :options="registerActionOptions" @select="doTopAction" />
+            <button type="button" class="registry-fullscreen-toggle" :aria-label="fullscreen ? 'Выйти из полноэкранного режима' : 'На весь экран'"
+              :title="fullscreen ? 'Выйти из полноэкранного режима' : 'На весь экран'"
+              @click="toggleFullscreen">
+              <Minimize2 v-if="fullscreen" :size="18" aria-hidden="true" />
+              <Maximize2 v-else :size="18" aria-hidden="true" />
+            </button>
+            <BaseButton v-if="employeeWritesEnabled && activeTab === 'register'" @click="createOpen = true">
+              <Plus :size="16" /> Добавить сотрудника
+            </BaseButton>
+            <div v-if="companies.length > 1" class="company-select">
+              <BaseSelectField v-model="selectedCompany" label="Компания" :options="companies" />
+            </div>
           </div>
         </div>
 
         <div class="registry-toolbar" aria-label="Настройки реестра">
-          <form class="registry-search" role="search" @submit.prevent="applySearch">
+          <button type="button" class="registry-tool-button"
+            :aria-expanded="searchOpen" @click="toggleSearch">
+            <Search :size="16" aria-hidden="true" /> Поиск
+          </button>
+          <form class="registry-search" :class="{ 'registry-search--open': searchOpen }"
+            role="search" @submit.prevent="applySearch">
             <Search :size="17" aria-hidden="true" />
-            <input v-model="searchDraft" type="search" aria-label="Поиск в реестре"
-              placeholder="Поиск по ФИО или табельному номеру" />
+            <input ref="searchInput" v-model="searchDraft" type="search" aria-label="Поиск в реестре"
+              placeholder="ФИО или табельный номер" />
             <BaseButton type="submit" variant="secondary">Найти</BaseButton>
+            <button v-if="searchDraft || search" type="button" class="registry-search-clear"
+              aria-label="Очистить поиск" @click="clearSearch">×</button>
           </form>
-          <BaseButton v-if="activeTab !== 'archive'" variant="secondary" @click="filtersOpen = !filtersOpen" :aria-expanded="filtersOpen">
+          <BaseButton variant="secondary" @click="filtersOpen = !filtersOpen" :aria-expanded="filtersOpen">
             <img src="/prototype-icons/Filter.svg" alt="" class="toolbar-icon" /> Фильтры
           </BaseButton>
-          <BaseButton variant="secondary" @click="grouped = !grouped">
+          <BaseButton variant="secondary" @click="grouped = !grouped" :aria-pressed="grouped">
             <FolderTree :size="16" /> {{ grouped ? 'Без группировки' : 'Группировка' }}
           </BaseButton>
           <BaseColumnPicker v-model="visibleFields" :columns="optionalColumns" title="Настройка колонок" />
-          <BaseButton v-if="search" variant="secondary" @click="clearSearch">Сбросить поиск</BaseButton>
+          <div class="registry-toolbar-spacer"></div>
+          <BaseActionDropdown label="Шаблоны" :options="templateOptions" @select="presetAction" />
         </div>
 
         <div v-if="filtersOpen" class="registry-filters">
-          <BaseSelectField v-if="activeTab !== 'archive'" class="status-select"
+          <BaseSelectField class="status-select"
             :model-value="statusFilter" label="Статус сотрудника" :options="statusSelectOptions"
             @update:model-value="setStatus($event as EmploymentFilter)" />
           <BaseButton v-if="statusFilter !== 'active'" variant="secondary" @click="setStatus('active')">Сбросить фильтр</BaseButton>
         </div>
-        <div class="registry-selection" aria-label="Выбор сотрудников текущей страницы">
-          <label><input type="checkbox" :checked="allPageSelected" :disabled="!registryRows.length" @change="togglePageSelection(($event.target as HTMLInputElement).checked)" /> Выбрать страницу</label>
-          <span>Выбрано на странице: {{ selectedOnPage.length }} из {{ registryRows.length }}</span>
-          <span v-if="!selectedOnPage.length" class="selection-instruction">Отметьте строки, чтобы выбрать действие</span>
+
+        <div v-if="registryChips.length" class="registry-chips" aria-label="Активные фильтры реестра">
+          <button v-for="chip in registryChips" :key="chip.id" type="button" class="registry-chip"
+            :aria-label="'Сбросить: '+chip.label" @click="clearChip(chip.id)">
+            {{ chip.label }} <span aria-hidden="true">×</span>
+          </button>
         </div>
+        <p v-if="presetNotice" role="status" class="registry-preset-notice">{{ presetNotice }}</p>
         <BaseTableBulkActions :count="selectedOnPage.length" subject="сотрудников"
           :options="selectedActions" @execute="executeSelectedAction" @clear="selectedIds = []" />
         <p v-if="grouped" class="scope-hint">Сгруппированы записи текущей страницы. Фильтры и количество сотрудников рассчитываются по всему реестру.</p>
@@ -529,7 +544,14 @@ onMounted(() => {
               : row.employment_status === 'planned' ? 'info' : 'warning'">{{ row.status_label }}</BaseStatusPill>
           </template>
           <template #cell-details="{ row }">
-            <RouterLink class="employee-link" :to="{ name: 'employee-detail', params: { company: selectedCompany, employee: row.id } }" :aria-label="'Открыть карточку: ' + row.full_name" :title="'Открыть карточку: ' + row.full_name"><img src="/prototype-icons/Edit.svg" alt="" /><span class="sr-only">Открыть карточку</span></RouterLink>
+            <div class="employee-row-actions">
+              <RouterLink class="employee-link" :to="{ name: 'employee-detail', params: { company: selectedCompany, employee: row.id } }"
+                :aria-label="'Открыть карточку: ' + row.full_name" :title="'Открыть карточку: ' + row.full_name">
+                <img src="/prototype-icons/Edit.svg" alt="" /><span class="sr-only">Открыть карточку</span>
+              </RouterLink>
+              <BaseActionDropdown variant="icon" :label="'Действия сотрудника: '+row.full_name"
+                :options="rowActionOptions" @select="doRowAction($event, row)" />
+            </div>
           </template>
           </BaseDataTable>
         </div>
@@ -537,8 +559,16 @@ onMounted(() => {
           <EmployeeMobileList :rows="registryRows" :company-id="selectedCompany" :selected-ids="selectedIds"
             :loading="employeeLoading" :grouped="grouped" @select="toggleSelection" />
         </div>
-        <BasePagination :page="page" :last-page="lastPage" :loading="employeeLoading"
-          caption="Страницы реестра сотрудников" @previous="page--" @next="page++" />
+        <div class="registry-bottomline">
+          <span class="registry-selection" aria-live="polite">
+            Выбрано на странице: {{ selectedOnPage.length }} из {{ registryRows.length }}
+          </span>
+          <BasePagination :page="page" :last-page="lastPage" :loading="employeeLoading"
+            :total="total" :page-size="pageSize"
+            caption="Страницы реестра сотрудников"
+            @previous="page--" @next="page++" @select-page="page=$event"
+            @change-page-size="changePageSize" />
+        </div>
       </template>
       <BaseNotice v-else-if="!error" tone="info">Нет доступных компаний.</BaseNotice>
     </BaseCard>

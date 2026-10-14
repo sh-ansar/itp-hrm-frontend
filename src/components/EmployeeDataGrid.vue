@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { useWorkspaceI18n } from '../composables/useWorkspaceI18n'
+const { tr } = useWorkspaceI18n()
 interface EmployeeDisplayField {
   label: string
   value: string | number | null | undefined
@@ -12,7 +14,7 @@ defineProps<{ fields: EmployeeDisplayField[] }>()
   <div class="employee-data-grid">
     <div v-for="field in fields" :key="field.label"
       class="employee-data-field" :class="{ 'employee-data-field--wide': field.wide, 'employee-data-field--muted': field.muted }">
-      <span>{{ field.label }}</span>
+      <span>{{ tr(field.label) }}</span>
       <strong>{{ field.value === null || field.value === undefined || field.value === '' ? '—' : field.value }}</strong>
     </div>
   </div>

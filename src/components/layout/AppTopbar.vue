@@ -92,7 +92,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', handleShortcut))
         </select>
       </label>
       <button class="theme-toggle topbar-icon" type="button"
-        :aria-label="ui.theme === 'dark' ? t('topbar.lightTheme') : t('topbar.darkTheme')"
+        :aria-label="ui.theme === 'dark' ? t('topbar.enableLightTheme') : t('topbar.enableDarkTheme')"
         :title="ui.theme === 'dark' ? t('topbar.lightTheme') : t('topbar.darkTheme')"
         :aria-pressed="ui.theme === 'dark'" @click="ui.toggleTheme()">
         <Sun v-if="ui.theme === 'dark'" :size="20" aria-hidden="true" />
@@ -106,7 +106,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', handleShortcut))
         </span>
       </div>
       <button v-if="canSignOut" class="logout-button" type="button" :disabled="session.loading"
-        :aria-label="t('topbar.signOutTitle')" :title="t('topbar.signOutTitle')" @click="logout">
+        :aria-label="t('topbar.signOutAria')" :title="t('topbar.signOutTitle')" @click="logout">
         <img src="/prototype-icons/Log-Out.svg" alt="" aria-hidden="true" />
         <span>{{ t('topbar.signOut') }}</span>
       </button>
@@ -116,6 +116,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', handleShortcut))
 
 <style scoped>
 .hrm-topbar{
+  width:100%;max-width:100%;min-width:0;
   height:64px;min-height:64px;padding:0 24px;
   display:flex;align-items:center;justify-content:space-between;gap:18px;
   background:var(--color-surface);
@@ -202,12 +203,12 @@ onBeforeUnmount(() => window.removeEventListener('keydown', handleShortcut))
   .profile-copy strong{max-width:145px}
 }
 @media(max-width:860px){
-  .hrm-topbar{height:64px;min-height:64px;padding:0 14px;gap:9px}
+  .hrm-topbar{height:64px;min-height:64px;padding:0 14px;gap:8px}
   .mobile-nav-trigger{display:grid}
-  .topbar-search{flex:1 1 auto;min-width:0;max-width:unset}
-  .profile-copy{display:none}
-  .profile-summary{padding-right:9px}
-  .topbar-user{gap:3px;margin-left:0}
+  .topbar-search{flex:1 1 0;min-width:0;width:auto;max-width:none;margin-right:0}
+  .profile-summary{display:none}
+  .topbar-user{flex:none;gap:2px;margin-left:0}
+  .locale-control select{width:48px;min-width:48px;padding:0 3px}
   .logout-button{width:37px;padding:0}
   .logout-button span{display:none}
 }

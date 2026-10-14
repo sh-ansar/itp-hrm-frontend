@@ -472,7 +472,7 @@ onMounted(() => {
             <BaseButton v-if="employeeWritesEnabled && activeTab === 'register'" @click="createOpen = true">
               <Plus :size="16" /> Добавить сотрудника
             </BaseButton>
-            <div v-if="companies.length > 1" class="company-select">
+            <div class="company-select">
               <BaseSelectField v-model="selectedCompany" label="Компания" :options="companies" />
             </div>
           </div>

@@ -49,6 +49,8 @@ test('employee card uses compact reference typography in each tab and dark mode'
       }
       assert.deepEqual(errors,[])
       if(width===1280){
+        await navigation.getByRole('button',{name:'Личные данные',exact:true}).click()
+        await page.locator('.employee-data-field > strong').first().waitFor()
         await page.evaluate(()=>document.documentElement.setAttribute('data-theme','dark'))
         const dark=await page.evaluate(()=>getComputedStyle(document.querySelector('.employee-data-field > strong')).backgroundColor)
         assert.notEqual(dark,'rgb(255, 255, 255)','Dark mode must use theme tokens')

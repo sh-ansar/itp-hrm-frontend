@@ -59,6 +59,22 @@ test('every HR workspace route stays visible and in-viewport on desktop, tablet 
           document: document.documentElement.scrollWidth,
           body: document.body.scrollWidth,
         }))
+        if (geometry.document > width + 1 || geometry.body > width + 1) {
+          const offenders = await page.evaluate(() => [...document.querySelectorAll('*')]
+            .filter(element => {
+              const rect = element.getBoundingClientRect()
+              const style = getComputedStyle(element)
+              return rect.right > innerWidth + 2 && rect.width > 0
+                && style.position !== 'fixed' && style.display !== 'none'
+            })
+            .slice(0, 15).map(element => {
+              const rect = element.getBoundingClientRect()
+              return { tag:element.tagName, classes:element.className?.baseVal ?? String(element.className).slice(0,120),
+                width:Math.round(rect.width), right:Math.round(rect.right),
+                parent:String(element.parentElement?.className).slice(0,100) }
+            }))
+          console.log('TABLE OVERFLOW DIAGNOSTICS', route, width, JSON.stringify(offenders))
+        }
         assert.ok(geometry.document <= width + 1 && geometry.body <= width + 1,
           `Document overflows on ${route} at ${width}px: ${JSON.stringify(geometry)}`)
         assert.equal(failures.length, priorErrorCount,

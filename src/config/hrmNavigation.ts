@@ -3,21 +3,22 @@
 export interface HrmNavigationItem {
   to: string
   label: string
+  labelKey?: string
   icon: string
   section: 'primary' | 'service'
 }
 
 export const hrmNavigation: readonly HrmNavigationItem[] = [
-  { to: '/', label: 'Главная', icon: '/prototype-icons/Home.svg', section: 'primary' },
-  { to: '/employees', label: 'Сотрудники', icon: '/prototype-icons/People-groupf.svg', section: 'primary' },
-  { to: '/organization', label: 'Оргструктура и штатка', icon: '/prototype-icons/Structure.svg', section: 'primary' },
-  { to: '/personnel-actions', label: 'Кадровые процессы', icon: '/prototype-icons/processf.svg', section: 'primary' },
-  { to: '/timesheets', label: 'Графики и табель', icon: '/prototype-icons/Calendar.svg', section: 'primary' },
-  { to: '/leaves', label: 'Отпуска', icon: '/prototype-icons/Clock.svg', section: 'primary' },
-  { to: '/documents', label: 'Документы и приказы', icon: '/prototype-icons/Document.svg', section: 'primary' },
-  { to: '/reports', label: 'Отчёты и аналитика', icon: '/prototype-icons/Report.svg', section: 'primary' },
-  { to: '/directories', label: 'Справочники', icon: '/prototype-icons/Storagef.svg', section: 'service' },
-  { to: '/settings', label: 'Настройки', icon: '/prototype-icons/Settings.svg', section: 'service' },
+  { to: '/', label: 'Главная', labelKey: 'nav.home', icon: '/prototype-icons/Home.svg', section: 'primary' },
+  { to: '/employees', label: 'Сотрудники', labelKey: 'nav.employees', icon: '/prototype-icons/People-groupf.svg', section: 'primary' },
+  { to: '/organization', label: 'Оргструктура и штатка', labelKey: 'nav.organization', icon: '/prototype-icons/Structure.svg', section: 'primary' },
+  { to: '/personnel-actions', label: 'Кадровые процессы', labelKey: 'nav.personnelActions', icon: '/prototype-icons/processf.svg', section: 'primary' },
+  { to: '/timesheets', label: 'Графики и табель', labelKey: 'nav.timesheets', icon: '/prototype-icons/Calendar.svg', section: 'primary' },
+  { to: '/leaves', label: 'Отпуска', labelKey: 'nav.leaves', icon: '/prototype-icons/Clock.svg', section: 'primary' },
+  { to: '/documents', label: 'Документы и приказы', labelKey: 'nav.documents', icon: '/prototype-icons/Document.svg', section: 'primary' },
+  { to: '/reports', label: 'Отчёты и аналитика', labelKey: 'nav.reports', icon: '/prototype-icons/Report.svg', section: 'primary' },
+  { to: '/directories', label: 'Справочники', labelKey: 'nav.directories', icon: '/prototype-icons/Storagef.svg', section: 'service' },
+  { to: '/settings', label: 'Настройки', labelKey: 'nav.settings', icon: '/prototype-icons/Settings.svg', section: 'service' },
 ]
 
 /** Page navigation is different from a client-side accordion: keep its

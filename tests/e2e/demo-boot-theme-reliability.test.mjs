@@ -8,7 +8,7 @@ before(async () => { browser = await chromium.launch({ headless: true }) })
 after(async () => { await browser?.close() })
 
 function rgb(color) {
-  const channels = color.match(/[\\d.]+/g)?.slice(0, 3).map(Number)
+  const channels = color.match(/[0-9.]+/g)?.slice(0, 3).map(Number)
   assert.equal(channels?.length, 3, 'Expected RGB computed color: ' + color)
   return channels
 }

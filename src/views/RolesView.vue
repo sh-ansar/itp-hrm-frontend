@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { ChevronDown, Maximize2, Minimize2, Plus, Search, ShieldCheck } from 'lucide-vue-next'
+import { ChevronDown, Maximize2, Minimize2, Plus, Search } from 'lucide-vue-next'
 import BaseActionDropdown from '../components/ui/BaseActionDropdown.vue'
 import BaseButton from '../components/ui/BaseButton.vue'
 import BaseCard from '../components/ui/BaseCard.vue'

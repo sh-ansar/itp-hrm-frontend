@@ -43,6 +43,39 @@ test('guests cannot silently enter HR route and see an accessible login view', a
   assert.equal(await page.getByLabel('Пароль').getAttribute('type'), 'password')
 })
 
+test('login is visibly rendered with a valid themed background across screen sizes', async (t) => {
+  const { page } = await createPage(t)
+  const errors = []
+  page.on('pageerror', error => errors.push(error.message))
+  for (const width of [375, 768, 1440]) {
+    await page.setViewportSize({ width, height: 850 })
+    await page.goto('/login?redirect=/')
+    const title = page.getByRole('heading', { name: 'Вход в систему' })
+    await title.waitFor()
+    assert.equal(await title.isVisible(), true)
+    assert.equal(await page.getByLabel('Электронная почта').isVisible(), true)
+    assert.equal(await page.getByLabel('Пароль').isVisible(), true)
+    const appearance = await page.locator('.login-page').evaluate(el => {
+      const style = getComputedStyle(el)
+      const bounds = el.getBoundingClientRect()
+      return {
+        background: style.backgroundImage,
+        width: document.documentElement.scrollWidth,
+        viewport: innerWidth,
+        visible: bounds.width > 0 && bounds.height > 0,
+      }
+    })
+    assert.ok(appearance.background.includes('linear-gradient('),
+      'Login background must not depend on an undefined token')
+    assert.equal(appearance.visible, true)
+    assert.ok(appearance.width <= width + 1,
+      'Login must not overflow the viewport: ' + JSON.stringify(appearance))
+    assert.equal(await page.locator('.boot-status').count(), 0,
+      'The static loading screen must disappear after Vue mounts')
+  }
+  assert.deepEqual(errors, [])
+})
+
 test('valid session rotates session cookie, survives refresh and accesses Sanctum API', async (t) => {
   const { page, context } = await createPage(t)
   await page.goto('/login')

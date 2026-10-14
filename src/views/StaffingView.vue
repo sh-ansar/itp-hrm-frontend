@@ -6,6 +6,7 @@ import BaseButton from '../components/ui/BaseButton.vue'
 import BaseCard from '../components/ui/BaseCard.vue'
 import BaseDataTable from '../components/ui/BaseDataTable.vue'
 import BaseDialog from '../components/ui/BaseDialog.vue'
+import BaseDrawer from '../components/ui/BaseDrawer.vue'
 import BaseFormField from '../components/ui/BaseFormField.vue'
 import BaseLoadingState from '../components/ui/BaseLoadingState.vue'
 import BaseNotice from '../components/ui/BaseNotice.vue'
@@ -489,11 +490,13 @@ onMounted(refreshCompanies)
       </BaseCard>
     </template>
 
-    <BaseDialog :open="createPlanOpen" title="Новая версия штатного расписания" @close="createPlanOpen = false">
+    <BaseDrawer :open="createPlanOpen" title="Новая версия штатного расписания"
+      description="Период действия и параметры новой версии" @close="createPlanOpen = false">
       <StaffingPlanForm v-if="company" :company-id="company" @saved="planCreated" @cancelled="createPlanOpen = false" />
-    </BaseDialog>
+    </BaseDrawer>
 
-    <BaseDialog :open="lineEditorOpen" :title="editingLine ? 'Изменить штатную единицу' : 'Новая штатная единица'" @close="lineEditorOpen = false">
+    <BaseDrawer :open="lineEditorOpen" :title="editingLine ? 'Изменить штатную единицу' : 'Новая штатная единица'"
+      description="Структурная позиция и параметры ставки" @close="lineEditorOpen = false">
       <StaffingLineForm
         v-if="company && selectedPlanId"
         :key="editingLine?.id ?? 'new'"
@@ -503,7 +506,7 @@ onMounted(refreshCompanies)
         @saved="lineSaved"
         @cancelled="lineEditorOpen = false"
       />
-    </BaseDialog>
+    </BaseDrawer>
 
     <BaseDialog :open="approveOpen" title="Утвердить штатное расписание" @close="approveOpen = false">
       <div class="approve-copy">

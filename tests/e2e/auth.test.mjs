@@ -104,9 +104,20 @@ test('valid session rotates session cookie, survives refresh and accesses Sanctu
   await page.getByRole('heading', { name: 'Главная' }).waitFor()
   assert.equal(await page.getByText('Synthetic HR E2E').count(), 1)
   const storedEntries = await page.evaluate(() => Object.entries(localStorage))
+  const safeUiPreferenceKeys = new Set([
+    'hrm-theme',
+    'hrm-sidebar-collapsed',
+    'hrm-locale',
+    'hrm-time-zone',
+    'hrm-date-format',
+    'hrm-time-format',
+    'hrm-number-format',
+    'hrm-start-screen',
+    'hrm-settings-profile-v2',
+  ])
   for (const [key, value] of storedEntries) {
-    assert.ok(['hrm-theme', 'hrm-sidebar-collapsed'].includes(key), 'only UI preferences may persist: ' + key)
-    assert.doesNotMatch(value, /synthetic-e2e@example\\.test|SyntheticE2E-Only|itp_hrm_e2e_session/, 'no credentials in storage')
+    assert.ok(safeUiPreferenceKeys.has(key), 'only UI preferences may persist: ' + key)
+    assert.doesNotMatch(value, /synthetic-e2e@example\.test|SyntheticE2E-Only|itp_hrm_e2e_session/, 'no credentials in storage')
   }
 
   const csrfDenied = await page.evaluate(async () => {

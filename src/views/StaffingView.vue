@@ -19,6 +19,7 @@ import StaffingMobileList from '../components/StaffingMobileList.vue'
 import StaffingPlanForm from '../components/StaffingPlanForm.vue'
 import { localTodayISO } from '../utils/localDate'
 import { downloadCsv } from '../utils/exportCsv'
+import { useUiFormatters } from '../composables/useUiFormatters'
 import { preferredStaffingPlan } from '../utils/staffingPlanChoice'
 import { listCompanies, type CompanyRecord } from '../api/organization'
 import {
@@ -34,6 +35,7 @@ import {
 
 const route = useRoute()
 const router = useRouter()
+const fmt = useUiFormatters()
 const companies = ref<CompanyRecord[]>([])
 const company = ref('')
 const plans = ref<StaffingPlanRecord[]>([])
@@ -158,12 +160,12 @@ watch(shownColumns, value => {
 }, { deep: true })
 
 function formatUnits(value: unknown) {
-  return Number(value).toLocaleString('ru-RU', { maximumFractionDigits: 2 })
+  return fmt.number(Number(value))
 }
 
 function formatSalary(row: StaffingPlanLine) {
   if (row.base_salary == null) return '—'
-  return `${Number(row.base_salary).toLocaleString('ru-RU')} ${row.currency ?? ''}`.trim()
+  return `${fmt.number(Number(row.base_salary), 0)} ${row.currency ?? ''}`.trim()
 }
 
 async function refreshCompanies() {
@@ -365,7 +367,7 @@ onMounted(refreshCompanies)
         <template #cell-staffing_plan_id="{ value }">
           <span class="history-reference">{{ value ? plans.find(plan => plan.id === value)?.name ?? String(value).slice(0, 8) : '—' }}</span>
         </template>
-        <template #cell-created_at="{ value }">{{ new Date(String(value)).toLocaleString('ru-RU') }}</template>
+        <template #cell-created_at="{ value }">{{ fmt.dateTime(String(value)) }}</template>
         </BaseDataTable>
       </div>
       <div class="staffing-history-mobile">
@@ -378,7 +380,7 @@ onMounted(refreshCompanies)
           </div>
           <p>{{ plans.find(plan => plan.id === event.staffing_plan_id)?.name ?? (event.staffing_plan_id ? 'Версия ' + event.staffing_plan_id.slice(0, 8) : 'Без версии') }}</p>
           <div class="staffing-history-card-foot">
-            <span>{{ new Date(event.created_at).toLocaleString('ru-RU') }}</span>
+            <span>{{ fmt.dateTime(event.created_at) }}</span>
             <span v-if="event.revision != null">Ревизия {{ event.revision }}</span>
           </div>
         </article>

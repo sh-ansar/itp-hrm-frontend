@@ -284,17 +284,6 @@ onMounted(load)
   border-radius:var(--radius-lg);background:var(--color-soft);box-shadow:var(--shadow-card);
 }
 .overview-section{min-width:0;display:grid;gap:0}
-.overview-section :deep(.table-scroll){
-  min-width:0;border-radius:var(--radius-md);
-  box-shadow:var(--shadow-card);scrollbar-color:var(--color-stroke-strong) transparent;scrollbar-width:thin;
-}
-.overview-section :deep(table){min-width:930px}
-.overview-section :deep(th){
-  padding:12px 13px;background:var(--color-table-heading);font-size:12px;
-  font-weight:600;line-height:17px;color:var(--color-text);
-}
-.overview-section :deep(td){padding:10px 13px;font-size:12px;line-height:18px}
-.overview-section :deep(tbody tr){height:51px}
 .primary-cell{display:grid;gap:3px;min-width:165px;max-width:290px}
 .primary-cell strong{color:var(--color-text);font-size:12px;line-height:17px;font-weight:600}
 .primary-cell span{color:var(--color-muted);font-size:11px;line-height:15px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -307,6 +296,5 @@ onMounted(load)
 @media(max-width:700px){
   .overview-page{gap:21px}
   .overview-metrics{grid-template-columns:1fr;padding:9px}
-  .overview-section :deep(th),.overview-section :deep(td){padding:9px 10px}
 }
 </style>

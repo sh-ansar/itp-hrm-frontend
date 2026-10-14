@@ -1,8 +1,13 @@
 <script setup lang="ts">
+import { useWorkspaceI18n } from '../composables/useWorkspaceI18n'
+import { useUiFormatters } from '../composables/useUiFormatters'
 import { computed } from 'vue'
 import { ChevronRight } from 'lucide-vue-next'
 import type { EmployeeRecord } from '../api/personnel'
 import BaseStatusPill from './ui/BaseStatusPill.vue'
+
+const { tr } = useWorkspaceI18n()
+const fmt = useUiFormatters()
 
 type EmployeeRow = EmployeeRecord & { full_name: string; status_label: string }
 
@@ -20,7 +25,7 @@ const groupedRows = computed(() => {
   if (!props.grouped) return [{ label: '', rows: props.rows }]
   const groups = new Map<string, EmployeeRow[]>()
   for (const row of props.rows) {
-    const label = row.current_department_name || 'Без подразделения'
+    const label = row.current_department_name || tr('Без подразделения')
     if (!groups.has(label)) groups.set(label, [])
     groups.get(label)!.push(row)
   }
@@ -29,16 +34,14 @@ const groupedRows = computed(() => {
     .map(([label, rows]) => ({ label, rows }))
 })
 function displayDate(value: unknown): string {
-  if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}/.test(value)) return '—'
-  const [year, month, day] = value.slice(0, 10).split('-')
-  return day + '.' + month + '.' + year
+  return typeof value === 'string' ? fmt.date(value) : '—'
 }
 </script>
 
 <template>
   <div class="employee-mobile-list">
-    <div v-if="loading" class="employee-mobile-loading" aria-live="polite">Загрузка сотрудников…</div>
-    <p v-else-if="!hasRows" class="employee-mobile-empty">Сотрудники не найдены.</p>
+    <div v-if="loading" class="employee-mobile-loading" aria-live="polite">{{ tr('Загрузка сотрудников…') }}</div>
+    <p v-else-if="!hasRows" class="employee-mobile-empty">{{ tr('Сотрудники не найдены.') }}</p>
 
     <template v-for="group in groupedRows" :key="group.label || 'all'">
       <div v-if="grouped && group.label" class="employee-mobile-group">
@@ -48,33 +51,33 @@ function displayDate(value: unknown): string {
       <header>
         <label class="employee-select">
           <input type="checkbox" :checked="selectedIds.includes(row.id)"
-            :aria-label="'Выбрать сотрудника: ' + row.full_name"
+            :aria-label="tr('Выбрать сотрудника: ') + row.full_name"
             @change="emit('select', row.id, ($event.target as HTMLInputElement).checked)" />
         </label>
         <div class="employee-mobile-heading">
           <RouterLink :to="{ name: 'employee-detail', params: { company: companyId, employee: row.id } }">
             {{ row.full_name }}
           </RouterLink>
-          <span>{{ row.current_position_name ?? 'Должность не назначена' }}</span>
+          <span>{{ row.current_position_name ?? tr('Должность не назначена') }}</span>
         </div>
         <RouterLink class="employee-mobile-open"
           :to="{ name: 'employee-detail', params: { company: companyId, employee: row.id } }"
-          :aria-label="'Открыть карточку: ' + row.full_name">
+          :aria-label="tr('Открыть карточку: ') + row.full_name">
           <ChevronRight :size="18" />
         </RouterLink>
       </header>
 
       <dl>
         <div>
-          <dt>Табельный №</dt>
+          <dt>{{ tr('Табельный №') }}</dt>
           <dd>{{ row.personnel_number }}</dd>
         </div>
         <div>
-          <dt>Подразделение</dt>
+          <dt>{{ tr('Подразделение') }}</dt>
           <dd>{{ row.current_department_name ?? '—' }}</dd>
         </div>
         <div>
-          <dt>Дата назначения</dt>
+          <dt>{{ tr('Дата назначения') }}</dt>
           <dd>{{ displayDate(row.current_assignment_valid_from) }}</dd>
         </div>
       </dl>

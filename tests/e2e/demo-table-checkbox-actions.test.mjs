@@ -116,8 +116,8 @@ test('checkbox filter panel and selected-actions never cause document overflow',
       await registry.getByRole('button', { name: 'Фильтр: Статус' }).click()
       await page.getByRole('group', { name: 'Фильтр столбца: Статус' }).waitFor()
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1), false, 'filter panel width at ' + width)
-      await page.getByRole('group', { name: 'Фильтр столбца: Статус' })
-        .getByRole('button', { name: 'Закрыть фильтр' }).click()
+      await page.keyboard.press('Escape')
+      await page.getByRole('group', { name: 'Фильтр столбца: Статус' }).waitFor({ state: 'hidden' })
       await registry.getByRole('checkbox', { name: /Выбрать сотрудника:/ }).first().check()
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1), false, 'actions width at ' + width)
     } finally { await context.close() }

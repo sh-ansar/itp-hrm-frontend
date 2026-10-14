@@ -30,8 +30,12 @@
 | Status indicator / semantic badge | `BaseStatusPill.vue` | Implemented |
 | Button variants and accessible fields | `BaseButton.vue`, `BaseFormField.vue`, `BaseSelectField.vue` | Implemented |
 | Show/hide and save table columns | `BaseColumnPicker.vue` | Implemented |
-| Page title, sections, tabs, empty/error/loading | `BasePageHeading.vue`, `BaseViewTabs.vue`, `BaseEmptyState.vue`, `BaseNotice.vue`, `BaseLoadingState.vue` | Implemented |
-| Slide-in action/edit panel / dialog | `BaseDialog.vue`, feature-specific forms | Existing; can adopt BNT drawer geometry without replacing forms |
+| Active filter pills / reset summary | `BaseFilterSummary.vue` | Implemented; Employees register already uses it |
+| Formula/help information popover | `BaseInfoPopover.vue` | Implemented for reusable KPI/field explanations |
+| Semantic progress track | `BaseProgressBar.vue` | Implemented for staffing/process/learning progress |
+| Horizontal/vertical semantic divider | `BaseDivider.vue` | Implemented |
+| Page title, eyebrow, info slot, actions, tabs, empty/error/loading | `BasePageHeading.vue`, `BaseViewTabs.vue`, `BaseEmptyState.vue`, `BaseNotice.vue`, `BaseLoadingState.vue` | Implemented |
+| Slide-in action/edit panel / dialog | `BaseDialog.vue`, feature-specific forms | Implemented with default/wide/half-screen BNT drawer geometry and footer slot |
 | Fixed topbar and full-height navigation | `AppTopbar.vue`, `AppSidebar.vue` | Implemented; do not add inert bell/microphone |
 | Charts, graphs, timeline, custom reporting | HRM Reports views | Adapt only when product APIs and prototypes justify them |
 | Toast/notifications/avatar menu | Not part of approved real HRM endpoints yet | **Not implemented**; no decorative fake actions |
@@ -50,6 +54,7 @@
 - [x] Compare compact KPI metrics/ring/card spacing and semantic tokens
 - [x] Use the current `demo_bnt_dt` source guidelines and audit rather than inventing design values
 - [x] Implement common components for reuse across the current HRM screens
+- [x] Port BNT filter-summary pills, info popover, progress bar, divider and half-screen drawer primitives into Vue
 - [ ] Browser screenshot sign-off against the complete original HRM ZIP on both themes
 - [ ] Server-backed cross-page multi-facet filtering and server-approved mass edits, if required by business spec
 - [ ] Real notification/inbox feature, once permissions, events and endpoints are specified

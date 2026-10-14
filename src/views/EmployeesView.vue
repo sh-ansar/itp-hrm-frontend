@@ -67,6 +67,7 @@ const vacancyPercent = computed(() =>
     ? 100 * counters.value.vacancies / counters.value.plannedUnits : null)
 let generation = 0
 let counterGeneration = 0
+let countersRequestedFor = ''
 
 const tabOptions = [
   { id: 'register', label: 'Реестр сотрудников' },
@@ -385,6 +386,13 @@ async function loadEmployees() {
     total.value = response.meta.total
     lastPage.value = response.meta.last_page
     employeeWritesEnabled.value = response.meta.employee_writes_enabled
+    // Prioritize the interactive registry over expensive dashboard summaries.
+    // A single-worker Windows PHP server would otherwise queue all KPI calls
+    // ahead of the requested page, leaving the register empty for 20+ seconds.
+    if (countersRequestedFor !== company) {
+      countersRequestedFor = company
+      void loadCounters()
+    }
   } catch (cause) {
     if (current === generation)
       error.value = cause instanceof Error ? cause.message : 'Не удалось получить сотрудников'
@@ -403,7 +411,9 @@ watch(visibleFields, next => {
 }, { deep: true })
 watch(selectedCompany, () => {
   page.value = 1
-  loadCounters()
+  countersRequestedFor = ''
+  counterGeneration += 1
+  counters.value = { active: null, archived: null, departments: null, vacancies: null, plannedUnits: null, expiring: null }
 })
 watch(() => route.query.q, value => {
   search.value = typeof value === 'string' ? value.trim() : ''

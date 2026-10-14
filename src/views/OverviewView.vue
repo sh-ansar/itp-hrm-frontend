@@ -2,6 +2,7 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import BaseDataTable from '../components/ui/BaseDataTable.vue'
+import BaseButton from '../components/ui/BaseButton.vue'
 import BaseTableBulkActions from '../components/ui/BaseTableBulkActions.vue'
 import BaseNotice from '../components/ui/BaseNotice.vue'
 import BaseStatusPill from '../components/ui/BaseStatusPill.vue'
@@ -245,7 +246,7 @@ onMounted(() => {
         <strong>{{ t('onboarding.dashboardTitle') }}</strong>
         <span>{{ t('onboarding.dashboardHelp') }}</span>
       </div>
-      <RouterLink to="/onboarding">{{ t('onboarding.dashboardAction') }}</RouterLink>
+      <BaseButton @click="router.push('/onboarding')">{{ t('onboarding.dashboardAction') }}</BaseButton>
     </section>
     <BaseKpiGrid class="overview-metrics" label="Основные показатели компании">
       <DashboardMetricCard title="Вакантные позиции" color="amber"
@@ -359,12 +360,7 @@ onMounted(() => {
 .onboarding-entry>div{display:grid;gap:3px;min-width:0}
 .onboarding-entry strong{font-size:13px;line-height:18px}
 .onboarding-entry span{color:var(--color-muted);font-size:11px;line-height:16px}
-.onboarding-entry a{
-  display:inline-flex;align-items:center;justify-content:center;min-height:34px;padding:7px 11px;
-  border:1px solid var(--color-primary);border-radius:var(--radius-sm);
-  background:var(--color-primary);color:var(--color-on-primary);font-size:11px;font-weight:700;
-}
-.onboarding-entry a:hover{background:var(--color-primary-hover)}
+.onboarding-entry :deep(.base-button){min-height:34px;font-size:11px}
 .primary-cell{display:grid;gap:3px;min-width:165px;max-width:290px}
 .primary-cell strong{color:var(--color-text);font-size:12px;line-height:17px;font-weight:600}
 .primary-cell span{color:var(--color-muted);font-size:11px;line-height:15px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}

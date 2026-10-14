@@ -104,7 +104,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', handleShortcut))
 
 <style scoped>
 .hrm-topbar{
-  height:70px;min-height:70px;padding:0 24px;
+  height:64px;min-height:64px;padding:0 24px;
   display:flex;align-items:center;justify-content:space-between;gap:18px;
   background:var(--color-surface);
 }

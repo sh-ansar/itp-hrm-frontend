@@ -74,7 +74,7 @@ async function submit() {
 <style scoped>
 .login-page{
   min-height:100vh;display:grid;place-items:center;padding:24px;
-  background:linear-gradient(145deg,var(--color-accent-soft) 0%,var(--color-bg) 60%,var(--color-soft) 100%)
+  background:linear-gradient(145deg,var(--color-accent-soft) 0%,var(--color-page) 60%,var(--color-soft) 100%)
 }
 .login-wrap{width:min(100%,440px);display:grid;gap:18px}
 .login-brand{display:grid;gap:4px;color:var(--color-text)}

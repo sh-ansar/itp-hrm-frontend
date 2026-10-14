@@ -6,10 +6,10 @@ button,input,select,textarea{font:inherit}
 button{cursor:pointer}
 a{color:inherit;text-decoration:none}
 button:focus-visible,a:focus-visible{outline:2px solid var(--color-primary);outline-offset:2px}
-.app-shell{min-height:100vh;min-height:100dvh;display:grid;grid-template-columns:276px minmax(0,1fr);transition:grid-template-columns .2s ease}
-.app-shell--collapsed{grid-template-columns:70px minmax(0,1fr)}
-.sidebar{position:sticky;top:0;height:100vh;height:100dvh;min-height:0;display:flex;flex-direction:column;overflow:hidden;background:var(--color-surface);border-right:1px solid var(--color-stroke);box-shadow:var(--shadow-card);z-index:20}
-.main{min-width:0;max-width:100%;width:100%}
+.app-shell{min-height:100vh;min-height:100dvh;display:flex;align-items:flex-start;max-width:100%;--app-sidebar-width:276px}
+.app-shell--collapsed{--app-sidebar-width:70px}
+.sidebar{position:sticky;top:0;height:100vh;height:100dvh;min-height:0;display:flex;flex:0 0 var(--app-sidebar-width);width:var(--app-sidebar-width);flex-direction:column;overflow:hidden;background:var(--color-surface);border-right:1px solid var(--color-stroke);box-shadow:var(--shadow-card);z-index:20;transition:width .2s ease,flex-basis .2s ease}
+.main{min-width:0;max-width:100%;width:auto;flex:1 1 auto}
 .topbar{height:70px;display:flex;align-items:center;justify-content:space-between;gap:clamp(12px,2vw,32px);padding:0 clamp(16px,2.2vw,32px);position:sticky;top:0;z-index:15;background:var(--color-surface);border-bottom:1px solid var(--color-stroke);backdrop-filter:blur(14px)}
 .content{max-width:none;margin:0;padding:16px 24px 32px;min-width:0;background:var(--color-page)}
 .page-title{margin:0 0 var(--space-2);font-size:var(--font-page-heading);line-height:1.2;letter-spacing:-.025em}

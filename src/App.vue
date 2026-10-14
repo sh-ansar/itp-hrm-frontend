@@ -46,8 +46,8 @@ onBeforeUnmount(() => {
 </template>
 
 <style scoped>
-.app-shell{grid-template-columns:264px minmax(0,1fr)}
-.app-shell--collapsed{grid-template-columns:66px minmax(0,1fr)}
+.app-shell{--app-sidebar-width:264px}
+.app-shell--collapsed{--app-sidebar-width:66px}
 .main{min-width:0;max-width:100%}
 .shell-error{margin:12px 24px}
 .nav-backdrop{display:none}

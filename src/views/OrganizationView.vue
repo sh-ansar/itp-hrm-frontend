@@ -8,11 +8,17 @@ import BaseButton from '../components/ui/BaseButton.vue'
 import BaseSelectField from '../components/ui/BaseSelectField.vue'
 import BasePagination from '../components/ui/BasePagination.vue'
 import BaseDialog from '../components/ui/BaseDialog.vue'
+import BaseDrawer from '../components/ui/BaseDrawer.vue'
+import BaseKpiGrid from '../components/ui/BaseKpiGrid.vue'
+import BaseRegistryMetricCard from '../components/ui/BaseRegistryMetricCard.vue'
 import BaseViewTabs from '../components/ui/BaseViewTabs.vue'
 import BaseColumnPicker from '../components/ui/BaseColumnPicker.vue'
 import DepartmentTreeNode from '../components/DepartmentTreeNode.vue'
 import { listEmployees, type EmployeeRecord } from '../api/personnel'
+import { getStaffingPlan, listStaffingPlans } from '../api/staffing'
 import { downloadCsv } from '../utils/exportCsv'
+import { preferredApprovedStaffingPlan } from '../utils/staffingPlanChoice'
+import { localTodayISO } from '../utils/localDate'
 import OrgStaffingNav from '../components/OrgStaffingNav.vue'
 import { buildDepartmentForest, filterDepartmentForest } from '../utils/departmentTree'
 import DepartmentForm from '../components/DepartmentForm.vue'
@@ -48,6 +54,19 @@ const diagramDepartments = ref<DepartmentRecord[]>([])
 const diagramLoading = ref(false)
 const diagramError = ref('')
 const diagramPartial = ref(false)
+const orgMetrics = ref({
+  employees: null as number | null,
+  planned: null as number | null,
+  occupied: null as number | null,
+  vacant: null as number | null,
+})
+let orgMetricGeneration = 0
+const occupancyDescription = computed(() => {
+  if (orgMetrics.value.planned === null || orgMetrics.value.occupied === null || orgMetrics.value.planned <= 0)
+    return 'Нет утверждённого штатного среза'
+  const percent = Math.round(100 * orgMetrics.value.occupied / orgMetrics.value.planned)
+  return percent + '% от штатных единиц занято'
+})
 const departmentForest = computed(() => {
   const forest = buildDepartmentForest(diagramDepartments.value)
   function enrich(nodes: typeof forest): void {
@@ -169,6 +188,36 @@ async function loadCompanies() {
   }
 }
 
+async function loadOrgMetrics() {
+  const current = ++orgMetricGeneration
+  const companyId = selectedCompany.value
+  orgMetrics.value = { employees: null, planned: null, occupied: null, vacant: null }
+  if (!companyId) return
+
+  const [peopleResult, plansResult] = await Promise.allSettled([
+    listEmployees(companyId, 1, '', 'active', 1),
+    listStaffingPlans(companyId),
+  ])
+  if (current !== orgMetricGeneration || companyId !== selectedCompany.value) return
+
+  if (peopleResult.status === 'fulfilled')
+    orgMetrics.value.employees = peopleResult.value.meta.total
+
+  if (plansResult.status !== 'fulfilled') return
+  const approved = preferredApprovedStaffingPlan(plansResult.value.data)
+  if (!approved) return
+
+  try {
+    const detail = await getStaffingPlan(companyId, approved.id, localTodayISO())
+    if (current !== orgMetricGeneration || companyId !== selectedCompany.value) return
+    orgMetrics.value.planned = detail.lines.reduce((sum, line) => sum + Number(line.planned_units || 0), 0)
+    orgMetrics.value.occupied = detail.lines.reduce((sum, line) => sum + Number(line.occupied_units || 0), 0)
+    orgMetrics.value.vacant = detail.lines.reduce((sum, line) => sum + Number(line.vacant_units || 0), 0)
+  } catch {
+    // Organization remains usable when staffing detail is unavailable.
+  }
+}
+
 async function loadDepartments() {
   const id = selectedCompany.value
   const currentPage = page.value
@@ -279,7 +328,7 @@ async function confirmDelete() {
   }
 }
 
-watch(selectedCompany, () => { page.value = 1 })
+watch(selectedCompany, () => { page.value = 1; void loadOrgMetrics() })
 watch([selectedCompany, page], loadDepartments)
 watch([selectedCompany, viewMode], loadDiagram)
 onMounted(loadCompanies)
@@ -295,6 +344,20 @@ onMounted(loadCompanies)
 
 
     <section v-if="selectedCompany" class="org-content">
+      <BaseKpiGrid class="org-metrics" label="Показатели организационной структуры">
+        <BaseRegistryMetricCard title="Подразделения" :value="total"
+          description="структурных подразделений в доступном контуре"
+          icon="/prototype-icons/Info.svg" />
+        <BaseRegistryMetricCard title="Штатные единицы" :value="orgMetrics.planned"
+          description="по утверждённому штатному расписанию"
+          icon="/prototype-icons/Info.svg" to="/staffing" />
+        <BaseRegistryMetricCard title="Занято" :value="orgMetrics.occupied"
+          :description="occupancyDescription"
+          icon="/prototype-icons/Info.svg" />
+        <BaseRegistryMetricCard title="Вакантные позиции" :value="orgMetrics.vacant"
+          description="открытых штатных единиц на текущую дату"
+          icon="/prototype-icons/Link-External.svg" to="/staffing?view=vacant" />
+      </BaseKpiGrid>
       <div class="section-title">
         <h1>Организационная структура <span class="structure-total">({{ total }})</span></h1>
         <div class="org-heading-actions">
@@ -393,9 +456,10 @@ onMounted(loadCompanies)
       />
     </section>
 
-    <BaseDialog
+    <BaseDrawer
       :open="editorOpen"
       :title="editingDepartment ? 'Изменить подразделение' : 'Новое подразделение'"
+      description="Структурная единица организационной схемы"
       @close="editorOpen = false"
     >
       <DepartmentForm
@@ -407,7 +471,7 @@ onMounted(loadCompanies)
         @saved="departmentSaved"
         @cancelled="editorOpen = false"
       />
-    </BaseDialog>
+    </BaseDrawer>
 
     <BaseDialog :open="!!deleteCandidate" title="Удалить подразделение" @close="deleteCandidate = null">
       <div class="delete-copy">
@@ -428,10 +492,11 @@ onMounted(loadCompanies)
 .organization-page{display:grid;grid-template-columns:minmax(0,1fr);gap:18px}
 .org-heading-actions{display:flex;align-items:end;justify-content:flex-end;gap:10px;min-width:0;flex-wrap:nowrap}
 .org-heading-actions :deep(.base-select-field){flex:0 1 200px;width:200px;max-width:200px;min-width:0}
-.org-content{min-width:0}
+.org-content{min-width:0;display:grid;gap:18px}
+.org-metrics{min-width:0}
 .org-mobile-list,.org-mobile-only{display:none}
 
-.section-title{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:end;gap:16px;margin-bottom:18px}
+.section-title{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:end;gap:16px;margin-bottom:0}
 .section-title h1{font-size:24px;line-height:1.2;margin:0}
 .structure-total{font-size:16px;font-weight:500}
 .org-table-view{min-width:0}

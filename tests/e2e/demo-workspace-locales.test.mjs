@@ -29,6 +29,16 @@ const locales = {
     personal: 'Жеке деректер',
     birth: 'Туған күні',
   },
+  ka: {
+    views: [
+      ['/employees', 'თანამშრომლების რეესტრი'],
+      ['/organization', 'ორგანიზაციული სტრუქტურა'],
+      ['/staffing', 'საშტატო განრიგი'],
+      ['/documents', 'დოკუმენტები და ბრძანებები'],
+    ],
+    personal: 'პირადი მონაცემები',
+    birth: 'დაბადების თარიღი',
+  },
 }
 
 for (const [locale, expected] of Object.entries(locales)) {
@@ -63,13 +73,14 @@ for (const [locale, expected] of Object.entries(locales)) {
   })
 }
 
-test('English working views remain responsive on narrow mobile and tablet widths', async () => {
+test('translated working views remain responsive on mobile and tablet widths', async () => {
   for (const width of [375, 768]) {
+    for (const locale of ['en', 'kk', 'ka']) {
     const context = await browser.newContext({ baseURL, viewport: { width, height: 900 } })
     const page = await context.newPage()
     try {
       await page.goto('/settings')
-      await page.evaluate(() => localStorage.setItem('hrm-locale', 'en'))
+      await page.evaluate(selected => localStorage.setItem('hrm-locale', selected), locale)
       for (const route of ['/employees', '/organization', '/staffing', '/documents']) {
         await page.goto(route)
         await page.locator('main#main-content h1').first().waitFor()
@@ -80,5 +91,40 @@ test('English working views remain responsive on narrow mobile and tablet widths
     } finally {
       await context.close()
     }
+    }
+  }
+})
+
+
+test('Georgian is selectable at runtime, persists and stays legible in dark theme', async () => {
+  const context = await browser.newContext({ baseURL, viewport: { width: 1280, height: 900 } })
+  const page = await context.newPage()
+  const errors = []
+  page.on('pageerror', error => errors.push(error.message))
+  try {
+    await page.goto('/employees')
+    await page.locator('.locale-control select').selectOption('ka')
+    assert.equal(await page.evaluate(() => document.documentElement.lang), 'ka')
+    assert.equal(await page.locator('.locale-control select').inputValue(), 'ka')
+    assert.match(await page.locator('main#main-content h1').first().innerText(), /თანამშრომლების რეესტრი/)
+    const themeButton = page.getByRole('button', { name: 'მუქი თემის ჩართვა' })
+    await themeButton.click()
+    assert.equal(await page.evaluate(() => document.documentElement.dataset.theme), 'dark')
+    const darkColors = await page.evaluate(() => {
+      const style = getComputedStyle(document.body)
+      return { background: style.backgroundColor, color: style.color }
+    })
+    assert.equal(darkColors.background, 'rgb(9, 38, 52)', 'dark theme body must have a dark background')
+    assert.equal(darkColors.color, 'rgb(229, 246, 255)', 'dark theme must use visible text')
+    await page.reload()
+    await page.locator('main#main-content h1').first().waitFor()
+    assert.equal(await page.locator('.locale-control select').inputValue(), 'ka')
+    assert.equal(await page.evaluate(() => document.documentElement.dataset.theme), 'dark')
+    await page.goto('/settings')
+    const language = page.getByText('ენა', { exact: true })
+    assert.ok((await language.count()) > 0, 'Settings labels must be Georgian')
+    assert.deepEqual(errors, [], 'No browser runtime exceptions while switching languages and themes')
+  } finally {
+    await context.close()
   }
 })

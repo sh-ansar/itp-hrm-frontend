@@ -104,6 +104,26 @@ const assignmentByEmployee=new Map<string,any[]>(employees.map((e,i)=>[e.id,
     valid_to:null,basis_reference:`Приказ № HR-${120+i}`,revision:1,
   }]:[],
 ]))
+// Same point-in-time occupancy calculation as StaffingPlanController: count
+// assignments valid on the selected date, including closed historical periods.
+function demoStaffingRowsAt(lines:any[],asOf:string){
+  const occupancy=new Map<string,number>()
+  for(const assignments of assignmentByEmployee.values())for(const item of assignments){
+    if(item.valid_from<=asOf&&(item.valid_to===null||item.valid_to>=asOf)){
+      const key=item.department_id+'|'+item.position_id
+      occupancy.set(key,(occupancy.get(key)??0)+1)
+    }
+  }
+  return lines.map(line=>{
+    const planned=Number(line.planned_units)
+    const occupied=occupancy.get(line.department_id+'|'+line.position_id)??0
+    return {
+      ...line,occupied_units:occupied,
+      vacant_units:Math.max(planned-occupied,0),
+      overstaffed_units:Math.max(occupied-planned,0),
+    }
+  })
+}
 const reserveFallbacks=new Map<string,any>()
 const trainingFallbacks=new Map<string,any>()
 function fallbackReserve(e:any,i:number){
@@ -366,7 +386,7 @@ export async function mockApiRequest<T>(path:string,options:RequestInit={}):Prom
     if(kind==='personnel-actions'&&u.searchParams.get('employee_id'))rows=rows.filter((x:any)=>x.employee_id===u.searchParams.get('employee_id'))
     if(kind==='documents'&&u.searchParams.get('document_type'))rows=rows.filter((x:any)=>x.document_type===u.searchParams.get('document_type'))
     if(kind==='documents'&&u.searchParams.get('employee_id'))rows=rows.filter((x:any)=>x.employee_id===u.searchParams.get('employee_id'))
-    const extra:any=kind==='departments'?{department_writes_enabled:true}:kind==='positions'?{position_writes_enabled:true}:kind==='employees'?{employee_writes_enabled:true,status_filter:u.searchParams.get('status')||'all',registry_summary:{vacancies:staffing.reduce((sum:any,row:any)=>sum+Number(row.vacant_units||0),0),expiring_contracts:6}}:kind==='personnel-actions'?{personnel_actions_writes_enabled:true,summary:{hire:actions.filter((x:any)=>x.action_type==='hire').length,transfer:actions.filter((x:any)=>x.action_type==='transfer').length,termination:actions.filter((x:any)=>x.action_type==='termination').length}}:{document_writes_enabled:true}
+    const extra:any=kind==='departments'?{department_writes_enabled:true}:kind==='positions'?{position_writes_enabled:true}:kind==='employees'?{employee_writes_enabled:true,status_filter:u.searchParams.get('status')||'all',registry_summary:{vacancies:demoStaffingRowsAt(staffing,new Date().toISOString().slice(0,10)).reduce((sum:any,row:any)=>sum+Number(row.vacant_units),0),expiring_contracts:null}}:kind==='personnel-actions'?{personnel_actions_writes_enabled:true,summary:{hire:actions.filter((x:any)=>x.action_type==='hire').length,transfer:actions.filter((x:any)=>x.action_type==='transfer').length,termination:actions.filter((x:any)=>x.action_type==='termination').length}}:{document_writes_enabled:true}
     return page(rows,pg,kind==='employees'||kind==='personnel-actions'||kind==='documents'?25:100,extra) as T}
   m=p.match(/^\/companies\/[^/]+\/documents\/([^/]+)\/file$/)
   if(m&&method==='POST'){
@@ -659,9 +679,13 @@ export async function mockApiRequest<T>(path:string,options:RequestInit={}):Prom
     if(m[1]){
       const selected=staffingPlans.find((x:any)=>x.id===m![1])
       if(!selected)throw new Error('Версия штатного расписания не найдена')
-      return structuredClone({data:selected,lines:staffingByPlan.get(selected.id)??[],meta:{
-        as_of:u.searchParams.get('as_of')||'2026-10-13',
-        staffing_writes_enabled:selected.status==='draft',
+      const asOf=u.searchParams.get('as_of')||new Date().toISOString().slice(0,10)
+      const parsed=Date.parse(asOf+'T00:00:00Z')
+      if(!/^\d{4}-\d{2}-\d{2}$/.test(asOf)||!Number.isFinite(parsed)
+        ||new Date(parsed).toISOString().slice(0,10)!==asOf)
+        throw new Error('Укажите корректную дату среза')
+      return structuredClone({data:selected,lines:demoStaffingRowsAt(staffingByPlan.get(selected.id)??[],asOf),meta:{
+        as_of:asOf,staffing_writes_enabled:selected.status==='draft',
       }}) as T
     }
     const pg=Number(u.searchParams.get('page')||1)

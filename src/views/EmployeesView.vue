@@ -30,6 +30,7 @@ import {
 } from '../api/personnel'
 
 type EmployeeRow = EmployeeRecord & { full_name: string; status_label: string }
+type GroupMode = 'none' | 'department' | 'category' | 'object'
 const router = useRouter()
 const route = useRoute()
 const companies = ref<CompanyRecord[]>([])
@@ -48,8 +49,14 @@ const pageSize = ref(10)
 const presetAvailable = ref(false)
 const presetNotice = ref('')
 const statusFilter = ref<EmploymentFilter>('active')
-const grouped = ref(false)
+const groupMode = ref<GroupMode>('none')
 const filtersOpen = ref(false)
+const departmentFilter = ref('all')
+const positionFilter = ref('all')
+const objectFilter = ref('all')
+const categoryFilter = ref('all')
+const genderFilter = ref('all')
+const demoMode = import.meta.env.VITE_DEMO_MODE === 'true'
 const selectedIds = ref<string[]>([])
 const error = ref('')
 const page = ref(1)

@@ -53,10 +53,23 @@ function outside(event: PointerEvent) {
   emit('close')
 }
 function scrollOrResize(event: Event) {
-  // Table scroll changes the header's coordinates. Close instead of displaying
-  // a detached floating menu; scrolling inside the list must continue to work.
+  // Scrolling inside the options must keep the popover open.
   if (event.type === 'scroll' && panel.value?.contains(event.target as Node)) return
-  if (event.type === 'scroll') { emit('close'); return }
+
+  if (event.type === 'scroll') {
+    // On tablet/mobile the table horizontally scrolls the clicked header into
+    // view. That scroll belongs to the same table as the active trigger, so
+    // reposition the floating panel instead of immediately closing it.
+    const target = event.target
+    const tableScroll = props.anchor?.closest('.table-scroll')
+    if (target instanceof Element && tableScroll === target) {
+      position()
+      return
+    }
+    emit('close')
+    return
+  }
+
   position()
 }
 onMounted(async () => {

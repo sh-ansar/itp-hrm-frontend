@@ -518,9 +518,7 @@ onMounted(loadCompanies)
                 </RouterLink>
                 <span>{{ row.personnel_number }} · {{ row.department }}</span>
               </div>
-              <ProductionCalendarEditor :open="calendarEditorOpen" :company-id="company" :month="month"
-    :days="productionCalendar" @close="calendarEditorOpen = false" @saved="calendarUpdated" @refresh="calendarUpdated" />
-</template>
+            </template>
             <template #cell-planned_hours="{ value }">{{ hoursLabel(value) }}<template v-if="typeof value === 'number'"> ч</template></template>
             <template #cell-worked_hours="{ value }">{{ hoursLabel(value) }}<template v-if="typeof value === 'number'"> ч</template></template>
             <template #cell-absence_hours="{ value }">{{ hoursLabel(value) }}<template v-if="typeof value === 'number'"> ч</template></template>
@@ -668,6 +666,8 @@ onMounted(loadCompanies)
       </BaseCard>
     </template>
   </section>
+  <ProductionCalendarEditor :open="calendarEditorOpen" :company-id="company" :month="month"
+    :days="productionCalendar" @close="calendarEditorOpen = false" @saved="calendarUpdated" @refresh="calendarUpdated" />
 </template>
 
 <style scoped>

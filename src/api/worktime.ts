@@ -88,6 +88,7 @@ export interface ProductionCalendarResponse {
     expected_days: number
     calendar_complete: boolean
     worktime_writes_enabled: boolean
+    can_edit_calendar?: boolean
   }
 }
 
@@ -163,4 +164,41 @@ export function getWorktimeAbsences(
   if (!Number.isSafeInteger(page) || page < 1) throw new Error('Некорректная страница')
   const params = new URLSearchParams({ month, page: String(page), per_page: '100' })
   return apiRequest<WorktimeAbsenceResponse>(`/companies/${companyId}/worktime/absences?${params.toString()}`)
+}
+
+
+/** Mutation payload matches Laravel UpsertCalendarDaysRequest. No implicit overwrite. */
+export type ProductionCalendarDayType = 'workday' | 'weekend' | 'holiday' | 'shortened'
+export interface CalendarDayChange {
+  date: string
+  day_type: ProductionCalendarDayType
+  planned_minutes: number | null
+  label: string | null
+  /** null = unrecorded day; integer = expected current revision. */
+  revision: number | null
+}
+export interface CalendarWriteResponse {
+  data: ProductionCalendarDay[]
+  meta: { month: string; created_count: number; updated_count: number }
+}
+
+export function putProductionCalendar(
+  companyId: string,
+  month: string,
+  days: CalendarDayChange[],
+): Promise<CalendarWriteResponse> {
+  assertCompany(companyId)
+  assertMonth(month)
+  if (!days.length || days.length > 31) throw new Error('Expected 1–31 calendar dates')
+  if (new Set(days.map(day => day.date)).size !== days.length) {
+    throw new Error('Duplicate calendar dates')
+  }
+  for (const day of days) {
+    assertDate(day.date)
+    if (!day.date.startsWith(month + '-')) throw new Error('Date is outside the selected month')
+  }
+  return apiRequest<CalendarWriteResponse>('/companies/' + companyId + '/worktime/calendar', {
+    method: 'PUT',
+    body: JSON.stringify({ month, days }),
+  })
 }

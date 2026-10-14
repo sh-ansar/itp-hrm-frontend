@@ -2,6 +2,8 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { CalendarDays, Clock3, TriangleAlert, UsersRound } from 'lucide-vue-next'
 import BaseCard from '../components/ui/BaseCard.vue'
+import BaseButton from '../components/ui/BaseButton.vue'
+import ProductionCalendarEditor from '../components/ProductionCalendarEditor.vue'
 import BaseDataTable from '../components/ui/BaseDataTable.vue'
 import BaseStatusPill from '../components/ui/BaseStatusPill.vue'
 import BaseFormField from '../components/ui/BaseFormField.vue'
@@ -17,6 +19,7 @@ import {
   getWorktimeAbsences,
   getWorktimeTimesheet,
   type ProductionCalendarDay,
+  type ProductionCalendarResponse,
   type WorkScheduleRow,
   type WorktimeAbsenceRow,
   type WorktimeTimesheetResponse,
@@ -91,7 +94,8 @@ const productionSchedules = ref<WorkScheduleRow[]>([])
 const productionCalendar = ref<ProductionCalendarDay[]>([])
 const productionAbsences = ref<WorktimeAbsenceRow[]>([])
 const productionTimesheetMeta = ref<WorktimeTimesheetResponse['meta'] | null>(null)
-const productionCalendarMeta = ref<{ recorded_days: number; expected_days: number; calendar_complete: boolean } | null>(null)
+const productionCalendarMeta = ref<ProductionCalendarResponse['meta'] | null>(null)
+const calendarEditorOpen = ref(false)
 const loadingCompanies = ref(false)
 const loading = ref(false)
 const error = ref('')
@@ -425,7 +429,14 @@ async function loadWorkspace() {
   }
 }
 
-watch([company, month], loadWorkspace)
+function calendarUpdated() {
+  calendarEditorOpen.value = false
+  void loadWorkspace()
+}
+watch([company, month], () => {
+  calendarEditorOpen.value = false
+  void loadWorkspace()
+})
 onMounted(loadCompanies)
 </script>
 
@@ -507,7 +518,9 @@ onMounted(loadCompanies)
                 </RouterLink>
                 <span>{{ row.personnel_number }} · {{ row.department }}</span>
               </div>
-            </template>
+              <ProductionCalendarEditor :open="calendarEditorOpen" :company-id="company" :month="month"
+    :days="productionCalendar" @close="calendarEditorOpen = false" @saved="calendarUpdated" @refresh="calendarUpdated" />
+</template>
             <template #cell-planned_hours="{ value }">{{ hoursLabel(value) }}<template v-if="typeof value === 'number'"> ч</template></template>
             <template #cell-worked_hours="{ value }">{{ hoursLabel(value) }}<template v-if="typeof value === 'number'"> ч</template></template>
             <template #cell-absence_hours="{ value }">{{ hoursLabel(value) }}<template v-if="typeof value === 'number'"> ч</template></template>
@@ -577,6 +590,7 @@ onMounted(loadCompanies)
             <h2>Производственный календарь</h2>
             <p>{{ monthLabel }} · рабочие и выходные дни периода.</p>
           </div>
+          <BaseButton v-if="!demoMode && productionCalendarMeta?.can_edit_calendar" variant="secondary" :disabled="loading" @click="calendarEditorOpen = true">Редактировать календарь</BaseButton>
           <span>
             {{ workdayCount }} рабочих · {{ weekendCount }} выходных
             <template v-if="missingCalendarCount"> · {{ missingCalendarCount }} без данных</template>

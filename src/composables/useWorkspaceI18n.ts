@@ -669,6 +669,10 @@ const workspaceCopy: Record<string, { kk: string; en: string }> = {
   "Без типа": { kk: "Түрі жоқ", en: "No type" },
   "по папкам": { kk: "бумалар бойынша", en: "by folder" },
   "по типу": { kk: "түрі бойынша", en: "by type" },
+  "Выбрано на странице:": { kk: "Бетте таңдалған:", en: "Selected on page:" },
+  "Схема слишком велика: показаны первые": { kk: "Сызба тым үлкен: алғашқы", en: "Diagram too large: showing the first" },
+  "подразделений из доступных": { kk: "қолжетімді бөлімшелердің ішінен", en: "departments out of" },
+  "записей": { kk: "жазба", en: "records" },
 }
 
 export function useWorkspaceI18n() {

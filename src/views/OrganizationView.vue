@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { useWorkspaceI18n } from '../composables/useWorkspaceI18n'
+import { useUiFormatters } from '../composables/useUiFormatters'
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { Minus, Pencil, Plus, Trash2, Search, UserPlus } from 'lucide-vue-next'
@@ -34,6 +35,7 @@ import {
 } from '../api/organization'
 
 const { tr } = useWorkspaceI18n()
+const fmt = useUiFormatters()
 
 const router = useRouter()
 const companies = ref<CompanyRecord[]>([])
@@ -376,7 +378,7 @@ onMounted(loadCompanies)
           icon="/prototype-icons/Link-External.svg" to="/staffing?view=vacant" />
       </BaseKpiGrid>
       <div class="section-title">
-        <h1>{{ tr('Организационная структура') }}<span class="structure-total">({{ total }})</span></h1>
+        <h1>{{ tr('Организационная структура') }}<span class="structure-total">({{ fmt.number(total, 0) }})</span></h1>
         <div class="org-heading-actions">
           <BaseSelectField v-model="selectedCompany" :label="tr('Компания')" :options="companies" />
           <BaseButton v-if="filteredHierarchyRows.length" variant="secondary" @click="exportDepartments">{{ tr('Экспорт CSV') }}</BaseButton>
@@ -405,7 +407,7 @@ onMounted(loadCompanies)
         {{ tr('Показана текущая страница. Невидимые подразделения и родительские связи не раскрываются.') }}</BaseNotice>
       <BaseNotice v-if="viewMode === 'diagram' && diagramError" tone="error">{{ diagramError }}</BaseNotice>
       <BaseNotice v-if="viewMode === 'diagram' && diagramPartial" tone="warning">
-        Схема слишком велика: показаны первые {{ diagramDepartments.length }} подразделений из доступных {{ total }}.
+        {{ tr('Схема слишком велика: показаны первые') }} {{ fmt.number(diagramDepartments.length, 0) }} {{ tr('подразделений из доступных') }} {{ fmt.number(total, 0) }}.
       </BaseNotice>
 
       <div v-if="viewMode === 'diagram'" class="structure-diagram" role="region" tabindex="0" :aria-label="tr('Схема подразделений компании')">

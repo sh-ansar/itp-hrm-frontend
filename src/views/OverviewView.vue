@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import BaseDataTable from '../components/ui/BaseDataTable.vue'
 import BaseTableBulkActions from '../components/ui/BaseTableBulkActions.vue'
 import BaseNotice from '../components/ui/BaseNotice.vue'
@@ -22,6 +22,7 @@ import { downloadCsv } from '../utils/exportCsv'
 type EmployeeRow = EmployeeRecord & { full_name:string; gender_label:string; status_label:string }
 type ActionRow = PersonnelActionRow & { full_name:string; action_label:string }
 const router = useRouter()
+const route = useRoute()
 const companyId=ref('')
 const companyName=ref('')
 const loading=ref(true)
@@ -61,10 +62,13 @@ const onboardingEmployeeName=computed(()=> {
   const employee=onboardingEmployee.value
   return employee?[employee.last_name,employee.first_name,employee.middle_name].filter(Boolean).join(' '):''
 })
-const showOnboarding=computed(()=>demoMode&&!onboardingCompleted.value)
+const showOnboarding=computed(()=>demoMode&&route.query.onboarding==='1')
 function completeOnboarding(){
   onboardingCompleted.value=true
   try{window.localStorage.setItem(ONBOARDING_KEY,'true')}catch{/* Demo can continue without storage. */}
+  const nextQuery={...route.query}
+  delete nextQuery.onboarding
+  void router.replace({name:'overview',query:nextQuery})
 }
 const employeeRows=computed<EmployeeRow[]>(()=>employees.value.slice(0,6).map(e=>({
   ...e,

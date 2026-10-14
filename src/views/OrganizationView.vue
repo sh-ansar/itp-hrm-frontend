@@ -480,9 +480,6 @@ onMounted(loadCompanies)
 .row-actions{display:flex;align-items:center;gap:6px;flex-wrap:nowrap;min-width:max-content}
 .row-actions :deep(.base-button){width:32px;min-width:32px;height:32px;min-height:32px;color:var(--color-muted)}
 .row-actions :deep(.base-button:hover){color:var(--color-primary)}
-.org-desktop-table :deep(.table-scroll){border-radius:7px}
-.org-desktop-table :deep(.table-scroll th){padding:11px 12px;font-size:12px}
-.org-desktop-table :deep(.table-scroll td){padding:10px 12px;font-size:13px}
 .delete-copy{display:grid;gap:var(--space-4)}
 .delete-copy p{margin:0}
 .delete-actions{display:flex;justify-content:flex-end;gap:var(--space-2)}

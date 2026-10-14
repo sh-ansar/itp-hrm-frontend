@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
-import { Minus, Pencil, Plus, Trash2, Search } from 'lucide-vue-next'
+import { useRouter } from 'vue-router'
+import { Minus, Pencil, Plus, Trash2, Search, UserPlus } from 'lucide-vue-next'
 import BaseDataTable from '../components/ui/BaseDataTable.vue'
 import BaseLoadingState from '../components/ui/BaseLoadingState.vue'
 import BaseNotice from '../components/ui/BaseNotice.vue'
@@ -14,6 +15,7 @@ import BaseRegistryMetricCard from '../components/ui/BaseRegistryMetricCard.vue'
 import BaseViewTabs from '../components/ui/BaseViewTabs.vue'
 import BaseColumnPicker from '../components/ui/BaseColumnPicker.vue'
 import DepartmentTreeNode from '../components/DepartmentTreeNode.vue'
+import EmployeeRecordForm from '../components/EmployeeRecordForm.vue'
 import { listEmployees, type EmployeeRecord } from '../api/personnel'
 import { getStaffingPlan, listStaffingPlans } from '../api/staffing'
 import { downloadCsv } from '../utils/exportCsv'
@@ -30,12 +32,15 @@ import {
   type DepartmentRecord,
 } from '../api/organization'
 
+const router = useRouter()
 const companies = ref<CompanyRecord[]>([])
 const departments = ref<DepartmentRecord[]>([])
 const selectedCompany = ref('')
 const loadingCompanies = ref(false)
 const loadingDepartments = ref(false)
 const departmentWritesEnabled = ref(false)
+const employeeWritesEnabled = ref(false)
+const addEmployeeOpen = ref(false)
 const error = ref('')
 const total = ref(0)
 const page = ref(1)
@@ -192,6 +197,7 @@ async function loadOrgMetrics() {
   const current = ++orgMetricGeneration
   const companyId = selectedCompany.value
   orgMetrics.value = { employees: null, planned: null, occupied: null, vacant: null }
+  employeeWritesEnabled.value = false
   if (!companyId) return
 
   const [peopleResult, plansResult] = await Promise.allSettled([
@@ -200,8 +206,10 @@ async function loadOrgMetrics() {
   ])
   if (current !== orgMetricGeneration || companyId !== selectedCompany.value) return
 
-  if (peopleResult.status === 'fulfilled')
+  if (peopleResult.status === 'fulfilled') {
     orgMetrics.value.employees = peopleResult.value.meta.total
+    employeeWritesEnabled.value = peopleResult.value.meta.employee_writes_enabled
+  }
 
   if (plansResult.status !== 'fulfilled') return
   const approved = preferredApprovedStaffingPlan(plansResult.value.data)
@@ -308,6 +316,12 @@ async function departmentSaved() {
   await Promise.all([loadDepartments(), loadDiagram()])
 }
 
+async function employeeCreated(employee: EmployeeRecord) {
+  addEmployeeOpen.value = false
+  await Promise.all([loadOrgMetrics(), loadDiagram()])
+  await router.push({ name: 'employee-detail', params: { company: selectedCompany.value, employee: employee.id } })
+}
+
 async function confirmDelete() {
   if (!deleteCandidate.value || !selectedCompany.value) return
   deleting.value = true
@@ -363,6 +377,9 @@ onMounted(loadCompanies)
         <div class="org-heading-actions">
           <BaseSelectField v-model="selectedCompany" label="Компания" :options="companies" />
           <BaseButton v-if="filteredHierarchyRows.length" variant="secondary" @click="exportDepartments">Экспорт CSV</BaseButton>
+          <BaseButton v-if="employeeWritesEnabled" variant="secondary" @click="addEmployeeOpen = true">
+            <UserPlus :size="17" /> Добавить сотрудника
+          </BaseButton>
           <BaseButton v-if="departmentWritesEnabled" @click="createDepartmentRecord">
             <Plus :size="17" /> Добавить подразделение
           </BaseButton>
@@ -471,6 +488,13 @@ onMounted(loadCompanies)
         @saved="departmentSaved"
         @cancelled="editorOpen = false"
       />
+    </BaseDrawer>
+
+    <BaseDrawer :open="addEmployeeOpen" title="Добавить сотрудника"
+      description="Создание новой карточки сотрудника в выбранной компании"
+      @close="addEmployeeOpen = false">
+      <EmployeeRecordForm v-if="selectedCompany" :company-id="selectedCompany"
+        @saved="employeeCreated" @cancelled="addEmployeeOpen = false" />
     </BaseDrawer>
 
     <BaseDialog :open="!!deleteCandidate" title="Удалить подразделение" @close="deleteCandidate = null">

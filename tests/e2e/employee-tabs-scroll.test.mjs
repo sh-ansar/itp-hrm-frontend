@@ -29,7 +29,7 @@ test('employee profile sections scroll horizontally only and remain operable at 
       await page.setViewportSize({ width, height: 900 })
       await laborTab.click()
       assert.equal(await laborTab.getAttribute('aria-current'), 'page')
-      await page.getByText('Трудовой договор и приём').waitFor()
+      await page.getByText('Договор и приём').waitFor()
 
       const dimensions = await page.locator('.employee-profile .view-tabs').evaluate(el => ({
         overflowX: getComputedStyle(el).overflowX,

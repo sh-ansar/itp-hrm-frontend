@@ -45,7 +45,7 @@ function displayDate(value: unknown): string {
 
     <template v-for="group in groupedRows" :key="group.label || 'all'">
       <div v-if="grouped && group.label" class="employee-mobile-group">
-        <strong>{{ group.label }}</strong><span>{{ group.rows.length }}</span>
+        <strong>{{ group.label }}</strong><span>{{ fmt.number(group.rows.length, 0) }}</span>
       </div>
       <article v-for="row in group.rows" :key="row.id" class="employee-mobile-card">
       <header>

@@ -72,7 +72,7 @@ function closeMobile() { if (props.mobileOpen) emit('update:mobileOpen', false) 
 <style scoped>
 .hrm-sidebar{min-width:0;height:100vh;height:100dvh}
 .sidebar-head{
-  min-height:70px;flex:0 0 70px;display:flex;align-items:center;
+  min-height:64px;flex:0 0 64px;display:flex;align-items:center;
   justify-content:space-between;gap:10px;padding:0 14px 0 17px;
   border-bottom:1px solid var(--color-stroke);
 }

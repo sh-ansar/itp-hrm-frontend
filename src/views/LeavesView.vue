@@ -2,6 +2,9 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { CalendarDays, Clock3, TriangleAlert, UsersRound } from 'lucide-vue-next'
 import BaseCard from '../components/ui/BaseCard.vue'
+import BaseButton from '../components/ui/BaseButton.vue'
+import LeaveManagementPanel from '../components/LeaveManagementPanel.vue'
+import { useLeaveWorkflowI18n } from '../i18n/leaveWorkflow'
 import BaseDataTable from '../components/ui/BaseDataTable.vue'
 import BaseStatusPill from '../components/ui/BaseStatusPill.vue'
 import BaseLoadingState from '../components/ui/BaseLoadingState.vue'
@@ -24,6 +27,8 @@ import {
 type LeaveTab = 'schedule' | 'months' | 'types'
 
 const demoMode = import.meta.env.VITE_DEMO_MODE === 'true'
+const { t: leaveT } = useLeaveWorkflowI18n()
+const managementOpen = ref(false)
 const companies = ref<CompanyRecord[]>([])
 const company = ref('')
 const year = ref(localTodayISO().slice(0, 4))
@@ -48,6 +53,7 @@ const yearOptions = Array.from({ length: 5 }, (_, index) => {
 })
 
 const selectedCompany = computed(() => companies.value.find(item => item.id === company.value) ?? null)
+const canManageLeaves = computed(() => !demoMode && !!productionMeta.value?.can_manage_leave_requests)
 const rows = computed<DemoLeaveRow[]>(() => {
   if (demoMode) return buildDemoLeaves(employees.value, Number(year.value))
   return productionLeaves.value.map(row => ({
@@ -199,7 +205,10 @@ async function loadWorkspace() {
   }
 }
 
-watch(company, loadWorkspace)
+watch(company, () => {
+  managementOpen.value = false
+  void loadWorkspace()
+})
 watch(year, () => {
   if (!demoMode) loadWorkspace()
 })
@@ -226,6 +235,7 @@ onMounted(loadCompanies)
         <div class="leaves-controls">
           <BaseSelectField v-model="company" label="Компания" :options="companies" />
           <BaseSelectField v-model="year" label="Год" :options="yearOptions" />
+          <BaseButton v-if="canManageLeaves" variant="secondary" @click="managementOpen = !managementOpen">{{ leaveT('title') }}</BaseButton>
         </div>
       </div>
 
@@ -235,6 +245,7 @@ onMounted(loadCompanies)
 
       <BaseViewTabs :model-value="activeTab" :options="tabs" label="Разделы графика отпусков"
         @update:model-value="setTab" />
+      <LeaveManagementPanel v-if="canManageLeaves && managementOpen" :company-id="company" @published="loadWorkspace" />
 
       <div class="leaves-summary" aria-label="Сводка графика отпусков">
         <BaseCard class="summary-card">

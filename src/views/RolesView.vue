@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { Plus, Search, ShieldCheck } from 'lucide-vue-next'
+import { ChevronDown, Maximize2, Minimize2, Plus, Search, ShieldCheck } from 'lucide-vue-next'
 import BaseActionDropdown from '../components/ui/BaseActionDropdown.vue'
 import BaseButton from '../components/ui/BaseButton.vue'
 import BaseCard from '../components/ui/BaseCard.vue'
@@ -32,12 +32,17 @@ type UserRecord = {
   status: 'active' | 'inactive'
   role_ids: string[]
 }
+type PermissionScope = 'all' | 'company' | 'department'
 type PermissionRow = {
   module: string
   view: boolean
+  view_scope: PermissionScope
   create: boolean
+  create_scope: PermissionScope
   edit: boolean
+  edit_scope: PermissionScope
   approve: boolean
+  approve_scope: PermissionScope
 }
 type LogRow = {
   id: string
@@ -62,9 +67,12 @@ const assignmentOpen = ref(false)
 const roleEditorOpen = ref(false)
 const roleToAssign = ref('hr-specialist')
 const selectedUserIds = ref<string[]>([])
-const selectedRoleForMatrix = ref('hr-specialist')
 const roleNameDraft = ref('')
 const roleCodeDraft = ref('')
+const matrixSearch = ref('')
+const expandedRoleIds = ref<string[]>(['company-admin'])
+const roleEnabled = ref<Record<string, boolean>>({})
+const permissionFullscreen = ref(false)
 
 const tabs = [
   { id: 'assignments', label: 'Назначение ролей' },
@@ -114,9 +122,13 @@ const defaultPermissions: Record<string, PermissionRow[]> = Object.fromEntries(
     moduleNames.map((module, index) => ({
       module,
       view: true,
+      view_scope: 'all' as PermissionScope,
       create: role.id === 'company-admin' || role.id === 'hr-specialist' || (role.id === 'staffing-editor' && index === 1),
+      create_scope: role.id === 'department-manager' ? 'department' as PermissionScope : 'all' as PermissionScope,
       edit: role.id === 'company-admin' || role.id === 'hr-specialist' || (role.id === 'staffing-editor' && index === 1),
+      edit_scope: role.id === 'department-manager' ? 'department' as PermissionScope : 'all' as PermissionScope,
       approve: role.canApprove && [2, 5].includes(index),
+      approve_scope: role.id === 'department-manager' ? 'department' as PermissionScope : 'all' as PermissionScope,
     })),
   ]),
 )
@@ -140,8 +152,16 @@ const statusOptions = [
   { id: 'active', name: 'Активный' },
   { id: 'inactive', name: 'Неактивный' },
 ]
-const matrixRoleOptions = computed(() => roles.value.map(role => ({ id: role.id, name: role.name })))
-const matrixRows = computed(() => permissions.value[selectedRoleForMatrix.value] ?? [])
+const permissionScopeOptions: Array<{ id: PermissionScope; name: string }> = [
+  { id: 'all', name: 'Все' },
+  { id: 'company', name: 'Компания' },
+  { id: 'department', name: 'Подразделение' },
+]
+const filteredPermissionRoles = computed(() => {
+  const q = matrixSearch.value.trim().toLowerCase()
+  return !q ? roles.value : roles.value.filter(role =>
+    [role.name, role.code, role.description].join(' ').toLowerCase().includes(q))
+})
 
 const assignmentRows = computed(() => users.value.filter(user => {
   const q = search.value.trim().toLowerCase()
@@ -173,10 +193,14 @@ const assignmentColumns = [
 ]
 const matrixColumns = [
   { key: 'module', label: 'Объект' },
-  { key: 'view', label: 'Просмотр' },
-  { key: 'create', label: 'Создание' },
-  { key: 'edit', label: 'Редактирование' },
-  { key: 'approve', label: 'Согласование' },
+  { key: 'view', label: 'Просмотр · Право' },
+  { key: 'view_scope', label: 'Просмотр · Область' },
+  { key: 'create', label: 'Создание · Право' },
+  { key: 'create_scope', label: 'Создание · Область' },
+  { key: 'edit', label: 'Редактирование · Право' },
+  { key: 'edit_scope', label: 'Редактирование · Область' },
+  { key: 'approve', label: 'Согласование · Право' },
+  { key: 'approve_scope', label: 'Согласование · Область' },
 ]
 const logColumns = [
   { key: 'created_at', label: 'Дата и время' },
@@ -244,6 +268,23 @@ function userActions(row: UserRecord) {
       .map(roleId => ({ id: 'revoke:' + roleId, label: 'Отозвать: ' + (roles.value.find(role => role.id === roleId)?.name ?? roleId) })),
   ]
 }
+function toggleRoleMatrix(id: string) {
+  expandedRoleIds.value = expandedRoleIds.value.includes(id)
+    ? expandedRoleIds.value.filter(item => item !== id)
+    : [...expandedRoleIds.value, id]
+}
+function isRoleExpanded(id: string) {
+  return expandedRoleIds.value.includes(id)
+}
+function setRoleEnabled(id: string, enabled: boolean) {
+  if (!demoMode) return
+  roleEnabled.value = { ...roleEnabled.value, [id]: enabled }
+}
+function setPermissionScope(row: PermissionRow, key: 'view_scope' | 'create_scope' | 'edit_scope' | 'approve_scope', value: string) {
+  if (!demoMode || !['all','company','department'].includes(value)) return
+  row[key] = value as PermissionScope
+}
+
 function setPermission(row: PermissionRow, key: 'view' | 'create' | 'edit' | 'approve', checked: boolean) {
   if (!demoMode) return
   row[key] = checked
@@ -267,8 +308,15 @@ function saveRole() {
   }
   const id = 'custom-' + code
   roles.value.push({ id, name, code, description: 'Настраиваемая роль', builtIn: false, canApprove: false })
-  permissions.value[id] = moduleNames.map(module => ({ module, view: true, create: false, edit: false, approve: false }))
-  selectedRoleForMatrix.value = id
+  permissions.value[id] = moduleNames.map(module => ({
+    module,
+    view: true, view_scope: 'all',
+    create: false, create_scope: 'all',
+    edit: false, edit_scope: 'all',
+    approve: false, approve_scope: 'all',
+  }))
+  roleEnabled.value = { ...roleEnabled.value, [id]: true }
+  expandedRoleIds.value = [id]
   roleEditorOpen.value = false
   error.value = ''
   success.value = 'Роль создана. Настройте права в матрице.'
@@ -279,6 +327,7 @@ async function load() {
   try {
     const response = await listCompanies()
     companies.value = response.data
+    roleEnabled.value = Object.fromEntries(roles.value.map(role => [role.id, roleEnabled.value[role.id] ?? true]))
     if (!companies.value.some(item => item.id === company.value)) company.value = response.data[0]?.id ?? ''
   } catch (cause) {
     error.value = cause instanceof Error ? cause.message : 'Не удалось загрузить компании'
@@ -361,48 +410,96 @@ onMounted(load)
       </BaseDataTable>
     </BaseCard>
 
-    <BaseCard v-else-if="activeTab === 'permissions'" class="roles-card">
+    <section v-else-if="activeTab === 'permissions'" class="roles-permissions-workspace"
+      :class="{ 'is-fullscreen': permissionFullscreen }">
       <div class="roles-heading">
         <div>
-          <h1>Создание роли и её прав</h1>
-          <p>Матрица доступа по разделам системы</p>
+          <h1>Создание роли и её права</h1>
+          <p>Права и область доступа по каждому разделу системы</p>
         </div>
         <div class="roles-heading-actions">
-          <BaseSelectField v-model="selectedRoleForMatrix" label="Роль" :options="matrixRoleOptions" />
+          <label class="matrix-search">
+            <Search :size="16" aria-hidden="true" />
+            <input v-model="matrixSearch" type="search" aria-label="Фильтр ролей" placeholder="Фильтр / Поиск" />
+          </label>
           <BaseButton :disabled="!demoMode" @click="openRoleEditor"><Plus :size="16" /> Добавить роль</BaseButton>
+          <BaseButton icon-only variant="secondary"
+            :aria-label="permissionFullscreen ? 'Выйти из полноэкранного режима' : 'На весь экран'"
+            @click="permissionFullscreen = !permissionFullscreen">
+            <Minimize2 v-if="permissionFullscreen" :size="17" />
+            <Maximize2 v-else :size="17" />
+          </BaseButton>
         </div>
       </div>
 
-      <div class="role-summary">
-        <ShieldCheck :size="22" aria-hidden="true" />
-        <div>
-          <strong>{{ roles.find(role => role.id === selectedRoleForMatrix)?.name }}</strong>
-          <span>{{ roles.find(role => role.id === selectedRoleForMatrix)?.description }}</span>
-        </div>
-      </div>
+      <BaseNotice v-if="!filteredPermissionRoles.length" tone="info">Роли по запросу не найдены.</BaseNotice>
 
-      <BaseDataTable :rows="matrixRows" :columns="matrixColumns" row-key="module"
-        caption="Матрица прав роли"
-        empty-title="Права роли не настроены">
-        <template #cell-view="{ row }">
-          <input type="checkbox" :checked="row.view" :disabled="!demoMode" aria-label="Просмотр"
-            @change="setPermission(row,'view',($event.target as HTMLInputElement).checked)" />
-        </template>
-        <template #cell-create="{ row }">
-          <input type="checkbox" :checked="row.create" :disabled="!demoMode" aria-label="Создание"
-            @change="setPermission(row,'create',($event.target as HTMLInputElement).checked)" />
-        </template>
-        <template #cell-edit="{ row }">
-          <input type="checkbox" :checked="row.edit" :disabled="!demoMode" aria-label="Редактирование"
-            @change="setPermission(row,'edit',($event.target as HTMLInputElement).checked)" />
-        </template>
-        <template #cell-approve="{ row }">
-          <input type="checkbox" :checked="row.approve" :disabled="!demoMode" aria-label="Согласование"
-            @change="setPermission(row,'approve',($event.target as HTMLInputElement).checked)" />
-        </template>
-      </BaseDataTable>
-      <div class="roles-save-row"><BaseButton :disabled="!demoMode" @click="success='Матрица прав сохранена.'">Сохранить изменения</BaseButton></div>
-    </BaseCard>
+      <BaseCard v-for="role in filteredPermissionRoles" :key="role.id" class="permission-role">
+        <div class="permission-role-header">
+          <BaseButton variant="secondary" class="role-accordion-trigger"
+            :aria-expanded="isRoleExpanded(role.id)" @click="toggleRoleMatrix(role.id)">
+            <ChevronDown :size="16" :class="{ closed: !isRoleExpanded(role.id) }" />
+            <span><strong>{{ role.name }}</strong><small>{{ role.description }}</small></span>
+          </BaseButton>
+          <label class="role-enabled-toggle">
+            <span>{{ roleEnabled[role.id] === false ? 'Отключена' : 'Активна' }}</span>
+            <input type="checkbox" :checked="roleEnabled[role.id] !== false" :disabled="!demoMode"
+              :aria-label="'Активность роли '+role.name"
+              @change="setRoleEnabled(role.id,($event.target as HTMLInputElement).checked)" />
+          </label>
+        </div>
+
+        <div v-if="isRoleExpanded(role.id)" class="permission-matrix-scroll">
+          <BaseDataTable :rows="permissions[role.id] ?? []" :columns="matrixColumns" row-key="module"
+            :caption="'Матрица прав роли '+role.name" empty-title="Права роли не настроены">
+            <template #cell-view="{ row }">
+              <input type="checkbox" :checked="row.view" :disabled="!demoMode" aria-label="Просмотр"
+                @change="setPermission(row,'view',($event.target as HTMLInputElement).checked)" />
+            </template>
+            <template #cell-view_scope="{ row }">
+              <select :value="row.view_scope" :disabled="!demoMode || !row.view" aria-label="Область просмотра"
+                @change="setPermissionScope(row,'view_scope',($event.target as HTMLSelectElement).value)">
+                <option v-for="option in permissionScopeOptions" :key="option.id" :value="option.id">{{ option.name }}</option>
+              </select>
+            </template>
+            <template #cell-create="{ row }">
+              <input type="checkbox" :checked="row.create" :disabled="!demoMode" aria-label="Создание"
+                @change="setPermission(row,'create',($event.target as HTMLInputElement).checked)" />
+            </template>
+            <template #cell-create_scope="{ row }">
+              <select :value="row.create_scope" :disabled="!demoMode || !row.create" aria-label="Область создания"
+                @change="setPermissionScope(row,'create_scope',($event.target as HTMLSelectElement).value)">
+                <option v-for="option in permissionScopeOptions" :key="option.id" :value="option.id">{{ option.name }}</option>
+              </select>
+            </template>
+            <template #cell-edit="{ row }">
+              <input type="checkbox" :checked="row.edit" :disabled="!demoMode" aria-label="Редактирование"
+                @change="setPermission(row,'edit',($event.target as HTMLInputElement).checked)" />
+            </template>
+            <template #cell-edit_scope="{ row }">
+              <select :value="row.edit_scope" :disabled="!demoMode || !row.edit" aria-label="Область редактирования"
+                @change="setPermissionScope(row,'edit_scope',($event.target as HTMLSelectElement).value)">
+                <option v-for="option in permissionScopeOptions" :key="option.id" :value="option.id">{{ option.name }}</option>
+              </select>
+            </template>
+            <template #cell-approve="{ row }">
+              <input type="checkbox" :checked="row.approve" :disabled="!demoMode" aria-label="Согласование"
+                @change="setPermission(row,'approve',($event.target as HTMLInputElement).checked)" />
+            </template>
+            <template #cell-approve_scope="{ row }">
+              <select :value="row.approve_scope" :disabled="!demoMode || !row.approve" aria-label="Область согласования"
+                @change="setPermissionScope(row,'approve_scope',($event.target as HTMLSelectElement).value)">
+                <option v-for="option in permissionScopeOptions" :key="option.id" :value="option.id">{{ option.name }}</option>
+              </select>
+            </template>
+          </BaseDataTable>
+        </div>
+      </BaseCard>
+
+      <div class="roles-save-row">
+        <BaseButton :disabled="!demoMode" @click="success='Матрица прав сохранена в demo-профиле.'">Сохранить изменения</BaseButton>
+      </div>
+    </section>
 
     <BaseCard v-else class="roles-card">
       <div class="roles-heading"><div><h1>Лог</h1><p>Изменения ролей и прав доступа</p></div></div>
@@ -474,10 +571,23 @@ onMounted(load)
   background:var(--color-accent-soft);color:var(--color-primary);font-size:11px;font-weight:800
 }
 .no-role{color:var(--color-danger);font-weight:600}
-.role-summary{display:flex;align-items:center;gap:11px;margin-bottom:14px;padding:12px 14px;border:1px solid var(--color-stroke);border-radius:8px;background:var(--color-soft)}
-.role-summary>div{display:grid;gap:2px}.role-summary strong{font-size:13px}.role-summary span{color:var(--color-muted);font-size:11px}
-.roles-card :deep(tbody input[type="checkbox"]){width:16px;height:16px;accent-color:var(--color-primary)}
-.roles-save-row{display:flex;justify-content:flex-end;margin-top:14px}
+.roles-permissions-workspace{display:grid;gap:10px;min-width:0}
+.roles-permissions-workspace.is-fullscreen{position:fixed;z-index:230;inset:0;overflow:auto;padding:20px;background:var(--color-page)}
+.permission-role{min-width:0;padding:0;overflow:hidden}
+.permission-role-header{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:7px 10px;background:var(--color-soft)}
+.role-accordion-trigger{flex:1;justify-content:flex-start!important;border:0!important;box-shadow:none!important;background:transparent!important;text-align:left}
+.role-accordion-trigger>span{display:grid;gap:2px;min-width:0}
+.role-accordion-trigger strong{font-size:13px}.role-accordion-trigger small{font-size:10px;color:var(--color-muted);font-weight:400}
+.role-accordion-trigger .closed{transform:rotate(-90deg)}
+.role-enabled-toggle{display:flex;align-items:center;gap:8px;font-size:10px;color:var(--color-muted);white-space:nowrap}
+.role-enabled-toggle input{width:32px;height:18px;accent-color:var(--color-primary)}
+.matrix-search{display:flex;align-items:center;gap:7px;min-height:36px;padding:0 10px;border:1px solid var(--color-stroke);border-radius:8px;background:var(--color-surface)}
+.matrix-search input{width:170px;min-width:0;border:0;outline:0;background:transparent;color:var(--color-text);font:inherit;font-size:11px}
+.permission-matrix-scroll{min-width:0;overflow-x:auto;overflow-y:hidden;padding:0 10px 10px}
+.permission-matrix-scroll :deep(table){min-width:1320px}
+.permission-matrix-scroll :deep(tbody input[type="checkbox"]){width:16px;height:16px;accent-color:var(--color-primary)}
+.permission-matrix-scroll :deep(tbody select){min-width:135px;height:32px;padding:0 26px 0 8px;border:1px solid var(--color-stroke);border-radius:6px;background:var(--color-surface-raised);color:var(--color-text);font:inherit;font-size:10px}
+.roles-save-row{display:flex;justify-content:flex-end;margin-top:4px}
 .drawer-form{display:grid;gap:20px}
 .user-picker{display:grid;gap:0;border:0;padding:0;margin:0}.user-picker legend{padding:0 0 9px;font-size:12px;font-weight:600}
 .user-picker label{display:grid;grid-template-columns:auto auto minmax(0,1fr);gap:9px;align-items:center;min-height:52px;border-bottom:1px solid var(--color-stroke);font-size:12px}
@@ -492,5 +602,9 @@ onMounted(load)
   .roles-heading-actions :deep(.base-select-field){width:100%}
   .roles-heading-actions :deep(.base-button){width:100%}
   .roles-save-row :deep(.base-button){width:100%}
+  .permission-role-header{align-items:flex-start;flex-direction:column}
+  .role-enabled-toggle{align-self:flex-end}
+  .matrix-search{width:100%}.matrix-search input{width:100%}
+  .roles-permissions-workspace.is-fullscreen{padding:12px}
 }
 </style>

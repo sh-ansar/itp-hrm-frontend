@@ -29,13 +29,13 @@ const fullName = ref(props.employeeName || '')
 const city = ref('Астана')
 const email = ref(props.employeeEmail || '')
 const phone = ref('')
-const department = ref(props.departmentName || 'Отдел не назначен')
-const position = ref(props.positionName || 'Должность не назначена')
+const department = ref(props.departmentName || '')
+const position = ref(props.positionName || '')
 
 watch(() => props.employeeName, value => { if (!fullName.value && value) fullName.value = value })
 watch(() => props.employeeEmail, value => { if (!email.value && value) email.value = value })
-watch(() => props.departmentName, value => { department.value = value || 'Отдел не назначен' })
-watch(() => props.positionName, value => { position.value = value || 'Должность не назначена' })
+watch(() => props.departmentName, value => { department.value = value || '' })
+watch(() => props.positionName, value => { position.value = value || '' })
 
 const access = ref({
   corporateMail: true,
@@ -63,6 +63,8 @@ type Copy = {
   phone: string
   department: string
   position: string
+  departmentFallback: string
+  positionFallback: string
   company: string
   personalHint: string
   standardAccess: string
@@ -98,6 +100,8 @@ const copy: Record<UiLocale, Copy> = {
     phone: 'Телефон',
     department: 'Подразделение',
     position: 'Должность',
+    departmentFallback: 'Отдел не назначен',
+    positionFallback: 'Должность не назначена',
     company: 'Компания',
     personalHint: 'Данные используются для рабочего профиля и кадровых процессов.',
     standardAccess: 'Стандартный доступ',
@@ -132,6 +136,8 @@ const copy: Record<UiLocale, Copy> = {
     phone: 'Телефон',
     department: 'Бөлімше',
     position: 'Лауазым',
+    departmentFallback: 'Бөлімше тағайындалмаған',
+    positionFallback: 'Лауазым тағайындалмаған',
     company: 'Компания',
     personalHint: 'Деректер жұмыс профилі мен кадрлық процестер үшін пайдаланылады.',
     standardAccess: 'Стандартты қолжетімділік',
@@ -166,6 +172,8 @@ const copy: Record<UiLocale, Copy> = {
     phone: 'Phone',
     department: 'Department',
     position: 'Position',
+    departmentFallback: 'Department not assigned',
+    positionFallback: 'Position not assigned',
     company: 'Company',
     personalHint: 'This information is used for the work profile and HR processes.',
     standardAccess: 'Standard access',
@@ -200,6 +208,8 @@ const copy: Record<UiLocale, Copy> = {
     phone: 'ტელეფონი',
     department: 'ქვედანაყოფი',
     position: 'თანამდებობა',
+    departmentFallback: 'ქვედანაყოფი არ არის მინიჭებული',
+    positionFallback: 'თანამდებობა არ არის მინიჭებული',
     company: 'კომპანია',
     personalHint: 'მონაცემები გამოიყენება სამუშაო პროფილისა და საკადრო პროცესებისთვის.',
     standardAccess: 'სტანდარტული წვდომა',
@@ -257,7 +267,7 @@ function finish() {
       <span class="onboarding-step-count">{{ t.step }} {{ step }} / 3</span>
     </div>
 
-    <ol class="onboarding-progress" aria-label="Onboarding progress">
+    <ol class="onboarding-progress"  :aria-label="t.step">
       <li v-for="(title,index) in titles" :key="title"
         :class="{ active: step === index + 1, done: step > index + 1 }">
         <span class="step-dot">
@@ -284,8 +294,8 @@ function finish() {
             <BaseField id="onboarding-email" v-model="email" :label="t.email" type="email" />
             <BaseField id="onboarding-phone" v-model="phone" :label="t.phone" />
             <div class="readonly-field"><span>{{ t.company }}</span><strong>{{ companyName }}</strong></div>
-            <div class="readonly-field"><span>{{ t.department }}</span><strong>{{ department }}</strong></div>
-            <div class="readonly-field"><span>{{ t.position }}</span><strong>{{ position }}</strong></div>
+            <div class="readonly-field"><span>{{ t.department }}</span><strong>{{ department || t.departmentFallback }}</strong></div>
+            <div class="readonly-field"><span>{{ t.position }}</span><strong>{{ position || t.positionFallback }}</strong></div>
           </div>
         </div>
       </template>

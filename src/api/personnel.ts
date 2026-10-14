@@ -80,6 +80,7 @@ export interface EmployeeReferenceProfile {
     address_floor?: string | null
     address_apartment?: string | null
     place_of_birth?: string | null
+    birth_certificate_attachment?: string | null
     emergency_contact_name?: string | null
     emergency_contact_phone?: string | null
   }

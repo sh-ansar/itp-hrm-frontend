@@ -674,6 +674,11 @@ const workspaceCopy: Record<string, { kk: string; en: string }> = {
   "Схема слишком велика: показаны первые": { kk: "Сызба тым үлкен: алғашқы", en: "Diagram too large: showing the first" },
   "подразделений из доступных": { kk: "қолжетімді бөлімшелердің ішінен", en: "departments out of" },
   "записей": { kk: "жазба", en: "records" },
+  "событий": { kk: "оқиға", en: "events" },
+  "занятость на": { kk: "жұмыспен қамтылу күні", en: "occupancy as of" },
+  "строк": { kk: "жол", en: "rows" },
+  "Показаны последние": { kk: "Соңғы", en: "Showing the latest" },
+  "изменений.": { kk: "өзгеріс көрсетілген.", en: "changes." },
 }
 
 export function useWorkspaceI18n() {

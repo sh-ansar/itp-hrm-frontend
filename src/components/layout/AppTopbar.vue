@@ -88,7 +88,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', handleShortcut))
       <label class="locale-control">
         <span class="sr-only">{{ t('settings.language') }}</span>
         <select :value="ui.locale" :aria-label="t('settings.language')" :title="localeOptions.find(option => option.id === ui.locale)?.name" @change="setLocale">
-          <option v-for="option in localeOptions" :key="option.id" :value="option.id">{{ option.id === 'ka' ? 'GE' : option.id.toUpperCase() }}</option>
+          <option v-for="option in localeOptions" :key="option.id" :value="option.id">{{ option.id === 'ka' ? 'GE' : option.id === 'kk' ? 'KZ' : option.id.toUpperCase() }}</option>
         </select>
       </label>
       <button class="theme-toggle topbar-icon" type="button"

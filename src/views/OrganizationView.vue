@@ -119,8 +119,8 @@ const hierarchyRows = computed(() => {
     ...item,
     depth: depthOf(item.id),
     parentLabel: !item.parent_id
-      ? 'Верхний уровень'
-      : (departmentNames.value.get(item.parent_id) ?? 'Родитель вне текущего списка'),
+      ? tr('Верхний уровень')
+      : (departmentNames.value.get(item.parent_id) ?? tr('Родитель вне текущего списка')),
   }))
   const byParent = new Map<string, typeof rows>()
   for (const row of rows) {
@@ -129,7 +129,7 @@ const hierarchyRows = computed(() => {
     siblings.push(row)
     byParent.set(parentKey, siblings)
   }
-  for (const siblings of byParent.values()) siblings.sort((a, b) => a.name.localeCompare(b.name, 'ru'))
+  for (const siblings of byParent.values()) siblings.sort((a, b) => a.name.localeCompare(b.name, fmt.localeTag()))
   const ordered: typeof rows = []
   const visited = new Set<string>()
   function walk(parentId: string) {
@@ -147,9 +147,9 @@ const hierarchyRows = computed(() => {
 })
 
 const filteredHierarchyRows = computed(() => {
-  const query = searchQuery.value.trim().toLocaleLowerCase('ru')
+  const query = searchQuery.value.trim().toLocaleLowerCase(fmt.localeTag())
   return !query ? hierarchyRows.value : hierarchyRows.value.filter(row =>
-    (row.name + ' ' + row.parentLabel).toLocaleLowerCase('ru').includes(query),
+    (row.name + ' ' + row.parentLabel).toLocaleLowerCase(fmt.localeTag()).includes(query),
   )
 })
 
@@ -427,7 +427,7 @@ onMounted(loadCompanies)
           <article v-for="row in filteredHierarchyRows" :key="row.id" class="org-mobile-item">
             <div class="org-mobile-item-head">
               <strong>{{ row.name }}</strong>
-              <span>Уровень {{ Number(row.depth) + 1 }}</span>
+              <span>{{ tr('Уровень') }} {{ fmt.number(Number(row.depth) + 1, 0) }}</span>
             </div>
             <p>{{ row.parentLabel }}</p>
             <div v-if="departmentWritesEnabled" class="org-mobile-actions">

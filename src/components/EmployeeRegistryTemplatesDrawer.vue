@@ -61,7 +61,10 @@ const name = ref('')
 const folder = ref('Без папки')
 const publicAccess = ref(false)
 const defaultTemplate = ref(false)
-const draft = ref<RegistryTemplateState>(structuredClone(props.current))
+function cloneState(state: RegistryTemplateState): RegistryTemplateState {
+  return JSON.parse(JSON.stringify(state)) as RegistryTemplateState
+}
+const draft = ref<RegistryTemplateState>(cloneState(props.current))
 
 const modeOptions = [
   { id: 'select', label: 'Выбрать шаблон' },
@@ -85,7 +88,7 @@ const selectedPreset = computed(() => presets.value.find(item => item.id === sel
 const allColumnsOn = computed(() => props.columns.every(column => draft.value.columns[column.key] !== false))
 
 function cloneCurrent() {
-  draft.value = structuredClone(props.current)
+  draft.value = cloneState(props.current)
 }
 function loadPresets() {
   presets.value = []
@@ -132,7 +135,7 @@ function save() {
     folder: folder.value || 'Без папки',
     publicAccess: publicAccess.value,
     defaultTemplate: defaultTemplate.value,
-    state: structuredClone(draft.value),
+    state: cloneState(draft.value),
   }
   presets.value = [preset, ...presets.value]
   persist()
@@ -142,7 +145,7 @@ function save() {
 }
 function applySelected() {
   if (!selectedPreset.value) return
-  emit('apply', structuredClone(selectedPreset.value.state))
+  emit('apply', cloneState(selectedPreset.value.state))
   emit('notice', 'Шаблон «' + selectedPreset.value.name + '» применён')
   emit('close')
 }

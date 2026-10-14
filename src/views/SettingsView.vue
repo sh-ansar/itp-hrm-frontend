@@ -81,7 +81,7 @@ const startScreenOptions = computed(() => [
   { id: '/', name: t('nav.home') },
   { id: '/employees', name: t('nav.employees') },
   { id: '/organization', name: t('nav.organization') },
-  { id: '/staffing', name: t('nav.organization') + ' — ' + (ui.locale === 'en' ? 'Staffing' : ui.locale === 'kk' ? 'Штат кестесі' : 'Штатное расписание') },
+  { id: '/staffing', name: t('nav.organization') + ' — ' + (ui.locale === 'en' ? 'Staffing' : ui.locale === 'kk' ? 'Штат кестесі' : ui.locale === 'ka' ? 'საშტატო განრიგი' : 'Штатное расписание') },
 ])
 const timeZoneOptions = [
   { id: 'Asia/Almaty', name: 'Asia/Almaty (UTC+5)' },
@@ -140,6 +140,7 @@ const role = computed(() => {
     ru: { company_admin: 'Администратор компании', hr_specialist: 'HR-специалист', department_manager: 'Руководитель подразделения' },
     kk: { company_admin: 'Компания әкімшісі', hr_specialist: 'HR-маман', department_manager: 'Бөлімше басшысы' },
     en: { company_admin: 'Company administrator', hr_specialist: 'HR specialist', department_manager: 'Department manager' },
+    ka: { company_admin: 'კომპანიის ადმინისტრატორი', hr_specialist: 'HR სპეციალისტი', department_manager: 'განყოფილების ხელმძღვანელი' },
   }
   return labels[ui.locale][code] ?? '—'
 })
@@ -149,7 +150,7 @@ const scope = computed(() => {
   }
   return ui.locale === 'en'
     ? 'Company departments'
-    : ui.locale === 'kk' ? 'Компания бөлімшелері' : 'Подразделения компании'
+    : ui.locale === 'kk' ? 'Компания бөлімшелері' : ui.locale === 'ka' ? 'კომპანიის განყოფილებები' : 'Подразделения компании'
 })
 
 const localSettingsKey = 'hrm-settings-profile-v2'
@@ -277,8 +278,8 @@ onMounted(reload)
         </label>
         <p class="settings-help">
           {{ demoMode
-            ? (ui.locale === 'en' ? 'Notification rules are stored in this browser profile.' : ui.locale === 'kk' ? 'Хабарландыру ережелері осы браузер профилінде сақталады.' : 'Правила уведомлений сохраняются в профиле этого браузера.')
-            : (ui.locale === 'en' ? 'Notification channels are managed by the company administrator.' : ui.locale === 'kk' ? 'Хабарландыру арналарын компания әкімшісі басқарады.' : 'Каналы уведомлений подключает администратор компании.') }}
+            ? (ui.locale === 'en' ? 'Notification rules are stored in this browser profile.' : ui.locale === 'kk' ? 'Хабарландыру ережелері осы браузер профилінде сақталады.' : ui.locale === 'ka' ? 'შეტყობინებების წესები ინახება ამ ბრაუზერის პროფილში.' : 'Правила уведомлений сохраняются в профиле этого браузера.')
+            : (ui.locale === 'en' ? 'Notification channels are managed by the company administrator.' : ui.locale === 'kk' ? 'Хабарландыру арналарын компания әкімшісі басқарады.' : ui.locale === 'ka' ? 'შეტყობინებების არხებს მართავს კომპანიის ადმინისტრატორი.' : 'Каналы уведомлений подключает администратор компании.') }}
         </p>
         <div class="settings-actions"><BaseButton @click="saveSettings">{{ t('settings.save') }}</BaseButton></div>
       </EmployeeProfileSection>

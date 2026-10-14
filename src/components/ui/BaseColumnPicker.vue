@@ -3,6 +3,8 @@ import { ref } from 'vue'
 import { Columns3 } from 'lucide-vue-next'
 import BaseButton from './BaseButton.vue'
 import BaseDialog from './BaseDialog.vue'
+import { useWorkspaceI18n } from '../../composables/useWorkspaceI18n'
+const { tr } = useWorkspaceI18n()
 const props = withDefaults(defineProps<{ modelValue: Record<string, boolean>; columns: { key: string; label: string }[]; title?: string }>(), { title: 'Колонки' })
 const emit = defineEmits<{ 'update:modelValue': [value: Record<string, boolean>] }>()
 const open = ref(false)
@@ -12,19 +14,19 @@ function apply() { emit('update:modelValue', { ...props.modelValue, ...draft.val
 </script>
 <template>
   <div class="column-settings">
-    <BaseButton variant="secondary" :aria-expanded="open" @click="begin"><Columns3 :size="16" aria-hidden="true" /> {{ title }}</BaseButton>
-    <BaseDialog :open="open" title="Настройка колонок" @close="open = false">
+    <BaseButton variant="secondary" :aria-expanded="open" @click="begin"><Columns3 :size="16" aria-hidden="true" /> {{ tr(title) }}</BaseButton>
+    <BaseDialog :open="open" :title="tr('Настройка колонок')" @close="open = false">
       <form class="column-picker-form" @submit.prevent="apply">
-        <p>Выберите данные, которые будут отображаться в таблице.</p>
+        <p>{{ tr('Выберите данные, которые будут отображаться в таблице.') }}</p>
         <div class="column-options" role="group" aria-label="Настройка отображаемых колонок">
           <label v-for="column in columns" :key="column.key">
-            <span>{{ column.label }}</span>
+            <span>{{ tr(column.label) }}</span>
             <input v-model="draft[column.key]" type="checkbox" />
           </label>
         </div>
         <div class="column-actions">
-          <BaseButton type="submit">Применить</BaseButton>
-          <BaseButton variant="secondary" @click="open = false">Отмена</BaseButton>
+          <BaseButton type="submit">{{ tr('Применить') }}</BaseButton>
+          <BaseButton variant="secondary" @click="open = false">{{ tr('Отмена') }}</BaseButton>
         </div>
       </form>
     </BaseDialog>

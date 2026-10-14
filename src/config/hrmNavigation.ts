@@ -18,6 +18,7 @@ export const hrmNavigation: readonly HrmNavigationItem[] = [
   { to: '/documents', label: 'Документы и приказы', labelKey: 'nav.documents', icon: '/prototype-icons/Document.svg', section: 'primary' },
   { to: '/reports', label: 'Отчёты и аналитика', labelKey: 'nav.reports', icon: '/prototype-icons/Report.svg', section: 'primary' },
   { to: '/directories', label: 'Справочники', labelKey: 'nav.directories', icon: '/prototype-icons/Storagef.svg', section: 'service' },
+  { to: '/roles', label: 'Роли и права', labelKey: 'nav.roles', icon: '/prototype-icons/People-groupf.svg', section: 'service' },
   { to: '/settings', label: 'Настройки', labelKey: 'nav.settings', icon: '/prototype-icons/Settings.svg', section: 'service' },
 ]
 

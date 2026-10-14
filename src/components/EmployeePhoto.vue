@@ -84,17 +84,39 @@ async function remove() {
 <style scoped>
 .employee-photo{min-width:0;border-radius:var(--radius-md)}
 .employee-photo--drag{outline:2px dashed var(--color-primary);outline-offset:6px}
-.photo-caption{margin:0 0 12px;color:var(--color-text);font-size:var(--font-label-size);font-weight:500}
-.photo-row{display:flex;align-items:center;gap:16px}
-.avatar{display:grid;place-items:center;flex:0 0 92px;width:92px;height:92px;overflow:hidden;border:1px solid var(--color-stroke);border-radius:50%;background:var(--color-accent-soft);color:var(--color-primary);font-size:22px;font-weight:600}
+.photo-caption{
+  margin:0 0 10px;
+  color:var(--color-text);
+  font-size:13px;
+  line-height:18px;
+  font-weight:600;
+}
+.photo-row{display:flex;align-items:center;gap:13px;min-width:0}
+.avatar{
+  display:grid;place-items:center;
+  flex:0 0 92px;width:92px;height:92px;
+  overflow:hidden;border:1px solid var(--color-stroke);
+  border-radius:50%;background:var(--color-accent-soft);
+  color:var(--color-primary);font-size:21px;font-weight:600;
+}
 .avatar img{width:100%;height:100%;object-fit:cover;object-position:center}
-.photo-actions{display:grid;gap:8px;min-width:0;flex:1;justify-items:start}
-.photo-actions p{margin:0;color:var(--color-muted);font-size:12px;line-height:1.5}
-.photo-actions :deep(button){min-height:34px;padding:6px 10px;font-size:12px}
-.photo-input{position:absolute;width:1px;height:1px;padding:0;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
-.remove-photo{border:0;padding:0;background:transparent;color:var(--color-muted);font:inherit;font-size:12px;cursor:pointer;text-decoration:underline;text-underline-offset:3px}
+.photo-actions{display:grid;gap:7px;min-width:0;flex:1;justify-items:start}
+.photo-actions p{margin:0;color:var(--color-muted);font-size:11px;line-height:16px}
+.photo-actions :deep(button){min-height:33px;padding:6px 10px;font-size:12px}
+.photo-input{
+  position:absolute;width:1px;height:1px;padding:0;overflow:hidden;
+  clip-path:inset(50%);white-space:nowrap;
+}
+.remove-photo{
+  border:0;padding:0;background:transparent;color:var(--color-muted);
+  font:inherit;font-size:11px;cursor:pointer;
+  text-decoration:underline;text-underline-offset:3px;
+}
 .remove-photo:focus-visible{outline:2px solid var(--color-primary);outline-offset:4px}
 .remove-photo:disabled{opacity:.6;cursor:default}
-.employee-photo :deep(.notice){margin-top:12px}
-@media(max-width:600px){.avatar{flex-basis:76px;width:76px;height:76px}.photo-row{gap:14px}}
+.employee-photo :deep(.notice){margin-top:10px}
+@media(max-width:600px){
+  .avatar{flex-basis:76px;width:76px;height:76px}
+  .photo-row{gap:12px}
+}
 </style>

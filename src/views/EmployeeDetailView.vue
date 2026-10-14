@@ -630,29 +630,115 @@ onMounted(load)
         </EmployeeProfileSection>
 
         <template v-if="activeSection === 'payroll'">
-          <EmployeeProfileSection title="Расчёты и начисления">
-            <EmployeeDataGrid :fields="payrollFields" />
+          <EmployeeProfileSection title="Условия оплаты">
+            <EmployeeDataGrid :fields="payConditionFields" />
           </EmployeeProfileSection>
-          <EmployeeProfileSection title="Банковские реквизиты">
-            <EmployeeDataGrid :fields="bankingFields" />
+
+          <EmployeeProfileSection title="Надбавки, компенсации и удержания">
+            <BaseDataTable density="compact" :rows="reference?.payroll_adjustments ?? []"
+              :columns="payrollAdjustmentColumns" row-key="id"
+              caption="Начисления и удержания сотрудника"
+              empty-title="Начисления не найдены"
+              empty-description="Для сотрудника пока нет доступных начислений и удержаний.">
+              <template #cell-amount="{ value }">{{ money(Number(value), reference?.payroll.currency ?? 'KZT') }}</template>
+            </BaseDataTable>
+          </EmployeeProfileSection>
+
+          <EmployeeProfileSection title="Расчётный лист">
+            <EmployeeDataGrid :fields="payrollSummaryFields" />
+          </EmployeeProfileSection>
+
+          <EmployeeProfileSection title="Динамика выплат и отработанных часов">
+            <BaseDataTable density="compact" :rows="reference?.payroll_history ?? []"
+              :columns="payrollHistoryColumns" row-key="id"
+              caption="История начислений и рабочего времени"
+              empty-title="История начислений пуста"
+              empty-description="Нет данных за предыдущие расчётные периоды.">
+              <template #cell-accrued="{ value }">{{ money(Number(value), reference?.payroll.currency ?? 'KZT') }}</template>
+              <template #cell-withheld="{ value }">{{ money(Number(value), reference?.payroll.currency ?? 'KZT') }}</template>
+              <template #cell-paid="{ value }">{{ money(Number(value), reference?.payroll.currency ?? 'KZT') }}</template>
+            </BaseDataTable>
+          </EmployeeProfileSection>
+
+          <EmployeeProfileSection title="Банковские и налоговые данные">
+            <EmployeeDataGrid :fields="bankTaxFields" />
           </EmployeeProfileSection>
         </template>
 
         <template v-if="activeSection === 'schedule'">
-          <EmployeeProfileSection title="График работы и табель">
+          <EmployeeProfileSection title="График работы">
             <EmployeeDataGrid :fields="scheduleFields" />
+          </EmployeeProfileSection>
+
+          <EmployeeProfileSection title="Отпуска и лимиты отсутствий">
+            <EmployeeDataGrid :fields="leaveSummaryFields" />
+            <h3 class="assignment-history-title">Лимиты и остатки</h3>
+            <BaseDataTable density="compact" :rows="reference?.leave_limits ?? []"
+              :columns="leaveLimitColumns" row-key="id"
+              caption="Лимиты отпусков и отсутствий"
+              empty-title="Лимиты не заданы"
+              empty-description="Для сотрудника не найдены доступные лимиты отпусков.">
+            </BaseDataTable>
+          </EmployeeProfileSection>
+
+          <EmployeeProfileSection title="Табель за период">
+            <EmployeeDataGrid :fields="currentTimesheetFields" />
+          </EmployeeProfileSection>
+
+          <EmployeeProfileSection title="Явки, неявки и отсутствия">
+            <BaseDataTable density="compact" :rows="reference?.attendance_events ?? []"
+              :columns="attendanceColumns" row-key="id"
+              caption="События посещаемости и рабочего времени"
+              empty-title="Событий нет"
+              empty-description="Для выбранного сотрудника события рабочего времени не зарегистрированы.">
+            </BaseDataTable>
+          </EmployeeProfileSection>
+
+          <EmployeeProfileSection title="История табелей">
+            <BaseDataTable density="compact" :rows="reference?.timesheet_history ?? []"
+              :columns="timesheetHistoryColumns" row-key="id"
+              caption="История табелей сотрудника"
+              empty-title="История табелей пуста"
+              empty-description="Для сотрудника пока нет архивных табелей.">
+            </BaseDataTable>
           </EmployeeProfileSection>
         </template>
 
         <template v-if="activeSection === 'development'">
           <EmployeeProfileSection title="Кадровый резерв">
+            <EmployeeDataGrid :fields="reserveSummaryFields" />
+            <h3 class="assignment-history-title">Параметры резерва</h3>
+            <EmployeeDataGrid :fields="reserveDetailFields" />
+            <h3 class="assignment-history-title">История кадрового резерва</h3>
             <BaseDataTable density="compact" :rows="profile.reserve" row-key="id" caption="Кадровый резерв сотрудника"
               :columns="[{key:'target_position',label:'Резервируемая должность'},{key:'reserve_level',label:'Уровень'},{key:'reserve_type',label:'Вид'},{key:'joined_year',label:'Год зачисления'},{key:'left_year',label:'Год исключения'}, ...(profile.meta.profile_writes_enabled ? [{key:'edit',label:'Действия'}] : [])]"
               empty-title="Записей резерва нет" empty-description="Сотрудник пока не включён в кадровый резерв.">
               <template #cell-edit="{ row }"><BaseButton variant="secondary" @click="beginEdit('reserve', row)">Изменить</BaseButton></template>
             </BaseDataTable>
           </EmployeeProfileSection>
-          <EmployeeProfileSection title="Обучение и повышение квалификации">
+
+          <EmployeeProfileSection title="Образование и квалификация">
+            <BaseDataTable density="compact" :rows="reference?.education ?? []"
+              :columns="educationColumns" row-key="id"
+              caption="Образование и квалификация сотрудника"
+              empty-title="Сведения об образовании отсутствуют"
+              empty-description="Для сотрудника пока нет записей об образовании и квалификации.">
+              <template #cell-started_on="{ value }">{{ formatDate(typeof value === 'string' ? value : null) }}</template>
+              <template #cell-ended_on="{ value }">{{ formatDate(typeof value === 'string' ? value : null) }}</template>
+            </BaseDataTable>
+          </EmployeeProfileSection>
+
+          <EmployeeProfileSection title="Оценка соответствия и решения комиссии">
+            <BaseDataTable density="compact" :rows="reference?.fit_assessment ?? []"
+              :columns="fitColumns" row-key="id"
+              caption="Оценка соответствия требованиям кадрового резерва"
+              empty-title="Оценка не проведена"
+              empty-description="Для сотрудника пока нет результатов оценки.">
+              <template #cell-score_percent="{ value }">{{ value }}%</template>
+            </BaseDataTable>
+          </EmployeeProfileSection>
+
+          <EmployeeProfileSection title="Дополнительное обучение">
             <BaseDataTable density="compact" :rows="profile.training" row-key="id" caption="Обучение сотрудника"
               :columns="[{key:'training_type',label:'Вид'},{key:'training_mode',label:'Формат'},{key:'topic',label:'Тема'},{key:'provider',label:'Центр обучения'},{key:'city',label:'Город'},{key:'started_on',label:'Начало'},{key:'ended_on',label:'Окончание'},{key:'document_reference',label:'Документ'}, ...(profile.meta.profile_writes_enabled ? [{key:'edit',label:'Действия'}] : [])]"
               empty-title="Обучение не зарегистрировано" empty-description="Добавьте сведения об обучении сотрудника.">

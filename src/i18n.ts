@@ -1,4 +1,5 @@
 import { computed } from 'vue'
+import { kaMessages } from './i18n/kaShell'
 import { useUiPreferencesStore, type UiLocale } from './stores/uiPreferences'
 
 type Messages = Record<string, string>
@@ -225,12 +226,13 @@ const en: Messages = {
   'settings.currentSession': 'Current session',
 }
 
-const messages: Record<UiLocale, Messages> = { ru, kk, en }
+const messages: Record<UiLocale, Messages> = { ru, kk, en, ka: kaMessages }
 
 export const localeOptions: Array<{ id: UiLocale; name: string }> = [
   { id: 'ru', name: 'Русский' },
   { id: 'kk', name: 'Қазақша' },
   { id: 'en', name: 'English' },
+  { id: 'ka', name: 'ქართული' },
 ]
 
 export function useAppI18n() {

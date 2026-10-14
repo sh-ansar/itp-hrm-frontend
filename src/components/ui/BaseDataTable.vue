@@ -324,9 +324,9 @@ watch(() => props.columns.map(column => column.key).join(','), () => {
                   :aria-label="tr('Упорядочить по столбцу:') + ' ' + column.label"
                   :title="tr('Сортировать загруженные строки:') + ' ' + column.label"
                   @click="sortBy(column.key)">
-                  <span>{{ column.label }}</span>
+                  <span>{{ tr(column.label) }}</span>
                 </button>
-                <span v-else class="heading-label">{{ column.label }}</span>
+                <span v-else class="heading-label">{{ tr(column.label) }}</span>
                 <div class="heading-actions">
                   <button v-if="canFilter(column)" type="button" class="heading-icon"
                     :class="{ 'heading-icon--active': !!activeFilters[column.key] }"

@@ -463,12 +463,12 @@ onMounted(() => {
             <BaseActionDropdown label="Экспорт" :options="exportOptions" @select="doExport" />
             <BaseActionDropdown label="Действия" variant="primary"
               :options="registerActionOptions" @select="doTopAction" />
-            <button type="button" class="registry-fullscreen-toggle" :aria-label="fullscreen ? 'Выйти из полноэкранного режима' : 'На весь экран'"
+            <BaseButton type="button" variant="secondary" icon-only class="registry-fullscreen-toggle" :aria-label="fullscreen ? 'Выйти из полноэкранного режима' : 'На весь экран'"
               :title="fullscreen ? 'Выйти из полноэкранного режима' : 'На весь экран'"
               @click="toggleFullscreen">
               <Minimize2 v-if="fullscreen" :size="18" aria-hidden="true" />
               <Maximize2 v-else :size="18" aria-hidden="true" />
-            </button>
+            </BaseButton>
             <BaseButton v-if="employeeWritesEnabled && activeTab === 'register'" @click="createOpen = true">
               <Plus :size="16" /> Добавить сотрудника
             </BaseButton>
@@ -479,18 +479,18 @@ onMounted(() => {
         </div>
 
         <div class="registry-toolbar" aria-label="Настройки реестра">
-          <button type="button" class="registry-tool-button"
+          <BaseButton type="button" variant="secondary" class="registry-tool-button"
             :aria-expanded="searchOpen" @click="toggleSearch">
             <Search :size="16" aria-hidden="true" /> Поиск
-          </button>
+          </BaseButton>
           <form class="registry-search" :class="{ 'registry-search--open': searchOpen }"
             role="search" @submit.prevent="applySearch">
             <Search :size="17" aria-hidden="true" />
             <input ref="searchInput" v-model="searchDraft" type="search" aria-label="Поиск в реестре"
               placeholder="ФИО или табельный номер" />
             <BaseButton type="submit" variant="secondary">Найти</BaseButton>
-            <button v-if="searchDraft || search" type="button" class="registry-search-clear"
-              aria-label="Очистить поиск" @click="clearSearch">×</button>
+            <BaseButton v-if="searchDraft || search" type="button" variant="secondary" icon-only class="registry-search-clear"
+              aria-label="Очистить поиск" @click="clearSearch">×</BaseButton>
           </form>
           <BaseButton variant="secondary" @click="filtersOpen = !filtersOpen" :aria-expanded="filtersOpen">
             <img src="/prototype-icons/Filter.svg" alt="" class="toolbar-icon" /> Фильтры
@@ -511,10 +511,10 @@ onMounted(() => {
         </div>
 
         <div v-if="registryChips.length" class="registry-chips" aria-label="Активные фильтры реестра">
-          <button v-for="chip in registryChips" :key="chip.id" type="button" class="registry-chip"
+          <BaseButton v-for="chip in registryChips" :key="chip.id" type="button" variant="secondary" class="registry-chip"
             :aria-label="'Сбросить: '+chip.label" @click="clearChip(chip.id)">
             {{ chip.label }} <span aria-hidden="true">×</span>
-          </button>
+          </BaseButton>
         </div>
         <p v-if="presetNotice" role="status" class="registry-preset-notice">{{ presetNotice }}</p>
         <BaseTableBulkActions :count="selectedOnPage.length" subject="сотрудников"

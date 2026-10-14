@@ -96,7 +96,7 @@ test('position create, rename, reload and delete survive demo navigation', async
   const original = 'QA Demo Position 26014'
   const renamed = 'QA Demo Position Updated 26014'
   try {
-    await page.goto('/directories')
+    await page.goto('/directories/positions')
     await page.getByRole('button', { name: 'Добавить должность' }).click()
     const addDialog = page.getByRole('dialog', { name: 'Новая должность' })
     await addDialog.getByLabel('Название должности').fill(original)

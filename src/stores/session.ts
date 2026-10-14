@@ -1,6 +1,7 @@
 import { ref } from 'vue'
 import { defineStore } from 'pinia'
 import { ApiError } from '../api/client'
+import { useCompanyAccessStore } from './companyAccess'
 import { currentSession, loginSession, logoutSession } from '../api/session'
 import type { SessionUser } from '../api/session'
 
@@ -18,6 +19,7 @@ export const useSessionStore = defineStore('session', () => {
       user.value = await currentSession()
     } catch (cause) {
       user.value = null
+      useCompanyAccessStore().clear()
       if (!(cause instanceof ApiError && [401, 404].includes(cause.status ?? 0))) {
         error.value = cause instanceof Error ? cause.message : 'Не удалось проверить сессию'
       }
@@ -32,6 +34,7 @@ export const useSessionStore = defineStore('session', () => {
     error.value = null
 
     try {
+      useCompanyAccessStore().clear()
       user.value = await loginSession(email, password)
       checked.value = true
     } catch (cause) {
@@ -50,6 +53,7 @@ export const useSessionStore = defineStore('session', () => {
       await logoutSession()
       user.value = null
       checked.value = true
+      useCompanyAccessStore().clear()
     } catch (cause) {
       error.value = cause instanceof Error ? cause.message : 'Не удалось завершить сеанс'
       throw cause

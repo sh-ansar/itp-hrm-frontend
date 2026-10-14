@@ -3,6 +3,7 @@ import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { Moon, Sun, Menu } from 'lucide-vue-next'
 import { useRoute, useRouter } from 'vue-router'
 import { useSessionStore } from '../../stores/session'
+import { useCompanyAccessStore } from '../../stores/companyAccess'
 import { useUiPreferencesStore, type UiLocale } from '../../stores/uiPreferences'
 import { localeOptions, useAppI18n } from '../../i18n'
 import { browserLoginEnabled } from '../../router'
@@ -14,6 +15,8 @@ const emit = defineEmits<{
 const router = useRouter()
 const route = useRoute()
 const session = useSessionStore()
+const access = useCompanyAccessStore()
+const showEmployeeSearch = computed(() => !browserLoginEnabled || access.can('employees.view'))
 const ui = useUiPreferencesStore()
 const { t } = useAppI18n()
 const searchTerm = ref('')
@@ -37,7 +40,7 @@ function searchEmployees() {
 function clearSearch() {
   searchTerm.value = ''
   if (route.name === 'employees') searchEmployees()
-  void nextTick(() => searchInput.value?.focus())
+  if (showEmployeeSearch.value) void nextTick(() => searchInput.value?.focus())
 }
 async function logout() {
   emit('logoutError', '')
@@ -52,6 +55,7 @@ function handleShortcut(event: KeyboardEvent) {
   if (event.key !== '/' || event.ctrlKey || event.metaKey || event.altKey || event.shiftKey) return
   const element = event.target as HTMLElement | null
   if (element?.closest('input,textarea,select,[contenteditable="true"]')) return
+  if (!showEmployeeSearch.value) return
   event.preventDefault()
   searchInput.value?.focus()
 }
@@ -69,7 +73,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', handleShortcut))
       <Menu :size="21" aria-hidden="true" />
     </button>
 
-    <form class="topbar-search" role="search" @submit.prevent="searchEmployees">
+    <form v-if="showEmployeeSearch" class="topbar-search" role="search" @submit.prevent="searchEmployees">
       <div class="search-field">
         <img class="search-leading-icon" src="/prototype-icons/Search.svg" alt="" aria-hidden="true" />
         <input ref="searchInput" v-model="searchTerm" type="search"

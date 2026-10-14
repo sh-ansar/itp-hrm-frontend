@@ -2,6 +2,8 @@
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { hrmNavigation, isHrmNavigationActive } from '../../config/hrmNavigation'
+import { routeCapability } from '../../config/routeAccess'
+import { useCompanyAccessStore } from '../../stores/companyAccess'
 import { useUiPreferencesStore } from '../../stores/uiPreferences'
 import { useAppI18n } from '../../i18n'
 
@@ -10,8 +12,11 @@ const emit = defineEmits<{ 'update:mobileOpen': [value: boolean] }>()
 const route = useRoute()
 const ui = useUiPreferencesStore()
 const { t } = useAppI18n()
-const primary = computed(() => hrmNavigation.filter(link => link.section === 'primary'))
-const services = computed(() => hrmNavigation.filter(link => link.section === 'service'))
+const access = useCompanyAccessStore()
+const connected = import.meta.env.VITE_ENABLE_BROWSER_LOGIN === 'true' && import.meta.env.VITE_DEMO_MODE !== 'true'
+const visible = (path: string) => !connected || (routeCapability(path) ? access.can(routeCapability(path)!) : true)
+const primary = computed(() => hrmNavigation.filter(link => link.section === 'primary' && visible(link.to)))
+const services = computed(() => hrmNavigation.filter(link => link.section === 'service' && visible(link.to)))
 function active(to: string) { return isHrmNavigationActive(to, route.path) }
 function linkLabel(link: { label: string; labelKey?: string }) { return t(link.labelKey ?? '', link.label) }
 function closeMobile() { if (props.mobileOpen) emit('update:mobileOpen', false) }
@@ -22,7 +27,7 @@ function closeMobile() { if (props.mobileOpen) emit('update:mobileOpen', false) 
     :class="{ 'sidebar--open': mobileOpen, 'hrm-sidebar--collapsed': ui.sidebarCollapsed }"
     :aria-label="t('shell.mainNavigation')">
     <div class="sidebar-head">
-      <RouterLink to="/" class="brand-link" title="ITP HRM — главная" @click="closeMobile">
+      <RouterLink :to="connected && !access.can('overview.view') ? '/settings' : '/'" class="brand-link" title="ITP HRM" @click="closeMobile">
         <span class="brand-mark" aria-hidden="true">ITP</span>
         <span class="brand-copy">
           <strong>ITP <em>HRM</em></strong>

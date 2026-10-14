@@ -64,12 +64,20 @@ test('register page size, action selection and view presets stay functional', as
     assert.equal(await grid.getByRole('row').count(), 16)
 
     await page.getByRole('button', { name: 'Шаблоны' }).click()
-    await page.getByRole('menu', { name: 'Шаблоны' }).getByRole('menuitem', { name: 'Сохранить текущий вид' }).click()
-    await page.getByRole('status', { name: '' }).count()
+    let templates = page.getByRole('dialog', { name: 'Шаблоны' })
+    await templates.waitFor()
+    await templates.getByRole('button', { name: 'Далее' }).click()
+    await templates.getByRole('button', { name: 'Далее' }).click()
+    await templates.getByPlaceholder('Введите название').fill('E2E вид 15 строк')
+    await templates.getByRole('button', { name: 'Создать' }).click()
+    await templates.getByRole('button', { name: 'Отмена' }).click()
+
     await pageSize.selectOption('10')
     assert.equal(await pageSize.inputValue(), '10')
     await page.getByRole('button', { name: 'Шаблоны' }).click()
-    await page.getByRole('menu', { name: 'Шаблоны' }).getByRole('menuitem', { name: 'Применить сохранённый вид' }).click()
+    templates = page.getByRole('dialog', { name: 'Шаблоны' })
+    await templates.waitFor()
+    await templates.getByRole('button', { name: 'Применить' }).click()
     assert.equal(await pageSize.inputValue(), '15')
 
     const checkbox = grid.getByRole('checkbox', { name: /Выбрать сотрудника:/ }).first()

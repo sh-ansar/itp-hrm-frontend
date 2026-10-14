@@ -30,6 +30,7 @@ const props = withDefaults(defineProps<{
   selectable?: boolean
   selectedKeys?: string[]
   minTableWidth?: number
+  density?: 'comfortable' | 'compact'
 }>(), {
   loading: false,
   emptyTitle: 'Данные не найдены',
@@ -37,6 +38,7 @@ const props = withDefaults(defineProps<{
   caption: 'Таблица данных',
   selectable: false,
   selectedKeys: () => [],
+  density: 'comfortable',
 })
 
 const emit = defineEmits<{ 'update:selectedKeys': [keys: string[]] }>()
@@ -200,7 +202,7 @@ watch(() => props.columns.map(column => column.key).join(','), () => {
 </script>
 
 <template>
-  <div class="base-data-table">
+  <div class="base-data-table" :class="{ 'base-data-table--compact': density === 'compact' }">
     <div v-if="filterColumn" class="table-filter-panel" role="group"
       :aria-label="'Фильтр столбца: ' + filterColumn.label">
       <label class="filter-field">
@@ -373,6 +375,11 @@ tbody tr.table-row--selected{background:var(--color-accent-soft)}
 .filter-hint{align-self:center;color:var(--color-muted);font-size:11px}
 .filter-summary{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:0 0 8px;color:var(--color-muted);font-size:11px}
 .filter-summary button{min-height:27px;padding:3px 9px;color:var(--color-primary)}
+.base-data-table--compact thead th{height:41px;min-height:41px}
+.base-data-table--compact .heading-content{min-height:40px;padding:7px 10px}
+.base-data-table--compact tbody tr:not(.table-group){height:43px}
+.base-data-table--compact tbody td{min-height:43px;padding:7px 10px;font-size:12px;line-height:17px}
+.base-data-table--compact .heading-label,.base-data-table--compact .sort-heading{font-size:11px;line-height:16px}
 .sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap}
 :root[data-theme="dark"] .heading-icon:not(.heading-icon--active) img{filter:brightness(0) invert(.78)}
 @media(max-width:650px){

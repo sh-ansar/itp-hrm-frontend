@@ -1,3 +1,4 @@
+import { georgianWorkspace } from '../i18n/workspaceGeorgian'
 import { useUiPreferencesStore } from '../stores/uiPreferences'
 
 /** Shared workspace copy. Canonical keys are the original RU prototype labels.
@@ -679,6 +680,7 @@ export function useWorkspaceI18n() {
   const preferences = useUiPreferencesStore()
   const tr = (russian: string): string => {
     if (preferences.locale === 'ru') return russian
+    if (preferences.locale === 'ka') return georgianWorkspace[russian] ?? russian
     return workspaceCopy[russian]?.[preferences.locale] ?? russian
   }
   function translateOptions<T extends { label?: string; name?: string; description?: string }>(options: T[]): T[] {

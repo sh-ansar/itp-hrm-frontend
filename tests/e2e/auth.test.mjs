@@ -65,7 +65,7 @@ test('login is visibly rendered with a valid themed background across screen siz
         visible: bounds.width > 0 && bounds.height > 0,
       }
     })
-    assert.match(appearance.background, /linear-gradient\\(/,
+    assert.ok(appearance.background.includes('linear-gradient('),
       'Login background must not depend on an undefined token')
     assert.equal(appearance.visible, true)
     assert.ok(appearance.width <= width + 1,

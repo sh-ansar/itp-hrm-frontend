@@ -127,7 +127,7 @@ function save() {
   if (defaultTemplate.value)
     presets.value = presets.value.map(item => ({ ...item, defaultTemplate: false }))
   const preset: StoredPreset = {
-    id: crypto.randomUUID(),
+    id: `preset-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
     name: trimmed,
     folder: folder.value || 'Без папки',
     publicAccess: publicAccess.value,

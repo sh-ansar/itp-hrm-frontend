@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { Moon, Sun, Menu } from 'lucide-vue-next'
+import { BellOff, ChevronDown, Menu, Moon, Settings, Sun, UserRound, X } from 'lucide-vue-next'
 import { useRoute, useRouter } from 'vue-router'
 import { useSessionStore } from '../../stores/session'
 import { useUiPreferencesStore, type UiLocale } from '../../stores/uiPreferences'
@@ -18,6 +18,10 @@ const ui = useUiPreferencesStore()
 const { t } = useAppI18n()
 const searchTerm = ref('')
 const searchInput = ref<HTMLInputElement | null>(null)
+const profileHost = ref<HTMLElement | null>(null)
+const profileOpen = ref(false)
+const notificationsMuted = ref(false)
+const SETTINGS_PROFILE_KEY = 'hrm-settings-profile-v2'
 const canSignOut = computed(() => browserLoginEnabled && Boolean(session.user))
 const accountName = computed(() => canSignOut.value ? (session.user?.name ?? '') : 'ITP HRM')
 const accountDetail = computed(() => canSignOut.value ? t('topbar.workAccount') : t('topbar.hrSystem'))
@@ -26,6 +30,32 @@ const initials = computed(() => {
   const words = session.user?.name?.trim().split(/\s+/) ?? []
   return words.slice(0, 2).map(word => word[0]?.toUpperCase() ?? '').join('') || 'HR'
 })
+function loadNotificationPreference() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(SETTINGS_PROFILE_KEY) || '{}') as Record<string, unknown>
+    const channels = saved.notificationChannels as Record<string, unknown> | undefined
+    notificationsMuted.value = Boolean(channels && channels.email === false && channels.in_app === false)
+  } catch { notificationsMuted.value = false }
+}
+function setNotificationsMuted(value: boolean) {
+  notificationsMuted.value = value
+  try {
+    const saved = JSON.parse(localStorage.getItem(SETTINGS_PROFILE_KEY) || '{}') as Record<string, unknown>
+    const channels = { ...((saved.notificationChannels as Record<string, unknown> | undefined) ?? {}) }
+    channels.email = !value
+    channels.in_app = !value
+    localStorage.setItem(SETTINGS_PROFILE_KEY, JSON.stringify({ ...saved, notificationChannels: channels }))
+  } catch { /* Browser settings remain usable for this session. */ }
+}
+function closeProfile() { profileOpen.value = false }
+function toggleProfile() {
+  profileOpen.value = !profileOpen.value
+  if (profileOpen.value) loadNotificationPreference()
+}
+function handleProfilePointer(event: PointerEvent) {
+  if (profileOpen.value && !profileHost.value?.contains(event.target as Node)) closeProfile()
+}
+
 function setLocale(event: Event) {
   const value = (event.target as HTMLSelectElement).value
   if (value === 'ru' || value === 'kk' || value === 'en') ui.setLocale(value as UiLocale)
@@ -49,6 +79,10 @@ async function logout() {
   }
 }
 function handleShortcut(event: KeyboardEvent) {
+  if (event.key === 'Escape' && profileOpen.value) {
+    closeProfile()
+    return
+  }
   if (event.key !== '/' || event.ctrlKey || event.metaKey || event.altKey || event.shiftKey) return
   const element = event.target as HTMLElement | null
   if (element?.closest('input,textarea,select,[contenteditable="true"]')) return
@@ -58,8 +92,15 @@ function handleShortcut(event: KeyboardEvent) {
 watch(() => [route.name, route.query.q] as const, ([name, q]) => {
   if (name === 'employees') searchTerm.value = typeof q === 'string' ? q : ''
 }, { immediate: true })
-onMounted(() => window.addEventListener('keydown', handleShortcut))
-onBeforeUnmount(() => window.removeEventListener('keydown', handleShortcut))
+onMounted(() => {
+  window.addEventListener('keydown', handleShortcut)
+  document.addEventListener('pointerdown', handleProfilePointer)
+  loadNotificationPreference()
+})
+onBeforeUnmount(() => {
+  window.removeEventListener('keydown', handleShortcut)
+  document.removeEventListener('pointerdown', handleProfilePointer)
+})
 </script>
 
 <template>
@@ -98,18 +139,52 @@ onBeforeUnmount(() => window.removeEventListener('keydown', handleShortcut))
         <Sun v-if="ui.theme === 'dark'" :size="20" aria-hidden="true" />
         <Moon v-else :size="20" aria-hidden="true" />
       </button>
-      <div class="profile-summary" :title="accountName">
-        <span class="user-avatar" aria-hidden="true">{{ initials }}</span>
-        <span class="profile-copy">
-          <strong>{{ accountName }}</strong>
-          <small>{{ accountDetail }}</small>
-        </span>
+      <div ref="profileHost" class="profile-menu">
+        <button type="button" class="profile-summary profile-trigger" :title="accountName"
+          :aria-expanded="profileOpen" aria-haspopup="menu" @click="toggleProfile">
+          <span class="user-avatar" aria-hidden="true">{{ initials }}</span>
+          <span class="profile-copy">
+            <strong>{{ accountName }}</strong>
+            <small>{{ accountDetail }}</small>
+          </span>
+          <ChevronDown :size="15" class="profile-chevron" :class="{ rotated: profileOpen }" aria-hidden="true" />
+        </button>
+
+        <div v-if="profileOpen" class="profile-popover" role="menu" :aria-label="accountName">
+          <div class="profile-popover-head">
+            <span class="user-avatar" aria-hidden="true">{{ initials }}</span>
+            <div>
+              <strong>{{ accountName }}</strong>
+              <small>{{ accountDetail }}</small>
+            </div>
+            <button type="button" class="popover-close" aria-label="Закрыть меню пользователя" @click="closeProfile">
+              <X :size="17" />
+            </button>
+          </div>
+
+          <div class="profile-status"><span class="online-dot"></span><strong>Online</strong></div>
+          <div class="profile-company"><span class="company-mark">ITP</span><span>ITP HRM</span></div>
+
+          <label class="profile-toggle">
+            <span><BellOff :size="18" aria-hidden="true" /> Отключить уведомления</span>
+            <input :checked="notificationsMuted" type="checkbox"
+              @change="setNotificationsMuted(($event.target as HTMLInputElement).checked)" />
+          </label>
+
+          <RouterLink class="profile-menu-link" to="/settings" role="menuitem" @click="closeProfile">
+            <UserRound :size="18" aria-hidden="true" /> Профиль и настройки
+          </RouterLink>
+          <RouterLink class="profile-menu-link" to="/settings" role="menuitem" @click="closeProfile">
+            <Settings :size="18" aria-hidden="true" /> {{ t('nav.settings') }}
+          </RouterLink>
+
+          <button v-if="canSignOut" class="profile-signout" type="button" role="menuitem"
+            :disabled="session.loading" @click="logout();closeProfile()">
+            <img src="/prototype-icons/Log-Out.svg" alt="" aria-hidden="true" />
+            {{ t('topbar.signOut') }}
+          </button>
+        </div>
       </div>
-      <button v-if="canSignOut" class="logout-button" type="button" :disabled="session.loading"
-        :aria-label="t('topbar.signOutAria')" :title="t('topbar.signOutTitle')" @click="logout">
-        <img src="/prototype-icons/Log-Out.svg" alt="" aria-hidden="true" />
-        <span>{{ t('topbar.signOut') }}</span>
-      </button>
     </div>
   </header>
 </template>
@@ -168,11 +243,38 @@ onBeforeUnmount(() => window.removeEventListener('keydown', handleShortcut))
   border:0;border-radius:7px;background:transparent;color:var(--color-muted);
 }
 .topbar-icon:hover{background:var(--color-soft);color:var(--color-primary)}
+.profile-menu{position:relative;min-width:0}
 .profile-summary{
-  display:flex;align-items:center;gap:8px;min-width:0;max-width:255px;
-  padding:2px 10px 2px 0;
-  border-right:1px solid var(--color-stroke);
+  display:flex;align-items:center;gap:8px;min-width:0;max-width:270px;
+  padding:2px 8px 2px 0;border:0;background:transparent;color:var(--color-text);text-align:left;
 }
+.profile-trigger{cursor:pointer}
+.profile-trigger:hover .profile-copy strong{color:var(--color-primary)}
+.profile-chevron{flex:none;color:var(--color-muted);transition:transform .15s}
+.profile-chevron.rotated{transform:rotate(180deg)}
+.profile-popover{
+  position:absolute;z-index:420;top:calc(100% + 12px);right:0;width:min(270px,calc(100vw - 20px));
+  display:grid;gap:7px;padding:10px;border:1px solid var(--color-stroke-strong);border-radius:9px;
+  background:var(--color-surface);box-shadow:var(--shadow-float)
+}
+.profile-popover-head{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:9px;padding:3px 2px 10px;border-bottom:1px solid var(--color-stroke)}
+.profile-popover-head>div{display:grid;gap:2px;min-width:0}
+.profile-popover-head strong{font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.profile-popover-head small{font-size:10px;color:var(--color-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.popover-close{display:grid;place-items:center;width:28px;height:28px;border:0;border-radius:50%;background:transparent;color:var(--color-muted)}
+.popover-close:hover{background:var(--color-soft);color:var(--color-primary)}
+.profile-status,.profile-company{display:flex;align-items:center;gap:9px;min-height:40px;padding:8px 10px;border:1px solid var(--color-stroke);border-radius:7px;background:var(--color-surface-raised);font-size:12px}
+.online-dot{width:8px;height:8px;border-radius:50%;background:var(--color-success)}
+.company-mark{display:grid;place-items:center;width:28px;height:28px;border-radius:7px;background:var(--color-accent-soft);color:var(--color-primary);font-size:9px;font-weight:800}
+.profile-toggle{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:9px 8px;font-size:12px;cursor:pointer}
+.profile-toggle>span{display:flex;align-items:center;gap:9px}
+.profile-toggle svg{color:var(--color-muted)}
+.profile-toggle input{width:34px;height:18px;accent-color:var(--color-primary)}
+.profile-menu-link,.profile-signout{display:flex;align-items:center;gap:10px;min-height:38px;padding:8px 9px;border:0;border-radius:6px;background:transparent;color:var(--color-text);font:inherit;font-size:12px;font-weight:600;text-align:left}
+.profile-menu-link:hover,.profile-signout:hover{background:var(--color-soft);color:var(--color-primary)}
+.profile-menu-link svg{color:var(--color-muted)}
+.profile-signout{width:100%;margin-top:5px;border-top:1px solid var(--color-stroke);border-radius:0;padding-top:12px}
+.profile-signout img{width:18px;height:18px}
 .user-avatar{
   display:grid;place-items:center;flex:0 0 35px;width:35px;height:35px;
   border-radius:50%;color:var(--color-primary);background:var(--color-accent-soft);
@@ -206,7 +308,9 @@ onBeforeUnmount(() => window.removeEventListener('keydown', handleShortcut))
   .hrm-topbar{height:64px;min-height:64px;padding:0 14px;gap:8px}
   .mobile-nav-trigger{display:grid}
   .topbar-search{flex:1 1 0;min-width:0;width:auto;max-width:none;margin-right:0}
-  .profile-summary{display:none}
+  .profile-summary{max-width:none;padding:0}
+  .profile-copy,.profile-chevron{display:none}
+  .profile-menu{display:block}
   .topbar-user{flex:none;gap:2px;margin-left:0}
   .locale-control select{width:48px;min-width:48px;padding:0 3px}
   .logout-button{width:37px;padding:0}
@@ -218,9 +322,9 @@ onBeforeUnmount(() => window.removeEventListener('keydown', handleShortcut))
   .search-field{height:36px;padding:0 7px;gap:6px}
   .search-leading-icon{width:15px;height:15px}
   .search-submit{width:36px;height:36px;flex-basis:36px}
-  .profile-summary{display:none}
+  .profile-copy,.profile-chevron{display:none}
   .topbar-icon{width:30px;height:32px;flex-basis:30px}
   .topbar-user{gap:0}
 }
-@media(prefers-reduced-motion:reduce){.search-field{scroll-behavior:auto}}
+@media(prefers-reduced-motion:reduce){.search-field{scroll-behavior:auto}.profile-chevron{transition:none}}
 </style>

@@ -243,7 +243,7 @@ function applyPreset() {
       visibleFields.value = {
         ...visibleFields.value,
         ...Object.fromEntries(columnKeys.filter(key => typeof values[key] === 'boolean')
-          .map(key => [key, values[key]])),
+          .map(key => [key, Boolean(values[key])])),
       }
     }
     if (typeof preset.perPage === 'number' && [10, 15, 25, 50].includes(preset.perPage))

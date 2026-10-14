@@ -17,12 +17,24 @@ withDefaults(defineProps<{
 const emit = defineEmits<{ select: [id: string] }>()
 const open = ref(false)
 const host = ref<HTMLElement | null>(null)
+const menu = ref<HTMLElement | null>(null)
+const menuPosition = ref({ left: '12px', top: '12px' })
 const trigger = ref<HTMLButtonElement | null>(null)
 const firstItem = ref<HTMLButtonElement | null>(null)
+function position() {
+  if (!trigger.value || !menu.value) return
+  const anchor = trigger.value.getBoundingClientRect()
+  const box = menu.value.getBoundingClientRect()
+  const left = Math.max(12, Math.min(anchor.right - box.width, innerWidth - box.width - 12))
+  const below = anchor.bottom + 5 + box.height <= innerHeight - 12
+  const top = below ? anchor.bottom + 5 : Math.max(12, anchor.top - box.height - 5)
+  menuPosition.value = { left: Math.round(left) + 'px', top: Math.round(top) + 'px' }
+}
 async function toggle() {
   open.value = !open.value
   if (open.value) {
     await nextTick()
+    position()
     firstItem.value?.focus()
   }
 }
@@ -32,7 +44,8 @@ function choose(id: string) {
   trigger.value?.focus()
 }
 function pointer(event: PointerEvent) {
-  if (!host.value?.contains(event.target as Node)) open.value = false
+  if (!host.value?.contains(event.target as Node) && !menu.value?.contains(event.target as Node))
+    open.value = false
 }
 function keydown(event: KeyboardEvent) {
   if (event.key === 'Escape' && open.value) {
@@ -41,13 +54,20 @@ function keydown(event: KeyboardEvent) {
     event.stopPropagation()
   }
 }
+function scroll(event: Event) {
+  if (open.value && !menu.value?.contains(event.target as Node)) open.value = false
+}
 onMounted(() => {
   document.addEventListener('pointerdown', pointer)
   document.addEventListener('keydown', keydown)
+  window.addEventListener('scroll', scroll, true)
+  window.addEventListener('resize', position)
 })
 onBeforeUnmount(() => {
   document.removeEventListener('pointerdown', pointer)
   document.removeEventListener('keydown', keydown)
+  window.removeEventListener('scroll', scroll, true)
+  window.removeEventListener('resize', position)
 })
 </script>
 
@@ -59,15 +79,17 @@ onBeforeUnmount(() => {
       <MoreHorizontal v-if="variant==='icon'" :size="18" aria-hidden="true" />
       <template v-else>{{ label }}<ChevronDown :size="14" aria-hidden="true" /></template>
     </button>
-    <div v-if="open" class="action-menu" role="menu" :aria-label="label">
-      <button v-for="(option,index) in options" :key="option.id"
-        :ref="el => { if(index===0) firstItem = el as HTMLButtonElement }"
-        type="button" role="menuitem" class="action-menu-item"
-        :disabled="option.disabled" @click="choose(option.id)">
-        <span>{{ option.label }}</span>
-        <small v-if="option.description">{{ option.description }}</small>
-      </button>
-    </div>
+    <Teleport to="body">
+      <div v-if="open" ref="menu" class="action-menu" role="menu" :aria-label="label" :style="menuPosition">
+        <button v-for="(option,index) in options" :key="option.id"
+          :ref="el => { if(index===0) firstItem = el as HTMLButtonElement }"
+          type="button" role="menuitem" class="action-menu-item"
+          :disabled="option.disabled" @click="choose(option.id)">
+          <span>{{ option.label }}</span>
+          <small v-if="option.description">{{ option.description }}</small>
+        </button>
+      </div>
+    </Teleport>
   </div>
 </template>
 
@@ -86,7 +108,7 @@ onBeforeUnmount(() => {
 .action-dropdown--primary .action-trigger:hover,.action-dropdown--primary .action-trigger[aria-expanded="true"]{background:var(--color-primary-hover);border-color:var(--color-primary-hover)}
 .action-dropdown--icon .action-trigger{width:29px;min-height:29px;height:29px;padding:3px;border:0;box-shadow:none;color:var(--color-muted);background:transparent}
 .action-menu{
-  position:absolute;top:calc(100% + 5px);right:0;z-index:120;
+  position:fixed;z-index:350;max-height:calc(100vh - 24px);overflow-y:auto;
   min-width:max(195px,100%);max-width:min(300px,calc(100vw - 24px));
   display:grid;gap:3px;padding:6px;border:1px solid var(--color-stroke-strong);
   border-radius:8px;background:var(--color-surface);box-shadow:var(--shadow-float);

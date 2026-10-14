@@ -376,6 +376,12 @@ onMounted(loadCompanies)
 .registry-metric small{grid-column:1/-1;color:var(--color-muted);font-size:11px;line-height:1.4}
 .registry-info-icon{grid-column:2;grid-row:1;width:15px;height:15px;object-fit:contain}
 .registry-card{min-width:0;box-shadow:none;background:transparent;border:0;padding:0}
+.registry-desktop-table{
+  min-width:0;max-width:100%;width:100%;
+  /* Only BaseDataTable's own .table-scroll is horizontally scrollable.
+     The host must never expand the document at tablet breakpoints. */
+  overflow:clip;
+}
 .registry-mobile-list{display:none}
 .register-heading{display:flex;align-items:end;justify-content:space-between;gap:16px;margin-bottom:var(--space-4);flex-wrap:wrap}
 .register-heading h1{font-size:21px;letter-spacing:-.025em;margin:0;line-height:1.25}

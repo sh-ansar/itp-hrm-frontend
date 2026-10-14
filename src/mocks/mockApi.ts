@@ -186,6 +186,7 @@ const referenceProfileFor=(e:any,i:number)=>({
     address_floor:String(2+i%12),
     address_apartment:String(10+i),
     place_of_birth:i%2?'Карагандинская область, г. Темиртау':'Алматинская область, г. Конаев',
+    birth_certificate_attachment:'Свидетельство о рождении.pdf',
     emergency_contact_name:i%2?'Ибраева Алия Сериковна':'Садыков Арман Ерланович',
     emergency_contact_phone:'+7 701 555 21 10',
   },

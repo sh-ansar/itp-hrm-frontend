@@ -207,11 +207,11 @@ function saveRecord(){
           <div class="tree-heading">
             <div><h2>{{ tabs.find(tab=>tab.id===activeSection)?.label }}</h2><span>{{ currentGroups.length }} справочников</span></div>
           </div>
-          <button v-for="group in currentGroups" :key="group.id" type="button" class="tree-item"
+          <BaseButton v-for="group in currentGroups" :key="group.id" type="button" variant="secondary" class="tree-item"
             :class="{active:activeGroup===group.id}" @click="selectGroup(group.id)">
             <span><strong>{{ group.label }}</strong><small>{{ group.description }}</small></span>
             <em>{{ records.filter(row=>row.group===group.id).length }}</em>
-          </button>
+          </BaseButton>
         </BaseCard>
 
         <BaseCard class="directory-register">

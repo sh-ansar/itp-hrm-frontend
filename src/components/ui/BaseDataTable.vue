@@ -6,6 +6,7 @@ import BaseLoadingState from './BaseLoadingState.vue'
 import { useUiPreferencesStore } from '../../stores/uiPreferences'
 import { localeTag } from '../../utils/localeFormat'
 import { useWorkspaceI18n } from '../../composables/useWorkspaceI18n'
+import { useUiFormatters } from '../../composables/useUiFormatters'
 
 type ColumnFilter =
   | { kind: 'contains'; text: string }
@@ -63,6 +64,7 @@ const draftChoices = ref<string[]>([])
 const draftTouched = ref(false)
 const preferences = useUiPreferencesStore()
 const { tr } = useWorkspaceI18n()
+const fmt = useUiFormatters()
 const collation = computed(() => new Intl.Collator(localeTag(preferences.locale), { numeric: true, sensitivity: 'base' }))
 const forbiddenActionKeys = new Set(['selection', 'select', 'actions', 'action', 'details', 'detail', 'edit', 'file'])
 
@@ -298,7 +300,7 @@ watch(() => props.columns.map(column => column.key).join(','), () => {
       @toggle="toggleDraftChoice" @toggle-all="toggleAllMatching"
       @apply="applyFilter" @reset="clearColumnFilter(filterColumn.key)" @close="closeFilter" />
     <div v-if="anyFilters" class="filter-summary" role="status">
-      <span>{{ tr('Фильтр:') }} {{ orderedRows.length }} {{ tr('из') }} {{ rows.length }} {{ tr('загруженных строк') }}</span>
+      <span>{{ tr('Фильтр:') }} {{ fmt.number(orderedRows.length, 0) }} {{ tr('из') }} {{ fmt.number(rows.length, 0) }} {{ tr('загруженных строк') }}</span>
       <button type="button" @click="clearFilters">{{ tr('Сбросить фильтры') }}</button>
     </div>
     <BaseLoadingState v-if="loading" :label="`${tr('Загрузка:')} ${caption}`" />
@@ -351,7 +353,7 @@ watch(() => props.columns.map(column => column.key).join(','), () => {
           <template v-for="entry in displayRows" :key="entry.key">
             <tr v-if="entry.kind === 'group'" class="table-group">
               <th scope="rowgroup" :colspan="headerColumnsCount">
-                {{ entry.label }} <span>{{ entry.count }} {{ tr('на странице') }}</span>
+                {{ entry.label }} <span>{{ fmt.number(entry.count, 0) }} {{ tr('на странице') }}</span>
               </th>
             </tr>
             <tr v-else :data-row-key="entry.key" :class="{ 'table-row--selected': selectedSet.has(entry.key) }">

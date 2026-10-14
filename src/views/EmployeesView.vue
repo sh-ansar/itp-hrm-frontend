@@ -17,6 +17,7 @@ import BaseStatusPill from '../components/ui/BaseStatusPill.vue'
 import BaseDialog from '../components/ui/BaseDialog.vue'
 import BaseViewTabs from '../components/ui/BaseViewTabs.vue'
 import BaseColumnPicker from '../components/ui/BaseColumnPicker.vue'
+import BaseFilterSummary from '../components/ui/BaseFilterSummary.vue'
 import EmployeeRecordForm from '../components/EmployeeRecordForm.vue'
 import EmployeeMobileList from '../components/EmployeeMobileList.vue'
 import { downloadCsv } from '../utils/exportCsv'
@@ -184,6 +185,15 @@ function clearChip(id: string) {
   if (id === 'search') clearSearch()
   if (id === 'status') setStatus('active')
   if (id === 'group') grouped.value = false
+}
+function clearRegistryFilters() {
+  searchDraft.value = ''
+  grouped.value = false
+  filtersOpen.value = false
+  router.replace({
+    name: 'employees',
+    query: { ...route.query, q: undefined, status: undefined },
+  })
 }
 function exportPage() {
   if (!registryRows.value.length) return
@@ -520,12 +530,8 @@ onMounted(() => {
           <BaseButton v-if="statusFilter !== 'active'" variant="secondary" @click="setStatus('active')">Сбросить фильтр</BaseButton>
         </div>
 
-        <div v-if="registryChips.length" class="registry-chips" aria-label="Активные фильтры реестра">
-          <BaseButton v-for="chip in registryChips" :key="chip.id" type="button" variant="secondary" class="registry-chip"
-            :aria-label="'Сбросить: '+chip.label" @click="clearChip(chip.id)">
-            {{ chip.label }} <span aria-hidden="true">×</span>
-          </BaseButton>
-        </div>
+        <BaseFilterSummary :items="registryChips" label="Активные фильтры реестра"
+          @remove="clearChip" @clear="clearRegistryFilters" />
         <p v-if="presetNotice" role="status" class="registry-preset-notice">{{ presetNotice }}</p>
         <BaseTableBulkActions :count="selectedOnPage.length" subject="сотрудников"
           :options="selectedActions" @execute="executeSelectedAction" @clear="selectedIds = []" />

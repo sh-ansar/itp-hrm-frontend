@@ -99,17 +99,37 @@ const columns = [
   { key: 'birth_date', label: 'Дата рождения' },
   { key: 'current_assignment_valid_from', label: 'Дата назначения' },
   { key: 'gender', label: 'Пол' },
+  { key: 'employee_category', label: 'Категория' },
+  { key: 'personnel_type', label: 'Тип персонала' },
   { key: 'current_position_name', label: 'Должность' },
   { key: 'current_department_name', label: 'Подразделение' },
+  { key: 'work_site', label: 'Объект' },
+  { key: 'work_zone', label: 'Рабочая зона' },
+  { key: 'work_team', label: 'Бригада / команда' },
+  { key: 'supervisor_name', label: 'Руководитель' },
+  { key: 'contract_type', label: 'Вид договора' },
+  { key: 'email', label: 'Email' },
+  { key: 'phone', label: 'Телефон' },
   { key: 'status_label', label: 'Статус' },
   { key: 'details', label: 'Действие' },
 ]
 const extendedRegistry = computed(() => ['company_admin', 'hr_specialist'].includes(currentCompany.value?.role_code ?? ''))
-const privateColumns = ['birth_date', 'gender']
-const optionalColumns = computed(() => columns.filter(column => !['full_name', 'details'].includes(column.key) && (extendedRegistry.value || !privateColumns.includes(column.key))))
-const columnKeys = ['birth_date', 'gender', 'personnel_number', 'current_position_name', 'current_department_name', 'current_assignment_valid_from', 'status_label']
+const privateColumns = ['birth_date', 'gender', 'email', 'phone']
+const optionalColumns = computed(() => columns.filter(column =>
+  !['full_name', 'details'].includes(column.key) &&
+  (extendedRegistry.value || !privateColumns.includes(column.key))))
+const columnKeys = [
+  'birth_date', 'gender', 'personnel_number', 'employee_category', 'personnel_type',
+  'current_position_name', 'current_department_name', 'current_assignment_valid_from',
+  'work_site', 'work_zone', 'work_team', 'supervisor_name', 'contract_type',
+  'email', 'phone', 'status_label',
+]
 function savedColumnPreferences(): Record<string, boolean> {
-  const initial = Object.fromEntries(columnKeys.map(key => [key, !['current_position_name', 'current_department_name'].includes(key)]))
+  const defaultVisible = new Set([
+    'birth_date', 'gender', 'personnel_number', 'current_assignment_valid_from',
+    'employee_category', 'current_position_name', 'current_department_name', 'status_label',
+  ])
+  const initial = Object.fromEntries(columnKeys.map(key => [key, defaultVisible.has(key)]))
   try {
     const saved = JSON.parse(localStorage.getItem('hrm-employee-columns-v1') || '{}') as Record<string, unknown>
     for (const key of columnKeys) if (typeof saved[key] === 'boolean') initial[key] = saved[key]
@@ -118,9 +138,11 @@ function savedColumnPreferences(): Record<string, boolean> {
 }
 const visibleFields = ref<Record<string, boolean>>(savedColumnPreferences())
 const visibleColumns = computed(() =>
-  columns.filter(column => (extendedRegistry.value || !privateColumns.includes(column.key)) && (['full_name', 'details'].includes(column.key) || visibleFields.value[column.key] !== false)))
+  columns.filter(column => (extendedRegistry.value || !privateColumns.includes(column.key)) &&
+    (['full_name', 'details'].includes(column.key) || visibleFields.value[column.key] !== false)))
 const currentCompany = computed(() => companies.value.find(item => item.id === selectedCompany.value))
-const registryRows = computed<EmployeeRow[]>(() => employees.value.map(employee => {
+
+const allRegistryRows = computed<EmployeeRow[]>(() => employees.value.map(employee => {
   const state: EmploymentStatus = employee.employment_status
     ?? (employee.current_position_name ? 'active' : 'unassigned')
   return {
@@ -129,13 +151,62 @@ const registryRows = computed<EmployeeRow[]>(() => employees.value.map(employee 
     status_label: statusLabels[state],
   }
 }))
+function uniqueOptions(values: Array<string | null | undefined>, allLabel: string) {
+  const names = [...new Set(values.filter((value): value is string => Boolean(value && value.trim())))]
+    .sort((a, b) => a.localeCompare(b, 'ru'))
+  return [{ id: 'all', name: allLabel }, ...names.map(name => ({ id: name, name }))]
+}
+const departmentFilterOptions = computed(() =>
+  uniqueOptions(allRegistryRows.value.map(row => row.current_department_name), 'Все подразделения'))
+const positionFilterOptions = computed(() =>
+  uniqueOptions(allRegistryRows.value.map(row => row.current_position_name), 'Все должности'))
+const objectFilterOptions = computed(() =>
+  uniqueOptions(allRegistryRows.value.map(row => row.work_site), 'Все объекты'))
+const categoryFilterOptions = computed(() =>
+  uniqueOptions(allRegistryRows.value.map(row => row.employee_category), 'Все категории'))
+const genderFilterOptions = [
+  { id: 'all', name: 'Любой пол' },
+  { id: 'male', name: 'Мужчина' },
+  { id: 'female', name: 'Женщина' },
+  { id: 'unset', name: 'Не указан' },
+]
+const filteredRegistryRows = computed(() => allRegistryRows.value.filter(row =>
+  (departmentFilter.value === 'all' || row.current_department_name === departmentFilter.value) &&
+  (positionFilter.value === 'all' || row.current_position_name === positionFilter.value) &&
+  (objectFilter.value === 'all' || row.work_site === objectFilter.value) &&
+  (categoryFilter.value === 'all' || row.employee_category === categoryFilter.value) &&
+  (genderFilter.value === 'all' ||
+    (genderFilter.value === 'unset' ? !row.gender : row.gender === genderFilter.value))
+))
+const registryRows = computed<EmployeeRow[]>(() => {
+  if (!demoMode) return filteredRegistryRows.value
+  const startIndex = (page.value - 1) * pageSize.value
+  return filteredRegistryRows.value.slice(startIndex, startIndex + pageSize.value)
+})
 function displayDate(value: unknown): string {
   if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}/.test(value)) return '—'
   const [year, month, day] = value.slice(0, 10).split('-')
   return day + '.' + month + '.' + year
 }
-const groupEmployees = (row: EmployeeRow) => row.current_department_name || 'Без подразделения'
-const allPageSelected = computed(() => registryRows.value.length > 0 && registryRows.value.every(row => selectedIds.value.includes(row.id)))
+const groupModeLabels: Record<GroupMode, string> = {
+  none: 'Без группировки',
+  department: 'По подразделениям',
+  category: 'По категориям',
+  object: 'По объектам',
+}
+const groupOptions = (Object.entries(groupModeLabels) as Array<[GroupMode, string]>)
+  .map(([id, label]) => ({ id, label }))
+function setGroupMode(id: string) {
+  if (['none', 'department', 'category', 'object'].includes(id)) groupMode.value = id as GroupMode
+}
+const groupEmployees = (row: EmployeeRow) => {
+  if (groupMode.value === 'department') return row.current_department_name || 'Без подразделения'
+  if (groupMode.value === 'category') return row.employee_category || 'Без категории'
+  if (groupMode.value === 'object') return row.work_site || 'Без объекта'
+  return ''
+}
+const allPageSelected = computed(() => registryRows.value.length > 0 &&
+  registryRows.value.every(row => selectedIds.value.includes(row.id)))
 const selectedOnPage = computed(() => registryRows.value.filter(row => selectedIds.value.includes(row.id)))
 const selectedActions = computed(() => [
   { id: 'export_csv', label: 'Экспортировать выбранных в CSV' },

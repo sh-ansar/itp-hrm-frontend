@@ -673,7 +673,7 @@ onMounted(() => {
         <p v-if="presetNotice" role="status" class="registry-preset-notice">{{ presetNotice }}</p>
         <BaseTableBulkActions :count="selectedOnPage.length" subject="сотрудников"
           :options="selectedActions" @execute="executeSelectedAction" @clear="selectedIds = []" />
-        <p v-if="groupMode !== 'none'" class="scope-hint">Группировка: {{ groupModeLabels[groupMode] }}. В demo фильтры применяются ко всему реестру; на реальном backend — к доступной выборке.</p>
+        <p v-if="groupMode !== 'none'" class="scope-hint">Группировка: {{ groupModeLabels[groupMode] }}. Фильтры применены к текущему реестру.</p>
 
         <div class="registry-desktop-table">
           <BaseDataTable :rows="registryRows" :columns="visibleColumns" :group-by="groupMode !== 'none' ? groupEmployees : undefined"

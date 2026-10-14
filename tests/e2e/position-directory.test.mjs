@@ -23,7 +23,7 @@ test('HR creates edits and deletes an unused position directory record', async (
 
   try {
     await login(page)
-    await page.goto('/directories')
+    await page.goto('/directories/positions')
     await page.getByRole('heading', { name: 'Справочники' }).waitFor()
 
     await page.getByRole('button', { name: 'Добавить должность' }).click()

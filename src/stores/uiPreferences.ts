@@ -2,7 +2,7 @@ import { ref, watch } from 'vue'
 import { defineStore } from 'pinia'
 
 export type UiTheme = 'light' | 'dark'
-export type UiLocale = 'ru' | 'kk' | 'en'
+export type UiLocale = 'ru' | 'kk' | 'en' | 'ka'
 export type UiDateFormat = 'dd.mm.yyyy' | 'yyyy-mm-dd' | 'dd/mm/yyyy'
 export type UiTimeFormat = '24h' | '12h'
 export type UiNumberFormat = 'space' | 'comma'
@@ -43,7 +43,7 @@ function readTimeZone(): string {
 export const useUiPreferencesStore = defineStore('ui-preferences', () => {
   const theme = ref<UiTheme>(readTheme())
   const sidebarCollapsed = ref(readSidebarCollapsed())
-  const locale = ref<UiLocale>(readStorage<UiLocale>('hrm-locale', ['ru', 'kk', 'en'], 'ru'))
+  const locale = ref<UiLocale>(readStorage<UiLocale>('hrm-locale', ['ru', 'kk', 'en', 'ka'], 'ru'))
   const timeZone = ref(readTimeZone())
   const dateFormat = ref<UiDateFormat>(
     readStorage<UiDateFormat>('hrm-date-format', ['dd.mm.yyyy', 'yyyy-mm-dd', 'dd/mm/yyyy'], 'dd.mm.yyyy'),

@@ -73,10 +73,21 @@ async function submit() {
 
 <style scoped>
 .login-page{
-  min-height:100vh;display:grid;place-items:center;padding:24px;
-  background:linear-gradient(145deg,var(--color-accent-soft) 0%,var(--color-bg) 60%,var(--color-soft) 100%)
+  position:relative;isolation:isolate;min-height:100vh;min-height:100dvh;
+  display:grid;place-items:center;padding:24px;overflow:auto;
+  background:
+    radial-gradient(circle at 18% 16%,rgba(6,151,224,.10),transparent 34%),
+    linear-gradient(145deg,var(--color-accent-soft) 0%,var(--color-page) 58%,var(--color-soft) 100%);
+  color:var(--color-text)
 }
-.login-wrap{width:min(100%,440px);display:grid;gap:18px}
+.login-page::before{
+  content:"";position:fixed;z-index:-1;inset:0;pointer-events:none;
+  background:linear-gradient(180deg,rgba(255,255,255,.18),transparent 42%)
+}
+.login-wrap{
+  position:relative;z-index:1;width:min(100%,440px);display:grid;gap:18px;
+  opacity:1;visibility:visible;transform:none
+}
 .login-brand{display:grid;gap:4px;color:var(--color-text)}
 .login-brand strong{font-size:26px;letter-spacing:-.02em}
 .login-brand span{font-size:13px;color:var(--color-muted)}

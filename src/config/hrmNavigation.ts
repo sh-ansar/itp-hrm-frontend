@@ -28,5 +28,6 @@ export function isHrmNavigationActive(to: string, routePath: string): boolean {
     || routePath.startsWith('/employees/')
     || routePath === '/employees-development' || routePath === '/learning' || routePath === '/reserve'
   if (to === '/organization') return routePath === '/organization' || routePath === '/staffing'
+  if (to === '/directories') return routePath === '/directories' || routePath.startsWith('/directories/')
   return to === routePath
 }

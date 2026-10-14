@@ -3,7 +3,8 @@ import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { Moon, Sun, Menu } from 'lucide-vue-next'
 import { useRoute, useRouter } from 'vue-router'
 import { useSessionStore } from '../../stores/session'
-import { useUiPreferencesStore } from '../../stores/uiPreferences'
+import { useUiPreferencesStore, type UiLocale } from '../../stores/uiPreferences'
+import { localeOptions, useAppI18n } from '../../i18n'
 import { browserLoginEnabled } from '../../router'
 
 const emit = defineEmits<{
@@ -14,16 +15,21 @@ const router = useRouter()
 const route = useRoute()
 const session = useSessionStore()
 const ui = useUiPreferencesStore()
+const { t } = useAppI18n()
 const searchTerm = ref('')
 const searchInput = ref<HTMLInputElement | null>(null)
 const canSignOut = computed(() => browserLoginEnabled && Boolean(session.user))
 const accountName = computed(() => canSignOut.value ? (session.user?.name ?? '') : 'ITP HRM')
-const accountDetail = computed(() => canSignOut.value ? 'Рабочая учётная запись' : 'Кадровая система')
+const accountDetail = computed(() => canSignOut.value ? t('topbar.workAccount') : t('topbar.hrSystem'))
 const initials = computed(() => {
   if (!canSignOut.value) return 'HR'
   const words = session.user?.name?.trim().split(/\s+/) ?? []
   return words.slice(0, 2).map(word => word[0]?.toUpperCase() ?? '').join('') || 'HR'
 })
+function setLocale(event: Event) {
+  const value = (event.target as HTMLSelectElement).value
+  if (value === 'ru' || value === 'kk' || value === 'en') ui.setLocale(value as UiLocale)
+}
 function searchEmployees() {
   const q = searchTerm.value.trim()
   void router.push({ name: 'employees', query: q ? { q } : {} })
@@ -39,7 +45,7 @@ async function logout() {
     await session.logout()
     await router.replace({ name: 'login' })
   } catch (cause) {
-    emit('logoutError', cause instanceof Error ? cause.message : 'Не удалось завершить сеанс')
+    emit('logoutError', cause instanceof Error ? cause.message : t('topbar.signOutTitle'))
   }
 }
 function handleShortcut(event: KeyboardEvent) {
@@ -67,21 +73,27 @@ onBeforeUnmount(() => window.removeEventListener('keydown', handleShortcut))
       <div class="search-field">
         <img class="search-leading-icon" src="/prototype-icons/Search.svg" alt="" aria-hidden="true" />
         <input ref="searchInput" v-model="searchTerm" type="search"
-          aria-label="Поиск сотрудника" placeholder="Поиск" autocomplete="off" />
+          :aria-label="t('topbar.searchEmployee')" :placeholder="t('topbar.search')" autocomplete="off" />
         <button v-if="searchTerm" class="search-clear" type="button"
-          aria-label="Очистить поиск" @click="clearSearch">
+          :aria-label="t('topbar.clearSearch')" @click="clearSearch">
           <img src="/prototype-icons/Close.svg" alt="" aria-hidden="true" />
         </button>
       </div>
-      <button class="search-submit" type="submit" aria-label="Найти сотрудников" title="Найти сотрудников">
+      <button class="search-submit" type="submit" :aria-label="t('topbar.findEmployees')" :title="t('topbar.findEmployees')">
         <img src="/prototype-icons/Search.svg" alt="" aria-hidden="true" />
       </button>
     </form>
 
     <div class="topbar-user">
+      <label class="locale-control">
+        <span class="sr-only">{{ t('settings.language') }}</span>
+        <select :value="ui.locale" :aria-label="t('settings.language')" @change="setLocale">
+          <option v-for="option in localeOptions" :key="option.id" :value="option.id">{{ option.id.toUpperCase() }}</option>
+        </select>
+      </label>
       <button class="theme-toggle topbar-icon" type="button"
-        :aria-label="ui.theme === 'dark' ? 'Включить светлую тему' : 'Включить тёмную тему'"
-        :title="ui.theme === 'dark' ? 'Светлая тема' : 'Тёмная тема'"
+        :aria-label="ui.theme === 'dark' ? t('topbar.lightTheme') : t('topbar.darkTheme')"
+        :title="ui.theme === 'dark' ? t('topbar.lightTheme') : t('topbar.darkTheme')"
         :aria-pressed="ui.theme === 'dark'" @click="ui.toggleTheme()">
         <Sun v-if="ui.theme === 'dark'" :size="20" aria-hidden="true" />
         <Moon v-else :size="20" aria-hidden="true" />
@@ -94,9 +106,9 @@ onBeforeUnmount(() => window.removeEventListener('keydown', handleShortcut))
         </span>
       </div>
       <button v-if="canSignOut" class="logout-button" type="button" :disabled="session.loading"
-        aria-label="Выйти из системы" title="Выйти" @click="logout">
+        :aria-label="t('topbar.signOutTitle')" :title="t('topbar.signOutTitle')" @click="logout">
         <img src="/prototype-icons/Log-Out.svg" alt="" aria-hidden="true" />
-        <span>Выход</span>
+        <span>{{ t('topbar.signOut') }}</span>
       </button>
     </div>
   </header>
@@ -142,6 +154,14 @@ onBeforeUnmount(() => window.removeEventListener('keydown', handleShortcut))
 .search-submit:hover{background:var(--color-primary-hover)}
 .search-submit img{width:19px;height:19px;filter:brightness(0) invert(1)}
 .topbar-user{display:flex;align-items:center;justify-content:flex-end;gap:11px;margin-left:auto;min-width:0}
+.locale-control{display:block;flex:none}
+.locale-control select{
+  height:34px;min-width:57px;padding:0 7px;border:1px solid var(--color-stroke);
+  border-radius:7px;background:var(--color-surface);color:var(--color-text);
+  font:inherit;font-size:11px;font-weight:700;box-shadow:var(--shadow-control);cursor:pointer;
+}
+.locale-control select:focus-visible{outline:2px solid var(--color-focus);outline-offset:2px}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap;border:0}
 .topbar-icon{
   display:grid;place-items:center;flex:0 0 36px;width:36px;height:36px;
   border:0;border-radius:7px;background:transparent;color:var(--color-muted);

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useActiveCompanySelection } from '../composables/useActiveCompanySelection'
 import { computed, onMounted, ref } from 'vue'
 import BaseButton from '../components/ui/BaseButton.vue'
 import BaseNotice from '../components/ui/BaseNotice.vue'
@@ -25,6 +26,7 @@ const { t } = useAppI18n()
 const activeTab = ref('interface')
 const companies = ref<CompanyRecord[]>([])
 const company = ref('')
+const { preferCompany } = useActiveCompanySelection(company)
 const error = ref('')
 const success = ref('')
 const busy = ref(false)
@@ -194,7 +196,7 @@ async function reload() {
   try {
     const response = await listCompanies()
     companies.value = response.data
-    if (!companies.value.some(item => item.id === company.value)) company.value = response.data[0]?.id || ''
+    if (!companies.value.some(item => item.id === company.value)) company.value = preferCompany(companies.value)
     if (import.meta.env.VITE_ENABLE_BROWSER_LOGIN === 'true') await session.refresh()
   } catch (cause) {
     error.value = cause instanceof Error ? cause.message : 'Не удалось загрузить настройки'

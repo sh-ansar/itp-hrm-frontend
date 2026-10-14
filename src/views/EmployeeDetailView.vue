@@ -286,6 +286,17 @@ const payrollHistoryColumns = [
   { key: 'worked_hours', label: 'Часы' },
   { key: 'worked_days', label: 'Дни' },
 ]
+const payrollSummaryFields = computed<EmployeeDisplayField[]>(() => {
+  const current = reference.value?.payroll_history?.[0]
+  return [
+    { label: 'Начислено', value: current ? money(current.accrued, reference.value?.payroll.currency ?? 'KZT') : null },
+    { label: 'Удержано', value: current ? money(current.withheld, reference.value?.payroll.currency ?? 'KZT') : null },
+    { label: 'К выплате', value: current ? money(current.paid, reference.value?.payroll.currency ?? 'KZT') : null },
+    { label: 'Отработано часов', value: current?.worked_hours },
+    { label: 'Отработано дней', value: current?.worked_days },
+    { label: 'Расчётный период', value: current?.period },
+  ]
+})
 
 const scheduleFields = computed<EmployeeDisplayField[]>(() => [
   { label: 'Производственный календарь', value: reference.value?.schedule.production_calendar, wide: true },

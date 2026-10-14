@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { FolderTree, Maximize2, Minimize2, Plus, Search } from 'lucide-vue-next'
+import { Maximize2, Minimize2, Plus, Search } from 'lucide-vue-next'
 import { useRoute, useRouter } from 'vue-router'
 import BaseCard from '../components/ui/BaseCard.vue'
 import BaseKpiGrid from '../components/ui/BaseKpiGrid.vue'
@@ -502,7 +502,13 @@ async function loadEmployees() {
   employeeLoading.value = true
   error.value = ''
   try {
-    const response = await listEmployees(company, page.value, search.value, statusFilter.value, pageSize.value)
+    const response = await listEmployees(
+      company,
+      demoMode ? 1 : page.value,
+      search.value,
+      statusFilter.value,
+      demoMode ? 100 : pageSize.value,
+    )
     if (current !== generation) return
     employees.value = response.data
     total.value = response.meta.total
@@ -549,7 +555,19 @@ watch(() => route.query.status, value => {
     ? candidate as EmploymentFilter : 'active'
   page.value = 1
 }, { immediate: true })
+watch([departmentFilter, positionFilter, objectFilter, categoryFilter, genderFilter], () => {
+  page.value = 1
+  selectedIds.value = []
+})
 watch([selectedCompany, page, search, statusFilter, pageSize], loadEmployees)
+const displayTotal = computed(() => demoMode ? filteredRegistryRows.value.length : total.value)
+const displayLastPage = computed(() => demoMode
+  ? Math.max(1, Math.ceil(displayTotal.value / pageSize.value))
+  : lastPage.value)
+watch(displayLastPage, value => {
+  if (page.value > value) page.value = value
+})
+
 onMounted(() => {
   loadCompanies()
   window.addEventListener('keydown', handleEscape)

@@ -36,6 +36,9 @@ jobs:
       - name: Shared design-system checks
         run: node --test tests/design-consistency.test.mjs
 
+      - name: Four-language translation coverage
+        run: node --test tests/i18n-coverage.test.mjs
+
       - name: Typecheck
         run: npm run typecheck
 

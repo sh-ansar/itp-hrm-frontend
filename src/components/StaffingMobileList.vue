@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { useWorkspaceI18n } from '../composables/useWorkspaceI18n'
+import { useUiFormatters } from '../composables/useUiFormatters'
 import { Pencil } from 'lucide-vue-next'
 import BaseButton from './ui/BaseButton.vue'
 import type { StaffingPlanLine } from '../api/staffing'
@@ -10,18 +12,21 @@ defineProps<{
   vacantOnly: boolean
   grouped?: boolean
 }>()
+const { tr } = useWorkspaceI18n()
+const fmt = useUiFormatters()
+
 const emit = defineEmits<{ edit: [row: StaffingPlanLine] }>()
-const format = (value: number) => Number(value).toLocaleString('ru-RU', { maximumFractionDigits: 2 })
+const format = (value: number) => fmt.number(Number(value))
 function salary(row: StaffingPlanLine): string {
-  if (row.base_salary == null) return 'Не указан'
-  return [Number(row.base_salary).toLocaleString('ru-RU'), row.currency].filter(Boolean).join(' ')
+  if (row.base_salary == null) return tr('Не указан')
+  return [fmt.number(Number(row.base_salary), 0), row.currency].filter(Boolean).join(' ')
 }
 </script>
 
 <template>
-  <div class="staffing-mobile-list" aria-label="Штатные позиции">
+  <div class="staffing-mobile-list" :aria-label="tr('Штатные позиции')">
     <p v-if="!rows.length" class="staffing-mobile-empty">
-      {{ filtered ? 'По вашему запросу ничего не найдено.' : vacantOnly ? 'Вакантных позиций нет.' : 'Штатных позиций нет.' }}
+      {{ filtered ? tr('По вашему запросу ничего не найдено.') : vacantOnly ? tr('Вакантных позиций нет.') : tr('Штатных позиций нет.') }}
     </p>
     <template v-for="(row, index) in rows" :key="row.id">
       <h3 v-if="grouped && (index === 0 || rows[index - 1]?.department_name !== row.department_name)"
@@ -34,20 +39,19 @@ function salary(row: StaffingPlanLine): string {
         </div>
         <span class="staffing-mobile-status"
           :class="{ 'is-vacant': row.vacant_units > 0, 'is-over': row.overstaffed_units > 0 }">
-          {{ row.overstaffed_units > 0 ? 'Сверх штата' : row.vacant_units > 0 ? 'Есть вакансии' : 'Укомплектовано' }}
+          {{ row.overstaffed_units > 0 ? tr('Сверх штата') : row.vacant_units > 0 ? tr('Есть вакансии') : tr('Укомплектовано') }}
         </span>
       </header>
       <dl>
-        <div><dt>Ставок</dt><dd>{{ format(row.planned_units) }}</dd></div>
-        <div><dt>Занято</dt><dd>{{ format(row.occupied_units) }}</dd></div>
-        <div><dt>Вакантно</dt><dd>{{ format(row.vacant_units) }}</dd></div>
+        <div><dt>{{ tr('Ставок') }}</dt><dd>{{ format(row.planned_units) }}</dd></div>
+        <div><dt>{{ tr('Занято') }}</dt><dd>{{ format(row.occupied_units) }}</dd></div>
+        <div><dt>{{ tr('Вакантно') }}</dt><dd>{{ format(row.vacant_units) }}</dd></div>
       </dl>
       <footer>
-        <span>Оклад: <strong>{{ salary(row) }}</strong></span>
+        <span>{{ tr('Оклад:') }}<strong>{{ salary(row) }}</strong></span>
         <BaseButton v-if="canEdit" type="button" variant="secondary"
-          :aria-label="'Изменить ' + row.position_name" @click="emit('edit', row)">
-          <Pencil :size="15" /> Изменить
-        </BaseButton>
+          :aria-label="tr('Изменить ') + row.position_name" @click="emit('edit', row)">
+          <Pencil :size="15" /> {{ tr('Изменить') }}</BaseButton>
       </footer>
     </article>
     </template>

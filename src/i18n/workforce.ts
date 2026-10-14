@@ -1,0 +1,115 @@
+import { useUiPreferencesStore, type UiLocale } from '../stores/uiPreferences'
+
+const ru = {
+  title: 'Редактор производственного календаря',
+  description: 'Выходные, праздники и сокращённые дни компании',
+  month: 'Месяц',
+  missing: 'Нет данных',
+  workday: 'Рабочий день',
+  weekend: 'Выходной',
+  holiday: 'Праздничный день',
+  shortened: 'Сокращённый день',
+  fill52: 'Заполнить пустые дни по графику 5/2',
+  fillHint: 'Существующие записи не изменяются. Праздники нужно отметить вручную.',
+  clickDay: 'Выберите дату для редактирования',
+  selected: 'Выбранная дата',
+  dayType: 'Тип дня',
+  minutes: 'Плановые минуты',
+  label: 'Описание / название праздника',
+  labelHint: 'Необязательно',
+  restore: 'Отменить изменения дня',
+  count: 'Несохранённых дней',
+  save: 'Сохранить изменения',
+  cancel: 'Закрыть',
+  saving: 'Сохранение…',
+  invalid: 'Проверьте тип дня и количество минут',
+  failed: 'Не удалось сохранить календарь',
+  conflict: 'Календарь изменён другим пользователем. Обновите данные и повторите.',
+  refresh: 'Перезагрузить календарь',
+  unsaved: 'Есть несохранённые изменения. Закрыть без сохранения?',
+  blank: 'Нет изменений для сохранения',
+  enabled: 'Редактирование доступно только администратору компании',
+  workdays: 'Рабочих дней',
+  nonworkdays: 'Выходных и праздничных',
+  incomplete: 'Не заполнено',
+  suggested: 'Предложенный график 5/2 не учитывает государственные праздники',
+  remaining: 'Можно сохранить заполненные дни, не изменяя остальные',
+}
+type WorkforceCopy = typeof ru
+export type WorkforceCopyKey = keyof WorkforceCopy
+
+const kk: Record<WorkforceCopyKey, string> = {
+  title: 'Өндірістік күнтізбені өңдеу',
+  description: 'Компанияның демалыс, мереке және қысқартылған күндері',
+  month: 'Ай', missing: 'Дерек жоқ', workday: 'Жұмыс күні',
+  weekend: 'Демалыс күні', holiday: 'Мереке күні', shortened: 'Қысқартылған күн',
+  fill52: 'Бос күндерді 5/2 кестесі бойынша толтыру',
+  fillHint: 'Бар жазбалар өзгермейді. Мерекелерді қолмен белгілеңіз.',
+  clickDay: 'Өңдеу үшін күнді таңдаңыз', selected: 'Таңдалған күн',
+  dayType: 'Күн түрі', minutes: 'Жоспарланған минуттар',
+  label: 'Сипаттама / мереке атауы', labelHint: 'Міндетті емес',
+  restore: 'Күн өзгерістерін болдырмау', count: 'Сақталмаған күндер',
+  save: 'Өзгерістерді сақтау', cancel: 'Жабу', saving: 'Сақталуда…',
+  invalid: 'Күн түрі мен минут санын тексеріңіз',
+  failed: 'Күнтізбені сақтау мүмкін болмады',
+  conflict: 'Күнтізбені басқа пайдаланушы өзгерткен. Деректерді жаңартыңыз.',
+  refresh: 'Күнтізбені жаңарту',
+  unsaved: 'Сақталмаған өзгерістер бар. Сақтамай жабасыз ба?',
+  blank: 'Сақталатын өзгерістер жоқ',
+  enabled: 'Тек компания әкімшісі өзгерте алады',
+  workdays: 'Жұмыс күндері', nonworkdays: 'Демалыс және мереке күндері',
+  incomplete: 'Толтырылмаған', suggested: '5/2 кестесі мемлекеттік мерекелерді ескермейді',
+  remaining: 'Қалған күндерді өзгертпей, толтырылған күндерді сақтауға болады',
+}
+const en: Record<WorkforceCopyKey, string> = {
+  title: 'Production calendar editor',
+  description: 'Company weekends, holidays and shortened workdays',
+  month: 'Month', missing: 'Not recorded', workday: 'Workday',
+  weekend: 'Weekend', holiday: 'Holiday', shortened: 'Shortened workday',
+  fill52: 'Fill empty dates with a Mon–Fri 5/2 template',
+  fillHint: 'Existing entries will not change. Mark public holidays manually.',
+  clickDay: 'Select a date to edit', selected: 'Selected date',
+  dayType: 'Day type', minutes: 'Planned minutes',
+  label: 'Description / holiday name', labelHint: 'Optional',
+  restore: 'Undo changes to this date', count: 'Unsaved days',
+  save: 'Save changes', cancel: 'Close', saving: 'Saving…',
+  invalid: 'Check the day type and planned minutes',
+  failed: 'Unable to save the calendar',
+  conflict: 'Another user changed this calendar. Reload the data and try again.',
+  refresh: 'Reload calendar', unsaved: 'You have unsaved changes. Close without saving?',
+  blank: 'No changes to save', enabled: 'Only company administrators can edit',
+  workdays: 'Workdays', nonworkdays: 'Weekends and holidays',
+  incomplete: 'Missing', suggested: 'The 5/2 suggestion does not include public holidays',
+  remaining: 'You can save only changed dates and leave the rest untouched',
+}
+const ka: Record<WorkforceCopyKey, string> = {
+  title: 'საწარმოო კალენდრის რედაქტორი',
+  description: 'კომპანიის დასვენების, უქმე და შემოკლებული დღეები',
+  month: 'თვე', missing: 'მონაცემი არ არის', workday: 'სამუშაო დღე',
+  weekend: 'დასვენების დღე', holiday: 'უქმე დღე', shortened: 'შემოკლებული სამუშაო დღე',
+  fill52: 'ცარიელი დღეების შევსება 5/2 გრაფიკით',
+  fillHint: 'არსებული ჩანაწერები არ შეიცვლება. დღესასწაულები მონიშნეთ ხელით.',
+  clickDay: 'აირჩიეთ თარიღი შესაცვლელად', selected: 'არჩეული თარიღი',
+  dayType: 'დღის ტიპი', minutes: 'დაგეგმილი წუთები',
+  label: 'აღწერა / დღესასწაულის დასახელება', labelHint: 'არასავალდებულო',
+  restore: 'დღის ცვლილებების გაუქმება', count: 'შეუნახავი დღეები',
+  save: 'ცვლილებების შენახვა', cancel: 'დახურვა', saving: 'ინახება…',
+  invalid: 'შეამოწმეთ დღის ტიპი და წუთების რაოდენობა',
+  failed: 'კალენდრის შენახვა ვერ მოხერხდა',
+  conflict: 'კალენდარი სხვა მომხმარებელმა შეცვალა. განაახლეთ მონაცემები.',
+  refresh: 'კალენდრის განახლება', unsaved: 'არის შეუნახავი ცვლილებები. დაიხუროს შენახვის გარეშე?',
+  blank: 'შესანახი ცვლილებები არ არის', enabled: 'რედაქტირება შეუძლია მხოლოდ კომპანიის ადმინისტრატორს',
+  workdays: 'სამუშაო დღეები', nonworkdays: 'დასვენებისა და უქმე დღეები',
+  incomplete: 'შეუვსებელი', suggested: '5/2 გრაფიკი არ ითვალისწინებს სახელმწიფო დღესასწაულებს',
+  remaining: 'შესაძლებელია შეცვლილი დღეების შენახვა დანარჩენების შეცვლის გარეშე',
+}
+
+const messages: Record<UiLocale, Record<WorkforceCopyKey, string>> = { ru, kk, en, ka }
+
+export function useWorkforceI18n() {
+  const ui = useUiPreferencesStore()
+  function t(key: WorkforceCopyKey): string {
+    return messages[ui.locale][key]
+  }
+  return { t }
+}

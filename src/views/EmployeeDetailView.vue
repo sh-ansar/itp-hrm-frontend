@@ -528,14 +528,33 @@ onMounted(load)
         <EmployeeProfileSection title="Документы, удостоверяющие личность">
           <EmployeeDataGrid :fields="documentFields" />
         </EmployeeProfileSection>
-        <EmployeeProfileSection title="Банковские реквизиты">
-          <EmployeeDataGrid :fields="bankingFields" />
+        <EmployeeProfileSection title="Место рождения">
+          <EmployeeDataGrid :fields="birthPlaceFields" />
+        </EmployeeProfileSection>
+        <EmployeeProfileSection title="Семейные данные">
+          <BaseDataTable density="compact" :rows="reference?.family ?? []" :columns="familyColumns" row-key="id"
+            caption="Сведения о родственниках сотрудника" empty-title="Семейные данные не внесены"
+            empty-description="Для сотрудника пока нет доступных сведений о родственниках.">
+            <template #cell-birth_date="{ value }">{{ formatDate(typeof value === 'string' ? value : null) }}</template>
+          </BaseDataTable>
+        </EmployeeProfileSection>
+        <EmployeeProfileSection title="Воинский учёт">
+          <EmployeeDataGrid :fields="militaryFields" />
         </EmployeeProfileSection>
       </template>
 
       <template v-if="activeSection === 'organization' && profile.meta.extended_sections_visible">
-        <EmployeeProfileSection title="Организационные данные">
-          <EmployeeDataGrid :fields="organizationFields" />
+        <EmployeeProfileSection title="Подразделение и должность">
+          <EmployeeDataGrid :fields="organizationPositionFields" />
+        </EmployeeProfileSection>
+        <EmployeeProfileSection title="Объект и место работы">
+          <EmployeeDataGrid :fields="workplaceFields" />
+        </EmployeeProfileSection>
+        <EmployeeProfileSection title="Бригада и руководитель">
+          <EmployeeDataGrid :fields="teamFields" />
+        </EmployeeProfileSection>
+        <EmployeeProfileSection title="Статус и штатная позиция">
+          <EmployeeDataGrid :fields="staffingStatusFields" />
         </EmployeeProfileSection>
       </template>
       <div v-if="profile.meta.profile_writes_enabled && activeSection === 'development'" class="profile-toolbar">

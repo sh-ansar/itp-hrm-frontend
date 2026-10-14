@@ -158,6 +158,138 @@ function exportSelected() {
   )
 }
 
+const PRESET_KEY = 'hrm-employee-view-preset-v1'
+const exportOptions = computed(() => [
+  { id: 'page', label: 'Выгрузить загруженную страницу CSV', disabled: registryRows.value.length === 0 },
+  { id: 'selected', label: 'Выгрузить выбранных CSV', disabled: selectedOnPage.value.length === 0 },
+])
+const registerActionOptions = computed(() => [
+  { id: 'select_page', label: 'Выбрать текущую страницу', disabled: !registryRows.value.length },
+  { id: 'clear_selection', label: 'Снять выделение', disabled: !selectedOnPage.value.length },
+  { id: 'open_selected', label: 'Открыть выбранную карточку', disabled: selectedOnPage.value.length !== 1 },
+  { id: 'export_selected', label: 'Экспортировать выбранных CSV', disabled: !selectedOnPage.value.length },
+])
+const templateOptions = computed(() => [
+  { id: 'save', label: 'Сохранить текущий вид', description: 'Только в этом браузере' },
+  { id: 'apply', label: 'Применить сохранённый вид', disabled: !presetAvailable.value },
+  { id: 'delete', label: 'Удалить сохранённый вид', disabled: !presetAvailable.value },
+])
+const registryChips = computed(() => [
+  ...(search.value ? [{ id: 'search', label: 'Поиск: ' + search.value }] : []),
+  ...(statusFilter.value !== 'active' ? [{ id: 'status', label: 'Статус: ' + (statusOptions.find(item => item.id === statusFilter.value)?.label ?? statusFilter.value) }] : []),
+  ...(grouped.value ? [{ id: 'group', label: 'По подразделениям' }] : []),
+])
+function clearChip(id: string) {
+  if (id === 'search') clearSearch()
+  if (id === 'status') setStatus('active')
+  if (id === 'group') grouped.value = false
+}
+function exportPage() {
+  if (!registryRows.value.length) return
+  downloadCsv('employees-page-' + page.value + '.csv',
+    ['ФИО', 'Табельный номер', 'Дата рождения', 'Дата назначения', 'Пол', 'Подразделение', 'Должность', 'Статус'],
+    registryRows.value.map(row => [
+      row.full_name, row.personnel_number, displayDate(row.birth_date),
+      displayDate(row.current_assignment_valid_from),
+      row.gender === 'male' ? 'М' : row.gender === 'female' ? 'Ж' : '—',
+      row.current_department_name, row.current_position_name, row.status_label,
+    ]),
+  )
+}
+function doExport(id: string) {
+  if (id === 'page') exportPage()
+  if (id === 'selected') exportSelected()
+}
+async function doTopAction(id: string) {
+  if (id === 'select_page') togglePageSelection(true)
+  if (id === 'clear_selection') selectedIds.value = []
+  if (id === 'export_selected') exportSelected()
+  if (id === 'open_selected' && selectedOnPage.value.length === 1) {
+    await router.push({ name: 'employee-detail',
+      params: { company: selectedCompany.value, employee: selectedOnPage.value[0]!.id } })
+  }
+}
+async function doRowAction(id: string, row: EmployeeRow) {
+  if (id === 'open') await router.push({ name: 'employee-detail',
+    params: { company: selectedCompany.value, employee: row.id } })
+  if (id === 'select') toggleSelection(row.id, true)
+  if (id === 'export') downloadCsv('employee-' + row.personnel_number + '.csv',
+    ['ФИО', 'Табельный номер', 'Подразделение', 'Должность', 'Статус'],
+    [[row.full_name, row.personnel_number, row.current_department_name, row.current_position_name, row.status_label]])
+}
+const rowActionOptions = [
+  { id: 'open', label: 'Открыть карточку' },
+  { id: 'select', label: 'Выбрать сотрудника' },
+  { id: 'export', label: 'Экспортировать строку CSV' },
+]
+function savePreset() {
+  try {
+    localStorage.setItem(PRESET_KEY, JSON.stringify({
+      columns: visibleFields.value, grouped: grouped.value,
+      status: statusFilter.value, perPage: pageSize.value,
+    }))
+    presetAvailable.value = true
+    presetNotice.value = 'Вид сохранён только в этом браузере'
+  } catch { presetNotice.value = 'Не удалось сохранить настройки в браузере' }
+}
+function applyPreset() {
+  try {
+    const raw = localStorage.getItem(PRESET_KEY)
+    if (!raw) return
+    const preset = JSON.parse(raw) as Record<string, unknown>
+    if (typeof preset.grouped === 'boolean') grouped.value = preset.grouped
+    if (typeof preset.columns === 'object' && preset.columns !== null) {
+      const values = preset.columns as Record<string, unknown>
+      visibleFields.value = {
+        ...visibleFields.value,
+        ...Object.fromEntries(columnKeys.filter(key => typeof values[key] === 'boolean')
+          .map(key => [key, values[key]])),
+      }
+    }
+    if (typeof preset.perPage === 'number' && [10, 15, 25, 50].includes(preset.perPage))
+      changePageSize(preset.perPage)
+    if (typeof preset.status === 'string' &&
+      ['all', 'active', 'planned', 'archived', 'unassigned'].includes(preset.status))
+      setStatus(preset.status as EmploymentFilter)
+    presetNotice.value = 'Сохранённый вид применён'
+  } catch { presetNotice.value = 'Не удалось прочитать сохранённый вид' }
+}
+function presetAction(id: string) {
+  if (id === 'save') savePreset()
+  if (id === 'apply') applyPreset()
+  if (id === 'delete') {
+    try {
+      localStorage.removeItem(PRESET_KEY)
+      presetAvailable.value = false
+      presetNotice.value = 'Сохранённый вид удалён'
+    } catch { presetNotice.value = 'Не удалось удалить сохранённый вид' }
+  }
+}
+function changePageSize(size: number) {
+  if (![10, 15, 25, 50].includes(size)) return
+  pageSize.value = size
+  page.value = 1
+  selectedIds.value = []
+}
+async function toggleSearch() {
+  searchOpen.value = !searchOpen.value
+  if (searchOpen.value) {
+    await nextTick()
+    searchInput.value?.focus()
+  } else if (search.value) clearSearch()
+}
+function toggleFullscreen() {
+  fullscreen.value = !fullscreen.value
+}
+function handleEscape(event: KeyboardEvent) {
+  if (event.key === 'Escape' && fullscreen.value) fullscreen.value = false
+}
+watch(fullscreen, value => document.body.classList.toggle('hrm-register-fullscreen', value))
+onBeforeUnmount(() => {
+  document.body.classList.remove('hrm-register-fullscreen')
+  window.removeEventListener('keydown', handleEscape)
+})
+
 function setTab(next: string) {
   filtersOpen.value = false
   if (next === 'development') {
@@ -276,6 +408,7 @@ watch(selectedCompany, () => {
 watch(() => route.query.q, value => {
   search.value = typeof value === 'string' ? value.trim() : ''
   searchDraft.value = search.value
+  if (search.value) searchOpen.value = true
   page.value = 1
 }, { immediate: true })
 watch(() => route.query.status, value => {
@@ -285,7 +418,11 @@ watch(() => route.query.status, value => {
   page.value = 1
 }, { immediate: true })
 watch([selectedCompany, page, search, statusFilter, pageSize], loadEmployees)
-onMounted(loadCompanies)
+onMounted(() => {
+  loadCompanies()
+  window.addEventListener('keydown', handleEscape)
+  try { presetAvailable.value = Boolean(localStorage.getItem(PRESET_KEY)) } catch { presetAvailable.value = false }
+})
 </script>
 
 <template>

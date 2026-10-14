@@ -1,8 +1,11 @@
 <script setup lang="ts">
+import { useWorkspaceI18n } from '../composables/useWorkspaceI18n'
 import { computed } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { House } from 'lucide-vue-next'
 import BaseViewTabs from './ui/BaseViewTabs.vue'
+
+const { tr } = useWorkspaceI18n()
 
 const route = useRoute()
 const router = useRouter()
@@ -29,15 +32,15 @@ function selectTab(id: string) {
 
 <template>
   <div class="org-staffing-navigation">
-    <nav class="org-breadcrumbs" aria-label="Навигационная цепочка">
-      <RouterLink to="/" aria-label="Главная"><House :size="15" /></RouterLink>
+    <nav class="org-breadcrumbs" :aria-label="tr('Навигационная цепочка')">
+      <RouterLink to="/" :aria-label="tr('Главная')"><House :size="15" /></RouterLink>
       <span aria-hidden="true">/</span>
-      <RouterLink to="/organization">Оргструктура и штатка</RouterLink>
+      <RouterLink to="/organization">{{ tr('Оргструктура и штатка') }}</RouterLink>
       <span aria-hidden="true">/</span>
-      <span aria-current="page">{{ currentLabel }}</span>
+      <span aria-current="page">{{ tr(currentLabel) }}</span>
     </nav>
     <BaseViewTabs :model-value="current" :options="tabOptions"
-      label="Разделы оргструктуры и штатного расписания"
+      :label="tr('Разделы оргструктуры и штатного расписания')"
       @update:model-value="selectTab" />
   </div>
 </template>

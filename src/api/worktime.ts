@@ -74,7 +74,7 @@ export interface WorkScheduleResponse {
 export interface ProductionCalendarDay extends Record<string, unknown> {
   id: string
   date: string
-  day_type: string
+  day_type: ProductionCalendarDayType
   planned_minutes: number | null
   label: string | null
   revision: number

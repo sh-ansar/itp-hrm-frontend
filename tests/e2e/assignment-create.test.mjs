@@ -40,7 +40,7 @@ test('HR creates edits and atomically transfers assignments at mobile width', as
     await row.waitFor()
     assert.match(await row.innerText(), /Visible Finance/)
     assert.match(await row.innerText(), /Test Engineer/)
-    assert.match(await row.innerText(), /1 января 2025/)
+    assert.match(await row.innerText(), /01\.01\.2025/)
 
     await row.getByRole('button', { name: 'Изменить' }).click()
     const editor = page.getByRole('region', { name: 'Редактирование назначения' })

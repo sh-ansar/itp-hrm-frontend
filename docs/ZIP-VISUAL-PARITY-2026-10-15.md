@@ -16,16 +16,16 @@ This report describes code parity and test coverage. It is **not** a claim of a 
 
 ## Localization contract
 
-- The interface vocabulary (not API business values) resolves via `useWorkspaceI18n`: RU source copy with KK and EN variants.
+- The interface vocabulary (not API business values) resolves via `useWorkspaceI18n`: RU source copy with KK, EN and KA (Georgian) variants. Georgian includes all **668** reviewed workspace translations, plus **71** shell/navigation/Settings keys. The stored language code is `ka`, header displays `GE`, and `ka-GE` formats the localized date/time parts.
 - Dates, date/time and numbers are formatted via `useUiFormatters`, including employee register and document register mobile views; no hard-coded RU `dd.mm.yyyy` remains in those modules.
 - Table collation and filter case folding follow the saved locale; stored selection IDs and API model fields remain unchanged.
 - Single source of truth for table accessibility and filters is the shared UI components, not five separate implementations.
-- Every language must be usable in desktop (1440px), tablet (768px) and mobile (375px); browser test `demo-workspace-locales.test.mjs` covers primary route headings, employee date formatting and mobile overflow.
+- All four languages must work at desktop (1440px), tablet (768px) and mobile (375px). Browser tests cover EN/KK/KA route headings, date preferences, live GE selection, persisted dark mode, absent overlays, and responsive viewport bounds. A deterministic `tests/i18n-coverage.test.mjs` check prevents missing Georgian shell/workspace labels.
 
 ## Remaining acceptance gates
 
-1. Pass Frontend CI, demo build, demo-browser E2E and authorization E2E for PR #117.
-2. When a working preview/build slot is available, capture real RU/KK/EN light/dark screenshots of the five views for side-by-side geometry comparison with ZIP (font, rows, whitespace, chart, overlays).
+1. Pass Frontend CI, demo build, demo-browser E2E and authorization E2E for PR #117 including Georgian tests; the dark-theme startup CSS fix in PR #118 is integrated.
+2. When a working preview/build slot is available, capture real RU/KK/EN/KA light/dark screenshots of the five views for side-by-side geometry comparison with ZIP (font, rows, whitespace, chart, overlays).
 3. Correct any screenshot-confirmed visual differences in follow-up commits; do not mark pixel-level parity as complete based solely on the source review.
 4. Keep backend, API contracts and production data unchanged; maintain Git-only changes.
 

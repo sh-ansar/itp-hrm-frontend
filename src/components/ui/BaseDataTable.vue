@@ -103,7 +103,7 @@ function filterValue(row: T, column: string): string {
 }
 function filterLabel(key: string, value: string): string {
   if (key === 'gender') return value === 'male' ? 'Мужчина' : value === 'female' ? 'Женщина' : value
-  if (/^\\d{4}-\\d{2}-\\d{2}$/.test(value) && (key.includes('date') || key.endsWith('_on') || key.endsWith('_from'))) {
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value) && (key.includes('date') || key.endsWith('_on') || key.endsWith('_from'))) {
     const [year, month, day] = value.split('-')
     return day + '.' + month + '.' + year
   }
@@ -319,7 +319,7 @@ watch(() => props.columns.map(column => column.key).join(','), () => {
           <tr>
             <th v-if="showSelection" class="selection-column" scope="col">
               <input type="checkbox" :checked="allSelected" :indeterminate="someSelected"
-                :aria-label="'Выбрать все видимые строки: ' + caption"
+                :aria-label="'Выбрать все строки на странице: ' + caption"
                 :disabled="orderedRows.length === 0"
                 @change="selectAll(($event.target as HTMLInputElement).checked)" />
             </th>

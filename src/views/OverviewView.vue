@@ -1,9 +1,12 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import BaseDataTable from '../components/ui/BaseDataTable.vue'
+import BaseTableBulkActions from '../components/ui/BaseTableBulkActions.vue'
 import BaseNotice from '../components/ui/BaseNotice.vue'
 import BaseStatusPill from '../components/ui/BaseStatusPill.vue'
 import DashboardMetricCard from '../components/ui/DashboardMetricCard.vue'
+import BaseKpiGrid from '../components/ui/BaseKpiGrid.vue'
 import DashboardSectionHeading from '../components/ui/DashboardSectionHeading.vue'
 import DashboardTableToolbar from '../components/ui/DashboardTableToolbar.vue'
 import { listCompanies } from '../api/organization'
@@ -13,9 +16,11 @@ import { listDocuments } from '../api/documents'
 import { getStaffingPlan, listStaffingPlans, type StaffingPlanLine } from '../api/staffing'
 import { preferredApprovedStaffingPlan } from '../utils/staffingPlanChoice'
 import { localTodayISO } from '../utils/localDate'
+import { downloadCsv } from '../utils/exportCsv'
 
 type EmployeeRow = EmployeeRecord & { full_name:string; gender_label:string; status_label:string }
 type ActionRow = PersonnelActionRow & { full_name:string; action_label:string }
+const router = useRouter()
 const companyId=ref('')
 const companyName=ref('')
 const loading=ref(true)
@@ -35,7 +40,10 @@ const employeeStatus=ref('active')
 const vacancyQuery=ref('')
 const vacancySearch=ref('')
 const vacancyDepartment=ref('all')
-const staffCount=ref(0)
+const staffCount=ref<number|null>(null)
+const allEmployeeCount=ref<number|null>(null)
+const selectedEmployeeKeys=ref<string[]>([])
+const selectedVacancyKeys=ref<string[]>([])
 
 const employeeOptions=[
   {id:'active',label:'Работают'},
@@ -70,10 +78,44 @@ const visibleVacancies=computed(()=>vacancyRows.value.filter(row=>
   (vacancyDepartment.value==='all'||row.department_id===vacancyDepartment.value)
   &&(!vacancySearch.value||[row.position_name,row.department_name].join(' ').toLowerCase().includes(vacancySearch.value.toLowerCase()))
 ).slice(0,6))
+const selectedEmployeeRows=computed(()=>employeeRows.value.filter(row=>selectedEmployeeKeys.value.includes(row.id)))
+const selectedVacancyRows=computed(()=>visibleVacancies.value.filter(row=>selectedVacancyKeys.value.includes(row.id)))
+const employeeBulkOptions=computed(()=>[
+  {id:'export_csv',label:'Экспорт выбранных сотрудников в CSV'},
+  ...(selectedEmployeeRows.value.length === 1 ? [{id:'open_card',label:'Открыть карточку сотрудника'}] : []),
+])
+const vacancyBulkOptions=[
+  {id:'export_csv',label:'Экспорт выбранных вакансий в CSV'},
+  {id:'open_staffing',label:'Открыть штатное расписание'},
+]
+function executeEmployeeAction(action:string){
+  if(action==='export_csv'){
+    downloadCsv('overview-selected-employees.csv',
+      ['ФИО','Табельный номер','Подразделение','Должность','Статус'],
+      selectedEmployeeRows.value.map(row=>[
+        row.full_name,row.personnel_number,row.current_department_name,row.current_position_name,row.status_label]))
+  }else if(action==='open_card'&&selectedEmployeeRows.value.length===1){
+    void router.push({name:'employee-detail',params:{company:companyId.value,employee:selectedEmployeeRows.value[0]!.id}})
+  }
+}
+function executeVacancyAction(action:string){
+  if(action==='export_csv'){
+    downloadCsv('overview-selected-vacancies.csv',
+      ['Должность','Подразделение','Ставок','Занято','Вакантно'],
+      selectedVacancyRows.value.map(row=>[row.position_name,row.department_name,
+        row.planned_units,row.occupied_units,row.vacant_units]))
+  }else if(action==='open_staffing'){
+    void router.push('/staffing?view=vacant')
+  }
+}
+watch(employeeRows,()=>{selectedEmployeeKeys.value=[]})
+watch(visibleVacancies,()=>{selectedVacancyKeys.value=[]})
 const plannedUnits=computed(()=>staffing.value.reduce((s,row)=>s+Number(row.planned_units||0),0))
 const vacantUnits=computed(()=>staffing.value.reduce((s,row)=>s+Number(row.vacant_units||0),0))
 const vacancyShare=computed(()=>plannedUnits.value>0?100*vacantUnits.value/plannedUnits.value:null)
-const newHireShare=computed(()=>hiresThisMonth.value!==null&&staffCount.value>0?100*hiresThisMonth.value/staffCount.value:null)
+const newHireShare=computed(()=>hiresThisMonth.value!==null&&staffCount.value!==null&&staffCount.value>0?100*hiresThisMonth.value/staffCount.value:null)
+const activeShare=computed(()=>staffCount.value!==null&&allEmployeeCount.value!==null&&allEmployeeCount.value>0
+  ?100*staffCount.value/allEmployeeCount.value:null)
 
 const employeeColumns=[
   {key:'full_name',label:'ФИО / Отдел',sortable:true},
@@ -142,8 +184,9 @@ async function load(){
     companyName.value=company.name
 
     // Independent requests: one optional unavailable module must not hide the dashboard.
-    const [peopleResult,actionsResult,plansResult,documentsResult]=await Promise.allSettled([
+    const [peopleResult,allPeopleResult,actionsResult,plansResult,documentsResult]=await Promise.allSettled([
       listEmployees(company.id,1,'','active'),
+      listEmployees(company.id,1,'','all'),
       listPersonnelActions(company.id),
       listStaffingPlans(company.id),
       listDocuments(company.id),
@@ -153,6 +196,7 @@ async function load(){
       personnelTotal.value=peopleResult.value.meta.total
       staffCount.value=peopleResult.value.meta.total
     }else staffError.value='Не удалось получить реестр сотрудников'
+    if(allPeopleResult.status==='fulfilled')allEmployeeCount.value=allPeopleResult.value.meta.total
     if(actionsResult.status==='fulfilled'){
       actions.value=actionsResult.value.data
       const {data,meta}=actionsResult.value
@@ -185,7 +229,7 @@ onMounted(load)
   <section class="overview-page">
     <h1 class="overview-sr-only">Главная</h1>
     <BaseNotice v-if="error" tone="error">{{ error }}</BaseNotice>
-    <section class="overview-metrics" aria-label="Основные показатели компании">
+    <BaseKpiGrid class="overview-metrics" label="Основные показатели компании">
       <DashboardMetricCard title="Вакантные позиции" color="amber"
         :value="staffingError?'—':formatUnits(vacantUnits)" :percent="staffingError?null:vacancyShare"
         :detail="'ставок из '+(plannedUnits?formatUnits(plannedUnits):'—')"
@@ -198,7 +242,11 @@ onMounted(load)
         :value="documentsTotal" :percent="null"
         detail="документов в реестре" :footnote="documentExpiryAvailable?'Сроки документов рассчитаны':'Сроки действия пока не учитываются'"
         to="/documents" />
-    </section>
+      <DashboardMetricCard title="Сотрудники в штате" color="blue"
+        :value="staffCount" :percent="activeShare"
+        :detail="'работают из '+(allEmployeeCount??'—')+' записей'"
+        footnote="По реестру персонала" to="/employees" />
+    </BaseKpiGrid>
 
     <section class="overview-section" aria-label="Реестр сотрудников на главной">
       <DashboardSectionHeading title="Реестр сотрудников" to="/employees" action-label="Полный реестр">
@@ -209,7 +257,10 @@ onMounted(load)
         </template>
       </DashboardSectionHeading>
       <BaseNotice v-if="staffError" tone="error">{{ staffError }}</BaseNotice>
+      <BaseTableBulkActions :count="selectedEmployeeRows.length" subject="сотрудников"
+        :options="employeeBulkOptions" @execute="executeEmployeeAction" @clear="selectedEmployeeKeys=[]" />
       <BaseDataTable :rows="employeeRows" :columns="employeeColumns" row-key="id"
+        selectable selection-label="Выбрать сотрудника" v-model:selected-keys="selectedEmployeeKeys"
         :loading="loading||staffLoading" caption="Реестр сотрудников на главной"
         empty-title="Сотрудники не найдены" empty-description="Измените запрос или фильтры, чтобы увидеть сотрудников.">
         <template #cell-full_name="{row}">
@@ -242,7 +293,10 @@ onMounted(load)
         </template>
       </DashboardSectionHeading>
       <BaseNotice v-if="staffingError" tone="error">{{ staffingError }}</BaseNotice>
+      <BaseTableBulkActions :count="selectedVacancyRows.length" subject="вакансий"
+        :options="vacancyBulkOptions" @execute="executeVacancyAction" @clear="selectedVacancyKeys=[]" />
       <BaseDataTable :rows="visibleVacancies" :columns="vacancyColumns" row-key="id"
+        selectable selection-label="Выбрать вакансию" v-model:selected-keys="selectedVacancyKeys"
         :loading="loading" caption="Вакантные штатные позиции на главной"
         empty-title="Вакантных позиций нет"
         empty-description="В текущей версии штатного расписания нет подходящих вакансий.">
@@ -278,11 +332,6 @@ onMounted(load)
 <style scoped>
 .overview-page{display:grid;grid-template-columns:minmax(0,1fr);gap:25px;min-width:0;max-width:100%;padding-top:1px}
 .overview-sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap;border:0}
-.overview-metrics{
-  display:grid;grid-template-columns:repeat(3,minmax(0,1fr));
-  gap:14px;min-width:0;padding:20px;border:1px solid var(--color-stroke);
-  border-radius:var(--radius-lg);background:var(--color-soft);box-shadow:var(--shadow-card);
-}
 .overview-section{min-width:0;display:grid;gap:0}
 .primary-cell{display:grid;gap:3px;min-width:165px;max-width:290px}
 .primary-cell strong{color:var(--color-text);font-size:12px;line-height:17px;font-weight:600}
@@ -292,9 +341,7 @@ onMounted(load)
 .overview-count{margin:8px 0 0;color:var(--color-muted);font-size:11px;line-height:17px}
 .overview-count a{color:var(--color-primary);font-weight:600}
 .overview-actions{padding-bottom:16px}
-@media(max-width:1100px){.overview-metrics{grid-template-columns:repeat(2,minmax(0,1fr));padding:14px;gap:10px}}
 @media(max-width:700px){
   .overview-page{gap:21px}
-  .overview-metrics{grid-template-columns:1fr;padding:9px}
 }
 </style>

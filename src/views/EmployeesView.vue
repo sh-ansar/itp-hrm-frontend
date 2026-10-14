@@ -9,6 +9,7 @@ import BasePagination from '../components/ui/BasePagination.vue'
 import BaseNotice from '../components/ui/BaseNotice.vue'
 import BaseLoadingState from '../components/ui/BaseLoadingState.vue'
 import BaseDataTable from '../components/ui/BaseDataTable.vue'
+import BaseTableBulkActions from '../components/ui/BaseTableBulkActions.vue'
 import BaseStatusPill from '../components/ui/BaseStatusPill.vue'
 import BaseDialog from '../components/ui/BaseDialog.vue'
 import BaseViewTabs from '../components/ui/BaseViewTabs.vue'
@@ -105,6 +106,17 @@ function displayDate(value: unknown): string {
 const groupEmployees = (row: EmployeeRow) => row.current_department_name || 'Без подразделения'
 const allPageSelected = computed(() => registryRows.value.length > 0 && registryRows.value.every(row => selectedIds.value.includes(row.id)))
 const selectedOnPage = computed(() => registryRows.value.filter(row => selectedIds.value.includes(row.id)))
+const selectedActions = computed(() => [
+  { id: 'export_csv', label: 'Экспортировать выбранных в CSV' },
+  ...(selectedOnPage.value.length === 1 ? [{ id: 'open_card', label: 'Открыть карточку сотрудника' }] : []),
+])
+async function executeSelectedAction(action: string) {
+  if (action === 'export_csv') exportSelected()
+  if (action === 'open_card' && selectedOnPage.value.length === 1) {
+    await router.push({ name: 'employee-detail',
+      params: { company: selectedCompany.value, employee: selectedOnPage.value[0]!.id } })
+  }
+}
 function toggleSelection(id: string, checked: boolean) {
   selectedIds.value = checked ? [...new Set([...selectedIds.value, id])] : selectedIds.value.filter(item => item !== id)
 }
@@ -316,14 +328,15 @@ onMounted(loadCompanies)
         <div class="registry-selection" aria-label="Выбор сотрудников текущей страницы">
           <label><input type="checkbox" :checked="allPageSelected" :disabled="!registryRows.length" @change="togglePageSelection(($event.target as HTMLInputElement).checked)" /> Выбрать страницу</label>
           <span>Выбрано на странице: {{ selectedOnPage.length }} из {{ registryRows.length }}</span>
-          <BaseButton v-if="selectedOnPage.length" variant="secondary" @click="exportSelected">Экспорт выбранных CSV</BaseButton>
-          <BaseButton v-if="selectedOnPage.length" variant="secondary" @click="selectedIds = []">Снять выделение</BaseButton>
+          <span v-if="!selectedOnPage.length" class="selection-instruction">Отметьте строки, чтобы выбрать действие</span>
         </div>
+        <BaseTableBulkActions :count="selectedOnPage.length" subject="сотрудников"
+          :options="selectedActions" @execute="executeSelectedAction" @clear="selectedIds = []" />
         <p v-if="grouped" class="scope-hint">Сгруппированы записи текущей страницы. Фильтры и количество сотрудников рассчитываются по всему реестру.</p>
 
         <div class="registry-desktop-table">
           <BaseDataTable :rows="registryRows" :columns="visibleColumns" :group-by="grouped ? groupEmployees : undefined"
-          selectable v-model:selected-keys="selectedIds"
+          selectable selection-label="Выбрать сотрудника" v-model:selected-keys="selectedIds"
           row-key="id" caption="Реестр сотрудников выбранной компании" :loading="employeeLoading"
           :empty-title="activeTab === 'archive' ? 'В архиве сотрудников нет' : 'Сотрудники не найдены'"
           :empty-description="search ? 'Уточните поиск или сбросьте запрос.' : 'Нет записей для выбранного фильтра.'">
@@ -411,6 +424,7 @@ onMounted(loadCompanies)
 .registry-selection label{display:inline-flex;align-items:center;gap:8px;font-weight:600;color:var(--color-text);cursor:pointer}
 .registry-selection input,.personnel-page :deep(td input[type=checkbox]){accent-color:var(--color-primary);width:15px;height:15px;cursor:pointer}
 .registry-selection :deep(button){min-height:30px;padding:5px 10px}
+.selection-instruction{font-size:11px;color:var(--color-muted)}
 .registry-filters{display:flex;gap:12px;align-items:end;flex-wrap:wrap;margin:-2px 0 14px;padding:12px 14px;border:1px solid var(--color-stroke);border-radius:6px;background:var(--color-surface)}
 .registry-toolbar .toolbar-icon{width:16px;height:16px;object-fit:contain}
 .scope-hint{color:var(--color-muted);font-size:12px;line-height:1.5;margin:0 0 12px}

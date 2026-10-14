@@ -10,7 +10,7 @@ import { useAppI18n } from '../i18n'
 
 const router = useRouter()
 const { t } = useAppI18n()
-const storageKey = 'hrm-onboarding-profile-v1'
+const storageKey = 'hrm-onboarding-complete-v1'
 const step = ref(1)
 const saved = ref(false)
 
@@ -79,22 +79,7 @@ function previous() {
 async function finish() {
   if (!responsibilityComplete.value) return
   try {
-    localStorage.setItem(storageKey, JSON.stringify({
-      completedAt: new Date().toISOString(),
-      profile: {
-        lastName: lastName.value,
-        firstName: firstName.value,
-        middleName: middleName.value,
-        email: email.value,
-        phone: phone.value,
-        department: department.value,
-        position: position.value,
-        office: office.value,
-        startDate: startDate.value,
-      },
-      workplace: workplaceChecks.value,
-      responsibility: responsibilityChecks.value,
-    }))
+    localStorage.setItem(storageKey, JSON.stringify({ completedAt: new Date().toISOString() }))
   } catch { /* A blocked browser store must not block the user from continuing. */ }
   saved.value = true
   await router.push('/')

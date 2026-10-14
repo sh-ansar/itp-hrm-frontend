@@ -91,8 +91,8 @@ watch(() => [props.options.length, props.query], async () => {
           placeholder="Поиск" autocomplete="off"
           @input="emit('update:query', ($event.target as HTMLInputElement).value)"
           @keydown.enter.prevent="emit('apply')" />
-        <button v-if="query" type="button" aria-label="Очистить поиск"
-          @click="emit('update:query', '')">×</button>
+        <button type="button" :aria-label="query ? 'Очистить поиск' : 'Закрыть фильтр'"
+          @click="query ? emit('update:query', '') : emit('close')">×</button>
       </label>
       <div class="filter-divider" aria-hidden="true"></div>
       <div class="filter-choice-list" role="group" :aria-label="'Значения столбца: ' + label">

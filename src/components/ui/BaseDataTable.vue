@@ -239,7 +239,7 @@ watch(() => props.columns.map(column => column.key).join(','), () => {
               :aria-sort="canSort(column) ? (activeSort === column.key ? (sortDirection === 'asc' ? 'ascending' : 'descending') : 'none') : undefined">
               <div class="heading-content">
                 <button v-if="canSort(column)" class="sort-heading" type="button"
-                  :aria-label="'Сортировать: ' + column.label"
+                  :aria-label="'Упорядочить по столбцу: ' + column.label"
                   :title="'Сортировать загруженные строки: ' + column.label"
                   @click="sortBy(column.key)">
                   <span>{{ column.label }}</span>

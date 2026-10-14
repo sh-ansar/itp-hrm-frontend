@@ -747,7 +747,7 @@ onMounted(load)
             <template #cell-action="{ value }">{{ historyActionLabel(String(value)) }}</template>
             <template #cell-created_at="{ value }">{{ fmt.dateTime(String(value)) }}</template>
           </BaseDataTable>
-          <BaseNotice v-if="profile.meta.history_truncated" tone="info">Показаны последние {{ profile.meta.history_limit ?? 100 }} изменений.</BaseNotice>
+          <BaseNotice v-if="profile.meta.history_truncated" tone="info">{{ tr('Показаны последние') }} {{ fmt.number(profile.meta.history_limit ?? 100, 0) }} {{ tr('изменений.') }}</BaseNotice>
         </EmployeeProfileSection>
       </template>
     </template>

@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import { ChevronRight } from 'lucide-vue-next'
 import type { EmployeeRecord } from '../api/personnel'
+import BaseStatusPill from './ui/BaseStatusPill.vue'
 
 type EmployeeRow = EmployeeRecord & { full_name: string; status_label: string }
 
@@ -14,7 +15,6 @@ const props = defineProps<{
 }>()
 const emit = defineEmits<{ select: [id: string, checked: boolean] }>()
 
-const statusClass = (row: EmployeeRow) => 'status-pill--' + (row.employment_status ?? 'unassigned')
 const hasRows = computed(() => !props.loading && props.rows.length > 0)
 const groupedRows = computed(() => {
   if (!props.grouped) return [{ label: '', rows: props.rows }]
@@ -80,7 +80,9 @@ function displayDate(value: unknown): string {
       </dl>
 
       <footer>
-        <span class="status-pill" :class="statusClass(row)">{{ row.status_label }}</span>
+        <BaseStatusPill :tone="row.employment_status === 'active' ? 'success'
+          : row.employment_status === 'archived' ? 'danger'
+          : row.employment_status === 'planned' ? 'info' : 'warning'">{{ row.status_label }}</BaseStatusPill>
       </footer>
       </article>
     </template>
@@ -134,14 +136,6 @@ function displayDate(value: unknown): string {
   display:flex;align-items:center;justify-content:flex-end;margin-top:10px;padding-top:10px;
   border-top:1px solid var(--color-stroke)
 }
-.status-pill{
-  display:inline-flex;align-items:center;padding:5px 9px;border-radius:999px;
-  background:var(--color-soft);font-size:10px;line-height:1;font-weight:700;white-space:nowrap
-}
-.status-pill--active{background:var(--color-success-surface);color:var(--color-success)}
-.status-pill--planned{background:var(--color-accent-soft);color:var(--color-primary)}
-.status-pill--archived{background:var(--color-danger-surface);color:var(--color-danger)}
-.status-pill--unassigned{background:var(--color-warning-surface);color:var(--color-warning)}
 @media(max-width:420px){
   .employee-mobile-card dl{grid-template-columns:1fr}
   .employee-mobile-card dl div:nth-child(2){grid-column:auto}

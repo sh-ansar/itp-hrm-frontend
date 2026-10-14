@@ -10,6 +10,7 @@ import BaseNotice from './ui/BaseNotice.vue'
 import BasePagination from './ui/BasePagination.vue'
 import EmployeeLookupField from './EmployeeLookupField.vue'
 import { useLeaveWorkflowI18n } from '../i18n/leaveWorkflow'
+import { useUiFormatters } from '../composables/useUiFormatters'
 import { useSessionStore } from '../stores/session'
 import { ApiError } from '../api/client'
 import {
@@ -21,6 +22,7 @@ import {
 const props = defineProps<{ companyId: string }>()
 const emit = defineEmits<{ published: [] }>()
 const { t } = useLeaveWorkflowI18n()
+const fmt = useUiFormatters()
 const session = useSessionStore()
 const loading = ref(false)
 const busy = ref(false)
@@ -235,8 +237,8 @@ async function transition(row: LeaveRequestRecord, action: 'submit' | 'cancel' |
         <article v-for="row in requests" :key="row.id" class="leave-management-row">
           <div class="leave-management-info">
             <strong>{{ [row.last_name, row.first_name, row.middle_name].filter(Boolean).join(' ') }}</strong>
-            <p>{{ row.leave_type_name }} · {{ row.planned_started_on }} — {{ row.planned_ended_on }}</p>
-            <small>{{ t('plannedDays') }}: {{ row.planned_days }} · {{ t('status') }}: {{ statusLabel(row.status) }}</small>
+            <p>{{ row.leave_type_name }} · {{ fmt.date(row.planned_started_on) }} — {{ fmt.date(row.planned_ended_on) }}</p>
+            <small>{{ t('plannedDays') }}: {{ fmt.number(row.planned_days, 0) }} · {{ t('status') }}: {{ statusLabel(row.status) }}</small>
             <p v-if="row.decision_comment" class="leave-management-comment">{{ row.decision_comment }}</p>
           </div>
           <div class="leave-management-row-actions">

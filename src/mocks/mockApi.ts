@@ -41,14 +41,53 @@ const seededDepartments=fixtureDepartments.map(original=>deps.find(dep=>dep.id==
 const seededPositions=fixturePositions.map(original=>positions.find(pos=>pos.id===original.id)??original)
 const names=[['Садыков','Арман','Ерланович'],['Ибраева','Алия','Сериковна'],['Ким','Даниил','Алексеевич'],['Ахметова','Мадина','Руслановна'],['Нуртаев','Асет','Маратович'],['Смирнова','Елена','Викторовна'],['Омаров','Тимур','Кайратович'],['Сейтова','Аружан','Нурлановна'],['Ли','Максим','Олегович'],['Жумабаева','Динара','Аскаровна'],['Касымов','Ринат','Булатович'],['Волкова','Анна','Игоревна'],['Тлеубаев','Адиль','Ермекович'],['Соколова','Мария','Андреевна'],['Беков','Нурсултан','Дауренович'],['Романова','Екатерина','Павловна'],['Абдрахманов','Ержан','Серикович'],['Кузнецова','Ольга','Дмитриевна'],['Мусин','Алихан','Талгатович'],['Морозова','Дарья','Сергеевна'],['Исаев','Руслан','Айдарович'],['Петрова','Виктория','Олеговна'],['Жанибеков','Данияр','Арманович'],['Орлова','Полина','Романовна'],['Сулейменов','Мирас','Канатович'],['Федорова','София','Ильинична'],['Калиев','Ерасыл','Бауыржанович'],['Новикова','Алина','Максимовна'],['Токтаров','Санжар','Ерланович'],['Попова','Ксения','Алексеевна'],['Ермеков','Айдос','Тимурович'],['Васильева','Наталья','Денисовна'],['Баймуханов','Алан','Рашидович'],['Захарова','Вероника','Олеговна'],['Серикбаев','Мади','Ерболович'],['Белова','Юлия','Антоновна'],['Кенжебек','Амир','Даулетович'],['Мельникова','Анастасия','Игоревна'],['Таиров','Ильяс','Муратович'],['Григорьева','Елизавета','Сергеевна']]
 const employees=names.map(([last_name,first_name,middle_name],i)=>{const d=seededDepartments[5+i%(seededDepartments.length-5)],p=seededPositions[5+i%(seededPositions.length-5)],arch=i>=37,planned=i>=34&&i<37,unassigned=i===33;return{id:id(1000+i),personnel_number:`EMP-${String(i+1).padStart(4,'0')}`,last_name,first_name,middle_name,revision:1,birth_date:`${1987+i%12}-0${i%9+1}-${String(i%20+5).padStart(2,'0')}`,gender:i%2?'female':'male',email:`employee${i+1}@demo.local`,phone:`+7 700 100 ${String(10+i).padStart(2,'0')} ${String(20+i).padStart(2,'0')}`,address:i%2?'г. Астана':'г. Алматы',work_site:i%2?'Астана, головной офис':'Алматы, офис',work_zone:i%3?'Гибрид':'Офис',work_team:`Команда ${String.fromCharCode(65+i%4)}`,supervisor_name:'Садыков Арман Ерланович',current_department_name:unassigned||arch?null:d.name,current_position_name:unassigned||arch?null:p.name,current_department_id:unassigned||arch?null:d.id,current_position_id:unassigned||arch?null:p.id,current_assignment_valid_from:unassigned||arch?null:`202${2+i%4}-0${i%8+1}-01`,employment_status:arch?'archived':planned?'planned':unassigned?'unassigned':'active'}})
-const plan:any={id:id(500),name:'Штатное расписание 2026',valid_from:'2026-01-01',valid_to:null,status:'approved',revision:3}
+const plan:any={id:id(500),name:'Штатное расписание 2026',valid_from:'2026-01-01',valid_to:'2026-12-31',status:'approved',revision:3}
 const staffing=seededDepartments.slice(1).flatMap((d,di)=>Array.from({length:di%3===0?3:2},(_,ri)=>{const p=seededPositions[(di*2+ri+4)%seededPositions.length],planned=ri?2:4,occupied=Math.max(0,planned-((di+ri)%3===0?1:0));return{id:id(600+di*4+ri),department_id:d.id,position_id:p.id,department_name:d.name,position_name:p.name,planned_units:planned,occupied_units:occupied,vacant_units:planned-occupied,overstaffed_units:0,base_salary:420000+di*25000+ri*60000,currency:'KZT',notes:null,revision:1}}))
-const draftPlan:any={...plan,id:id(501),name:'Проект штатного расписания 2027',valid_from:'2027-01-01',status:'draft',revision:1}
+const draftPlan:any={...plan,id:id(501),name:'Проект штатного расписания 2027',valid_from:'2027-01-01',valid_to:null,status:'draft',revision:1}
 const staffingPlans:any[]=[plan,draftPlan]
 const staffingByPlan=new Map<string,any[]>([
   [plan.id,staffing],
   [draftPlan.id,staffing.map((row:any,index:number)=>({...row,id:id(1600+index),revision:1}))],
 ])
+// The history is a real demo activity log, not 34 fabricated audit records.
+// Seeded sample plans are fixtures, not user actions in this browser session.
+type DemoStaffingEvent = {
+  id:number; action:string; staffing_plan_id:string; staffing_line_id:string|null;
+  revision:number; created_at:string
+}
+const staffingHistory:DemoStaffingEvent[]=[]
+let staffingHistoryId=0
+function recordStaffingEvent(action:string,planId:string,lineId:string|null,revision:number){
+  staffingHistory.unshift({
+    id:++staffingHistoryId,action,staffing_plan_id:planId,staffing_line_id:lineId,
+    revision,created_at:new Date().toISOString(),
+  })
+}
+function demoStaffingLinePayload(body:any,lines:any[],lineId:string|null){
+  const department=deps.find(x=>x.id===body.department_id)
+  const position=positions.find(x=>x.id===body.position_id)
+  if(!department||!position)throw new Error('Выберите действующие подразделение и должность')
+  const planned=Number(body.planned_units)
+  if(!Number.isFinite(planned)||planned<=0||planned>999999.99||
+    Math.abs(planned*100-Math.round(planned*100))>0.000001)
+    throw new Error('Количество ставок должно быть положительным числом с точностью до сотых')
+  const salary=body.base_salary===null||body.base_salary===''||body.base_salary===undefined
+    ?null:Number(body.base_salary)
+  if(salary!==null&&(!Number.isFinite(salary)||salary<0||salary>999999999999.99))
+    throw new Error('Некорректный базовый оклад')
+  const currency=body.currency??null
+  if(currency!==null&&!['KZT','USD','EUR','GEL','RUB'].includes(currency))
+    throw new Error('Некорректная валюта')
+  if(lines.some(line=>line.id!==lineId&&line.department_id===department.id&&line.position_id===position.id))
+    throw new Error('Такая штатная позиция уже есть в этой версии')
+  return {
+    department_id:department.id,position_id:position.id,
+    department_name:department.name,position_name:position.name,
+    planned_units:planned,base_salary:salary,
+    currency:salary===null?null:currency,
+    notes:body.notes??null,
+  }
+}
 const actions=employees.slice(0,18).map((e,i)=>({id:id(3000+i),employee_id:e.id,action_type:i%5===0?'transfer':'hire',effective_on:`2026-0${i%9+1}-0${i%8+1}`,basis_reference:`Приказ № HR-${120+i}`,notes:null,source_assignment_id:i%5===0?id(4000+i):null,target_assignment_id:id(4100+i),personnel_number:e.personnel_number,last_name:e.last_name,first_name:e.first_name,middle_name:e.middle_name,source_department_name:i%5===0?deps[9].name:null,source_position_name:i%5===0?positions[7].name:null,target_department_name:e.current_department_name,target_position_name:e.current_position_name,created_at:'2026-10-01T09:30:00+05:00'}))
 const training=employees.slice(0,16).map((e,i)=>({id:id(2000+i),employee_id:e.id,revision:1,personnel_number:e.personnel_number,first_name:e.first_name,last_name:e.last_name,middle_name:e.middle_name,development_status:i%4===0?'planned':i%3===0?'ongoing':'completed',training_type:i%2?'external':'internal',training_mode:i%3===0?'remote':i%3===1?'in_person':'on_the_job',topic:['Управление проектами','Excel и аналитика','Охрана труда','Лидерство'][i%4],provider:'ITP Academy',city:'Астана',started_on:'2026-09-10',ended_on:i%4===0?null:'2026-09-12',document_reference:i%4===0?null:`CERT-${202600+i}`}))
 const reserve=employees.slice(4,14).map((e,i)=>({id:id(2100+i),employee_id:e.id,revision:1,personnel_number:e.personnel_number,first_name:e.first_name,last_name:e.last_name,middle_name:e.middle_name,development_status:i>=8?'alumni':'active',target_position:seededPositions[(i+1)%8].name,reserve_level:i%2?'Функциональный':'Корпоративный',reserve_type:i%3?'Среднесрочный':'Оперативный',joined_year:2024+i%3,left_year:i>=8?2026:null,notes:'Индивидуальный план развития'}))
@@ -553,16 +592,13 @@ export async function mockApiRequest<T>(path:string,options:RequestInit={}):Prom
     const line:any=rows.find((x:any)=>x.id===m![2])
     if(!line)throw new Error('Строка штатного расписания не найдена')
     const body=options.body?JSON.parse(String(options.body)):{}
-    const dep:any=deps.find(x=>x.id===body.department_id)
-    const pos:any=positions.find(x=>x.id===body.position_id)
-    Object.assign(line,body,{
-      department_name:dep?.name??line.department_name,
-      position_name:pos?.name??line.position_name,
-      planned_units:Number(body.planned_units??line.planned_units),
-      revision:Number(line.revision||1)+1,
-    })
+    if(Number(body.revision)!==Number(line.revision))
+      throw new Error('Штатная позиция уже изменена. Обновите страницу')
+    const fields=demoStaffingLinePayload(body,rows,line.id)
+    Object.assign(line,fields,{revision:Number(line.revision)+1})
     line.vacant_units=Math.max(Number(line.planned_units)-Number(line.occupied_units||0),0)
     line.overstaffed_units=Math.max(Number(line.occupied_units||0)-Number(line.planned_units),0)
+    recordStaffingEvent('staffing.plan_line_updated',selected.id,line.id,line.revision)
     return {data:{id:line.id,revision:line.revision}} as T
   }
 
@@ -570,19 +606,16 @@ export async function mockApiRequest<T>(path:string,options:RequestInit={}):Prom
   if(m&&method==='POST'){
     const selected=staffingPlans.find((x:any)=>x.id===m![1])
     if(!selected||selected.status!=='draft')throw new Error('Утверждённое штатное расписание нельзя изменять')
-    const body=options.body?JSON.parse(String(options.body)):{}
-    const dep:any=deps.find(x=>x.id===body.department_id)
-    const pos:any=positions.find(x=>x.id===body.position_id)
-    if(!dep||!pos)throw new Error('Подразделение или должность не найдены')
     const rows=staffingByPlan.get(selected.id)??[]
+    const body=options.body?JSON.parse(String(options.body)):{}
+    const fields=demoStaffingLinePayload(body,rows,null)
     const line:any={
-      id:id(2600+rows.length),department_id:dep.id,position_id:pos.id,
-      department_name:dep.name,position_name:pos.name,
-      planned_units:Number(body.planned_units||1),occupied_units:0,
-      vacant_units:Number(body.planned_units||1),overstaffed_units:0,
-      base_salary:body.base_salary??null,currency:body.currency??null,notes:body.notes??null,revision:1,
+      id:crypto.randomUUID(),...fields,occupied_units:0,
+      vacant_units:fields.planned_units,overstaffed_units:0,revision:1,
     }
-    rows.push(line);staffingByPlan.set(selected.id,rows)
+    rows.push(line)
+    staffingByPlan.set(selected.id,rows)
+    recordStaffingEvent('staffing.plan_line_created',selected.id,line.id,1)
     return {data:{id:line.id,staffing_plan_id:selected.id,revision:1}} as T
   }
 
@@ -590,33 +623,54 @@ export async function mockApiRequest<T>(path:string,options:RequestInit={}):Prom
   if(m&&method==='POST'){
     const selected=staffingPlans.find((x:any)=>x.id===m![1])
     if(!selected||selected.status!=='draft')throw new Error('Версия уже утверждена')
+    const body=options.body?JSON.parse(String(options.body)):{}
+    if(Number(body.revision)!==Number(selected.revision))
+      throw new Error('Версия штатного расписания уже изменена. Обновите данные')
     if(!(staffingByPlan.get(selected.id)?.length))throw new Error('Добавьте хотя бы одну строку')
-    selected.status='approved';selected.revision=Number(selected.revision||1)+1
+    const overlapsApproved=staffingPlans.some((other:any)=>
+      other.id!==selected.id&&other.status==='approved'&&
+      other.valid_from<=(selected.valid_to??'9999-12-31')&&
+      (other.valid_to??'9999-12-31')>=selected.valid_from)
+    if(overlapsApproved)throw new Error('Период пересекается с утверждённым расписанием')
+    selected.status='approved'
+    selected.revision=Number(selected.revision)+1
+    recordStaffingEvent('staffing.plan_approved',selected.id,null,selected.revision)
     return {data:{id:selected.id,status:'approved',revision:selected.revision}} as T
   }
 
   m=p.match(/^\/companies\/[^/]+\/staffing-plans(?:\/([^/]+))?$/)
   if(m&&method==='POST'&&!m[1]){
     const body=options.body?JSON.parse(String(options.body)):{}
+    const name=typeof body.name==='string'?body.name.trim():''
+    const from=body.valid_from
+    const to=body.valid_to??null
+    if(!name||name.length>255||typeof from!=='string'||!/^\d{4}-\d{2}-\d{2}$/.test(from)||
+      (to!==null&&(!/^\d{4}-\d{2}-\d{2}$/.test(to)||to<from)))
+      throw new Error('Укажите название и корректный период штатного расписания')
     const created:any={
-      id:id(2700+staffingPlans.length),name:String(body.name||'Новая версия штатного расписания'),
-      valid_from:String(body.valid_from||'2027-01-01'),valid_to:body.valid_to??null,status:'draft',revision:1,
+      id:crypto.randomUUID(),name,valid_from:from,valid_to:to,status:'draft',revision:1,
     }
-    staffingPlans.unshift(created);staffingByPlan.set(created.id,[])
-    return {data:created} as T
+    staffingPlans.unshift(created)
+    staffingByPlan.set(created.id,[])
+    recordStaffingEvent('staffing.plan_created',created.id,null,1)
+    return {data:{...created}} as T
   }
   if(m&&method==='GET'){
     if(m[1]){
       const selected=staffingPlans.find((x:any)=>x.id===m![1])
       if(!selected)throw new Error('Версия штатного расписания не найдена')
-      return {data:selected,lines:staffingByPlan.get(selected.id)??[],meta:{
+      return structuredClone({data:selected,lines:staffingByPlan.get(selected.id)??[],meta:{
         as_of:u.searchParams.get('as_of')||'2026-10-13',
         staffing_writes_enabled:selected.status==='draft',
-      }} as T
+      }}) as T
     }
-    return page(staffingPlans,1,25,{staffing_writes_enabled:true}) as T
+    const pg=Number(u.searchParams.get('page')||1)
+    return page([...staffingPlans].sort((a:any,b:any)=>b.valid_from.localeCompare(a.valid_from)),pg,25,{staffing_writes_enabled:true}) as T
   }
-  if(p.includes('/staffing-history'))return page(Array.from({length:34},(_,i)=>({id:34-i,action:i%6===0?'staffing.plan_approved':i%4===0?'staffing.plan_line_updated':'staffing.plan_line_created',staffing_plan_id:plan.id,staffing_line_id:staffing[i%staffing.length].id,revision:1+i%3,created_at:'2026-10-01T10:30:00+05:00'})),Number(u.searchParams.get('page')||1),25) as T
+  if(p===`/companies/${companyId}/staffing-history`&&method==='GET'){
+    const pg=Number(u.searchParams.get('page')||1)
+    return page(staffingHistory,pg,25) as T
+  }
   m=p.match(/^\/companies\/[^/]+\/development\/(training|reserve)$/)
   if(m){const rows=(m[1]==='training'?training:reserve).filter((x:any)=>{const s=u.searchParams.get('status')||'all',q=(u.searchParams.get('search')||'').toLowerCase();return(s==='all'||x.development_status===s)&&(!q||json(x).toLowerCase().includes(q))}),all=m[1]==='training'?training:reserve;const summary:any={total:all.length};for(const x of all as any[])summary[x.development_status]=(summary[x.development_status]||0)+1;const res:any=page(rows,Number(u.searchParams.get('page')||1),25,{section:m[1],status_filter:u.searchParams.get('status')||'all',summary,profile_writes_enabled:true});return res as T}
   if(method!=='GET')throw new Error('Операция недоступна в демонстрационной версии')

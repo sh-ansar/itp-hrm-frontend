@@ -69,7 +69,7 @@ test('register page size, action selection and view presets stay functional', as
     await templates.getByRole('button', { name: 'Далее' }).click()
     await templates.getByRole('button', { name: 'Далее' }).click()
     await templates.getByPlaceholder('Введите название').fill('E2E вид 15 строк')
-    await templates.getByRole('button', { name: 'Создать' }).click()
+    await templates.getByRole('button', { name: 'Создать', exact: true }).click()
     await templates.getByRole('button', { name: 'Отмена' }).click()
 
     await pageSize.selectOption('10')

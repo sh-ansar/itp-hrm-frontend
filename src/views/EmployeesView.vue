@@ -14,12 +14,13 @@ import BaseLoadingState from '../components/ui/BaseLoadingState.vue'
 import BaseDataTable from '../components/ui/BaseDataTable.vue'
 import BaseTableBulkActions from '../components/ui/BaseTableBulkActions.vue'
 import BaseStatusPill from '../components/ui/BaseStatusPill.vue'
-import BaseDialog from '../components/ui/BaseDialog.vue'
+import BaseDrawer from '../components/ui/BaseDrawer.vue'
 import BaseViewTabs from '../components/ui/BaseViewTabs.vue'
 import BaseColumnPicker from '../components/ui/BaseColumnPicker.vue'
 import BaseFilterSummary from '../components/ui/BaseFilterSummary.vue'
 import EmployeeRecordForm from '../components/EmployeeRecordForm.vue'
 import EmployeeMobileList from '../components/EmployeeMobileList.vue'
+import EmployeeRegistryTemplatesDrawer, { type RegistryTemplateState } from '../components/EmployeeRegistryTemplatesDrawer.vue'
 import { downloadCsv } from '../utils/exportCsv'
 import { listCompanies, listDepartments, type CompanyRecord } from '../api/organization'
 import { getStaffingPlan, listStaffingPlans } from '../api/staffing'
@@ -46,7 +47,7 @@ const searchInput = ref<HTMLInputElement | null>(null)
 const searchOpen = ref(false)
 const fullscreen = ref(false)
 const pageSize = ref(10)
-const presetAvailable = ref(false)
+const templatesOpen = ref(false)
 const presetNotice = ref('')
 const statusFilter = ref<EmploymentFilter>('active')
 const groupMode = ref<GroupMode>('none')
@@ -56,6 +57,22 @@ const positionFilter = ref('all')
 const objectFilter = ref('all')
 const categoryFilter = ref('all')
 const genderFilter = ref('all')
+const personnelTypeFilter = ref('all')
+const teamFilter = ref('all')
+const hiredFrom = ref('')
+const hiredTo = ref('')
+const filterDraft = ref({
+  status: 'active',
+  department: 'all',
+  position: 'all',
+  personnelType: 'all',
+  object: 'all',
+  team: 'all',
+  category: 'all',
+  gender: 'all',
+  hiredFrom: '',
+  hiredTo: '',
+})
 const demoMode = import.meta.env.VITE_DEMO_MODE === 'true'
 const selectedIds = ref<string[]>([])
 const error = ref('')
@@ -164,6 +181,10 @@ const objectFilterOptions = computed(() =>
   uniqueOptions(allRegistryRows.value.map(row => row.work_site), 'Все объекты'))
 const categoryFilterOptions = computed(() =>
   uniqueOptions(allRegistryRows.value.map(row => row.employee_category), 'Все категории'))
+const personnelTypeFilterOptions = computed(() =>
+  uniqueOptions(allRegistryRows.value.map(row => row.personnel_type), 'Все виды персонала'))
+const teamFilterOptions = computed(() =>
+  uniqueOptions(allRegistryRows.value.map(row => row.work_team), 'Все бригады'))
 const genderFilterOptions = [
   { id: 'all', name: 'Любой пол' },
   { id: 'male', name: 'Мужчина' },
@@ -175,6 +196,10 @@ const filteredRegistryRows = computed(() => allRegistryRows.value.filter(row =>
   (positionFilter.value === 'all' || row.current_position_name === positionFilter.value) &&
   (objectFilter.value === 'all' || row.work_site === objectFilter.value) &&
   (categoryFilter.value === 'all' || row.employee_category === categoryFilter.value) &&
+  (personnelTypeFilter.value === 'all' || row.personnel_type === personnelTypeFilter.value) &&
+  (teamFilter.value === 'all' || row.work_team === teamFilter.value) &&
+  (!hiredFrom.value || (row.current_assignment_valid_from ?? '') >= hiredFrom.value) &&
+  (!hiredTo.value || (row.current_assignment_valid_from ?? '') <= hiredTo.value) &&
   (genderFilter.value === 'all' ||
     (genderFilter.value === 'unset' ? !row.gender : row.gender === genderFilter.value))
 ))
@@ -238,22 +263,6 @@ function exportSelected() {
   )
 }
 
-const PRESET_KEY = 'hrm-employee-view-preset-v1'
-const exportOptions = computed(() => [
-  { id: 'page', label: 'Выгрузить загруженную страницу CSV', disabled: registryRows.value.length === 0 },
-  { id: 'selected', label: 'Выгрузить выбранных CSV', disabled: selectedOnPage.value.length === 0 },
-])
-const registerActionOptions = computed(() => [
-  { id: 'select_page', label: 'Выбрать текущую страницу', disabled: !registryRows.value.length },
-  { id: 'clear_selection', label: 'Снять выделение', disabled: !selectedOnPage.value.length },
-  { id: 'open_selected', label: 'Открыть выбранную карточку', disabled: selectedOnPage.value.length !== 1 },
-  { id: 'export_selected', label: 'Экспортировать выбранных CSV', disabled: !selectedOnPage.value.length },
-])
-const templateOptions = computed(() => [
-  { id: 'save', label: 'Сохранить текущий вид', description: 'Только в этом браузере' },
-  { id: 'apply', label: 'Применить сохранённый вид', disabled: !presetAvailable.value },
-  { id: 'delete', label: 'Удалить сохранённый вид', disabled: !presetAvailable.value },
-])
 const registryChips = computed(() => [
   ...(search.value ? [{ id: 'search', label: 'Поиск: ' + search.value }] : []),
   ...(statusFilter.value !== 'active' ? [{ id: 'status', label: 'Статус: ' + (statusOptions.find(item => item.id === statusFilter.value)?.label ?? statusFilter.value) }] : []),
@@ -261,6 +270,10 @@ const registryChips = computed(() => [
   ...(positionFilter.value !== 'all' ? [{ id: 'position', label: 'Должность: ' + positionFilter.value }] : []),
   ...(objectFilter.value !== 'all' ? [{ id: 'object', label: 'Объект: ' + objectFilter.value }] : []),
   ...(categoryFilter.value !== 'all' ? [{ id: 'category', label: 'Категория: ' + categoryFilter.value }] : []),
+  ...(personnelTypeFilter.value !== 'all' ? [{ id: 'personnelType', label: 'Вид персонала: ' + personnelTypeFilter.value }] : []),
+  ...(teamFilter.value !== 'all' ? [{ id: 'team', label: 'Бригада: ' + teamFilter.value }] : []),
+  ...(hiredFrom.value ? [{ id: 'hiredFrom', label: 'Приём с: ' + hiredFrom.value }] : []),
+  ...(hiredTo.value ? [{ id: 'hiredTo', label: 'Приём по: ' + hiredTo.value }] : []),
   ...(genderFilter.value !== 'all' ? [{ id: 'gender', label: 'Пол: ' + (genderFilterOptions.find(item => item.id === genderFilter.value)?.name ?? genderFilter.value) }] : []),
   ...(groupMode.value !== 'none' ? [{ id: 'group', label: 'Группировка: ' + groupModeLabels[groupMode.value] }] : []),
 ])
@@ -271,6 +284,10 @@ function clearChip(id: string) {
   if (id === 'position') positionFilter.value = 'all'
   if (id === 'object') objectFilter.value = 'all'
   if (id === 'category') categoryFilter.value = 'all'
+  if (id === 'personnelType') personnelTypeFilter.value = 'all'
+  if (id === 'team') teamFilter.value = 'all'
+  if (id === 'hiredFrom') hiredFrom.value = ''
+  if (id === 'hiredTo') hiredTo.value = ''
   if (id === 'gender') genderFilter.value = 'all'
   if (id === 'group') groupMode.value = 'none'
   page.value = 1
@@ -282,6 +299,10 @@ function clearRegistryFilters() {
   positionFilter.value = 'all'
   objectFilter.value = 'all'
   categoryFilter.value = 'all'
+  personnelTypeFilter.value = 'all'
+  teamFilter.value = 'all'
+  hiredFrom.value = ''
+  hiredTo.value = ''
   genderFilter.value = 'all'
   filtersOpen.value = false
   page.value = 1
@@ -328,65 +349,74 @@ const rowActionOptions = [
   { id: 'select', label: 'Выбрать сотрудника' },
   { id: 'export', label: 'Экспортировать строку CSV' },
 ]
-function savePreset() {
-  try {
-    localStorage.setItem(PRESET_KEY, JSON.stringify({
-      columns: visibleFields.value,
-      groupMode: groupMode.value,
-      status: statusFilter.value,
-      department: departmentFilter.value,
-      position: positionFilter.value,
-      object: objectFilter.value,
-      category: categoryFilter.value,
-      gender: genderFilter.value,
-      perPage: pageSize.value,
-    }))
-    presetAvailable.value = true
-    presetNotice.value = 'Вид сохранён только в этом браузере'
-  } catch { presetNotice.value = 'Не удалось сохранить настройки в браузере' }
-}
-function applyPreset() {
-  try {
-    const raw = localStorage.getItem(PRESET_KEY)
-    if (!raw) return
-    const preset = JSON.parse(raw) as Record<string, unknown>
-    if (typeof preset.groupMode === 'string' && ['none', 'department', 'category', 'object'].includes(preset.groupMode))
-      groupMode.value = preset.groupMode as GroupMode
-    // Compatibility with the previous single "grouped by department" preset.
-    if (typeof preset.grouped === 'boolean' && !('groupMode' in preset))
-      groupMode.value = preset.grouped ? 'department' : 'none'
-    if (typeof preset.columns === 'object' && preset.columns !== null) {
-      const values = preset.columns as Record<string, unknown>
-      visibleFields.value = {
-        ...visibleFields.value,
-        ...Object.fromEntries(columnKeys.filter(key => typeof values[key] === 'boolean')
-          .map(key => [key, Boolean(values[key])])),
-      }
-    }
-    if (typeof preset.perPage === 'number' && [10, 15, 25, 50].includes(preset.perPage))
-      changePageSize(preset.perPage)
-    if (typeof preset.status === 'string' &&
-      ['all', 'active', 'planned', 'archived', 'unassigned'].includes(preset.status))
-      setStatus(preset.status as EmploymentFilter)
-    if (typeof preset.department === 'string') departmentFilter.value = preset.department
-    if (typeof preset.position === 'string') positionFilter.value = preset.position
-    if (typeof preset.object === 'string') objectFilter.value = preset.object
-    if (typeof preset.category === 'string') categoryFilter.value = preset.category
-    if (typeof preset.gender === 'string') genderFilter.value = preset.gender
-    page.value = 1
-    presetNotice.value = 'Сохранённый вид применён'
-  } catch { presetNotice.value = 'Не удалось прочитать сохранённый вид' }
-}
-function presetAction(id: string) {
-  if (id === 'save') savePreset()
-  if (id === 'apply') applyPreset()
-  if (id === 'delete') {
-    try {
-      localStorage.removeItem(PRESET_KEY)
-      presetAvailable.value = false
-      presetNotice.value = 'Сохранённый вид удалён'
-    } catch { presetNotice.value = 'Не удалось удалить сохранённый вид' }
+function openFilters() {
+  filterDraft.value = {
+    status: statusFilter.value,
+    department: departmentFilter.value,
+    position: positionFilter.value,
+    personnelType: personnelTypeFilter.value,
+    object: objectFilter.value,
+    team: teamFilter.value,
+    category: categoryFilter.value,
+    gender: genderFilter.value,
+    hiredFrom: hiredFrom.value,
+    hiredTo: hiredTo.value,
   }
+  filtersOpen.value = true
+}
+function applyFilterDraft() {
+  departmentFilter.value = filterDraft.value.department
+  positionFilter.value = filterDraft.value.position
+  personnelTypeFilter.value = filterDraft.value.personnelType
+  objectFilter.value = filterDraft.value.object
+  teamFilter.value = filterDraft.value.team
+  categoryFilter.value = filterDraft.value.category
+  genderFilter.value = filterDraft.value.gender
+  hiredFrom.value = filterDraft.value.hiredFrom
+  hiredTo.value = filterDraft.value.hiredTo
+  filtersOpen.value = false
+  setStatus(filterDraft.value.status as EmploymentFilter)
+  page.value = 1
+  selectedIds.value = []
+}
+function resetFilterDraft() {
+  filterDraft.value = {
+    status: 'active', department: 'all', position: 'all', personnelType: 'all',
+    object: 'all', team: 'all', category: 'all', gender: 'all', hiredFrom: '', hiredTo: '',
+  }
+}
+const registryTemplateState = computed<RegistryTemplateState>(() => ({
+  columns: { ...visibleFields.value },
+  groupMode: groupMode.value,
+  status: statusFilter.value,
+  department: departmentFilter.value,
+  position: positionFilter.value,
+  personnelType: personnelTypeFilter.value,
+  object: objectFilter.value,
+  team: teamFilter.value,
+  category: categoryFilter.value,
+  gender: genderFilter.value,
+  hiredFrom: hiredFrom.value,
+  hiredTo: hiredTo.value,
+  perPage: pageSize.value,
+}))
+function applyRegistryTemplate(state: RegistryTemplateState) {
+  visibleFields.value = { ...visibleFields.value, ...state.columns }
+  if (['none','department','category','object'].includes(state.groupMode)) groupMode.value = state.groupMode
+  departmentFilter.value = state.department || 'all'
+  positionFilter.value = state.position || 'all'
+  personnelTypeFilter.value = state.personnelType || 'all'
+  objectFilter.value = state.object || 'all'
+  teamFilter.value = state.team || 'all'
+  categoryFilter.value = state.category || 'all'
+  genderFilter.value = state.gender || 'all'
+  hiredFrom.value = state.hiredFrom || ''
+  hiredTo.value = state.hiredTo || ''
+  if ([10,15,25,50].includes(state.perPage)) changePageSize(state.perPage)
+  setStatus(['all','active','planned','archived','unassigned'].includes(state.status)
+    ? state.status as EmploymentFilter : 'active')
+  page.value = 1
+  selectedIds.value = []
 }
 function changePageSize(size: number) {
   if (![10, 15, 25, 50].includes(size)) return
@@ -415,6 +445,7 @@ onBeforeUnmount(() => {
 
 function setTab(next: string) {
   filtersOpen.value = false
+  templatesOpen.value = false
   if (next === 'development') {
     router.push({ name: 'employees-development' })
     return
@@ -555,7 +586,7 @@ watch(() => route.query.status, value => {
     ? candidate as EmploymentFilter : 'active'
   page.value = 1
 }, { immediate: true })
-watch([departmentFilter, positionFilter, objectFilter, categoryFilter, genderFilter], () => {
+watch([departmentFilter, positionFilter, objectFilter, categoryFilter, genderFilter, personnelTypeFilter, teamFilter, hiredFrom, hiredTo], () => {
   page.value = 1
   selectedIds.value = []
 })
@@ -571,7 +602,6 @@ watch(displayLastPage, value => {
 onMounted(() => {
   loadCompanies()
   window.addEventListener('keydown', handleEscape)
-  try { presetAvailable.value = Boolean(localStorage.getItem(PRESET_KEY)) } catch { presetAvailable.value = false }
 })
 </script>
 
@@ -642,7 +672,7 @@ onMounted(() => {
             <BaseButton v-if="searchDraft || search" type="button" variant="secondary" icon-only class="registry-search-clear"
               aria-label="Очистить поиск" @click="clearSearch">×</BaseButton>
           </form>
-          <BaseButton variant="secondary" @click="filtersOpen = !filtersOpen" :aria-expanded="filtersOpen">
+          <BaseButton variant="secondary" @click="openFilters" :aria-expanded="filtersOpen">
             <img src="/prototype-icons/Filter.svg" alt="" class="toolbar-icon" /> Фильтры
           </BaseButton>
           <BaseActionDropdown
@@ -650,23 +680,10 @@ onMounted(() => {
             :options="groupOptions" @select="setGroupMode" />
           <BaseColumnPicker v-model="visibleFields" :columns="optionalColumns" title="Настройка колонок" />
           <div class="registry-toolbar-spacer"></div>
-          <BaseActionDropdown label="Шаблоны" :options="templateOptions" @select="presetAction" />
+          <BaseButton variant="secondary" @click="templatesOpen = true">Шаблоны</BaseButton>
         </div>
 
-        <div v-if="filtersOpen" class="registry-filters">
-          <BaseSelectField
-            :model-value="statusFilter" label="Статус сотрудника" :options="statusSelectOptions"
-            @update:model-value="setStatus($event as EmploymentFilter)" />
-          <BaseSelectField v-model="departmentFilter" label="Подразделение" :options="departmentFilterOptions" />
-          <BaseSelectField v-model="positionFilter" label="Должность" :options="positionFilterOptions" />
-          <BaseSelectField v-model="categoryFilter" label="Категория сотрудника" :options="categoryFilterOptions" />
-          <BaseSelectField v-model="objectFilter" label="Объект" :options="objectFilterOptions" />
-          <BaseSelectField v-model="genderFilter" label="Пол" :options="genderFilterOptions" />
-          <BaseButton
-            v-if="statusFilter !== 'active' || departmentFilter !== 'all' || positionFilter !== 'all'
-              || categoryFilter !== 'all' || objectFilter !== 'all' || genderFilter !== 'all'"
-            variant="secondary" @click="clearRegistryFilters">Сбросить фильтры</BaseButton>
-        </div>
+
 
         <BaseFilterSummary :items="registryChips" label="Активные фильтры реестра"
           @remove="clearChip" @clear="clearRegistryFilters" />
@@ -727,10 +744,50 @@ onMounted(() => {
       <BaseNotice v-else-if="!error" tone="info">Нет доступных компаний.</BaseNotice>
     </BaseCard>
 
-    <BaseDialog :open="createOpen" title="Добавить сотрудника" @close="createOpen = false">
+    <BaseDrawer :open="createOpen" title="Добавить сотрудника"
+      description="Основные данные новой карточки сотрудника" @close="createOpen = false">
       <EmployeeRecordForm v-if="selectedCompany" :company-id="selectedCompany"
         @saved="employeeCreated" @cancelled="createOpen = false" />
-    </BaseDialog>
+    </BaseDrawer>
+
+    <BaseDrawer :open="filtersOpen" title="Фильтры"
+      description="Организационные данные и период приёма" @close="filtersOpen = false">
+      <div class="registry-filter-drawer">
+        <h3>Организационные данные</h3>
+        <BaseSelectField v-model="filterDraft.department" label="Отдел" :options="departmentFilterOptions" />
+        <BaseSelectField v-model="filterDraft.position" label="Должность" :options="positionFilterOptions" />
+        <BaseSelectField v-model="filterDraft.category" label="Категория" :options="categoryFilterOptions" />
+        <BaseSelectField v-model="filterDraft.personnelType" label="Вид персонала" :options="personnelTypeFilterOptions" />
+        <BaseSelectField v-model="filterDraft.object" label="Объект / место работы" :options="objectFilterOptions" />
+        <BaseSelectField v-model="filterDraft.team" label="Бригада" :options="teamFilterOptions" />
+        <BaseSelectField v-model="filterDraft.status" label="Статус сотрудника" :options="statusSelectOptions" />
+        <BaseSelectField v-model="filterDraft.gender" label="Пол" :options="genderFilterOptions" />
+        <label class="registry-date-filter"><span>Период приёма — с</span><input v-model="filterDraft.hiredFrom" type="date" /></label>
+        <label class="registry-date-filter"><span>Период приёма — по</span><input v-model="filterDraft.hiredTo" type="date" /></label>
+      </div>
+      <template #footer>
+        <BaseButton @click="applyFilterDraft">Применить</BaseButton>
+        <BaseButton variant="secondary" @click="filtersOpen = false">Отмена</BaseButton>
+        <BaseButton variant="secondary" @click="resetFilterDraft">Сбросить все фильтры</BaseButton>
+      </template>
+    </BaseDrawer>
+
+    <EmployeeRegistryTemplatesDrawer
+      :open="templatesOpen"
+      :columns="optionalColumns"
+      :current="registryTemplateState"
+      :status-options="statusSelectOptions"
+      :department-options="departmentFilterOptions"
+      :position-options="positionFilterOptions"
+      :personnel-type-options="personnelTypeFilterOptions"
+      :object-options="objectFilterOptions"
+      :team-options="teamFilterOptions"
+      :category-options="categoryFilterOptions"
+      :gender-options="genderFilterOptions"
+      @close="templatesOpen = false"
+      @apply="applyRegistryTemplate"
+      @notice="presetNotice = $event"
+    />
   </section>
 </template>
 
@@ -773,6 +830,11 @@ onMounted(() => {
 }
 .registry-toolbar :deep(.base-button){min-height:36px;white-space:nowrap}
 .registry-toolbar-spacer{flex:1 1 10px;min-width:4px}
+.registry-filter-drawer{display:grid;gap:13px}
+.registry-filter-drawer h3{margin:0 0 2px;font-size:17px;line-height:23px}
+.registry-date-filter{display:grid;gap:7px}
+.registry-date-filter span{font-size:12px;font-weight:650}
+.registry-date-filter input{min-height:40px;padding:9px 11px;border:1px solid var(--color-stroke);border-radius:8px;background:var(--color-surface-raised);color:var(--color-text);font:inherit}
 .registry-search{
   display:none;align-items:center;gap:8px;flex:1 1 280px;
   min-width:min(280px,100%);max-width:490px;min-height:36px;

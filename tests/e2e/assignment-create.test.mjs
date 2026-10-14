@@ -62,7 +62,7 @@ test('HR creates edits and atomically transfers assignments at mobile width', as
     const transferred = table.getByRole('row', { name: /Приказ E2E-transfer/ })
     await transferred.waitFor()
     assert.match(await transferred.innerText(), /Visible Finance Child/)
-    const closedPrevious = table.getByRole('row', { name: /30 июня 2026/ })
+    const closedPrevious = table.getByRole('row', { name: /30\.06\.2026/ })
     await closedPrevious.waitFor()
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1), false)
   } finally {

@@ -211,15 +211,15 @@ function recordCount(groupId:string){return records.value.filter(row=>row.group=
       <div v-for="(column,columnIndex) in groupColumns" :key="columnIndex" class="directory-column">
         <BaseCard v-for="group in column" :key="group.id" class="directory-accordion"
           :class="{ 'directory-accordion--open': activeGroup === group.id }">
-          <button type="button" class="accordion-trigger" :aria-expanded="activeGroup === group.id"
-            @click="toggleGroup(group.id)">
+          <BaseButton type="button" variant="secondary" class="accordion-trigger"
+            :aria-expanded="activeGroup === group.id" @click="toggleGroup(group.id)">
             <span>
               <strong>{{ group.label }}</strong>
               <small>{{ group.description }}</small>
             </span>
             <span class="accordion-meta">{{ recordCount(group.id) }}</span>
             <ChevronDown :size="17" :class="{ rotated: activeGroup === group.id }" aria-hidden="true" />
-          </button>
+          </BaseButton>
 
           <div v-if="activeGroup === group.id" class="accordion-content">
             <div class="directory-toolbar">

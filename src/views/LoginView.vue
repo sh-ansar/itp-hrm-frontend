@@ -77,7 +77,8 @@ async function submit() {
   display:flex;align-items:center;justify-content:center;
   padding:24px;
   overflow:auto;
-  background:var(--color-page);
+  background:
+    linear-gradient(180deg,var(--color-page) 0%,var(--color-surface) 100%);
   color:var(--color-text);
 }
 .login-wrap{

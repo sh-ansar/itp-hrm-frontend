@@ -297,6 +297,9 @@ watch(() => props.columns.map(column => column.key).join(','), () => {
 .base-data-table{min-width:0;max-width:100%;font-size:var(--font-table-size);line-height:19px}
 .table-scroll{
   width:100%;max-width:100%;overflow-x:auto;overflow-y:hidden;overscroll-behavior-inline:contain;
+  /* Layout/paint containment keeps intrinsic table width out of document.scrollWidth;
+     only this region scrolls horizontally, never the entire HRM page. */
+  contain:layout paint;
   border:1px solid var(--color-table-border,var(--color-stroke-strong));border-radius:var(--radius-md);
   background:var(--color-surface);box-shadow:var(--shadow-card);scrollbar-width:thin;
   scrollbar-color:var(--color-primary-stroke) transparent;

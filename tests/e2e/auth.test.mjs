@@ -135,7 +135,8 @@ test('valid session rotates session cookie, survives refresh and accesses Sanctu
   })
   assert.equal(me.status, 200, 'CSRF rejection must not log out the user')
 
-  await page.getByRole('button', { name: 'Выйти' }).click()
+  await page.locator('.profile-trigger').click()
+  await page.locator('.profile-popover').getByRole('menuitem', { name: 'Выйти' }).click()
   await page.getByRole('heading', { name: 'Вход в систему' }).waitFor()
   const guestStatus = await page.evaluate(async () => {
     const response = await fetch('/api/v1/me', { credentials: 'same-origin', headers: { Accept: 'application/json' } })

@@ -1,8 +1,11 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
-import { FolderTree, Plus, Search } from 'lucide-vue-next'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { FolderTree, Maximize2, Minimize2, Plus, Search } from 'lucide-vue-next'
 import { useRoute, useRouter } from 'vue-router'
 import BaseCard from '../components/ui/BaseCard.vue'
+import BaseKpiGrid from '../components/ui/BaseKpiGrid.vue'
+import BaseRegistryMetricCard from '../components/ui/BaseRegistryMetricCard.vue'
+import BaseActionDropdown from '../components/ui/BaseActionDropdown.vue'
 import BaseButton from '../components/ui/BaseButton.vue'
 import BaseSelectField from '../components/ui/BaseSelectField.vue'
 import BasePagination from '../components/ui/BasePagination.vue'
@@ -18,6 +21,9 @@ import EmployeeRecordForm from '../components/EmployeeRecordForm.vue'
 import EmployeeMobileList from '../components/EmployeeMobileList.vue'
 import { downloadCsv } from '../utils/exportCsv'
 import { listCompanies, listDepartments, type CompanyRecord } from '../api/organization'
+import { getStaffingPlan, listStaffingPlans } from '../api/staffing'
+import { preferredApprovedStaffingPlan } from '../utils/staffingPlanChoice'
+import { localTodayISO } from '../utils/localDate'
 import {
   listEmployees, type EmployeeRecord, type EmploymentFilter, type EmploymentStatus,
 } from '../api/personnel'
@@ -34,6 +40,12 @@ const employeeWritesEnabled = ref(false)
 const createOpen = ref(false)
 const search = ref('')
 const searchDraft = ref('')
+const searchInput = ref<HTMLInputElement | null>(null)
+const searchOpen = ref(false)
+const fullscreen = ref(false)
+const pageSize = ref(10)
+const presetAvailable = ref(false)
+const presetNotice = ref('')
 const statusFilter = ref<EmploymentFilter>('active')
 const grouped = ref(false)
 const filtersOpen = ref(false)
@@ -42,9 +54,20 @@ const error = ref('')
 const page = ref(1)
 const total = ref(0)
 const lastPage = ref(1)
-const counters = ref({ active: null as number | null, archived: null as number | null, departments: null as number | null, vacancies: null as number | null, expiring: null as number | null })
+const counters = ref({
+  active: null as number | null,
+  archived: null as number | null,
+  departments: null as number | null,
+  vacancies: null as number | null,
+  plannedUnits: null as number | null,
+  expiring: null as number | null,
+})
+const vacancyPercent = computed(() =>
+  counters.value.vacancies !== null && counters.value.plannedUnits !== null && counters.value.plannedUnits > 0
+    ? 100 * counters.value.vacancies / counters.value.plannedUnits : null)
 let generation = 0
 let counterGeneration = 0
+let countersRequestedFor = ''
 
 const tabOptions = [
   { id: 'register', label: 'Реестр сотрудников' },
@@ -66,10 +89,10 @@ const columns = [
   { key: 'full_name', label: 'ФИО / Отдел' },
   { key: 'personnel_number', label: 'Таб. №' },
   { key: 'birth_date', label: 'Дата рождения' },
+  { key: 'current_assignment_valid_from', label: 'Дата назначения' },
   { key: 'gender', label: 'Пол' },
   { key: 'current_position_name', label: 'Должность' },
   { key: 'current_department_name', label: 'Подразделение' },
-  { key: 'current_assignment_valid_from', label: 'Дата назначения' },
   { key: 'status_label', label: 'Статус' },
   { key: 'details', label: 'Действие' },
 ]
@@ -136,6 +159,138 @@ function exportSelected() {
   )
 }
 
+const PRESET_KEY = 'hrm-employee-view-preset-v1'
+const exportOptions = computed(() => [
+  { id: 'page', label: 'Выгрузить загруженную страницу CSV', disabled: registryRows.value.length === 0 },
+  { id: 'selected', label: 'Выгрузить выбранных CSV', disabled: selectedOnPage.value.length === 0 },
+])
+const registerActionOptions = computed(() => [
+  { id: 'select_page', label: 'Выбрать текущую страницу', disabled: !registryRows.value.length },
+  { id: 'clear_selection', label: 'Снять выделение', disabled: !selectedOnPage.value.length },
+  { id: 'open_selected', label: 'Открыть выбранную карточку', disabled: selectedOnPage.value.length !== 1 },
+  { id: 'export_selected', label: 'Экспортировать выбранных CSV', disabled: !selectedOnPage.value.length },
+])
+const templateOptions = computed(() => [
+  { id: 'save', label: 'Сохранить текущий вид', description: 'Только в этом браузере' },
+  { id: 'apply', label: 'Применить сохранённый вид', disabled: !presetAvailable.value },
+  { id: 'delete', label: 'Удалить сохранённый вид', disabled: !presetAvailable.value },
+])
+const registryChips = computed(() => [
+  ...(search.value ? [{ id: 'search', label: 'Поиск: ' + search.value }] : []),
+  ...(statusFilter.value !== 'active' ? [{ id: 'status', label: 'Статус: ' + (statusOptions.find(item => item.id === statusFilter.value)?.label ?? statusFilter.value) }] : []),
+  ...(grouped.value ? [{ id: 'group', label: 'По подразделениям' }] : []),
+])
+function clearChip(id: string) {
+  if (id === 'search') clearSearch()
+  if (id === 'status') setStatus('active')
+  if (id === 'group') grouped.value = false
+}
+function exportPage() {
+  if (!registryRows.value.length) return
+  downloadCsv('employees-page-' + page.value + '.csv',
+    ['ФИО', 'Табельный номер', 'Дата рождения', 'Дата назначения', 'Пол', 'Подразделение', 'Должность', 'Статус'],
+    registryRows.value.map(row => [
+      row.full_name, row.personnel_number, displayDate(row.birth_date),
+      displayDate(row.current_assignment_valid_from),
+      row.gender === 'male' ? 'М' : row.gender === 'female' ? 'Ж' : '—',
+      row.current_department_name, row.current_position_name, row.status_label,
+    ]),
+  )
+}
+function doExport(id: string) {
+  if (id === 'page') exportPage()
+  if (id === 'selected') exportSelected()
+}
+async function doTopAction(id: string) {
+  if (id === 'select_page') togglePageSelection(true)
+  if (id === 'clear_selection') selectedIds.value = []
+  if (id === 'export_selected') exportSelected()
+  if (id === 'open_selected' && selectedOnPage.value.length === 1) {
+    await router.push({ name: 'employee-detail',
+      params: { company: selectedCompany.value, employee: selectedOnPage.value[0]!.id } })
+  }
+}
+async function doRowAction(id: string, row: EmployeeRow) {
+  if (id === 'open') await router.push({ name: 'employee-detail',
+    params: { company: selectedCompany.value, employee: row.id } })
+  if (id === 'select') toggleSelection(row.id, true)
+  if (id === 'export') downloadCsv('employee-' + row.personnel_number + '.csv',
+    ['ФИО', 'Табельный номер', 'Подразделение', 'Должность', 'Статус'],
+    [[row.full_name, row.personnel_number, row.current_department_name, row.current_position_name, row.status_label]])
+}
+const rowActionOptions = [
+  { id: 'open', label: 'Открыть карточку' },
+  { id: 'select', label: 'Выбрать сотрудника' },
+  { id: 'export', label: 'Экспортировать строку CSV' },
+]
+function savePreset() {
+  try {
+    localStorage.setItem(PRESET_KEY, JSON.stringify({
+      columns: visibleFields.value, grouped: grouped.value,
+      status: statusFilter.value, perPage: pageSize.value,
+    }))
+    presetAvailable.value = true
+    presetNotice.value = 'Вид сохранён только в этом браузере'
+  } catch { presetNotice.value = 'Не удалось сохранить настройки в браузере' }
+}
+function applyPreset() {
+  try {
+    const raw = localStorage.getItem(PRESET_KEY)
+    if (!raw) return
+    const preset = JSON.parse(raw) as Record<string, unknown>
+    if (typeof preset.grouped === 'boolean') grouped.value = preset.grouped
+    if (typeof preset.columns === 'object' && preset.columns !== null) {
+      const values = preset.columns as Record<string, unknown>
+      visibleFields.value = {
+        ...visibleFields.value,
+        ...Object.fromEntries(columnKeys.filter(key => typeof values[key] === 'boolean')
+          .map(key => [key, Boolean(values[key])])),
+      }
+    }
+    if (typeof preset.perPage === 'number' && [10, 15, 25, 50].includes(preset.perPage))
+      changePageSize(preset.perPage)
+    if (typeof preset.status === 'string' &&
+      ['all', 'active', 'planned', 'archived', 'unassigned'].includes(preset.status))
+      setStatus(preset.status as EmploymentFilter)
+    presetNotice.value = 'Сохранённый вид применён'
+  } catch { presetNotice.value = 'Не удалось прочитать сохранённый вид' }
+}
+function presetAction(id: string) {
+  if (id === 'save') savePreset()
+  if (id === 'apply') applyPreset()
+  if (id === 'delete') {
+    try {
+      localStorage.removeItem(PRESET_KEY)
+      presetAvailable.value = false
+      presetNotice.value = 'Сохранённый вид удалён'
+    } catch { presetNotice.value = 'Не удалось удалить сохранённый вид' }
+  }
+}
+function changePageSize(size: number) {
+  if (![10, 15, 25, 50].includes(size)) return
+  pageSize.value = size
+  page.value = 1
+  selectedIds.value = []
+}
+async function toggleSearch() {
+  searchOpen.value = !searchOpen.value
+  if (searchOpen.value) {
+    await nextTick()
+    searchInput.value?.focus()
+  } else if (search.value) clearSearch()
+}
+function toggleFullscreen() {
+  fullscreen.value = !fullscreen.value
+}
+function handleEscape(event: KeyboardEvent) {
+  if (event.key === 'Escape' && fullscreen.value) fullscreen.value = false
+}
+watch(fullscreen, value => document.body.classList.toggle('hrm-register-fullscreen', value))
+onBeforeUnmount(() => {
+  document.body.classList.remove('hrm-register-fullscreen')
+  window.removeEventListener('keydown', handleEscape)
+})
+
 function setTab(next: string) {
   filtersOpen.value = false
   if (next === 'development') {
@@ -166,24 +321,37 @@ function clearSearch() {
 async function loadCounters() {
   const company = selectedCompany.value
   const current = ++counterGeneration
-  counters.value = { active: null, archived: null, departments: null, vacancies: null, expiring: null }
+  counters.value = { active: null, archived: null, departments: null, vacancies: null, plannedUnits: null, expiring: null }
   if (!company) return
-  const result = await Promise.allSettled([
-    listEmployees(company, 1, '', 'active'),
-    listEmployees(company, 1, '', 'archived'),
+  const [activeResult, archivedResult, departmentResult, plansResult] = await Promise.allSettled([
+    listEmployees(company, 1, '', 'active', 1),
+    listEmployees(company, 1, '', 'archived', 1),
     listDepartments(company),
+    listStaffingPlans(company),
   ])
   if (current !== counterGeneration) return
-  const summary = result[0].status === 'fulfilled' ? result[0].value.meta.registry_summary : undefined
-  counters.value = {
-    active: result[0].status === 'fulfilled' ? result[0].value.meta.total : null,
-    archived: result[1].status === 'fulfilled' ? result[1].value.meta.total : null,
-    departments: result[2].status === 'fulfilled' ? result[2].value.meta.total : null,
-    vacancies: summary?.vacancies ?? null,
-    expiring: summary?.expiring_contracts ?? null,
+  const currentCounters = {
+    active: activeResult.status === 'fulfilled' ? activeResult.value.meta.total : null,
+    archived: archivedResult.status === 'fulfilled' ? archivedResult.value.meta.total : null,
+    departments: departmentResult.status === 'fulfilled' ? departmentResult.value.meta.total : null,
+    vacancies: null as number | null,
+    plannedUnits: null as number | null,
+    // Contracts do not have an authoritative expiry-date API yet.
+    expiring: null as number | null,
   }
+  if (plansResult.status === 'fulfilled') {
+    const approved = preferredApprovedStaffingPlan(plansResult.value.data)
+    if (approved) {
+      try {
+        const detail = await getStaffingPlan(company, approved.id, localTodayISO())
+        if (current !== counterGeneration) return
+        currentCounters.vacancies = detail.lines.reduce((sum, row) => sum + Number(row.vacant_units || 0), 0)
+        currentCounters.plannedUnits = detail.lines.reduce((sum, row) => sum + Number(row.planned_units || 0), 0)
+      } catch { /* A staffing permission/error must not invent vacancy totals. */ }
+    }
+  }
+  if (current === counterGeneration) counters.value = currentCounters
 }
-
 async function loadCompanies() {
   companyLoading.value = true
   error.value = ''
@@ -212,12 +380,19 @@ async function loadEmployees() {
   employeeLoading.value = true
   error.value = ''
   try {
-    const response = await listEmployees(company, page.value, search.value, statusFilter.value)
+    const response = await listEmployees(company, page.value, search.value, statusFilter.value, pageSize.value)
     if (current !== generation) return
     employees.value = response.data
     total.value = response.meta.total
     lastPage.value = response.meta.last_page
     employeeWritesEnabled.value = response.meta.employee_writes_enabled
+    // Prioritize the interactive registry over expensive dashboard summaries.
+    // A single-worker Windows PHP server would otherwise queue all KPI calls
+    // ahead of the requested page, leaving the register empty for 20+ seconds.
+    if (countersRequestedFor !== company) {
+      countersRequestedFor = company
+      void loadCounters()
+    }
   } catch (cause) {
     if (current === generation)
       error.value = cause instanceof Error ? cause.message : 'Не удалось получить сотрудников'
@@ -236,11 +411,14 @@ watch(visibleFields, next => {
 }, { deep: true })
 watch(selectedCompany, () => {
   page.value = 1
-  loadCounters()
+  countersRequestedFor = ''
+  counterGeneration += 1
+  counters.value = { active: null, archived: null, departments: null, vacancies: null, plannedUnits: null, expiring: null }
 })
 watch(() => route.query.q, value => {
   search.value = typeof value === 'string' ? value.trim() : ''
   searchDraft.value = search.value
+  if (search.value) searchOpen.value = true
   page.value = 1
 }, { immediate: true })
 watch(() => route.query.status, value => {
@@ -249,8 +427,12 @@ watch(() => route.query.status, value => {
     ? candidate as EmploymentFilter : 'active'
   page.value = 1
 }, { immediate: true })
-watch([selectedCompany, page, search, statusFilter], loadEmployees)
-onMounted(loadCompanies)
+watch([selectedCompany, page, search, statusFilter, pageSize], loadEmployees)
+onMounted(() => {
+  loadCompanies()
+  window.addEventListener('keydown', handleEscape)
+  try { presetAvailable.value = Boolean(localStorage.getItem(PRESET_KEY)) } catch { presetAvailable.value = false }
+})
 </script>
 
 <template>
@@ -261,75 +443,90 @@ onMounted(loadCompanies)
     <BaseViewTabs :model-value="activeTab" :options="tabOptions" label="Разделы реестра сотрудников"
       @update:model-value="setTab" />
 
-    <div class="registry-metrics" aria-label="Сводка по персоналу">
-      <BaseCard class="registry-metric">
-        <span>Сотрудники</span>
-        <img src="/prototype-icons/Info.svg" class="registry-info-icon" alt="" aria-hidden="true" />
-        <strong>{{ counters.active ?? '—' }}</strong>
-        <small>активных сотрудников</small>
-      </BaseCard>
-      <BaseCard class="registry-metric">
-        <span>Отделы</span>
-        <img src="/prototype-icons/Info.svg" class="registry-info-icon" alt="" aria-hidden="true" />
-        <strong>{{ counters.departments ?? '—' }}</strong>
-        <small>структурных подразделений</small>
-      </BaseCard>
-      <BaseCard v-if="counters.vacancies !== null" class="registry-metric">
-        <span>Вакантные позиции</span>
-        <img src="/prototype-icons/Link-External.svg" class="registry-info-icon" alt="" aria-hidden="true" />
-        <strong>{{ counters.vacancies }}</strong>
-        <small>открытых штатных единиц</small>
-      </BaseCard>
-      <BaseCard v-if="counters.expiring !== null" class="registry-metric">
-        <span>Истекающие договоры</span>
-        <img src="/prototype-icons/Filter.svg" class="registry-info-icon" alt="" aria-hidden="true" />
-        <strong>{{ counters.expiring }}</strong>
-        <small>требуют внимания</small>
-      </BaseCard>
-    </div>
+    <BaseKpiGrid class="registry-metrics" label="Сводка по персоналу">
+      <BaseRegistryMetricCard title="Сотрудники" :value="counters.active"
+        description="активных сотрудников работают в компании"
+        icon="/prototype-icons/Info.svg" />
+      <BaseRegistryMetricCard title="Отделы" :value="counters.departments"
+        description="структурных подразделений в компании"
+        icon="/prototype-icons/Info.svg" to="/organization" />
+      <BaseRegistryMetricCard title="Вакантные позиции" :value="counters.vacancies"
+        kind="ring" :percentage="vacancyPercent"
+        :description="counters.plannedUnits === null ? 'Нет данных утверждённого штата' : 'из '+counters.plannedUnits+' штатных единиц'"
+        icon="/prototype-icons/Link-External.svg" to="/staffing?view=vacant" />
+      <BaseRegistryMetricCard title="Истекающие договоры" :value="counters.expiring"
+        description="сроки договоров пока не учитываются в API"
+        icon="/prototype-icons/Info.svg" tone="danger" />
+    </BaseKpiGrid>
 
-    <BaseCard class="registry-card">
+    <BaseCard class="registry-card" :class="{ 'registry-card--fullscreen': fullscreen }">
       <BaseLoadingState v-if="companyLoading" label="Загрузка доступных компаний" />
       <template v-else-if="companies.length">
         <div class="register-heading">
-          <div>
-            <h1>{{ activeTab === 'archive' ? 'Архив сотрудников' : 'Реестр сотрудников' }} <span>({{ employeeLoading ? '…' : total }})</span></h1>
-            <p>{{ currentCompany?.name }} · {{ employeeLoading ? 'Загрузка записей…' : 'отображается ' + registryRows.length + ' из ' + total }}</p>
+          <div class="register-title">
+            <h1>{{ activeTab === 'archive' ? 'Архив сотрудников' : 'Реестр сотрудников' }}
+              <span>({{ employeeLoading ? '…' : registryRows.length }} из {{ total }})</span>
+            </h1>
+            <p v-if="companies.length===1">{{ currentCompany?.name }}</p>
           </div>
           <div class="register-actions">
-            <BaseButton v-if="employeeWritesEnabled && activeTab === 'register'" @click="createOpen = true"><Plus :size="16" /> Добавить сотрудника</BaseButton>
-            <div class="company-select"><BaseSelectField v-model="selectedCompany" label="Компания" :options="companies" /></div>
+            <BaseActionDropdown label="Экспорт" :options="exportOptions" @select="doExport" />
+            <BaseActionDropdown label="Действия" variant="primary"
+              :options="registerActionOptions" @select="doTopAction" />
+            <BaseButton type="button" variant="secondary" icon-only class="registry-fullscreen-toggle" :aria-label="fullscreen ? 'Выйти из полноэкранного режима' : 'На весь экран'"
+              :title="fullscreen ? 'Выйти из полноэкранного режима' : 'На весь экран'"
+              @click="toggleFullscreen">
+              <Minimize2 v-if="fullscreen" :size="18" aria-hidden="true" />
+              <Maximize2 v-else :size="18" aria-hidden="true" />
+            </BaseButton>
+            <BaseButton v-if="employeeWritesEnabled && activeTab === 'register'" @click="createOpen = true">
+              <Plus :size="16" /> Добавить сотрудника
+            </BaseButton>
+            <div class="company-select">
+              <BaseSelectField v-model="selectedCompany" label="Компания" :options="companies" />
+            </div>
           </div>
         </div>
 
         <div class="registry-toolbar" aria-label="Настройки реестра">
-          <form class="registry-search" role="search" @submit.prevent="applySearch">
+          <BaseButton type="button" variant="secondary" class="registry-tool-button"
+            :aria-expanded="searchOpen" @click="toggleSearch">
+            <Search :size="16" aria-hidden="true" /> Поиск
+          </BaseButton>
+          <form class="registry-search" :class="{ 'registry-search--open': searchOpen }"
+            role="search" @submit.prevent="applySearch">
             <Search :size="17" aria-hidden="true" />
-            <input v-model="searchDraft" type="search" aria-label="Поиск в реестре"
-              placeholder="Поиск по ФИО или табельному номеру" />
+            <input ref="searchInput" v-model="searchDraft" type="search" aria-label="Поиск в реестре"
+              placeholder="ФИО или табельный номер" />
             <BaseButton type="submit" variant="secondary">Найти</BaseButton>
+            <BaseButton v-if="searchDraft || search" type="button" variant="secondary" icon-only class="registry-search-clear"
+              aria-label="Очистить поиск" @click="clearSearch">×</BaseButton>
           </form>
-          <BaseButton v-if="activeTab !== 'archive'" variant="secondary" @click="filtersOpen = !filtersOpen" :aria-expanded="filtersOpen">
+          <BaseButton variant="secondary" @click="filtersOpen = !filtersOpen" :aria-expanded="filtersOpen">
             <img src="/prototype-icons/Filter.svg" alt="" class="toolbar-icon" /> Фильтры
           </BaseButton>
-          <BaseButton variant="secondary" @click="grouped = !grouped">
+          <BaseButton variant="secondary" @click="grouped = !grouped" :aria-pressed="grouped">
             <FolderTree :size="16" /> {{ grouped ? 'Без группировки' : 'Группировка' }}
           </BaseButton>
           <BaseColumnPicker v-model="visibleFields" :columns="optionalColumns" title="Настройка колонок" />
-          <BaseButton v-if="search" variant="secondary" @click="clearSearch">Сбросить поиск</BaseButton>
+          <div class="registry-toolbar-spacer"></div>
+          <BaseActionDropdown label="Шаблоны" :options="templateOptions" @select="presetAction" />
         </div>
 
         <div v-if="filtersOpen" class="registry-filters">
-          <BaseSelectField v-if="activeTab !== 'archive'" class="status-select"
+          <BaseSelectField class="status-select"
             :model-value="statusFilter" label="Статус сотрудника" :options="statusSelectOptions"
             @update:model-value="setStatus($event as EmploymentFilter)" />
           <BaseButton v-if="statusFilter !== 'active'" variant="secondary" @click="setStatus('active')">Сбросить фильтр</BaseButton>
         </div>
-        <div class="registry-selection" aria-label="Выбор сотрудников текущей страницы">
-          <label><input type="checkbox" :checked="allPageSelected" :disabled="!registryRows.length" @change="togglePageSelection(($event.target as HTMLInputElement).checked)" /> Выбрать страницу</label>
-          <span>Выбрано на странице: {{ selectedOnPage.length }} из {{ registryRows.length }}</span>
-          <span v-if="!selectedOnPage.length" class="selection-instruction">Отметьте строки, чтобы выбрать действие</span>
+
+        <div v-if="registryChips.length" class="registry-chips" aria-label="Активные фильтры реестра">
+          <BaseButton v-for="chip in registryChips" :key="chip.id" type="button" variant="secondary" class="registry-chip"
+            :aria-label="'Сбросить: '+chip.label" @click="clearChip(chip.id)">
+            {{ chip.label }} <span aria-hidden="true">×</span>
+          </BaseButton>
         </div>
+        <p v-if="presetNotice" role="status" class="registry-preset-notice">{{ presetNotice }}</p>
         <BaseTableBulkActions :count="selectedOnPage.length" subject="сотрудников"
           :options="selectedActions" @execute="executeSelectedAction" @clear="selectedIds = []" />
         <p v-if="grouped" class="scope-hint">Сгруппированы записи текущей страницы. Фильтры и количество сотрудников рассчитываются по всему реестру.</p>
@@ -357,7 +554,14 @@ onMounted(loadCompanies)
               : row.employment_status === 'planned' ? 'info' : 'warning'">{{ row.status_label }}</BaseStatusPill>
           </template>
           <template #cell-details="{ row }">
-            <RouterLink class="employee-link" :to="{ name: 'employee-detail', params: { company: selectedCompany, employee: row.id } }" :aria-label="'Открыть карточку: ' + row.full_name" :title="'Открыть карточку: ' + row.full_name"><img src="/prototype-icons/Edit.svg" alt="" /><span class="sr-only">Открыть карточку</span></RouterLink>
+            <div class="employee-row-actions">
+              <RouterLink class="employee-link" :to="{ name: 'employee-detail', params: { company: selectedCompany, employee: row.id } }"
+                :aria-label="'Открыть карточку: ' + row.full_name" :title="'Открыть карточку: ' + row.full_name">
+                <img src="/prototype-icons/Edit.svg" alt="" /><span class="sr-only">Открыть карточку</span>
+              </RouterLink>
+              <BaseActionDropdown variant="icon" :label="'Действия сотрудника: '+row.full_name"
+                :options="rowActionOptions" @select="doRowAction($event, row)" />
+            </div>
           </template>
           </BaseDataTable>
         </div>
@@ -365,8 +569,16 @@ onMounted(loadCompanies)
           <EmployeeMobileList :rows="registryRows" :company-id="selectedCompany" :selected-ids="selectedIds"
             :loading="employeeLoading" :grouped="grouped" @select="toggleSelection" />
         </div>
-        <BasePagination :page="page" :last-page="lastPage" :loading="employeeLoading"
-          caption="Страницы реестра сотрудников" @previous="page--" @next="page++" />
+        <div class="registry-bottomline">
+          <span class="registry-selection" aria-live="polite">
+            Выбрано на странице: {{ selectedOnPage.length }} из {{ registryRows.length }}
+          </span>
+          <BasePagination :page="page" :last-page="lastPage" :loading="employeeLoading"
+            :total="total" :page-size="pageSize"
+            caption="Страницы реестра сотрудников"
+            @previous="page--" @next="page++" @select-page="page=$event"
+            @change-page-size="changePageSize" />
+        </div>
       </template>
       <BaseNotice v-else-if="!error" tone="info">Нет доступных компаний.</BaseNotice>
     </BaseCard>
@@ -378,79 +590,111 @@ onMounted(loadCompanies)
   </section>
 </template>
 
+
 <style scoped>
-.personnel-page{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;max-width:100%;min-width:0}
-.personnel-page :deep(.base-card){border-radius:6px;box-shadow:none}
-.registry-metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:var(--space-3)}
-.registry-metric{display:grid;grid-template-columns:minmax(0,1fr) auto;align-content:start;gap:5px 9px;align-items:start;min-height:122px}
-.registry-metric span{font-size:12px;text-transform:uppercase;font-weight:700;letter-spacing:.01em;color:var(--color-muted);grid-column:1;grid-row:1;line-height:1.4}
-.registry-metric :deep(svg){color:var(--color-primary);grid-column:2;grid-row:1}
-.registry-metric strong{font-size:25px;color:var(--color-primary);grid-column:1/-1;line-height:1.18}
-.registry-metric small{grid-column:1/-1;color:var(--color-muted);font-size:11px;line-height:1.4}
-.registry-info-icon{grid-column:2;grid-row:1;width:15px;height:15px;object-fit:contain}
-.registry-card{min-width:0;box-shadow:none;background:transparent;border:0;padding:0}
-.registry-desktop-table{
-  min-width:0;max-width:100%;width:100%;
-  /* Only BaseDataTable's own .table-scroll is horizontally scrollable.
-     The host must never expand the document at tablet breakpoints. */
-  overflow:clip;
-}
-.registry-mobile-list{display:none}
-.register-heading{display:flex;align-items:end;justify-content:space-between;gap:16px;margin-bottom:var(--space-4);flex-wrap:wrap}
-.register-heading h1{font-size:21px;letter-spacing:-.025em;margin:0;line-height:1.25}
-.register-heading h1 span{color:var(--color-text);font-size:15px;font-weight:400}
-.register-heading p{margin:6px 0 0;color:var(--color-muted);font-size:12px}
-.register-actions{display:flex;gap:10px;align-items:end;flex-wrap:wrap;justify-content:flex-end}
-.company-select{min-width:175px;max-width:260px;flex:1}
+.personnel-page{display:grid;grid-template-columns:minmax(0,1fr);gap:16px;max-width:100%;min-width:0}
 .registry-breadcrumb{display:flex;align-items:center;gap:10px;color:var(--color-muted);font-size:12px;min-height:24px}
 .registry-breadcrumb img{width:15px;height:15px}
 .registry-breadcrumb strong{font-weight:500;color:var(--color-text)}
-.registry-toolbar{display:flex;align-items:center;gap:var(--space-2);flex-wrap:wrap;margin-bottom:var(--space-3)}
-.registry-search{display:flex;align-items:center;gap:8px;min-width:260px;flex:1 1 300px;min-height:var(--control-height);padding:3px 4px 3px 12px;border:1px solid var(--color-stroke);border-radius:var(--radius-md);color:var(--color-muted)}
+.registry-metrics{min-width:0;gap:12px}
+.registry-card{min-width:0;background:transparent;border:0;box-shadow:none;padding:0}
+.registry-card--fullscreen{
+  position:fixed;z-index:220;inset:10px;display:block;
+  max-width:none;overflow:auto;background:var(--color-page);
+  border:1px solid var(--color-stroke);border-radius:10px;
+  padding:18px;box-shadow:var(--shadow-float)
+}
+:global(body.hrm-register-fullscreen){overflow:hidden}
+.register-heading{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;margin:2px 0 14px}
+.register-title{display:grid;gap:3px;min-width:0}
+.register-title h1{margin:0;color:var(--color-text);font-size:22px;line-height:29px;letter-spacing:-.022em;font-weight:700}
+.register-title h1 span{color:var(--color-text);font-size:14px;line-height:20px;font-weight:400;white-space:nowrap}
+.register-title p{margin:0;font-size:11px;color:var(--color-muted)}
+.register-actions{display:flex;gap:8px;align-items:center;justify-content:flex-end;flex-wrap:wrap}
+.register-actions :deep(.base-button){min-height:36px;white-space:nowrap}
+.registry-fullscreen-toggle,.registry-tool-button{
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  min-height:36px;padding:7px 10px;border:1px solid var(--color-stroke);
+  border-radius:8px;background:var(--color-surface);box-shadow:var(--shadow-control);
+  font:inherit;font-size:12px;line-height:18px;font-weight:600;
+  color:var(--color-text);cursor:pointer
+}
+.registry-fullscreen-toggle{width:36px;padding:6px;color:var(--color-muted)}
+.registry-fullscreen-toggle:hover,.registry-tool-button:hover,
+.registry-tool-button[aria-expanded="true"]{background:var(--color-soft);border-color:var(--color-primary-stroke)}
+.company-select{min-width:175px;max-width:260px;flex:1}
+.registry-toolbar{
+  display:flex;align-items:center;gap:8px;flex-wrap:wrap;
+  min-width:0;margin-bottom:10px
+}
+.registry-toolbar :deep(.base-button){min-height:36px;white-space:nowrap}
+.registry-toolbar-spacer{flex:1 1 10px;min-width:4px}
+.registry-search{
+  display:none;align-items:center;gap:8px;flex:1 1 280px;
+  min-width:min(280px,100%);max-width:490px;min-height:36px;
+  padding:3px 5px 3px 10px;border:1px solid var(--color-stroke-strong);
+  border-radius:8px;background:var(--color-surface);color:var(--color-muted)
+}
+.registry-search--open{display:flex}
 .registry-search:focus-within{border-color:var(--color-primary)}
-.registry-search input{border:0;outline:0;flex:1;min-width:0;width:100%;font-size:13px;color:var(--color-text);background:transparent}
-.registry-search :deep(button){min-height:36px;padding:7px 12px}
-.status-select{flex:0 1 175px;min-width:145px}
+.registry-search input{border:0;outline:0;flex:1;min-width:0;width:100%;font-size:12px;color:var(--color-text);background:transparent}
+.registry-search :deep(button){min-height:28px;padding:4px 9px}
+.registry-search-clear{display:grid;place-items:center;width:25px;height:25px;padding:2px;border:0;background:transparent;color:var(--color-muted);font-size:19px;cursor:pointer}
+.registry-toolbar .toolbar-icon{width:16px;height:16px;object-fit:contain}
+.registry-filters{
+  display:flex;gap:12px;align-items:end;flex-wrap:wrap;margin:0 0 12px;
+  padding:11px 12px;border:1px solid var(--color-stroke);border-radius:8px;
+  background:var(--color-surface)
+}
+.status-select{flex:0 1 210px;min-width:165px}
 .status-select :deep(label){position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}
-.status-select :deep(select){font-size:13px}
+.status-select :deep(select){font-size:12px}
+.registry-chips{display:flex;align-items:center;flex-wrap:wrap;gap:7px;margin-bottom:10px}
+.registry-chip{
+  display:inline-flex;align-items:center;gap:7px;min-height:29px;
+  padding:4px 8px;border:1px solid var(--color-stroke);
+  border-radius:7px;background:var(--color-surface);color:var(--color-muted);
+  font-size:11px;line-height:16px;cursor:pointer
+}
+.registry-chip span{font-size:16px;line-height:12px}
+.registry-chip:hover{color:var(--color-primary);border-color:var(--color-primary-stroke)}
+.registry-preset-notice{margin:0 0 10px;color:var(--color-muted);font-size:11px}
+.registry-desktop-table{
+  min-width:0;max-width:100%;width:100%;overflow:clip
+}
+.registry-mobile-list{display:none}
 .name-cell{min-width:180px;display:grid;gap:3px}
-.name-cell a{font-weight:600;color:var(--color-text)}
+.name-cell a{font-size:12px;line-height:18px;font-weight:500;color:var(--color-text)}
 .name-cell a:hover{color:var(--color-primary);text-decoration:underline}
-.name-cell span{font-size:11px;color:var(--color-muted)}
-.employee-link{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:4px;color:var(--color-primary)}
+.name-cell span{font-size:11px;line-height:16px;color:var(--color-muted)}
+.employee-row-actions{display:flex;align-items:center;justify-content:center;gap:5px;white-space:nowrap}
+.employee-link{display:inline-flex;align-items:center;justify-content:center;width:29px;height:29px;border-radius:5px;color:var(--color-primary)}
 .employee-link:hover{background:var(--color-accent-soft)}
 .employee-link img{width:17px;height:17px}
-.registry-selection{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:0 0 12px;min-height:34px;font-size:12px;color:var(--color-muted)}
-.registry-selection label{display:inline-flex;align-items:center;gap:8px;font-weight:600;color:var(--color-text);cursor:pointer}
-.registry-selection input,.personnel-page :deep(td input[type=checkbox]){accent-color:var(--color-primary);width:15px;height:15px;cursor:pointer}
-.registry-selection :deep(button){min-height:30px;padding:5px 10px}
-.selection-instruction{font-size:11px;color:var(--color-muted)}
-.registry-filters{display:flex;gap:12px;align-items:end;flex-wrap:wrap;margin:-2px 0 14px;padding:12px 14px;border:1px solid var(--color-stroke);border-radius:6px;background:var(--color-surface)}
-.registry-toolbar .toolbar-icon{width:16px;height:16px;object-fit:contain}
-.scope-hint{color:var(--color-muted);font-size:12px;line-height:1.5;margin:0 0 12px}
+.registry-bottomline{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.registry-selection{display:inline-flex;align-items:center;min-height:30px;font-size:11px;color:var(--color-muted)}
+.registry-bottomline :deep(.base-pagination){flex:1;margin-top:12px}
+.scope-hint{color:var(--color-muted);font-size:11px;line-height:16px;margin:0 0 10px}
 .sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap}
-@media(max-width:1100px){.registry-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:1000px){
+  .register-title h1{font-size:20px;line-height:27px}
+  .register-actions{justify-content:flex-start}
+}
 @media(max-width:700px){
   .registry-desktop-table{display:none}
   .registry-mobile-list{display:block}
   .registry-toolbar :deep(.column-settings){display:none}
+  .registry-search{display:flex;order:6;min-width:100%;max-width:none;flex-basis:100%}
+  .registry-toolbar-spacer{display:none}
 }
-@media(max-width:650px){
-  .registry-metrics{gap:8px}
-  .registry-metric{min-height:118px}
-  .registry-metric strong{font-size:22px}
-  .registry-search{min-width:100%;width:100%}
-  .registry-toolbar>:deep(button){flex:1 1 auto}
-  .status-select{flex:1}.status-select :deep(select){width:100%}
-  .company-select{max-width:none;width:100%}
-  .register-actions{width:100%;justify-content:stretch}
-  .register-actions :deep(button){flex:1}
+@media(max-width:600px){
+  .register-heading{align-items:start}
+  .register-title h1{font-size:19px}
+  .register-actions{width:100%;gap:6px}
+  .register-actions :deep(.base-button){flex:1}
+  .registry-fullscreen-toggle{margin-left:auto}
+  .company-select{min-width:100%;max-width:none}
+  .registry-metrics{gap:9px}
+  .registry-card--fullscreen{inset:0;border-radius:0;padding:12px}
 }
-</style>
-
-<style scoped>
-.registry-metric>span,.registry-metric strong{font-weight:500}
-.name-cell a{font-weight:400}
-.register-heading h1{font-weight:600}
-.registry-metrics{gap:20px}
 </style>

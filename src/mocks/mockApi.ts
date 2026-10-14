@@ -387,7 +387,10 @@ export async function mockApiRequest<T>(path:string,options:RequestInit={}):Prom
     if(kind==='documents'&&u.searchParams.get('document_type'))rows=rows.filter((x:any)=>x.document_type===u.searchParams.get('document_type'))
     if(kind==='documents'&&u.searchParams.get('employee_id'))rows=rows.filter((x:any)=>x.employee_id===u.searchParams.get('employee_id'))
     const extra:any=kind==='departments'?{department_writes_enabled:true}:kind==='positions'?{position_writes_enabled:true}:kind==='employees'?{employee_writes_enabled:true,status_filter:u.searchParams.get('status')||'all',registry_summary:{vacancies:demoStaffingRowsAt(staffing,new Date().toISOString().slice(0,10)).reduce((sum:any,row:any)=>sum+Number(row.vacant_units),0),expiring_contracts:null}}:kind==='personnel-actions'?{personnel_actions_writes_enabled:true,summary:{hire:actions.filter((x:any)=>x.action_type==='hire').length,transfer:actions.filter((x:any)=>x.action_type==='transfer').length,termination:actions.filter((x:any)=>x.action_type==='termination').length}}:{document_writes_enabled:true}
-    return page(rows,pg,kind==='employees'||kind==='personnel-actions'||kind==='documents'?25:100,extra) as T}
+    const defaultSize=kind==='employees'||kind==='personnel-actions'||kind==='documents'?25:100
+    const requestedSize=Number(u.searchParams.get('per_page')||defaultSize)
+    const actualSize=Number.isSafeInteger(requestedSize)&&requestedSize>=1&&requestedSize<=100?requestedSize:defaultSize
+    return page(rows,pg,actualSize,extra) as T}
   m=p.match(/^\/companies\/[^/]+\/documents\/([^/]+)\/file$/)
   if(m&&method==='POST'){
     const document:any=documents.find(x=>x.id===m![1])

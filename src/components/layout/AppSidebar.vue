@@ -3,67 +3,70 @@ import { computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { hrmNavigation, isHrmNavigationActive } from '../../config/hrmNavigation'
 import { useUiPreferencesStore } from '../../stores/uiPreferences'
+import { useAppI18n } from '../../i18n'
 
 const props = defineProps<{ mobileOpen: boolean }>()
 const emit = defineEmits<{ 'update:mobileOpen': [value: boolean] }>()
 const route = useRoute()
 const ui = useUiPreferencesStore()
+const { t } = useAppI18n()
 const primary = computed(() => hrmNavigation.filter(link => link.section === 'primary'))
 const services = computed(() => hrmNavigation.filter(link => link.section === 'service'))
 function active(to: string) { return isHrmNavigationActive(to, route.path) }
+function linkLabel(link: { label: string; labelKey?: string }) { return t(link.labelKey ?? '', link.label) }
 function closeMobile() { if (props.mobileOpen) emit('update:mobileOpen', false) }
 </script>
 
 <template>
   <aside class="sidebar hrm-sidebar"
     :class="{ 'sidebar--open': mobileOpen, 'hrm-sidebar--collapsed': ui.sidebarCollapsed }"
-    aria-label="Боковая панель">
+    :aria-label="t('shell.mainNavigation')">
     <div class="sidebar-head">
       <RouterLink to="/" class="brand-link" title="ITP HRM — главная" @click="closeMobile">
         <span class="brand-mark" aria-hidden="true">ITP</span>
         <span class="brand-copy">
           <strong>ITP <em>HRM</em></strong>
-          <small>Кадровая система</small>
+          <small>{{ t('shell.hrSystem') }}</small>
         </span>
       </RouterLink>
       <button class="sidebar-collapse icon-control" type="button"
-        :aria-label="ui.sidebarCollapsed ? 'Развернуть меню' : 'Свернуть меню'"
+        :aria-label="ui.sidebarCollapsed ? t('shell.expandMenu') : t('shell.collapseMenu')"
         :aria-expanded="!ui.sidebarCollapsed"
         @click="ui.toggleSidebar()">
         <img :src="ui.sidebarCollapsed ? '/prototype-icons/Open-Side.svg' : '/prototype-icons/Collapsed-screen.svg'"
           alt="" aria-hidden="true" />
       </button>
       <button class="mobile-nav-close icon-control" type="button"
-        aria-label="Закрыть меню" @click="closeMobile">
+        :aria-label="t('shell.closeMenu')" @click="closeMobile">
         <img src="/prototype-icons/Close.svg" alt="" aria-hidden="true" />
       </button>
     </div>
 
-    <nav class="sidebar-nav" aria-label="Главная навигация">
+    <nav class="sidebar-nav" :aria-label="t('shell.mainNavigation')">
       <RouterLink v-for="link in primary" :key="link.to" class="nav-item"
         :class="{ 'is-active': active(link.to), 'router-link-active': active(link.to) }"
-        :to="link.to" :aria-label="link.label"
+        :to="link.to" :aria-label="linkLabel(link)"
         :aria-current="active(link.to) ? 'page' : undefined"
-        :title="ui.sidebarCollapsed && !mobileOpen ? link.label : undefined"
+        :title="ui.sidebarCollapsed && !mobileOpen ? linkLabel(link) : undefined"
         @click="closeMobile">
         <img :src="link.icon" class="nav-svg-icon" alt="" aria-hidden="true" />
-        <span class="nav-label">{{ link.label }}</span>
+        <span class="nav-label">{{ linkLabel(link) }}</span>
       </RouterLink>
-      <div class="nav-divider" role="separator" aria-label="Сервисные разделы"></div>
+      <div class="nav-divider" role="separator" :aria-label="t('shell.serviceSections')"></div>
       <RouterLink v-for="link in services" :key="link.to" class="nav-item"
         :class="{ 'is-active': active(link.to), 'router-link-active': active(link.to) }"
-        :to="link.to" :aria-label="link.label"
+        :to="link.to" :aria-label="linkLabel(link)"
         :aria-current="active(link.to) ? 'page' : undefined"
-        :title="ui.sidebarCollapsed && !mobileOpen ? link.label : undefined"
+        :title="ui.sidebarCollapsed && !mobileOpen ? linkLabel(link) : undefined"
         @click="closeMobile">
         <img :src="link.icon" class="nav-svg-icon" alt="" aria-hidden="true" />
-        <span class="nav-label">{{ link.label }}</span>
+        <span class="nav-label">{{ linkLabel(link) }}</span>
       </RouterLink>
     </nav>
     <footer class="sidebar-foot">
       <span class="sidebar-foot-mark" aria-hidden="true">ITP</span>
       <span class="sidebar-foot-copy">
-        <strong>ITP HRM</strong><small>Единая кадровая система</small>
+        <strong>ITP HRM</strong><small>{{ t('shell.unifiedHrSystem') }}</small>
       </span>
     </footer>
   </aside>

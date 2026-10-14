@@ -2,6 +2,7 @@
 import { ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useSessionStore } from '../stores/session'
+import { useUiPreferencesStore } from '../stores/uiPreferences'
 import BaseCard from '../components/ui/BaseCard.vue'
 import BaseNotice from '../components/ui/BaseNotice.vue'
 import BaseButton from '../components/ui/BaseButton.vue'
@@ -14,6 +15,7 @@ const message = ref('')
 const route = useRoute()
 const router = useRouter()
 const session = useSessionStore()
+const ui = useUiPreferencesStore()
 
 async function submit() {
   if (!enabled || session.loading) return
@@ -27,7 +29,7 @@ async function submit() {
     const destination = typeof requested === 'string'
       && requested.startsWith('/')
       && !requested.startsWith('//')
-      ? requested : '/'
+      ? requested : ui.startScreen
 
     await router.replace(destination)
   } catch (cause) {

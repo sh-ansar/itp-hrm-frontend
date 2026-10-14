@@ -18,10 +18,12 @@ import { getStaffingPlan, listStaffingPlans, type StaffingPlanLine } from '../ap
 import { preferredApprovedStaffingPlan } from '../utils/staffingPlanChoice'
 import { localTodayISO } from '../utils/localDate'
 import { downloadCsv } from '../utils/exportCsv'
+import { useUiFormatters } from '../composables/useUiFormatters'
 
 type EmployeeRow = EmployeeRecord & { full_name:string; gender_label:string; status_label:string }
 type ActionRow = PersonnelActionRow & { full_name:string; action_label:string }
 const router = useRouter()
+const fmt = useUiFormatters()
 const route = useRoute()
 const companyId=ref('')
 const companyName=ref('')
@@ -161,15 +163,13 @@ const actionColumns=[
   {key:'basis_reference',label:'Основание'},
 ]
 function formatDate(value:unknown):string {
-  if(typeof value!=='string'||!/^\d{4}-\d{2}-\d{2}/.test(value))return '—'
-  const [year,month,day]=value.slice(0,10).split('-')
-  return day+'.'+month+'.'+year
+  return typeof value === 'string' ? fmt.date(value) : '—'
 }
 function formatUnits(value:number):string{
-  return Number(value).toLocaleString('ru-RU',{maximumFractionDigits:2})
+  return fmt.number(value)
 }
 function salary(line:StaffingPlanLine):string{
-  return line.base_salary===null?'—':Number(line.base_salary).toLocaleString('ru-RU')+' '+(line.currency??'')
+  return line.base_salary===null?'—':fmt.number(Number(line.base_salary),0)+' '+(line.currency??'')
 }
 let staffGeneration=0
 async function refreshEmployees(){

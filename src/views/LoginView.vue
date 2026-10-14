@@ -73,37 +73,38 @@ async function submit() {
 
 <style scoped>
 .login-page{
-  position:relative;isolation:isolate;min-height:100vh;min-height:100dvh;
-  display:grid;place-items:center;padding:24px;overflow:auto;
-  background:
-    radial-gradient(circle at 18% 16%,rgba(6,151,224,.10),transparent 34%),
-    linear-gradient(145deg,var(--color-accent-soft) 0%,var(--color-page) 58%,var(--color-soft) 100%);
-  color:var(--color-text)
-}
-.login-page::before{
-  content:"";position:fixed;z-index:-1;inset:0;pointer-events:none;
-  background:linear-gradient(180deg,rgba(255,255,255,.18),transparent 42%)
+  min-height:100vh;min-height:100dvh;
+  display:flex;align-items:center;justify-content:center;
+  padding:24px;
+  overflow:auto;
+  background:var(--color-page);
+  color:var(--color-text);
 }
 .login-wrap{
-  position:relative;z-index:1;width:min(100%,440px);display:grid;gap:18px;
-  opacity:1;visibility:visible;transform:none
+  width:min(100%,440px);
+  display:flex;flex-direction:column;gap:18px;
+  opacity:1;visibility:visible;
 }
-.login-brand{display:grid;gap:4px;color:var(--color-text)}
-.login-brand strong{font-size:26px;letter-spacing:-.02em}
-.login-brand span{font-size:13px;color:var(--color-muted)}
-.login-wrap h1{font-size:25px;margin:0 0 8px}
+.login-brand{display:flex;flex-direction:column;gap:4px;color:var(--color-text)}
+.login-brand strong{font-size:26px;line-height:32px;letter-spacing:-.02em}
+.login-brand span{font-size:13px;line-height:18px;color:var(--color-muted)}
+.login-wrap :deep(.base-card){
+  width:100%;
+  background:var(--color-surface);
+  border:1px solid var(--color-stroke);
+  box-shadow:var(--shadow-card);
+}
+.login-wrap h1{font-size:25px;line-height:32px;margin:0 0 8px;color:var(--color-text)}
 .login-wrap p{line-height:1.5;margin:0 0 20px}
-.login-form{display:grid;gap:18px}
-.login-form :deep(.base-button){min-height:44px;margin-top:4px}
-
+.login-form{display:flex;flex-direction:column;gap:18px}
+.login-form :deep(.base-button){width:100%;min-height:44px;margin-top:4px}
 .login-back{display:inline-block;margin-top:20px;color:var(--color-primary);font-size:14px;text-decoration:underline}
-.login-footnote{font-size:12px;color:var(--color-muted);text-align:center;margin:0}
+.login-footnote{font-size:12px;line-height:18px;color:var(--color-muted);text-align:center;margin:0}
 @media(max-width:520px){
-  .login-page{place-items:start center;padding:20px 14px}
+  .login-page{align-items:flex-start;padding:20px 14px}
   .login-wrap{width:100%;gap:14px}
-  .login-brand strong{font-size:22px}
-  .login-wrap h1{font-size:21px}
+  .login-brand strong{font-size:22px;line-height:28px}
+  .login-wrap h1{font-size:21px;line-height:28px}
   .login-form{gap:14px}
-  .login-form :deep(.base-button){width:100%}
 }
 </style>

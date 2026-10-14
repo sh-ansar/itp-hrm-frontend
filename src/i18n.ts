@@ -215,11 +215,11 @@ const en: Messages = {
 
 const messages: Record<UiLocale, Messages> = { ru, kk, en }
 
-export const localeOptions = [
+export const localeOptions: Array<{ id: UiLocale; name: string }> = [
   { id: 'ru', name: 'Русский' },
   { id: 'kk', name: 'Қазақша' },
   { id: 'en', name: 'English' },
-] as const
+]
 
 export function useAppI18n() {
   const ui = useUiPreferencesStore()

@@ -24,7 +24,7 @@ export const hrmNavigation: readonly HrmNavigationItem[] = [
 /** Page navigation is different from a client-side accordion: keep its
  * states consistent for both mouse and keyboard across all viewports. */
 export function isHrmNavigationActive(to: string, routePath: string): boolean {
-  if (to === '/') return routePath === '/'
+  if (to === '/') return routePath === '/' || routePath === '/onboarding'
   if (to === '/employees') return routePath === '/employees'
     || routePath.startsWith('/employees/')
     || routePath === '/employees-development' || routePath === '/learning' || routePath === '/reserve'

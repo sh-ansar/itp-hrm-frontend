@@ -2,6 +2,7 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import BaseDataTable from '../components/ui/BaseDataTable.vue'
+import BaseButton from '../components/ui/BaseButton.vue'
 import BaseTableBulkActions from '../components/ui/BaseTableBulkActions.vue'
 import BaseNotice from '../components/ui/BaseNotice.vue'
 import BaseStatusPill from '../components/ui/BaseStatusPill.vue'
@@ -17,10 +18,14 @@ import { getStaffingPlan, listStaffingPlans, type StaffingPlanLine } from '../ap
 import { preferredApprovedStaffingPlan } from '../utils/staffingPlanChoice'
 import { localTodayISO } from '../utils/localDate'
 import { downloadCsv } from '../utils/exportCsv'
+import { useAppI18n } from '../i18n'
 
 type EmployeeRow = EmployeeRecord & { full_name:string; gender_label:string; status_label:string }
 type ActionRow = PersonnelActionRow & { full_name:string; action_label:string }
 const router = useRouter()
+const { t } = useAppI18n()
+const onboardingComplete = ref(false)
+const onboardingStorageKey = 'hrm-onboarding-complete-v1'
 const companyId=ref('')
 const companyName=ref('')
 const loading=ref(true)
@@ -222,13 +227,27 @@ async function load(){
     error.value=cause instanceof Error?cause.message:'Не удалось открыть главную страницу'
   }finally{loading.value=false}
 }
-onMounted(load)
+function readOnboardingCompletion(){
+  try { onboardingComplete.value = Boolean(localStorage.getItem(onboardingStorageKey)) }
+  catch { onboardingComplete.value = false }
+}
+onMounted(() => {
+  readOnboardingCompletion()
+  void load()
+})
 </script>
 
 <template>
   <section class="overview-page">
     <h1 class="overview-sr-only">Главная</h1>
     <BaseNotice v-if="error" tone="error">{{ error }}</BaseNotice>
+    <section v-if="!onboardingComplete" class="onboarding-entry" aria-label="Первичная настройка">
+      <div>
+        <strong>{{ t('onboarding.dashboardTitle') }}</strong>
+        <span>{{ t('onboarding.dashboardHelp') }}</span>
+      </div>
+      <BaseButton @click="router.push('/onboarding')">{{ t('onboarding.dashboardAction') }}</BaseButton>
+    </section>
     <BaseKpiGrid class="overview-metrics" label="Основные показатели компании">
       <DashboardMetricCard title="Вакантные позиции" color="amber"
         :value="staffingError?'—':formatUnits(vacantUnits)" :percent="staffingError?null:vacancyShare"
@@ -333,6 +352,15 @@ onMounted(load)
 .overview-page{display:grid;grid-template-columns:minmax(0,1fr);gap:25px;min-width:0;max-width:100%;padding-top:1px}
 .overview-sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap;border:0}
 .overview-section{min-width:0;display:grid;gap:0}
+.onboarding-entry{
+  display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;
+  padding:13px 15px;border:1px solid var(--color-primary-stroke);border-radius:var(--radius-md);
+  background:var(--color-accent-soft);color:var(--color-text);
+}
+.onboarding-entry>div{display:grid;gap:3px;min-width:0}
+.onboarding-entry strong{font-size:13px;line-height:18px}
+.onboarding-entry span{color:var(--color-muted);font-size:11px;line-height:16px}
+.onboarding-entry :deep(.base-button){min-height:34px;font-size:11px}
 .primary-cell{display:grid;gap:3px;min-width:165px;max-width:290px}
 .primary-cell strong{color:var(--color-text);font-size:12px;line-height:17px;font-weight:600}
 .primary-cell span{color:var(--color-muted);font-size:11px;line-height:15px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}

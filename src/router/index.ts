@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import OverviewView from '../views/OverviewView.vue'
+import OnboardingView from '../views/OnboardingView.vue'
 import OrganizationView from '../views/OrganizationView.vue'
 import EmployeesView from '../views/EmployeesView.vue'
 import StaffingView from '../views/StaffingView.vue'
@@ -25,6 +26,7 @@ export const router = createRouter({
   history: createWebHistory(),
   routes: [
     { path: '/', name: 'overview', component: OverviewView },
+    { path: '/onboarding', name: 'onboarding', component: OnboardingView },
     { path: '/login', name: 'login', component: LoginView },
     { path: '/employees', name: 'employees', component: EmployeesView },
     { path: '/employees/:company/:employee', name: 'employee-detail', component: EmployeeDetailView },

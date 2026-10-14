@@ -9,6 +9,7 @@ import BasePagination from '../components/ui/BasePagination.vue'
 import BaseNotice from '../components/ui/BaseNotice.vue'
 import BaseLoadingState from '../components/ui/BaseLoadingState.vue'
 import BaseDataTable from '../components/ui/BaseDataTable.vue'
+import BaseStatusPill from '../components/ui/BaseStatusPill.vue'
 import BaseDialog from '../components/ui/BaseDialog.vue'
 import BaseViewTabs from '../components/ui/BaseViewTabs.vue'
 import BaseColumnPicker from '../components/ui/BaseColumnPicker.vue'
@@ -61,7 +62,6 @@ const statusLabels: Record<EmploymentStatus, string> = {
   active: 'Работает', planned: 'Запланирован', archived: 'В архиве', unassigned: 'Без назначения',
 }
 const columns = [
-  { key: 'selection', label: 'Выбор' },
   { key: 'full_name', label: 'ФИО / Отдел' },
   { key: 'personnel_number', label: 'Таб. №' },
   { key: 'birth_date', label: 'Дата рождения' },
@@ -74,7 +74,7 @@ const columns = [
 ]
 const extendedRegistry = computed(() => ['company_admin', 'hr_specialist'].includes(currentCompany.value?.role_code ?? ''))
 const privateColumns = ['birth_date', 'gender']
-const optionalColumns = computed(() => columns.filter(column => !['selection', 'full_name', 'details'].includes(column.key) && (extendedRegistry.value || !privateColumns.includes(column.key))))
+const optionalColumns = computed(() => columns.filter(column => !['full_name', 'details'].includes(column.key) && (extendedRegistry.value || !privateColumns.includes(column.key))))
 const columnKeys = ['birth_date', 'gender', 'personnel_number', 'current_position_name', 'current_department_name', 'current_assignment_valid_from', 'status_label']
 function savedColumnPreferences(): Record<string, boolean> {
   const initial = Object.fromEntries(columnKeys.map(key => [key, !['current_position_name', 'current_department_name'].includes(key)]))
@@ -86,7 +86,7 @@ function savedColumnPreferences(): Record<string, boolean> {
 }
 const visibleFields = ref<Record<string, boolean>>(savedColumnPreferences())
 const visibleColumns = computed(() =>
-  columns.filter(column => (extendedRegistry.value || !privateColumns.includes(column.key)) && (['selection', 'full_name', 'details'].includes(column.key) || visibleFields.value[column.key] !== false)))
+  columns.filter(column => (extendedRegistry.value || !privateColumns.includes(column.key)) && (['full_name', 'details'].includes(column.key) || visibleFields.value[column.key] !== false)))
 const currentCompany = computed(() => companies.value.find(item => item.id === selectedCompany.value))
 const registryRows = computed<EmployeeRow[]>(() => employees.value.map(employee => {
   const state: EmploymentStatus = employee.employment_status
@@ -323,13 +323,10 @@ onMounted(loadCompanies)
 
         <div class="registry-desktop-table">
           <BaseDataTable :rows="registryRows" :columns="visibleColumns" :group-by="grouped ? groupEmployees : undefined"
+          selectable v-model:selected-keys="selectedIds"
           row-key="id" caption="Реестр сотрудников выбранной компании" :loading="employeeLoading"
           :empty-title="activeTab === 'archive' ? 'В архиве сотрудников нет' : 'Сотрудники не найдены'"
           :empty-description="search ? 'Уточните поиск или сбросьте запрос.' : 'Нет записей для выбранного фильтра.'">
-          <template #cell-selection="{ row }">
-            <input type="checkbox" :checked="selectedIds.includes(row.id)" :aria-label="'Выбрать сотрудника: ' + row.full_name"
-              @change="toggleSelection(row.id, ($event.target as HTMLInputElement).checked)" />
-          </template>
           <template #cell-full_name="{ row }">
             <div class="name-cell">
               <RouterLink :to="{ name: 'employee-detail', params: { company: selectedCompany, employee: row.id } }">{{ row.full_name }}</RouterLink>
@@ -342,9 +339,9 @@ onMounted(loadCompanies)
           <template #cell-current_department_name="{ value }">{{ value ?? '—' }}</template>
           <template #cell-current_assignment_valid_from="{ value }">{{ displayDate(value) }}</template>
           <template #cell-status_label="{ row }">
-            <span class="status-pill" :class="'status-pill--' + (row.employment_status ?? 'unassigned')">
-              {{ row.status_label }}
-            </span>
+            <BaseStatusPill :tone="row.employment_status === 'active' ? 'success'
+              : row.employment_status === 'archived' ? 'danger'
+              : row.employment_status === 'planned' ? 'info' : 'warning'">{{ row.status_label }}</BaseStatusPill>
           </template>
           <template #cell-details="{ row }">
             <RouterLink class="employee-link" :to="{ name: 'employee-detail', params: { company: selectedCompany, employee: row.id } }" :aria-label="'Открыть карточку: ' + row.full_name" :title="'Открыть карточку: ' + row.full_name"><img src="/prototype-icons/Edit.svg" alt="" /><span class="sr-only">Открыть карточку</span></RouterLink>
@@ -371,10 +368,6 @@ onMounted(loadCompanies)
 <style scoped>
 .personnel-page{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;max-width:100%;min-width:0}
 .personnel-page :deep(.base-card){border-radius:6px;box-shadow:none}
-.personnel-page :deep(table){font-size:13px}
-.personnel-page :deep(th){font-weight:600;padding:11px 13px}
-.personnel-page :deep(td){vertical-align:middle;padding:10px 13px}
-.personnel-page :deep(.table-scroll){border-radius:6px;contain:layout paint}
 .registry-metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:var(--space-3)}
 .registry-metric{display:grid;grid-template-columns:minmax(0,1fr) auto;align-content:start;gap:5px 9px;align-items:start;min-height:122px}
 .registry-metric span{font-size:12px;text-transform:uppercase;font-weight:700;letter-spacing:.01em;color:var(--color-muted);grid-column:1;grid-row:1;line-height:1.4}
@@ -405,11 +398,6 @@ onMounted(loadCompanies)
 .name-cell a{font-weight:600;color:var(--color-text)}
 .name-cell a:hover{color:var(--color-primary);text-decoration:underline}
 .name-cell span{font-size:11px;color:var(--color-muted)}
-.status-pill{display:inline-flex;align-items:center;padding:5px 10px;border-radius:999px;background:var(--color-soft);font-size:11px;font-weight:700;white-space:nowrap}
-.status-pill--active{background:var(--color-success-surface);color:var(--color-success)}
-.status-pill--planned{background:var(--color-accent-soft);color:var(--color-primary)}
-.status-pill--archived{background:var(--color-danger-surface);color:var(--color-danger)}
-.status-pill--unassigned{background:var(--color-warning-surface);color:var(--color-warning)}
 .employee-link{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:4px;color:var(--color-primary)}
 .employee-link:hover{background:var(--color-accent-soft)}
 .employee-link img{width:17px;height:17px}
@@ -417,7 +405,6 @@ onMounted(loadCompanies)
 .registry-selection label{display:inline-flex;align-items:center;gap:8px;font-weight:600;color:var(--color-text);cursor:pointer}
 .registry-selection input,.personnel-page :deep(td input[type=checkbox]){accent-color:var(--color-primary);width:15px;height:15px;cursor:pointer}
 .registry-selection :deep(button){min-height:30px;padding:5px 10px}
-.personnel-page :deep(th:first-child),.personnel-page :deep(td:first-child){width:45px;text-align:center;padding-left:10px;padding-right:10px}
 .registry-filters{display:flex;gap:12px;align-items:end;flex-wrap:wrap;margin:-2px 0 14px;padding:12px 14px;border:1px solid var(--color-stroke);border-radius:6px;background:var(--color-surface)}
 .registry-toolbar .toolbar-icon{width:16px;height:16px;object-fit:contain}
 .scope-hint{color:var(--color-muted);font-size:12px;line-height:1.5;margin:0 0 12px}

@@ -11,19 +11,20 @@ import { useAppI18n } from '../i18n'
 const router = useRouter()
 const { t } = useAppI18n()
 const storageKey = 'hrm-onboarding-complete-v1'
+const demoMode = import.meta.env.VITE_DEMO_MODE === 'true'
 const step = ref(1)
 const saved = ref(false)
 
-const lastName = ref('Ибраева')
-const firstName = ref('Алия')
-const middleName = ref('Сериковна')
-const email = ref('a.ibraeva@company.local')
-const phone = ref('+7 701 555 21 10')
-const gender = ref('female')
-const department = ref('Департамент по работе с персоналом')
-const position = ref('HR бизнес-партнёр')
-const office = ref('Астана, головной офис')
-const startDate = ref('2026-10-01')
+const lastName = ref(demoMode ? 'Ибраева' : '')
+const firstName = ref(demoMode ? 'Алия' : '')
+const middleName = ref(demoMode ? 'Сериковна' : '')
+const email = ref(demoMode ? 'a.ibraeva@company.local' : '')
+const phone = ref(demoMode ? '+7 701 555 21 10' : '')
+const gender = ref(demoMode ? 'female' : '')
+const department = ref(demoMode ? 'Департамент по работе с персоналом' : '')
+const position = ref(demoMode ? 'HR бизнес-партнёр' : '')
+const office = ref(demoMode ? 'Астана, головной офис' : '')
+const startDate = ref(demoMode ? '2026-10-01' : '')
 
 const workplaceChecks = ref({
   corporateEmail: true,

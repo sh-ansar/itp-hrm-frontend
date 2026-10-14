@@ -13,7 +13,7 @@ type FilterOption = { value: string; label: string; count: number }
  * column controls on every screen. Search/sort operate on the LOADED rows only.
  * Server-side search/pagination still belong to the calling module.
  */
-export interface TableColumn {
+interface TableColumn {
   key: string
   label: string
   sortable?: boolean

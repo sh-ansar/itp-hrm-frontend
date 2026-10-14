@@ -76,22 +76,22 @@ const vacancyShare=computed(()=>plannedUnits.value>0?100*vacantUnits.value/plann
 const newHireShare=computed(()=>hiresThisMonth.value!==null&&staffCount.value>0?100*hiresThisMonth.value/staffCount.value:null)
 
 const employeeColumns=[
-  {key:'full_name',label:'ФИО / Отдел'},
-  {key:'personnel_number',label:'Таб. №'},
-  {key:'birth_date',label:'Дата рождения'},
-  {key:'current_assignment_valid_from',label:'Дата назначения'},
-  {key:'gender_label',label:'Пол'},
-  {key:'status_label',label:'Статус'},
+  {key:'full_name',label:'ФИО / Отдел',sortable:true},
+  {key:'personnel_number',label:'Таб. №',sortable:true},
+  {key:'birth_date',label:'Дата рождения',sortable:true},
+  {key:'current_assignment_valid_from',label:'Дата назначения',sortable:true},
+  {key:'gender_label',label:'Пол',sortable:true},
+  {key:'status_label',label:'Статус',sortable:true},
   {key:'current_position_name',label:'Должность'},
   {key:'details',label:'Действия'},
 ]
 const vacancyColumns=[
-  {key:'position_name',label:'Должность'},
-  {key:'department_name',label:'Подразделение'},
-  {key:'planned_units',label:'Ставок'},
-  {key:'occupied_units',label:'Занято'},
-  {key:'vacant_units',label:'Вакантно'},
-  {key:'base_salary',label:'Базовый оклад'},
+  {key:'position_name',label:'Должность',sortable:true},
+  {key:'department_name',label:'Подразделение',sortable:true},
+  {key:'planned_units',label:'Ставок',sortable:true},
+  {key:'occupied_units',label:'Занято',sortable:true},
+  {key:'vacant_units',label:'Вакантно',sortable:true},
+  {key:'base_salary',label:'Базовый оклад',sortable:true},
   {key:'status',label:'Статус'},
 ]
 const actionColumns=[

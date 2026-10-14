@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { RouterLink } from 'vue-router'
+import { useUiFormatters } from '../../composables/useUiFormatters'
+import { useWorkspaceI18n } from '../../composables/useWorkspaceI18n'
 
 const props = withDefaults(defineProps<{
   title: string
@@ -12,6 +14,9 @@ const props = withDefaults(defineProps<{
   percentage?: number | null
   tone?: 'primary' | 'danger' | 'warning'
 }>(), { kind: 'number', percentage: null, tone: 'primary' })
+const fmt = useUiFormatters()
+const { tr } = useWorkspaceI18n()
+const formattedValue = computed(() => typeof props.value === 'number' ? fmt.number(props.value, 0) : (props.value ?? '—'))
 const percentage = computed(() =>
   props.percentage === null || !Number.isFinite(props.percentage)
     ? null : Math.max(0, Math.min(100, Math.round(props.percentage))))
@@ -30,16 +35,16 @@ const ringStyle = computed(() => ({
     </div>
     <div v-if="kind==='ring'" class="registry-summary-ring-layout">
       <span class="registry-summary-ring" :style="ringStyle"
-        :aria-label="percentage===null ? 'Доля не рассчитана' : 'Доля '+percentage+'%'">
-        <b>{{ value ?? '—' }}</b>
+        :aria-label="percentage===null ? tr('Доля не рассчитана') : tr('Доля')+' '+percentage+'%'">
+        <b>{{ formattedValue }}</b>
       </span>
       <div class="registry-summary-ring-copy">
-        <strong>{{ percentage===null ? 'Доля не рассчитана' : percentage+'% позиций открыты' }}</strong>
+        <strong>{{ percentage===null ? tr('Доля не рассчитана') : percentage+'% '+tr('позиций открыты') }}</strong>
         <small>{{ description }}</small>
       </div>
     </div>
     <template v-else>
-      <strong class="registry-summary-value">{{ value ?? '—' }}</strong>
+      <strong class="registry-summary-value">{{ formattedValue }}</strong>
       <small class="registry-summary-description">{{ description }}</small>
     </template>
   </component>

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useWorkspaceI18n } from '../composables/useWorkspaceI18n'
 import { computed, ref } from 'vue'
 import { Maximize2, Minimize2, Search } from 'lucide-vue-next'
 import BaseActionDropdown from './ui/BaseActionDropdown.vue'
@@ -11,6 +12,8 @@ import BaseStatusPill from './ui/BaseStatusPill.vue'
 import BaseTableBulkActions from './ui/BaseTableBulkActions.vue'
 import { downloadCsv } from '../utils/exportCsv'
 import { useUiFormatters } from '../composables/useUiFormatters'
+
+const { tr } = useWorkspaceI18n()
 
 type EmployeeDocument = {
   id: string
@@ -104,7 +107,7 @@ const exportOptions = computed(() => [
 const bulkOptions = [{ id:'export', label:'Экспортировать выбранные в CSV' }]
 
 function groupBy(row: DocumentRow): string {
-  if (groupMode.value === 'folder') return row.folder
+  if (groupMode.value === 'folder') return tr(row.folder)
   if (groupMode.value === 'type') return row.document_type || 'Без типа'
   return ''
 }
@@ -151,10 +154,10 @@ function statusTone(status: string): 'success' | 'warning' | 'danger' | 'info' {
 <template>
   <div class="employee-documents-panel" :class="{ 'is-fullscreen': fullscreen }">
     <div class="documents-actions">
-      <BaseActionDropdown label="Экспорт" :options="exportOptions" @select="doExport" />
-      <RouterLink class="documents-link-button documents-link-button--primary" to="/documents">Действия</RouterLink>
+      <BaseActionDropdown :label="tr('Экспорт')" :options="exportOptions" @select="doExport" />
+      <RouterLink class="documents-link-button documents-link-button--primary" to="/documents">{{ tr('Действия') }}</RouterLink>
       <BaseButton variant="secondary" icon-only
-        :aria-label="fullscreen ? 'Выйти из полноэкранного режима' : 'На весь экран'"
+        :aria-label="fullscreen ? tr('Выйти из полноэкранного режима') : tr('На весь экран')"
         @click="fullscreen=!fullscreen">
         <Minimize2 v-if="fullscreen" :size="17" aria-hidden="true" />
         <Maximize2 v-else :size="17" aria-hidden="true" />
@@ -164,32 +167,32 @@ function statusTone(status: string): 'success' | 'warning' | 'danger' | 'info' {
     <div class="documents-toolbar">
       <label class="documents-search">
         <Search :size="16" aria-hidden="true" />
-        <input v-model="search" type="search" aria-label="Поиск документов" placeholder="Поиск" />
+        <input v-model="search" type="search" :aria-label="tr('Поиск документов')" :placeholder="tr('Поиск')" />
       </label>
-      <BaseSelectField v-model="typeFilter" label="Тип документа" :options="typeOptions" />
-      <BaseSelectField v-model="statusFilter" label="Статус" :options="statusOptions" />
+      <BaseSelectField v-model="typeFilter" :label="tr('Тип документа')" :options="typeOptions" />
+      <BaseSelectField v-model="statusFilter" :label="tr('Статус')" :options="statusOptions" />
       <BaseActionDropdown
-        :label="groupMode === 'none' ? 'Группировка' : groupMode === 'folder' ? 'По папкам' : 'По типу'"
+        :label="groupMode === 'none' ? tr('Группировка') : groupMode === 'folder' ? tr('По папкам') : tr('По типу')"
         :options="groupOptions" @select="setGrouping" />
-      <BaseColumnPicker v-model="visibleFields" :columns="optionalColumns" title="Настройка колонок" />
-      <RouterLink class="documents-link-button" to="/documents?view=templates">Шаблоны</RouterLink>
+      <BaseColumnPicker v-model="visibleFields" :columns="optionalColumns" :title="tr('Настройка колонок')" />
+      <RouterLink class="documents-link-button" to="/documents?view=templates">{{ tr('Шаблоны') }}</RouterLink>
     </div>
 
-    <BaseFilterSummary :items="filterChips" label="Активные фильтры документов"
+    <BaseFilterSummary :items="filterChips" :label="tr('Активные фильтры документов')"
       @remove="clearFilter" @clear="clearFilters" />
 
-    <BaseTableBulkActions :count="selectedRows.length" subject="документов"
+    <BaseTableBulkActions :count="selectedRows.length" :subject="tr('документов')"
       :options="bulkOptions" @execute="doBulk" @clear="selectedIds=[]" />
 
     <BaseDataTable density="compact" :rows="filteredRows" :columns="columns" row-key="id"
-      selectable selection-label="Выбрать документ" v-model:selected-keys="selectedIds"
+      selectable :selection-label="tr('Выбрать документ')" v-model:selected-keys="selectedIds"
       :group-by="groupMode !== 'none' ? groupBy : undefined"
-      caption="Документы сотрудника" empty-title="Документы не добавлены"
-      empty-description="В карточке пока нет документов для выбранных фильтров.">
+      :caption="tr('Документы сотрудника')" :empty-title="tr('Документы не добавлены')"
+      :empty-description="tr('В карточке пока нет документов для выбранных фильтров.')">
       <template #cell-title="{ row }">
         <div class="document-title-cell">
           <strong>{{ row.title }}</strong>
-          <span>{{ row.folder }}</span>
+          <span>{{ tr(row.folder) }}</span>
         </div>
       </template>
       <template #cell-file_name="{ value }"><span class="document-file">{{ value || '—' }}</span></template>
@@ -201,7 +204,7 @@ function statusTone(status: string): 'success' | 'warning' | 'danger' | 'info' {
       </template>
     </BaseDataTable>
 
-    <RouterLink class="related-module-link" to="/documents">Открыть общий реестр документов</RouterLink>
+    <RouterLink class="related-module-link" to="/documents">{{ tr('Открыть общий реестр документов') }}</RouterLink>
   </div>
 </template>
 

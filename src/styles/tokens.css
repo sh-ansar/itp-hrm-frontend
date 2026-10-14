@@ -76,6 +76,11 @@
 }
 
 
+/* Keep Georgian glyphs legible: Golos Text does not guarantee Georgian coverage. */
+:root[lang="ka"] {
+  font-family:"Noto Sans Georgian","Sylfaen","DejaVu Sans","Segoe UI",sans-serif;
+}
+
 :root[data-theme="dark"] {
   color:#e5f6ff;
   background:#092634;

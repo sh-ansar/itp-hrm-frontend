@@ -1,5 +1,10 @@
 <script setup lang="ts">
 import { useId } from 'vue'
+import { useWorkspaceI18n } from '../../composables/useWorkspaceI18n'
+const { tr } = useWorkspaceI18n()
+// Translate only well-known UI choice IDs; keep company, person and other API values verbatim.
+const uiChoiceIds = new Set(['all', 'none', 'active', 'archived', 'planned', 'unassigned', 'unset', 'male', 'female', 'approved', 'draft', 'table', 'diagram', 'register', 'development', 'vacant', 'changes'])
+const optionLabel = (option: { id: string; name: string }) => uiChoiceIds.has(option.id) ? tr(option.name) : option.name
 
 withDefaults(defineProps<{
   modelValue: string
@@ -16,11 +21,11 @@ const id = useId()
 
 <template>
   <div class="base-select-field">
-    <label :for="id">{{ label }}<span v-if="required" aria-hidden="true"> *</span></label>
+    <label :for="id">{{ tr(label) }}<span v-if="required" aria-hidden="true"> *</span></label>
     <select :id="id" :value="modelValue" :disabled="disabled" :required="required"
       @change="$emit('update:modelValue', ($event.target as HTMLSelectElement).value)">
-      <option v-if="placeholder" value="" disabled>{{ placeholder }}</option>
-      <option v-for="option in options" :key="option.id" :value="option.id">{{ option.name }}</option>
+      <option v-if="placeholder" value="" disabled>{{ tr(placeholder) }}</option>
+      <option v-for="option in options" :key="option.id" :value="option.id">{{ optionLabel(option) }}</option>
     </select>
   </div>
 </template>

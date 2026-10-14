@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { useWorkspaceI18n } from '../composables/useWorkspaceI18n'
+import { useUiFormatters } from '../composables/useUiFormatters'
 import { computed, onMounted, ref, watch } from 'vue'
 import { FileCheck2, FilePlus2, FileText, Paperclip } from 'lucide-vue-next'
 import BaseButton from '../components/ui/BaseButton.vue'
@@ -25,6 +27,9 @@ import {
   type DocumentRow,
   type DocumentType,
 } from '../api/documents'
+
+const { tr } = useWorkspaceI18n()
+const fmt = useUiFormatters()
 
 const companies = ref<CompanyRecord[]>([])
 const company = ref('')
@@ -66,11 +71,10 @@ function employeeName(row: DocumentRow): string {
   return [row.last_name, row.first_name].filter(Boolean).join(' ')
 }
 function statusLabel(status: string): string {
-  return status === 'draft' ? 'Черновик' : 'Документ'
+  return tr(status === 'draft' ? 'Черновик' : 'Документ')
 }
 function displayDate(value: string | null): string {
-  if (!value || !/^\d{4}-\d{2}-\d{2}/.test(value)) return '—'
-  return value.slice(8, 10) + '.' + value.slice(5, 7) + '.' + value.slice(0, 4)
+  return fmt.date(value)
 }
 
 async function loadCompanies() {
@@ -159,68 +163,67 @@ onMounted(loadCompanies)
   <section class="documents-page">
     <div class="documents-breadcrumb">
       <img src="/prototype-icons/Home.svg" alt="" aria-hidden="true" />
-      <span>/</span><strong>Документы и приказы</strong>
+      <span>/</span><strong>{{ tr('Документы и приказы') }}</strong>
     </div>
 
     <BaseNotice v-if="error" tone="error">{{ error }}</BaseNotice>
     <BaseNotice v-if="success" tone="success">{{ success }}</BaseNotice>
-    <BaseLoadingState v-if="companiesBusy" label="Загрузка компаний" />
-    <BaseNotice v-else-if="!companies.length && !error" tone="info">Нет доступных компаний.</BaseNotice>
+    <BaseLoadingState v-if="companiesBusy" :label="tr('Загрузка компаний')" />
+    <BaseNotice v-else-if="!companies.length && !error" tone="info">{{ tr('Нет доступных компаний.') }}</BaseNotice>
 
     <template v-else-if="companies.length">
       <div class="documents-heading">
         <div>
-          <h1>Документы и приказы</h1>
+          <h1>{{ tr('Документы и приказы') }}</h1>
           <p>{{ selectedCompany?.name }}</p>
         </div>
         <div class="documents-heading-controls">
-          <BaseSelectField v-model="company" label="Компания" :options="companies" />
+          <BaseSelectField v-model="company" :label="tr('Компания')" :options="companies" />
           <BaseButton v-if="writesEnabled" @click="createOpen = true">
-            <FilePlus2 :size="17" /> Новый черновик
-          </BaseButton>
+            <FilePlus2 :size="17" /> {{ tr('Новый черновик') }}</BaseButton>
         </div>
       </div>
 
-      <BaseViewTabs v-model="typeFilter" :options="typeTabs" label="Виды кадровых документов" />
+      <BaseViewTabs v-model="typeFilter" :options="typeTabs" :label="tr('Виды кадровых документов')" />
 
       <div class="documents-filter-row">
         <EmployeeLookupField v-if="company" :key="company" v-model="employeeFilter" :company-id="company" allow-all />
       </div>
 
-      <div class="summary-grid" aria-label="Сводка документов">
+      <div class="summary-grid" :aria-label="tr('Сводка документов')">
         <BaseCard class="summary-card">
           <FileText :size="19" aria-hidden="true" />
-          <span>Документы</span>
+          <span>{{ tr('Документы') }}</span>
           <strong>{{ documentsBusy ? '…' : total }}</strong>
-          <small>по выбранному фильтру</small>
+          <small>{{ tr('по выбранному фильтру') }}</small>
         </BaseCard>
         <BaseCard class="summary-card">
           <FileCheck2 :size="19" aria-hidden="true" />
           <span>PDF</span>
           <strong>{{ documentsBusy ? '…' : pagePdfCount }}</strong>
-          <small>на текущей странице</small>
+          <small>{{ tr('на текущей странице') }}</small>
         </BaseCard>
         <BaseCard class="summary-card">
           <Paperclip :size="19" aria-hidden="true" />
-          <span>Черновики</span>
+          <span>{{ tr('Черновики') }}</span>
           <strong>{{ documentsBusy ? '…' : pageDraftCount }}</strong>
-          <small>на текущей странице</small>
+          <small>{{ tr('на текущей странице') }}</small>
         </BaseCard>
       </div>
 
       <BaseCard class="documents-register">
         <div class="register-heading">
           <div>
-            <h2>Кадровые документы</h2>
-            <p>Черновики, приказы, договоры и основания сотрудников.</p>
+            <h2>{{ tr('Кадровые документы') }}</h2>
+            <p>{{ tr('Черновики, приказы, договоры и основания сотрудников.') }}</p>
           </div>
-          <span>{{ total }} записей</span>
+          <span>{{ fmt.number(total, 0) }} {{ tr('записей') }}</span>
         </div>
 
         <div class="documents-desktop">
           <BaseDataTable :rows="rows" :columns="columns" row-key="id" :loading="documentsBusy"
-            caption="Реестр кадровых документов" empty-title="Документы не найдены"
-            empty-description="Созданные кадровые документы появятся здесь.">
+            :caption="tr('Реестр кадровых документов')" :empty-title="tr('Документы не найдены')"
+            :empty-description="tr('Созданные кадровые документы появятся здесь.')">
             <template #cell-issued_on="{ row }">{{ displayDate(row.issued_on) }}</template>
             <template #cell-document_type="{ row }">
               <span class="type-label">{{ documentTypeLabel(row.document_type) }}</span>
@@ -228,7 +231,7 @@ onMounted(loadCompanies)
             <template #cell-title="{ row }">
               <div class="document-name">
                 <strong>{{ row.title }}</strong>
-                <span>№ {{ row.document_number || 'без номера' }}</span>
+                <span>№ {{ row.document_number || tr('без номера') }}</span>
               </div>
             </template>
             <template #cell-employee="{ row }">
@@ -240,7 +243,7 @@ onMounted(loadCompanies)
               </div>
             </template>
             <template #cell-relation="{ row }">
-              <span class="relation-label">{{ row.personnel_action_id ? 'Кадровое действие' : '—' }}</span>
+              <span class="relation-label">{{ row.personnel_action_id ? tr('Кадровое действие') : '—' }}</span>
             </template>
             <template #cell-status="{ row }">
               <BaseStatusPill :tone="row.status === 'draft' ? 'info' : 'success'">
@@ -250,17 +253,14 @@ onMounted(loadCompanies)
             <template #cell-file="{ row }">
               <a v-if="row.has_file && demoMode && getDemoDocumentUrl(row.id)" class="download-link"
                 :href="documentFileUrl(company, row.id)" target="_blank" rel="noopener">
-                <FileCheck2 :size="15" /> Открыть PDF
-              </a>
+                <FileCheck2 :size="15" /> {{ tr('Открыть PDF') }}</a>
               <span v-else-if="row.has_file && demoMode" class="file-ready">
-                <FileCheck2 :size="15" /> Демо: файл недоступен
-              </span>
+                <FileCheck2 :size="15" /> {{ tr('Демо: файл недоступен') }}</span>
               <a v-else-if="row.has_file" class="download-link" :href="documentFileUrl(company, row.id)" target="_blank" rel="noopener">
-                Открыть PDF
-              </a>
+                {{ tr('Открыть PDF') }}</a>
               <BaseButton v-else-if="writesEnabled && row.status === 'draft'" variant="secondary"
-                @click="uploadTarget = row">Прикрепить PDF</BaseButton>
-              <span v-else class="muted">Не прикреплён</span>
+                @click="uploadTarget = row">{{ tr('Прикрепить PDF') }}</BaseButton>
+              <span v-else class="muted">{{ tr('Не прикреплён') }}</span>
             </template>
           </BaseDataTable>
         </div>
@@ -271,21 +271,21 @@ onMounted(loadCompanies)
         </div>
 
         <BasePagination :page="page" :last-page="lastPage" :loading="documentsBusy"
-          caption="Страницы реестра документов" @previous="page--" @next="page++" />
+          :caption="tr('Страницы реестра документов')" @previous="page--" @next="page++" />
       </BaseCard>
 
       <BaseNotice tone="info">
         {{ demoMode
-          ? 'Демонстрация: PDF хранится только в текущем окне браузера до перезагрузки. Образцы без загруженного файла не открываются.'
-          : 'Реестр доступен только кадровым ролям. PDF хранится приватно и скачивается через авторизованный API.' }}
+          ? tr('Демонстрация: PDF хранится только в текущем окне браузера до перезагрузки. Образцы без загруженного файла не открываются.')
+          : tr('Реестр доступен только кадровым ролям. PDF хранится приватно и скачивается через авторизованный API.') }}
       </BaseNotice>
     </template>
 
-    <BaseDialog :open="createOpen" title="Новый черновик документа" @close="createOpen = false">
+    <BaseDialog :open="createOpen" :title="tr('Новый черновик документа')" @close="createOpen = false">
       <DocumentDraftForm v-if="createOpen && company" :key="company" :company-id="company"
         @saved="documentSaved" @cancelled="createOpen = false" />
     </BaseDialog>
-    <BaseDialog :open="uploadTarget !== null" title="Прикрепить PDF" @close="uploadTarget = null">
+    <BaseDialog :open="uploadTarget !== null" :title="tr('Прикрепить PDF')" @close="uploadTarget = null">
       <DocumentUploadForm v-if="uploadTarget" :key="uploadTarget.id + ':' + uploadTarget.revision"
         :company-id="company" :document="uploadTarget" @saved="fileSaved" @cancelled="uploadTarget = null" />
     </BaseDialog>

@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import { ChevronDown, MoreHorizontal } from 'lucide-vue-next'
+import { useWorkspaceI18n } from '../../composables/useWorkspaceI18n'
+const { tr } = useWorkspaceI18n()
 
 interface ActionItem {
   id: string
@@ -74,19 +76,19 @@ onBeforeUnmount(() => {
 <template>
   <div ref="host" class="action-dropdown" :class="'action-dropdown--'+variant">
     <button ref="trigger" type="button" class="action-trigger"
-      :disabled="disabled" :aria-label="label" :title="variant==='icon'?label:undefined"
+      :disabled="disabled" :aria-label="tr(label)" :title="variant==='icon'?tr(label):undefined"
       :aria-expanded="open" aria-haspopup="menu" @click="toggle">
       <MoreHorizontal v-if="variant==='icon'" :size="18" aria-hidden="true" />
-      <template v-else>{{ label }}<ChevronDown :size="14" aria-hidden="true" /></template>
+      <template v-else>{{ tr(label) }}<ChevronDown :size="14" aria-hidden="true" /></template>
     </button>
     <Teleport to="body">
-      <div v-if="open" ref="menu" class="action-menu" role="menu" :aria-label="label" :style="menuPosition">
+      <div v-if="open" ref="menu" class="action-menu" role="menu" :aria-label="tr(label)" :style="menuPosition">
         <button v-for="(option,index) in options" :key="option.id"
           :ref="el => { if(index===0) firstItem = el as HTMLButtonElement }"
           type="button" role="menuitem" class="action-menu-item"
           :disabled="option.disabled" @click="choose(option.id)">
-          <span>{{ option.label }}</span>
-          <small v-if="option.description">{{ option.description }}</small>
+          <span>{{ tr(option.label) }}</span>
+          <small v-if="option.description">{{ tr(option.description) }}</small>
         </button>
       </div>
     </Teleport>

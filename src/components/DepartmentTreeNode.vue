@@ -1,9 +1,12 @@
 <script setup lang="ts">
+import { useWorkspaceI18n } from '../composables/useWorkspaceI18n'
 import { computed, ref, watch } from 'vue'
 import { ChevronDown, Users } from 'lucide-vue-next'
 import type { DepartmentTreeItem } from '../utils/departmentTree'
 import BaseButton from './ui/BaseButton.vue'
 defineOptions({ name: 'DepartmentTreeNode' })
+const { tr } = useWorkspaceI18n()
+
 const props = withDefaults(defineProps<{ node: DepartmentTreeItem; depth?: number; companyId: string; expandAll?: boolean; tone?: number }>(), { depth: 0, expandAll: true, tone: 0 })
 const expanded = ref(props.expandAll)
 const allMembers = ref(false)
@@ -20,19 +23,19 @@ function initials(name: string) { return name.split(' ').slice(0,2).map(word=>wo
         <template v-if="depth === 0 && members.length">
           <RouterLink class="root-person" :to="{ name:'employee-detail',params:{company:companyId,employee:members[0]!.id} }"><span class="person-avatar">{{ initials(members[0]!.name) }}</span>{{ members[0]!.name }}</RouterLink>
         </template>
-        <span v-if="node.hiddenParent">Родитель вне доступного списка</span>
+        <span v-if="node.hiddenParent">{{ tr('Родитель вне доступного списка') }}</span>
         <span v-else class="department-count"><Users :size="15" /> {{ members.length }} сотрудников<span v-if="node.children.length"> · {{ node.children.length }} подразделений</span></span>
       </div>
       <BaseButton v-if="node.children.length || members.length" icon-only variant="secondary"
-        :aria-label="expanded ? 'Свернуть ' + node.name : 'Развернуть ' + node.name" :aria-expanded="expanded" @click="expanded = !expanded">
+        :aria-label="expanded ? tr('Свернуть ') + node.name : tr('Развернуть ') + node.name" :aria-expanded="expanded" @click="expanded = !expanded">
         <ChevronDown :size="16" :class="{ closed: !expanded }" />
       </BaseButton>
     </div>
     <div v-if="expanded && depth > 0 && members.length" class="tree-members">
       <RouterLink v-for="member in visibleMembers" :key="member.id" class="person-card" :to="{name:'employee-detail',params:{company:companyId,employee:member.id}}">
-        <strong>{{ member.position || 'Сотрудник' }}</strong><div class="person-row"><span class="person-avatar">{{ initials(member.name) }}</span><span>{{ member.name }}</span></div>
+        <strong>{{ member.position || tr('Сотрудник') }}</strong><div class="person-row"><span class="person-avatar">{{ initials(member.name) }}</span><span>{{ member.name }}</span></div>
       </RouterLink>
-      <BaseButton v-if="members.length > 3" variant="secondary" @click="allMembers = !allMembers">{{ allMembers ? 'Свернуть сотрудников' : 'Ещё ' + (members.length - 3) }}</BaseButton>
+      <BaseButton v-if="members.length > 3" variant="secondary" @click="allMembers = !allMembers">{{ allMembers ? tr('Свернуть сотрудников') : tr('Ещё ') + (members.length - 3) }}</BaseButton>
     </div>
     <div v-if="expanded && node.children.length" class="tree-children">
       <DepartmentTreeNode v-for="(child,index) in node.children" :key="child.id" :node="child" :depth="depth + 1" :company-id="companyId" :expand-all="expandAll" :tone="depth === 0 ? index : tone" />

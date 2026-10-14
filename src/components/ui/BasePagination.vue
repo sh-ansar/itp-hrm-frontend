@@ -1,6 +1,11 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import BaseButton from './BaseButton.vue'
+import { useUiFormatters } from '../../composables/useUiFormatters'
+import { useWorkspaceI18n } from '../../composables/useWorkspaceI18n'
+
+const fmt = useUiFormatters()
+const { tr } = useWorkspaceI18n()
 
 const props = withDefaults(defineProps<{
   page: number
@@ -43,27 +48,27 @@ function changeSize(event: Event) {
 <template>
   <nav v-if="lastPage > 1 || withStats" class="base-pagination" :aria-label="caption">
     <div v-if="withStats" class="pagination-summary">
-      <span>Всего {{ total }} строк, показать</span>
+      <span>{{ tr('Всего') }} {{ fmt.number(total, 0) }} {{ tr('строк, показать') }}</span>
       <label>
-        <span class="sr-only">Строк на странице</span>
-        <select :value="pageSize" aria-label="Строк на странице" :disabled="loading" @change="changeSize">
-          <option v-for="size in pageSizes" :key="size" :value="size">{{ size }} на странице</option>
+        <span class="sr-only">{{ tr('Строк на странице') }}</span>
+        <select :value="pageSize" :aria-label="tr('Строк на странице')" :disabled="loading" @change="changeSize">
+          <option v-for="size in pageSizes" :key="size" :value="size">{{ fmt.number(size, 0) }} {{ tr('на странице') }}</option>
         </select>
       </label>
     </div>
     <div class="pagination-pages">
-      <BaseButton variant="secondary" :disabled="loading || page <= 1" @click="emit('previous')">Назад</BaseButton>
+      <BaseButton variant="secondary" :disabled="loading || page <= 1" @click="emit('previous')">{{ tr('Назад') }}</BaseButton>
       <template v-if="withStats">
         <template v-for="(item,index) in numberedPages" :key="index">
           <span v-if="item === '…'" class="pagination-ellipsis">…</span>
           <button v-else type="button" class="pagination-page"
             :class="{ 'pagination-page--active': item === page }"
             :disabled="loading || item === page" :aria-current="item === page ? 'page' : undefined"
-            :aria-label="'Страница '+item" @click="emit('selectPage', item)">{{ item }}</button>
+            :aria-label="tr('Страница')+' '+item" @click="emit('selectPage', item)">{{ item }}</button>
         </template>
       </template>
-      <span v-else class="base-pagination__label" aria-live="polite">Страница {{ page }} из {{ lastPage }}</span>
-      <BaseButton variant="secondary" :disabled="loading || page >= lastPage" @click="emit('next')">Далее</BaseButton>
+      <span v-else class="base-pagination__label" aria-live="polite">{{ tr('Страница') }} {{ fmt.number(page, 0) }} {{ tr('из') }} {{ fmt.number(lastPage, 0) }}</span>
+      <BaseButton variant="secondary" :disabled="loading || page >= lastPage" @click="emit('next')">{{ tr('Далее') }}</BaseButton>
     </div>
   </nav>
 </template>

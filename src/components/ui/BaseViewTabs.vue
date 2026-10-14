@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { useWorkspaceI18n } from '../../composables/useWorkspaceI18n'
+const { tr } = useWorkspaceI18n()
 defineProps<{
   modelValue: string
   options: Array<{ id: string; label: string }>
@@ -8,12 +10,12 @@ const emit = defineEmits<{ 'update:modelValue': [value: string] }>()
 </script>
 
 <template>
-  <nav class="view-tabs" :aria-label="label">
+  <nav class="view-tabs" :aria-label="tr(label)">
     <button v-for="tab in options" :key="tab.id" type="button"
       class="view-tab" :class="{ 'view-tab--active': modelValue === tab.id }"
       :aria-current="modelValue === tab.id ? 'page' : undefined"
       @click="emit('update:modelValue', tab.id)">
-      {{ tab.label }}
+      {{ tr(tab.label) }}
     </button>
   </nav>
 </template>

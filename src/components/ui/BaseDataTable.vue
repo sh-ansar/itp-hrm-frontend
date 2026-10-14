@@ -3,6 +3,10 @@ import { computed, nextTick, ref, shallowRef, watch } from 'vue'
 import BaseEmptyState from './BaseEmptyState.vue'
 import BaseColumnFilterPopover from './BaseColumnFilterPopover.vue'
 import BaseLoadingState from './BaseLoadingState.vue'
+import { useUiPreferencesStore } from '../../stores/uiPreferences'
+import { localeTag } from '../../utils/localeFormat'
+import { useWorkspaceI18n } from '../../composables/useWorkspaceI18n'
+import { useUiFormatters } from '../../composables/useUiFormatters'
 
 type ColumnFilter =
   | { kind: 'contains'; text: string }
@@ -58,7 +62,10 @@ const filterAnchor = shallowRef<HTMLElement | null>(null)
 const filterDraft = ref('')
 const draftChoices = ref<string[]>([])
 const draftTouched = ref(false)
-const collation = new Intl.Collator('ru', { numeric: true, sensitivity: 'base' })
+const preferences = useUiPreferencesStore()
+const { tr } = useWorkspaceI18n()
+const fmt = useUiFormatters()
+const collation = computed(() => new Intl.Collator(localeTag(preferences.locale), { numeric: true, sensitivity: 'base' }))
 const forbiddenActionKeys = new Set(['selection', 'select', 'actions', 'action', 'details', 'detail', 'edit', 'file'])
 
 const visibleColumns = computed(() => props.columns.filter(column => column.key !== 'selection'))
@@ -104,7 +111,7 @@ function filterValue(row: T, column: string): string {
   return '—'
 }
 function filterLabel(key: string, value: string): string {
-  if (key === 'gender') return value === 'male' ? 'Мужчина' : value === 'female' ? 'Женщина' : value
+  if (key === 'gender') return value === 'male' ? tr('Мужчина') : value === 'female' ? tr('Женщина') : value
   if (/^\d{4}-\d{2}-\d{2}$/.test(value) && (key.includes('date') || key.endsWith('_on') || key.endsWith('_from'))) {
     const [year, month, day] = value.split('-')
     return day + '.' + month + '.' + year
@@ -115,7 +122,7 @@ function matchesFilter(row: T, key: string, condition: ColumnFilter): boolean {
   const actual = filterValue(row, key)
   return condition.kind === 'choices'
     ? condition.values.includes(actual)
-    : actual.toLocaleLowerCase('ru').includes(condition.text.trim().toLocaleLowerCase('ru'))
+    : actual.toLocaleLowerCase(localeTag(preferences.locale)).includes(condition.text.trim().toLocaleLowerCase(localeTag(preferences.locale)))
 }
 function matchesFilters(row: T, except?: string): boolean {
   return Object.entries(activeFilters.value).every(([key, condition]) =>
@@ -137,12 +144,12 @@ const availableOptions = computed<FilterOption[]>(() => {
   for (const value of draftChoices.value) if (!counts.has(value)) counts.set(value, 0)
   return [...counts.entries()]
     .map(([value, count]) => ({ value, label: filterLabel(key, value), count }))
-    .sort((a, b) => collation.compare(a.label, b.label))
+    .sort((a, b) => collation.value.compare(a.label, b.label))
 })
 const matchingOptions = computed(() => {
-  const term = filterDraft.value.trim().toLocaleLowerCase('ru')
+  const term = filterDraft.value.trim().toLocaleLowerCase(localeTag(preferences.locale))
   return term ? availableOptions.value.filter(option =>
-    option.label.toLocaleLowerCase('ru').includes(term) || option.value.toLocaleLowerCase('ru').includes(term))
+    option.label.toLocaleLowerCase(localeTag(preferences.locale)).includes(term) || option.value.toLocaleLowerCase(localeTag(preferences.locale)).includes(term))
     : availableOptions.value
 })
 const allMatchingChecked = computed(() => matchingOptions.value.length > 0
@@ -176,7 +183,7 @@ const orderedRows = computed(() => {
     if (left === null || left === undefined) return 1
     if (right === null || right === undefined) return -1
     const compare = typeof left === 'number' && typeof right === 'number'
-      ? left - right : collation.compare(String(left), String(right))
+      ? left - right : collation.value.compare(String(left), String(right))
     return sortDirection.value === 'asc' ? compare : -compare
   })
 })
@@ -188,7 +195,7 @@ const displayRows = computed<Entry[]>(() => {
   }))
   const groups = new Map<string, T[]>()
   for (const row of orderedRows.value) {
-    const label = props.groupBy(row) || 'Без подразделения'
+    const label = props.groupBy(row) || tr('Без подразделения')
     if (!groups.has(label)) groups.set(label, [])
     groups.get(label)!.push(row)
   }
@@ -293,12 +300,12 @@ watch(() => props.columns.map(column => column.key).join(','), () => {
       @toggle="toggleDraftChoice" @toggle-all="toggleAllMatching"
       @apply="applyFilter" @reset="clearColumnFilter(filterColumn.key)" @close="closeFilter" />
     <div v-if="anyFilters" class="filter-summary" role="status">
-      <span>Фильтр: {{ orderedRows.length }} из {{ rows.length }} загруженных строк</span>
-      <button type="button" @click="clearFilters">Сбросить фильтры</button>
+      <span>{{ tr('Фильтр:') }} {{ fmt.number(orderedRows.length, 0) }} {{ tr('из') }} {{ fmt.number(rows.length, 0) }} {{ tr('загруженных строк') }}</span>
+      <button type="button" @click="clearFilters">{{ tr('Сбросить фильтры') }}</button>
     </div>
-    <BaseLoadingState v-if="loading" :label="`Загрузка: ${caption}`" />
-    <BaseEmptyState v-else-if="!hasRows" :title="anyFilters ? 'По фильтру ничего не найдено' : emptyTitle"
-      :description="anyFilters ? 'Измените значение фильтра или сбросьте его.' : emptyDescription" />
+    <BaseLoadingState v-if="loading" :label="`${tr('Загрузка:')} ${caption}`" />
+    <BaseEmptyState v-else-if="!hasRows" :title="anyFilters ? tr('По фильтру ничего не найдено') : tr(emptyTitle)"
+      :description="anyFilters ? tr('Измените значение фильтра или сбросьте его.') : tr(emptyDescription)" />
     <div v-else class="table-scroll" tabindex="0" role="region" :aria-label="caption">
       <table :style="{ minWidth: tableWidth + 'px' }">
         <caption class="sr-only">{{ caption }}</caption>
@@ -306,7 +313,7 @@ watch(() => props.columns.map(column => column.key).join(','), () => {
           <tr>
             <th v-if="showSelection" class="selection-column" scope="col">
               <input type="checkbox" :checked="allSelected" :indeterminate="someSelected"
-                :aria-label="'Выбрать все строки на странице: ' + caption"
+                :aria-label="tr('Выбрать все строки на странице:') + ' ' + caption"
                 :disabled="orderedRows.length === 0"
                 @change="selectAll(($event.target as HTMLInputElement).checked)" />
             </th>
@@ -316,24 +323,24 @@ watch(() => props.columns.map(column => column.key).join(','), () => {
               :aria-sort="canSort(column) ? (activeSort === column.key ? (sortDirection === 'asc' ? 'ascending' : 'descending') : 'none') : undefined">
               <div class="heading-content">
                 <button v-if="canSort(column)" class="sort-heading" type="button"
-                  :aria-label="'Упорядочить по столбцу: ' + column.label"
-                  :title="'Сортировать загруженные строки: ' + column.label"
+                  :aria-label="tr('Упорядочить по столбцу:') + ' ' + column.label"
+                  :title="tr('Сортировать загруженные строки:') + ' ' + column.label"
                   @click="sortBy(column.key)">
-                  <span>{{ column.label }}</span>
+                  <span>{{ tr(column.label) }}</span>
                 </button>
-                <span v-else class="heading-label">{{ column.label }}</span>
+                <span v-else class="heading-label">{{ tr(column.label) }}</span>
                 <div class="heading-actions">
                   <button v-if="canFilter(column)" type="button" class="heading-icon"
                     :class="{ 'heading-icon--active': !!activeFilters[column.key] }"
-                    :aria-label="'Фильтр: ' + column.label" :aria-pressed="!!activeFilters[column.key]"
+                    :aria-label="tr('Фильтр:') + ' ' + column.label" :aria-pressed="!!activeFilters[column.key]"
                     :aria-expanded="editingColumn===column.key" data-column-filter-trigger
-                    :title="'Фильтр по загруженным строкам: ' + column.label"
+                    :title="tr('Фильтр по загруженным строкам:') + ' ' + column.label"
                     @click="toggleFilter(column.key, $event)">
                     <img src="/prototype-icons/Filter.svg" alt="" aria-hidden="true" />
                   </button>
                   <button v-if="canSort(column)" type="button" class="heading-icon"
-                    :aria-label="'Сортировать: ' + column.label"
-                    :title="'Сортировка загруженных строк: ' + column.label"
+                    :aria-label="tr('Сортировать:') + ' ' + column.label"
+                    :title="tr('Сортировка загруженных строк:') + ' ' + column.label"
                     @click="sortBy(column.key)">
                     <img src="/prototype-icons/Sort.svg" alt="" aria-hidden="true" />
                   </button>
@@ -346,7 +353,7 @@ watch(() => props.columns.map(column => column.key).join(','), () => {
           <template v-for="entry in displayRows" :key="entry.key">
             <tr v-if="entry.kind === 'group'" class="table-group">
               <th scope="rowgroup" :colspan="headerColumnsCount">
-                {{ entry.label }} <span>{{ entry.count }} на странице</span>
+                {{ entry.label }} <span>{{ fmt.number(entry.count, 0) }} {{ tr('на странице') }}</span>
               </th>
             </tr>
             <tr v-else :data-row-key="entry.key" :class="{ 'table-row--selected': selectedSet.has(entry.key) }">

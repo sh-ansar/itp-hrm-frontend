@@ -28,7 +28,7 @@ const initials = computed(() => {
 })
 function setLocale(event: Event) {
   const value = (event.target as HTMLSelectElement).value
-  if (value === 'ru' || value === 'kk' || value === 'en') ui.setLocale(value as UiLocale)
+  if (value === 'ru' || value === 'kk' || value === 'en' || value === 'ka') ui.setLocale(value as UiLocale)
 }
 function searchEmployees() {
   const q = searchTerm.value.trim()
@@ -87,8 +87,8 @@ onBeforeUnmount(() => window.removeEventListener('keydown', handleShortcut))
     <div class="topbar-user">
       <label class="locale-control">
         <span class="sr-only">{{ t('settings.language') }}</span>
-        <select :value="ui.locale" :aria-label="t('settings.language')" @change="setLocale">
-          <option v-for="option in localeOptions" :key="option.id" :value="option.id">{{ option.id.toUpperCase() }}</option>
+        <select :value="ui.locale" :aria-label="t('settings.language')" :title="localeOptions.find(option => option.id === ui.locale)?.name" @change="setLocale">
+          <option v-for="option in localeOptions" :key="option.id" :value="option.id">{{ option.id === 'ka' ? 'GE' : option.id.toUpperCase() }}</option>
         </select>
       </label>
       <button class="theme-toggle topbar-icon" type="button"

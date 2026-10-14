@@ -1,10 +1,13 @@
 <script setup lang="ts">
+import { useWorkspaceI18n } from '../composables/useWorkspaceI18n'
 import { computed, ref, watch } from 'vue'
 import BaseButton from './ui/BaseButton.vue'
 import BaseDrawer from './ui/BaseDrawer.vue'
 import BaseNotice from './ui/BaseNotice.vue'
 import BaseSelectField from './ui/BaseSelectField.vue'
 import BaseViewTabs from './ui/BaseViewTabs.vue'
+
+const { tr } = useWorkspaceI18n()
 
 type SelectOption = { id: string; name: string }
 export type RegistryGroupMode = 'none' | 'department' | 'category' | 'object'
@@ -175,38 +178,37 @@ watch(() => props.open, open => {
 </script>
 
 <template>
-  <BaseDrawer :open="open" title="Шаблоны"
-    description="Готовые представления реестра с настроенными колонками, фильтрами и группировкой"
+  <BaseDrawer :open="open" :title="tr('Шаблоны')"
+    :description="tr('Готовые представления реестра с настроенными колонками, фильтрами и группировкой')"
     @close="emit('close')">
-    <BaseViewTabs :model-value="mode" :options="modeOptions" label="Режим шаблонов"
+    <BaseViewTabs :model-value="mode" :options="modeOptions" :label="tr('Режим шаблонов')"
       @update:model-value="setMode" />
 
     <template v-if="mode === 'select'">
       <div class="preset-select">
         <label>
-          <span>Выберите шаблон</span>
-          <BaseSelectField v-model="selectedPresetId" label="Шаблон" :options="presetOptions" />
+          <span>{{ tr('Выберите шаблон') }}</span>
+          <BaseSelectField v-model="selectedPresetId" :label="tr('Шаблон')" :options="presetOptions" />
         </label>
         <BaseNotice v-if="!presets.length" tone="info">
-          Сохранённых шаблонов пока нет. Создайте первый шаблон для текущего реестра.
-        </BaseNotice>
+          {{ tr('Сохранённых шаблонов пока нет. Создайте первый шаблон для текущего реестра.') }}</BaseNotice>
         <div v-if="selectedPreset" class="preset-meta">
           <span>{{ selectedPreset.folder }}</span>
-          <span v-if="selectedPreset.defaultTemplate">Стартовый шаблон</span>
-          <span v-if="selectedPreset.publicAccess">Публичный доступ</span>
+          <span v-if="selectedPreset.defaultTemplate">{{ tr('Стартовый шаблон') }}</span>
+          <span v-if="selectedPreset.publicAccess">{{ tr('Публичный доступ') }}</span>
         </div>
       </div>
     </template>
 
     <template v-else>
-      <ol class="template-progress" aria-label="Шаги создания шаблона">
-        <li :class="{ active: step === 1, done: step > 1 }"><span>1</span>Колонки</li>
-        <li :class="{ active: step === 2, done: step > 2 }"><span>2</span>Фильтры</li>
-        <li :class="{ active: step === 3 }"><span>3</span>Название</li>
+      <ol class="template-progress" :aria-label="tr('Шаги создания шаблона')">
+        <li :class="{ active: step === 1, done: step > 1 }"><span>1</span>{{ tr('Колонки') }}</li>
+        <li :class="{ active: step === 2, done: step > 2 }"><span>2</span>{{ tr('Фильтры') }}</li>
+        <li :class="{ active: step === 3 }"><span>3</span>{{ tr('Название') }}</li>
       </ol>
 
       <section v-if="step === 1" class="template-step">
-        <h3>Группировка</h3>
+        <h3>{{ tr('Группировка') }}</h3>
         <div class="radio-grid">
           <label v-for="option in groupOptions" :key="option.id">
             <input v-model="draft.groupMode" type="radio" :value="option.id" />
@@ -214,7 +216,7 @@ watch(() => props.open, open => {
           </label>
         </div>
         <label class="master-switch">
-          <span>Показать все колонки</span>
+          <span>{{ tr('Показать все колонки') }}</span>
           <input type="checkbox" :checked="allColumnsOn" @change="setAllColumns(($event.target as HTMLInputElement).checked)" />
         </label>
         <div class="column-list">
@@ -226,52 +228,52 @@ watch(() => props.open, open => {
       </section>
 
       <section v-if="step === 2" class="template-step">
-        <h3>Организационные данные</h3>
+        <h3>{{ tr('Организационные данные') }}</h3>
         <div class="filter-grid">
-          <BaseSelectField v-model="draft.department" label="Отдел" :options="departmentOptions" />
-          <BaseSelectField v-model="draft.position" label="Должность" :options="positionOptions" />
-          <BaseSelectField v-model="draft.category" label="Категория" :options="categoryOptions" />
-          <BaseSelectField v-model="draft.personnelType" label="Вид персонала" :options="personnelTypeOptions" />
-          <BaseSelectField v-model="draft.object" label="Объект / место работы" :options="objectOptions" />
-          <BaseSelectField v-model="draft.team" label="Бригада" :options="teamOptions" />
-          <BaseSelectField v-model="draft.status" label="Статус сотрудника" :options="statusOptions" />
-          <BaseSelectField v-model="draft.gender" label="Пол" :options="genderOptions" />
-          <label class="date-field"><span>Период приёма — с</span><input v-model="draft.hiredFrom" type="date" /></label>
-          <label class="date-field"><span>Период приёма — по</span><input v-model="draft.hiredTo" type="date" /></label>
+          <BaseSelectField v-model="draft.department" :label="tr('Отдел')" :options="departmentOptions" />
+          <BaseSelectField v-model="draft.position" :label="tr('Должность')" :options="positionOptions" />
+          <BaseSelectField v-model="draft.category" :label="tr('Категория')" :options="categoryOptions" />
+          <BaseSelectField v-model="draft.personnelType" :label="tr('Вид персонала')" :options="personnelTypeOptions" />
+          <BaseSelectField v-model="draft.object" :label="tr('Объект / место работы')" :options="objectOptions" />
+          <BaseSelectField v-model="draft.team" :label="tr('Бригада')" :options="teamOptions" />
+          <BaseSelectField v-model="draft.status" :label="tr('Статус сотрудника')" :options="statusOptions" />
+          <BaseSelectField v-model="draft.gender" :label="tr('Пол')" :options="genderOptions" />
+          <label class="date-field"><span>{{ tr('Период приёма — с') }}</span><input v-model="draft.hiredFrom" type="date" /></label>
+          <label class="date-field"><span>{{ tr('Период приёма — по') }}</span><input v-model="draft.hiredTo" type="date" /></label>
         </div>
       </section>
 
       <section v-if="step === 3" class="template-step">
         <label class="text-field">
-          <span>Папка</span>
-          <input v-model="folder" list="employee-template-folders" placeholder="Выберите или создайте новую папку" />
+          <span>{{ tr('Папка') }}</span>
+          <input v-model="folder" list="employee-template-folders" :placeholder="tr('Выберите или создайте новую папку')" />
           <datalist id="employee-template-folders">
             <option v-for="option in folderOptions" :key="option.id" :value="option.id" />
           </datalist>
         </label>
         <label class="text-field">
-          <span>Название шаблона</span>
-          <input v-model="name" type="text" placeholder="Введите название" />
+          <span>{{ tr('Название шаблона') }}</span>
+          <input v-model="name" type="text" :placeholder="tr('Введите название')" />
         </label>
-        <label class="toggle-line"><input v-model="publicAccess" type="checkbox" /><span>Установить публичный доступ</span></label>
-        <label class="toggle-line"><input v-model="defaultTemplate" type="checkbox" /><span>Сделать стартовым шаблоном</span></label>
+        <label class="toggle-line"><input v-model="publicAccess" type="checkbox" /><span>{{ tr('Установить публичный доступ') }}</span></label>
+        <label class="toggle-line"><input v-model="defaultTemplate" type="checkbox" /><span>{{ tr('Сделать стартовым шаблоном') }}</span></label>
       </section>
     </template>
 
     <template #footer>
       <template v-if="mode === 'select'">
-        <BaseButton :disabled="!selectedPreset" @click="applySelected">Применить</BaseButton>
-        <BaseButton variant="secondary" @click="emit('close')">Отмена</BaseButton>
+        <BaseButton :disabled="!selectedPreset" @click="applySelected">{{ tr('Применить') }}</BaseButton>
+        <BaseButton variant="secondary" @click="emit('close')">{{ tr('Отмена') }}</BaseButton>
         <BaseButton v-if="selectedPreset" variant="secondary" @click="resetDefault">
-          {{ selectedPreset.defaultTemplate ? 'Убрать стартовый' : 'Сделать стартовым' }}
+          {{ selectedPreset.defaultTemplate ? tr('Убрать стартовый') : tr('Сделать стартовым') }}
         </BaseButton>
-        <BaseButton v-if="selectedPreset" variant="secondary" @click="deleteSelected">Удалить</BaseButton>
+        <BaseButton v-if="selectedPreset" variant="secondary" @click="deleteSelected">{{ tr('Удалить') }}</BaseButton>
       </template>
       <template v-else>
-        <BaseButton v-if="step > 1" variant="secondary" @click="back">Назад</BaseButton>
-        <BaseButton v-if="step < 3" @click="next">Далее</BaseButton>
-        <BaseButton v-else :disabled="!name.trim()" @click="save">Создать</BaseButton>
-        <BaseButton variant="secondary" @click="emit('close')">Отмена</BaseButton>
+        <BaseButton v-if="step > 1" variant="secondary" @click="back">{{ tr('Назад') }}</BaseButton>
+        <BaseButton v-if="step < 3" @click="next">{{ tr('Далее') }}</BaseButton>
+        <BaseButton v-else :disabled="!name.trim()" @click="save">{{ tr('Создать') }}</BaseButton>
+        <BaseButton variant="secondary" @click="emit('close')">{{ tr('Отмена') }}</BaseButton>
       </template>
     </template>
   </BaseDrawer>

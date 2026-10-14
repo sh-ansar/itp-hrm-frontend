@@ -6,7 +6,7 @@ import type {
 } from '../stores/uiPreferences'
 
 export function localeTag(locale: UiLocale): string {
-  return ({ ru: 'ru-RU', kk: 'kk-KZ', en: 'en-US' } as const)[locale]
+  return ({ ru: 'ru-RU', kk: 'kk-KZ', en: 'en-US', ka: 'ka-GE' } as const)[locale]
 }
 
 function plainDateParts(value: string | Date | null | undefined): { year: string; month: string; day: string } | null {

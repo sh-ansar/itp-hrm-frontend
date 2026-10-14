@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { useWorkspaceI18n } from '../composables/useWorkspaceI18n'
+import { useUiFormatters } from '../composables/useUiFormatters'
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { Maximize2, Minimize2, Plus, Search } from 'lucide-vue-next'
 import { useRoute, useRouter } from 'vue-router'
@@ -29,6 +31,9 @@ import { localTodayISO } from '../utils/localDate'
 import {
   listEmployees, type EmployeeRecord, type EmploymentFilter, type EmploymentStatus,
 } from '../api/personnel'
+
+const { tr } = useWorkspaceI18n()
+const fmt = useUiFormatters()
 
 type EmployeeRow = EmployeeRecord & { full_name: string; status_label: string }
 type GroupMode = 'none' | 'department' | 'category' | 'object'
@@ -165,7 +170,7 @@ const allRegistryRows = computed<EmployeeRow[]>(() => employees.value.map(employ
   return {
     ...employee,
     full_name: [employee.last_name, employee.first_name, employee.middle_name].filter(Boolean).join(' '),
-    status_label: statusLabels[state],
+    status_label: tr(statusLabels[state]),
   }
 }))
 function uniqueOptions(values: Array<string | null | undefined>, allLabel: string) {
@@ -209,9 +214,7 @@ const registryRows = computed<EmployeeRow[]>(() => {
   return filteredRegistryRows.value.slice(startIndex, startIndex + pageSize.value)
 })
 function displayDate(value: unknown): string {
-  if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}/.test(value)) return '—'
-  const [year, month, day] = value.slice(0, 10).split('-')
-  return day + '.' + month + '.' + year
+  return typeof value === 'string' ? fmt.date(value) : '—'
 }
 const groupModeLabels: Record<GroupMode, string> = {
   none: 'Без группировки',
@@ -618,105 +621,102 @@ onMounted(() => {
 
 <template>
   <section class="personnel-page">
-    <div class="registry-breadcrumb"><img src="/prototype-icons/Home.svg" alt="" aria-hidden="true" /><span>/</span><strong>Сотрудники</strong><span>/</span><span>{{ activeTab === 'archive' ? 'Архив сотрудников' : 'Реестр сотрудников' }}</span></div>
+    <div class="registry-breadcrumb"><img src="/prototype-icons/Home.svg" alt="" aria-hidden="true" /><span>/</span><strong>{{ tr('Сотрудники') }}</strong><span>/</span><span>{{ activeTab === 'archive' ? tr('Архив сотрудников') : tr('Реестр сотрудников') }}</span></div>
 
     <BaseNotice v-if="error" tone="error">{{ error }}</BaseNotice>
-    <BaseViewTabs :model-value="activeTab" :options="tabOptions" label="Разделы реестра сотрудников"
+    <BaseViewTabs :model-value="activeTab" :options="tabOptions" :label="tr('Разделы реестра сотрудников')"
       @update:model-value="setTab" />
 
-    <BaseKpiGrid class="registry-metrics" label="Сводка по персоналу">
-      <BaseRegistryMetricCard title="Сотрудники" :value="counters.active"
-        description="активных сотрудников работают в компании"
+    <BaseKpiGrid class="registry-metrics" :label="tr('Сводка по персоналу')">
+      <BaseRegistryMetricCard :title="tr('Сотрудники')" :value="counters.active"
+        :description="tr('активных сотрудников работают в компании')"
         icon="/prototype-icons/Info.svg" />
-      <BaseRegistryMetricCard title="Отделы" :value="counters.departments"
-        description="структурных подразделений в компании"
+      <BaseRegistryMetricCard :title="tr('Отделы')" :value="counters.departments"
+        :description="tr('структурных подразделений в компании')"
         icon="/prototype-icons/Info.svg" to="/organization" />
-      <BaseRegistryMetricCard title="Вакантные позиции" :value="counters.vacancies"
+      <BaseRegistryMetricCard :title="tr('Вакантные позиции')" :value="counters.vacancies"
         kind="ring" :percentage="vacancyPercent"
-        :description="counters.plannedUnits === null ? 'Нет данных утверждённого штата' : 'из '+counters.plannedUnits+' штатных единиц'"
+        :description="counters.plannedUnits === null ? tr('Нет данных утверждённого штата') : tr('из ')+counters.plannedUnits+tr(' штатных единиц')"
         icon="/prototype-icons/Link-External.svg" to="/staffing?view=vacant" />
-      <BaseRegistryMetricCard title="Истекающие договоры" :value="counters.expiring"
-        description="сроки договоров пока не учитываются в API"
+      <BaseRegistryMetricCard :title="tr('Истекающие договоры')" :value="counters.expiring"
+        :description="tr('сроки договоров пока не учитываются в API')"
         icon="/prototype-icons/Info.svg" tone="danger" />
     </BaseKpiGrid>
 
     <BaseCard class="registry-card" :class="{ 'registry-card--fullscreen': fullscreen }">
-      <BaseLoadingState v-if="companyLoading" label="Загрузка доступных компаний" />
+      <BaseLoadingState v-if="companyLoading" :label="tr('Загрузка доступных компаний')" />
       <template v-else-if="companies.length">
         <div class="register-heading">
           <div class="register-title">
-            <h1>{{ activeTab === 'archive' ? 'Архив сотрудников' : 'Реестр сотрудников' }}
-              <span>({{ employeeLoading ? '…' : registryRows.length }} из {{ displayTotal }})</span>
+            <h1>{{ activeTab === 'archive' ? tr('Архив сотрудников') : tr('Реестр сотрудников') }}
+              <span>({{ employeeLoading ? '…' : fmt.number(registryRows.length, 0) }} {{ tr('из') }} {{ fmt.number(displayTotal, 0) }})</span>
             </h1>
             <p v-if="companies.length===1">{{ currentCompany?.name }}</p>
           </div>
           <div class="register-actions">
-            <BaseActionDropdown label="Экспорт" :options="exportOptions" @select="doExport" />
-            <BaseActionDropdown label="Действия" variant="primary"
+            <BaseActionDropdown :label="tr('Экспорт')" :options="exportOptions" @select="doExport" />
+            <BaseActionDropdown :label="tr('Действия')" variant="primary"
               :options="registerActionOptions" @select="doTopAction" />
-            <BaseButton type="button" variant="secondary" icon-only class="registry-fullscreen-toggle" :aria-label="fullscreen ? 'Выйти из полноэкранного режима' : 'На весь экран'"
-              :title="fullscreen ? 'Выйти из полноэкранного режима' : 'На весь экран'"
+            <BaseButton type="button" variant="secondary" icon-only class="registry-fullscreen-toggle" :aria-label="fullscreen ? tr('Выйти из полноэкранного режима') : tr('На весь экран')"
+              :title="fullscreen ? tr('Выйти из полноэкранного режима') : tr('На весь экран')"
               @click="toggleFullscreen">
               <Minimize2 v-if="fullscreen" :size="18" aria-hidden="true" />
               <Maximize2 v-else :size="18" aria-hidden="true" />
             </BaseButton>
             <BaseButton v-if="employeeWritesEnabled && activeTab === 'register'" @click="createOpen = true">
-              <Plus :size="16" /> Добавить сотрудника
-            </BaseButton>
+              <Plus :size="16" /> {{ tr('Добавить сотрудника') }}</BaseButton>
             <div class="company-select">
-              <BaseSelectField v-model="selectedCompany" label="Компания" :options="companies" />
+              <BaseSelectField v-model="selectedCompany" :label="tr('Компания')" :options="companies" />
             </div>
           </div>
         </div>
 
-        <div class="registry-toolbar" aria-label="Настройки реестра">
+        <div class="registry-toolbar" :aria-label="tr('Настройки реестра')">
           <BaseButton type="button" variant="secondary" class="registry-tool-button"
             :aria-expanded="searchOpen" @click="toggleSearch">
-            <Search :size="16" aria-hidden="true" /> Поиск
-          </BaseButton>
+            <Search :size="16" aria-hidden="true" /> {{ tr('Поиск') }}</BaseButton>
           <form class="registry-search" :class="{ 'registry-search--open': searchOpen }"
             role="search" @submit.prevent="applySearch">
             <Search :size="17" aria-hidden="true" />
-            <input ref="searchInput" v-model="searchDraft" type="search" aria-label="Поиск в реестре"
-              placeholder="ФИО или табельный номер" />
-            <BaseButton type="submit" variant="secondary">Найти</BaseButton>
+            <input ref="searchInput" v-model="searchDraft" type="search" :aria-label="tr('Поиск в реестре')"
+              :placeholder="tr('ФИО или табельный номер')" />
+            <BaseButton type="submit" variant="secondary">{{ tr('Найти') }}</BaseButton>
             <BaseButton v-if="searchDraft || search" type="button" variant="secondary" icon-only class="registry-search-clear"
-              aria-label="Очистить поиск" @click="clearSearch">×</BaseButton>
+              :aria-label="tr('Очистить поиск')" @click="clearSearch">×</BaseButton>
           </form>
           <BaseButton variant="secondary" @click="openFilters" :aria-expanded="filtersOpen">
-            <img src="/prototype-icons/Filter.svg" alt="" class="toolbar-icon" /> Фильтры
-          </BaseButton>
+            <img src="/prototype-icons/Filter.svg" alt="" class="toolbar-icon" /> {{ tr('Фильтры') }}</BaseButton>
           <BaseActionDropdown
-            :label="groupMode === 'none' ? 'Группировка' : groupModeLabels[groupMode]"
+            :label="groupMode === 'none' ? tr('Группировка') : groupModeLabels[groupMode]"
             :options="groupOptions" @select="setGroupMode" />
-          <BaseColumnPicker v-model="visibleFields" :columns="optionalColumns" title="Настройка колонок" />
+          <BaseColumnPicker v-model="visibleFields" :columns="optionalColumns" :title="tr('Настройка колонок')" />
           <div class="registry-toolbar-spacer"></div>
-          <BaseButton variant="secondary" @click="templatesOpen = true">Шаблоны</BaseButton>
+          <BaseButton variant="secondary" @click="templatesOpen = true">{{ tr('Шаблоны') }}</BaseButton>
         </div>
 
 
 
-        <BaseFilterSummary :items="registryChips" label="Активные фильтры реестра"
+        <BaseFilterSummary :items="registryChips" :label="tr('Активные фильтры реестра')"
           @remove="clearChip" @clear="clearRegistryFilters" />
         <p v-if="presetNotice" role="status" class="registry-preset-notice">{{ presetNotice }}</p>
-        <BaseTableBulkActions :count="selectedOnPage.length" subject="сотрудников"
+        <BaseTableBulkActions :count="selectedOnPage.length" :subject="tr('сотрудников')"
           :options="selectedActions" @execute="executeSelectedAction" @clear="selectedIds = []" />
         <p v-if="groupMode !== 'none'" class="scope-hint">Группировка: {{ groupModeLabels[groupMode] }}. Фильтры применены к текущему реестру.</p>
 
         <div class="registry-desktop-table">
           <BaseDataTable :rows="registryRows" :columns="visibleColumns" :group-by="groupMode !== 'none' ? groupEmployees : undefined"
-          selectable selection-label="Выбрать сотрудника" v-model:selected-keys="selectedIds"
-          row-key="id" caption="Реестр сотрудников выбранной компании" :loading="employeeLoading"
-          :empty-title="activeTab === 'archive' ? 'В архиве сотрудников нет' : 'Сотрудники не найдены'"
-          :empty-description="search ? 'Уточните поиск или сбросьте запрос.' : 'Нет записей для выбранного фильтра.'">
+          selectable :selection-label="tr('Выбрать сотрудника')" v-model:selected-keys="selectedIds"
+          row-key="id" :caption="tr('Реестр сотрудников выбранной компании')" :loading="employeeLoading"
+          :empty-title="activeTab === 'archive' ? tr('В архиве сотрудников нет') : tr('Сотрудники не найдены')"
+          :empty-description="search ? tr('Уточните поиск или сбросьте запрос.') : tr('Нет записей для выбранного фильтра.')">
           <template #cell-full_name="{ row }">
             <div class="name-cell">
               <RouterLink :to="{ name: 'employee-detail', params: { company: selectedCompany, employee: row.id } }">{{ row.full_name }}</RouterLink>
-              <span>{{ row.current_department_name || 'Подразделение не назначено' }}</span>
+              <span>{{ row.current_department_name || tr('Подразделение не назначено') }}</span>
             </div>
           </template>
           <template #cell-birth_date="{ value }">{{ displayDate(value) }}</template>
-          <template #cell-gender="{ value }">{{ value === 'male' ? 'М' : value === 'female' ? 'Ж' : '—' }}</template>
+          <template #cell-gender="{ value }">{{ value === 'male' ? tr('М') : value === 'female' ? tr('Ж') : '—' }}</template>
           <template #cell-current_position_name="{ value }">{{ value ?? '—' }}</template>
           <template #cell-current_department_name="{ value }">{{ value ?? '—' }}</template>
           <template #cell-current_assignment_valid_from="{ value }">{{ displayDate(value) }}</template>
@@ -728,10 +728,10 @@ onMounted(() => {
           <template #cell-details="{ row }">
             <div class="employee-row-actions">
               <RouterLink class="employee-link" :to="{ name: 'employee-detail', params: { company: selectedCompany, employee: row.id } }"
-                :aria-label="'Открыть карточку: ' + row.full_name" :title="'Открыть карточку: ' + row.full_name">
-                <img src="/prototype-icons/Edit.svg" alt="" /><span class="sr-only">Открыть карточку</span>
+                :aria-label="tr('Открыть карточку: ') + row.full_name" :title="tr('Открыть карточку: ') + row.full_name">
+                <img src="/prototype-icons/Edit.svg" alt="" /><span class="sr-only">{{ tr('Открыть карточку') }}</span>
               </RouterLink>
-              <BaseActionDropdown variant="icon" :label="'Действия сотрудника: '+row.full_name"
+              <BaseActionDropdown variant="icon" :label="tr('Действия сотрудника: ')+row.full_name"
                 :options="rowActionOptions" @select="doRowAction($event, row)" />
             </div>
           </template>
@@ -743,43 +743,43 @@ onMounted(() => {
         </div>
         <div class="registry-bottomline">
           <span class="registry-selection" aria-live="polite">
-            Выбрано на странице: {{ selectedOnPage.length }} из {{ registryRows.length }}
+            {{ tr('Выбрано на странице:') }} {{ fmt.number(selectedOnPage.length, 0) }} {{ tr('из') }} {{ fmt.number(registryRows.length, 0) }}
           </span>
           <BasePagination :page="page" :last-page="displayLastPage" :loading="employeeLoading"
             :total="displayTotal" :page-size="pageSize"
-            caption="Страницы реестра сотрудников"
+            :caption="tr('Страницы реестра сотрудников')"
             @previous="page--" @next="page++" @select-page="page=$event"
             @change-page-size="changePageSize" />
         </div>
       </template>
-      <BaseNotice v-else-if="!error" tone="info">Нет доступных компаний.</BaseNotice>
+      <BaseNotice v-else-if="!error" tone="info">{{ tr('Нет доступных компаний.') }}</BaseNotice>
     </BaseCard>
 
-    <BaseDrawer :open="createOpen" title="Добавить сотрудника"
-      description="Основные данные новой карточки сотрудника" @close="createOpen = false">
+    <BaseDrawer :open="createOpen" :title="tr('Добавить сотрудника')"
+      :description="tr('Основные данные новой карточки сотрудника')" @close="createOpen = false">
       <EmployeeRecordForm v-if="selectedCompany" :company-id="selectedCompany"
         @saved="employeeCreated" @cancelled="createOpen = false" />
     </BaseDrawer>
 
-    <BaseDrawer :open="filtersOpen" title="Фильтры"
-      description="Организационные данные и период приёма" @close="filtersOpen = false">
+    <BaseDrawer :open="filtersOpen" :title="tr('Фильтры')"
+      :description="tr('Организационные данные и период приёма')" @close="filtersOpen = false">
       <div class="registry-filter-drawer">
-        <h3>Организационные данные</h3>
-        <BaseSelectField v-model="filterDraft.department" label="Отдел" :options="departmentFilterOptions" />
-        <BaseSelectField v-model="filterDraft.position" label="Должность" :options="positionFilterOptions" />
-        <BaseSelectField v-model="filterDraft.category" label="Категория" :options="categoryFilterOptions" />
-        <BaseSelectField v-model="filterDraft.personnelType" label="Вид персонала" :options="personnelTypeFilterOptions" />
-        <BaseSelectField v-model="filterDraft.object" label="Объект / место работы" :options="objectFilterOptions" />
-        <BaseSelectField v-model="filterDraft.team" label="Бригада" :options="teamFilterOptions" />
-        <BaseSelectField v-model="filterDraft.status" label="Статус сотрудника" :options="statusSelectOptions" />
-        <BaseSelectField v-model="filterDraft.gender" label="Пол" :options="genderFilterOptions" />
-        <label class="registry-date-filter"><span>Период приёма — с</span><input v-model="filterDraft.hiredFrom" type="date" /></label>
-        <label class="registry-date-filter"><span>Период приёма — по</span><input v-model="filterDraft.hiredTo" type="date" /></label>
+        <h3>{{ tr('Организационные данные') }}</h3>
+        <BaseSelectField v-model="filterDraft.department" :label="tr('Отдел')" :options="departmentFilterOptions" />
+        <BaseSelectField v-model="filterDraft.position" :label="tr('Должность')" :options="positionFilterOptions" />
+        <BaseSelectField v-model="filterDraft.category" :label="tr('Категория')" :options="categoryFilterOptions" />
+        <BaseSelectField v-model="filterDraft.personnelType" :label="tr('Вид персонала')" :options="personnelTypeFilterOptions" />
+        <BaseSelectField v-model="filterDraft.object" :label="tr('Объект / место работы')" :options="objectFilterOptions" />
+        <BaseSelectField v-model="filterDraft.team" :label="tr('Бригада')" :options="teamFilterOptions" />
+        <BaseSelectField v-model="filterDraft.status" :label="tr('Статус сотрудника')" :options="statusSelectOptions" />
+        <BaseSelectField v-model="filterDraft.gender" :label="tr('Пол')" :options="genderFilterOptions" />
+        <label class="registry-date-filter"><span>{{ tr('Период приёма — с') }}</span><input v-model="filterDraft.hiredFrom" type="date" /></label>
+        <label class="registry-date-filter"><span>{{ tr('Период приёма — по') }}</span><input v-model="filterDraft.hiredTo" type="date" /></label>
       </div>
       <template #footer>
-        <BaseButton @click="applyFilterDraft">Применить</BaseButton>
-        <BaseButton variant="secondary" @click="filtersOpen = false">Отмена</BaseButton>
-        <BaseButton variant="secondary" @click="resetFilterDraft">Сбросить все фильтры</BaseButton>
+        <BaseButton @click="applyFilterDraft">{{ tr('Применить') }}</BaseButton>
+        <BaseButton variant="secondary" @click="filtersOpen = false">{{ tr('Отмена') }}</BaseButton>
+        <BaseButton variant="secondary" @click="resetFilterDraft">{{ tr('Сбросить все фильтры') }}</BaseButton>
       </template>
     </BaseDrawer>
 

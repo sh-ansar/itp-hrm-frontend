@@ -1,5 +1,9 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
+import { useWorkspaceI18n } from '../../composables/useWorkspaceI18n'
+import { useUiFormatters } from '../../composables/useUiFormatters'
+const { tr } = useWorkspaceI18n()
+const fmt = useUiFormatters()
 
 export interface BulkActionOption {
   id: string
@@ -29,18 +33,18 @@ watch(() => props.options.map(option => option.id).join(','), () => {
 
 <template>
   <form v-if="count > 0" class="table-bulk-actions"
-    aria-label="Действия с выбранными строками" @submit.prevent="execute">
-    <span class="selected-count" role="status">Выбрано {{ subject }}: <strong>{{ count }}</strong></span>
+    :aria-label="tr('Действия с выбранными строками')" @submit.prevent="execute">
+    <span class="selected-count" role="status">{{ tr('Выбрано') }} {{ tr(subject) }}: <strong>{{ fmt.number(count, 0) }}</strong></span>
     <label class="action-picker">
-      <span class="sr-only">Действие с выбранными</span>
-      <select v-model="action" aria-label="Действие с выбранными">
-        <option value="" disabled>Выберите действие</option>
-        <option v-for="option in options" :key="option.id" :value="option.id">{{ option.label }}</option>
+      <span class="sr-only">{{ tr('Действие с выбранными') }}</span>
+      <select v-model="action" :aria-label="tr('Действие с выбранными')">
+        <option value="" disabled>{{ tr('Выберите действие') }}</option>
+        <option v-for="option in options" :key="option.id" :value="option.id">{{ tr(option.label) }}</option>
       </select>
     </label>
-    <button class="apply-action" type="submit" :disabled="!canExecute">Выполнить</button>
-    <button class="clear-action" type="button" @click="emit('clear')">Снять выделение</button>
-    <span class="scope-caption">Только выбранные строки текущей страницы</span>
+    <button class="apply-action" type="submit" :disabled="!canExecute">{{ tr('Выполнить') }}</button>
+    <button class="clear-action" type="button" @click="emit('clear')">{{ tr('Снять выделение') }}</button>
+    <span class="scope-caption">{{ tr('Только выбранные строки текущей страницы') }}</span>
   </form>
 </template>
 

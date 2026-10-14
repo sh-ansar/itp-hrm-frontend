@@ -1,6 +1,7 @@
 import '../../../src/styles/tokens.css'
 import '../../../src/styles/global.css'
 import { createApp, defineComponent, h, ref } from 'vue'
+import { createPinia } from 'pinia'
 import BaseFormField from '../../../src/components/ui/BaseFormField.vue'
 import BaseDialog from '../../../src/components/ui/BaseDialog.vue'
 import BaseDataTable from '../../../src/components/ui/BaseDataTable.vue'
@@ -32,4 +33,4 @@ const Fixture = defineComponent({
   },
 })
 
-createApp(Fixture).mount('#app')
+createApp(Fixture).use(createPinia()).mount('#app')

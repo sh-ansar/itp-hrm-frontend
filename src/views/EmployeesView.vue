@@ -649,7 +649,7 @@ onMounted(() => {
         <div class="register-heading">
           <div class="register-title">
             <h1>{{ activeTab === 'archive' ? tr('Архив сотрудников') : tr('Реестр сотрудников') }}
-              <span>({{ employeeLoading ? '…' : registryRows.length }} из {{ displayTotal }})</span>
+              <span>({{ employeeLoading ? '…' : fmt.number(registryRows.length, 0) }} {{ tr('из') }} {{ fmt.number(displayTotal, 0) }})</span>
             </h1>
             <p v-if="companies.length===1">{{ currentCompany?.name }}</p>
           </div>
@@ -743,7 +743,7 @@ onMounted(() => {
         </div>
         <div class="registry-bottomline">
           <span class="registry-selection" aria-live="polite">
-            Выбрано на странице: {{ selectedOnPage.length }} из {{ registryRows.length }}
+            {{ tr('Выбрано на странице:') }} {{ fmt.number(selectedOnPage.length, 0) }} {{ tr('из') }} {{ fmt.number(registryRows.length, 0) }}
           </span>
           <BasePagination :page="page" :last-page="displayLastPage" :loading="employeeLoading"
             :total="displayTotal" :page-size="pageSize"

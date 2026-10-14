@@ -276,13 +276,14 @@ Status: **PARTIAL**
 ## Immediate implementation sequence
 
 ### P0 — before management demo
-- [ ] Complete Employee card Personal data, including military records
-- [ ] Complete Employee card Organizational data
-- [ ] Complete Employee card Employment data
-- [ ] Expand Payroll and Schedule tabs with prototype sections in demo
-- [ ] Expand Talent/Learning and History tabs
-- [ ] Upgrade employee Documents tab
-- [ ] Screenshot sign-off for all Employee-card tabs
+- [x] Complete Employee card Personal data in demo, including military records and family data
+- [x] Complete Employee card Organizational data in demo
+- [x] Complete Employee card Employment data in demo
+- [x] Expand Payroll and Schedule tabs with prototype sections in demo
+- [x] Expand Talent/Learning and History tabs in demo
+- [x] Upgrade employee Documents table fields in demo
+- [ ] Add full Documents-tab toolbar/folders/filter parity
+- [ ] Screenshot sign-off for all Employee-card tabs after a Vercel build slot is available
 
 ### P1
 - [ ] Employees grouping modes and richer filters
@@ -299,3 +300,20 @@ Status: **PARTIAL**
 The current Laravel employee detail endpoint returns employee identity, assignments, experience, reserve, training and audit history.
 It does **not yet return the prototype-level reference profile** used by the demo for passport/family/military/payroll/schedule/etc.
 Therefore frontend demo parity can be completed first, but the real Laravel/PostgreSQL schema/API must later be extended before these fields can become production data.
+
+
+## Implementation update — employee-card parity branch
+
+Branch: `feat/employee-card-prototype-parity-20261014`
+
+Implemented for the autonomous demo:
+- Personal: login, structured addresses, identity-document metadata, place of birth, family table, military records
+- Organization: company/category/personnel type, workplace/pass, team/managers, staffing-position status
+- Employment: contract validity/probation, seniority, working conditions, combination/additional duties, termination
+- Payroll: pay conditions, adjustments/deductions, payslip summary, history/dynamics, banking/tax
+- Schedule: schedule parameters, leave balances/limits, current timesheet, attendance events, timesheet history
+- Development: reserve summary/details, education, fit assessment, reserve history, additional training
+- History: section, before/after, system result, author and timestamp
+- Documents: document/file/type/number/date/status columns
+
+Production note: these extended reference fields remain optional because Laravel does not yet expose the corresponding reference profile. The demo is intentionally ahead of the production persistence contract.

@@ -31,7 +31,7 @@ test('employee prototype register has real status filter, archive, grouping and 
 
     await page.getByRole('button', { name: 'Группировка' }).click()
     await page.getByRole('menuitem', { name: 'По подразделениям' }).click()
-    await page.getByText(/Группировка: По подразделениям/).waitFor()
+    await page.locator('.scope-hint').filter({ hasText: 'Группировка: По подразделениям' }).waitFor()
     assert.ok((await table.locator('tbody tr.table-group').count()) >= 1)
 
     await page.getByRole('button', { name: 'Настройка колонок', exact: true }).click()

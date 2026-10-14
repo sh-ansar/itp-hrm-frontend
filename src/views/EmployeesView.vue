@@ -263,6 +263,17 @@ function exportSelected() {
   )
 }
 
+const exportOptions = computed(() => [
+  { id: 'page', label: 'Выгрузить загруженную страницу CSV', disabled: registryRows.value.length === 0 },
+  { id: 'selected', label: 'Выгрузить выбранных CSV', disabled: selectedOnPage.value.length === 0 },
+])
+const registerActionOptions = computed(() => [
+  { id: 'select_page', label: 'Выбрать текущую страницу', disabled: !registryRows.value.length },
+  { id: 'clear_selection', label: 'Снять выделение', disabled: !selectedOnPage.value.length },
+  { id: 'open_selected', label: 'Открыть выбранную карточку', disabled: selectedOnPage.value.length !== 1 },
+  { id: 'export_selected', label: 'Экспортировать выбранных CSV', disabled: !selectedOnPage.value.length },
+])
+
 const registryChips = computed(() => [
   ...(search.value ? [{ id: 'search', label: 'Поиск: ' + search.value }] : []),
   ...(statusFilter.value !== 'active' ? [{ id: 'status', label: 'Статус: ' + (statusOptions.find(item => item.id === statusFilter.value)?.label ?? statusFilter.value) }] : []),

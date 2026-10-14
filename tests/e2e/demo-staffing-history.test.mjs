@@ -163,3 +163,107 @@ test('the demo staffing API rejects false success and records only accepted muta
     await context.close()
   }
 })
+
+
+test('staffing snapshot counts employees on the requested date, including transfers', async () => {
+  const context = await browser.newContext({ baseURL })
+  const page = await context.newPage()
+  try {
+    await page.goto('/')
+    const result = await page.evaluate(async () => {
+      const { mockApiRequest: request } = await import('/src/mocks/mockApi.ts')
+      const company='11111111-1111-4111-8111-111111111111'
+      const id=n=>`00000000-0000-4000-8000-${String(n).padStart(12,'0')}`
+      const plans=`/companies/${company}/staffing-plans`
+      const created=(await request(plans,{method:'POST',body:JSON.stringify({
+        name:'QA timed staffing',valid_from:'2044-01-01',valid_to:'2044-12-31',
+      })})).data
+      const lines=`${plans}/${created.id}/lines`
+      await request(lines,{method:'POST',body:JSON.stringify({
+        department_id:id(105),position_id:id(305),planned_units:1,
+        base_salary:null,currency:null,notes:null,
+      })})
+      await request(lines,{method:'POST',body:JSON.stringify({
+        department_id:id(106),position_id:id(306),planned_units:3,
+        base_salary:null,currency:null,notes:null,
+      })})
+      const snapshot=async date=>(await request(`${plans}/${created.id}?as_of=${date}`)).lines
+      const find=(rows,department,position)=>rows.find(row=>row.department_id===id(department)&&row.position_id===id(position))
+      const beforeHire=await snapshot('2021-12-31')
+      const beforeTransfer=await snapshot('2026-11-14')
+      await request(`/companies/${company}/employees/${id(1000)}/personnel-actions/transfer`, {
+        method:'POST',
+        body:JSON.stringify({
+          department_id:id(106),position_id:id(306),effective_on:'2026-11-15',
+          basis_reference:'QA as-of transfer',
+        }),
+      })
+      const afterTransfer=await snapshot('2026-11-15')
+      const historicalAgain=await snapshot('2026-11-14')
+      const invalidDate=await (async()=>{
+        try{await snapshot('2026-02-31');return false}catch{return true}
+      })()
+      const roster=await request(`/companies/${company}/employees?status=active`)
+      return {
+        beforeHire:find(beforeHire,105,305)?.occupied_units,
+        beforeTransfer:find(beforeTransfer,105,305)?.occupied_units,
+        afterTransfer:find(afterTransfer,105,305)?.occupied_units,
+        oldVacantAfter:find(afterTransfer,105,305)?.vacant_units,
+        newBefore:find(beforeTransfer,106,306)?.occupied_units,
+        newAfter:find(afterTransfer,106,306)?.occupied_units,
+        historicalStable:find(historicalAgain,105,305)?.occupied_units===find(beforeTransfer,105,305)?.occupied_units,
+        newOverstaffed:find(afterTransfer,106,306)?.overstaffed_units,
+        invalidDate,
+        expiringIsNotInvented:roster.meta.registry_summary?.expiring_contracts===null,
+      }
+    })
+    assert.equal(result.beforeHire,0)
+    assert.equal(result.beforeTransfer,1)
+    assert.equal(result.afterTransfer,0)
+    assert.equal(result.oldVacantAfter,1)
+    assert.equal(result.newAfter,result.newBefore+1)
+    assert.equal(result.historicalStable,true)
+    assert.equal(result.newOverstaffed,0)
+    assert.equal(result.invalidDate,true)
+    assert.equal(result.expiringIsNotInvented,true)
+  } finally {
+    await context.close()
+  }
+})
+
+test('the existing staffing date filter updates mobile occupancy and vacancy counters', async () => {
+  const context = await browser.newContext({ baseURL, viewport:{width:375,height:850} })
+  const page = await context.newPage()
+  const errors=[]
+  page.on('pageerror',error=>errors.push(error.message))
+  try {
+    await page.goto('/staffing')
+    await page.getByRole('button',{name:'Новая версия'}).click()
+    const version=page.getByRole('dialog',{name:'Новая версия штатного расписания'})
+    await version.getByLabel('Название версии').fill('QA slice 2045')
+    await version.getByLabel('Действует с').fill('2045-01-01')
+    await version.getByLabel('Действует по').fill('2045-12-31')
+    await version.getByRole('button',{name:'Создать версию'}).click()
+    await page.getByRole('heading',{name:'QA slice 2045'}).waitFor()
+    await page.getByRole('button',{name:'Добавить строку'}).click()
+    const line=page.getByRole('dialog',{name:'Новая штатная единица'})
+    await line.getByLabel('Подразделение').selectOption('00000000-0000-4000-8000-000000000105')
+    await line.getByLabel('Должность').selectOption('00000000-0000-4000-8000-000000000305')
+    await line.getByLabel('Количество ставок').fill('1')
+    await line.getByRole('button',{name:'Добавить в штат'}).click()
+    await line.waitFor({state:'hidden'})
+    await page.getByLabel('Дата среза занятости').fill('2021-12-31')
+    await page.getByRole('button',{name:'Показать на дату'}).click()
+    const metrics=page.locator('.staffing-summary-item')
+    await metrics.nth(1).getByText('0',{exact:true}).waitFor()
+    await metrics.nth(2).getByText('1',{exact:true}).waitFor()
+    await page.getByLabel('Дата среза занятости').fill('2026-10-14')
+    await page.getByRole('button',{name:'Показать на дату'}).click()
+    await metrics.nth(1).getByText('1',{exact:true}).waitFor()
+    await metrics.nth(2).getByText('0',{exact:true}).waitFor()
+    assert.deepEqual(errors,[])
+    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth+1),false)
+  } finally {
+    await context.close()
+  }
+})

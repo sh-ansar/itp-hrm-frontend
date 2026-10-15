@@ -3,6 +3,9 @@
 Options -Indexes -MultiViews
 DirectoryIndex index.html
 RewriteEngine On
+# Force HTTPS only for HRM; leave platform and Unityre HTTP behavior unchanged.
+RewriteCond %{HTTPS} !=on
+RewriteRule ^ https://platform.itpmining.kz%{REQUEST_URI} [R=301,L,NE]
 RewriteBase /hrm/
 RewriteRule ^index\.html$ - [L]
 RewriteCond %{REQUEST_FILENAME} !-f

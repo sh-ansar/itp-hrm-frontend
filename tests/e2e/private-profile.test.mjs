@@ -36,7 +36,7 @@ test('HR saves personal and military data in Laravel from a mobile employee prof
     await page.getByRole('button', { name: 'Изменить', exact: true }).first().click()
     await personal.waitFor()
     assert.equal(await personal.getByLabel('Место рождения').inputValue(), 'Synthetic City')
-    await personal.getByRole('button', { name: 'Закрыть' }).click()
+    await personal.getByRole('button', { name: 'Закрыть', exact: true }).last().click()
     await personal.waitFor({ state: 'hidden' })
 
     await page.getByRole('button', { name: 'Изменить', exact: true }).last().click()

@@ -173,7 +173,7 @@ const calendarDays = computed<CalendarViewDay[]>(() => {
       day: day.day,
       weekday: day.weekday,
       type: day.type,
-      label: null,
+      label: day.label ?? null,
     }))
   }
 
@@ -235,7 +235,8 @@ const calendarOffset = computed(() => {
   return (weekday + 6) % 7
 })
 const workdayCount = computed(() => calendarDays.value.filter(day => ['workday', 'shortened'].includes(day.type)).length)
-const weekendCount = computed(() => calendarDays.value.filter(day => ['weekend', 'holiday'].includes(day.type)).length)
+const weekendCount = computed(() => calendarDays.value.filter(day => day.type === 'weekend').length)
+const holidayCount = computed(() => calendarDays.value.filter(day => day.type === 'holiday').length)
 const missingCalendarCount = computed(() => calendarDays.value.filter(day => day.type === 'missing').length)
 
 const timesheetColumns = [
@@ -592,7 +593,7 @@ onMounted(loadCompanies)
           </div>
           <BaseButton v-if="!demoMode && productionCalendarMeta?.can_edit_calendar" variant="secondary" :disabled="loading" @click="calendarEditorOpen = true">Редактировать календарь</BaseButton>
           <span>
-            {{ workdayCount }} рабочих · {{ weekendCount }} выходных
+            {{ workdayCount }} рабочих · {{ weekendCount }} выходных · {{ holidayCount }} праздничных
             <template v-if="missingCalendarCount"> · {{ missingCalendarCount }} без данных</template>
           </span>
         </div>
@@ -600,14 +601,24 @@ onMounted(loadCompanies)
           Календарь заполнен частично: {{ productionCalendarMeta.recorded_days }} из {{ productionCalendarMeta.expected_days }} дней.
           Незагруженные даты не классифицируются автоматически.
         </BaseNotice>
+        <div class="calendar-legend" role="list" aria-label="Обозначения типов дней">
+          <span role="listitem"><i class="calendar-key calendar-key--workday" aria-hidden="true" /> Рабочие</span>
+          <span role="listitem"><i class="calendar-key calendar-key--weekend" aria-hidden="true" /> Выходные</span>
+          <span role="listitem"><i class="calendar-key calendar-key--holiday" aria-hidden="true" /> Праздничные</span>
+          <span v-if="missingCalendarCount" role="listitem"><i class="calendar-key calendar-key--missing" aria-hidden="true" /> Не заполнены</span>
+        </div>
         <div class="calendar-weekdays" aria-hidden="true">
           <span v-for="label in ['Пн','Вт','Ср','Чт','Пт','Сб','Вс']" :key="label">{{ label }}</span>
         </div>
         <div class="calendar-grid" :aria-label="'Производственный календарь: ' + monthLabel">
           <span v-for="blank in calendarOffset" :key="'blank-' + blank" class="calendar-blank" aria-hidden="true" />
           <article v-for="day in calendarDays" :key="day.date" class="calendar-day"
+            :aria-label="day.date + ' — ' + calendarTypeLabel(day)"
             :class="{
-              'calendar-day--weekend': ['weekend','holiday'].includes(day.type),
+              'calendar-day--workday': ['workday','shortened'].includes(day.type),
+              'calendar-day--shortened': day.type === 'shortened',
+              'calendar-day--weekend': day.type === 'weekend',
+              'calendar-day--holiday': day.type === 'holiday',
               'calendar-day--missing': day.type === 'missing',
             }">
             <strong>{{ day.day }}</strong>
@@ -715,15 +726,26 @@ onMounted(loadCompanies)
 .schedule-card header{display:flex;align-items:center;justify-content:space-between;gap:10px}
 .schedule-card header strong{color:var(--color-text);font-size:13px}
 .schedule-card header span{color:var(--color-primary);font-size:10px;font-weight:700}
+
+.calendar-legend{display:flex;align-items:center;gap:9px 18px;flex-wrap:wrap;margin:0 0 15px;color:var(--color-text);font-size:12px}
+.calendar-legend span{display:inline-flex;align-items:center;gap:7px}
+.calendar-key{display:inline-block;flex:0 0 13px;width:13px;height:13px;border-radius:4px;border:1px solid var(--color-stroke-strong)}
+.calendar-key--workday{background:var(--calendar-work-bg);border-color:var(--calendar-work-border)}
+.calendar-key--weekend{background:var(--calendar-weekend-bg);border-color:var(--calendar-weekend-border)}
+.calendar-key--holiday{background:var(--calendar-holiday-bg);border-color:var(--calendar-holiday-border)}
+.calendar-key--missing{background:var(--color-surface-raised);border-style:dashed}
 .calendar-weekdays,.calendar-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:7px}
 .calendar-weekdays{margin-bottom:7px}
 .calendar-weekdays span{text-align:center;color:var(--color-muted);font-size:10px;font-weight:600}
-.calendar-day{display:grid;gap:5px;min-height:84px;padding:10px;border:1px solid var(--color-stroke);border-radius:var(--radius-sm);background:var(--color-surface-raised)}
-.calendar-day strong{color:var(--color-text);font-size:15px}
-.calendar-day span{color:var(--color-muted);font-size:10px}
-.calendar-day small{align-self:end;color:var(--color-success);font-size:9px;font-weight:600}
-.calendar-day--weekend{background:var(--color-soft)}
-.calendar-day--weekend small{color:var(--color-muted)}\n.calendar-day--missing{border-style:dashed;background:transparent}\n.calendar-day--missing strong,.calendar-day--missing span,.calendar-day--missing small{color:var(--color-muted)}
+.calendar-day{display:grid;gap:5px;min-height:84px;padding:10px;border:1px solid var(--color-stroke);border-radius:var(--radius-sm);background:var(--color-surface-raised);color:var(--color-text)}
+.calendar-day strong{color:inherit;font-size:15px}
+.calendar-day span{color:inherit;opacity:.83;font-size:10px}
+.calendar-day small{align-self:end;color:inherit;font-size:10px;line-height:1.3;font-weight:650;overflow-wrap:anywhere}
+.calendar-day--workday{background:var(--calendar-work-bg);border-color:var(--calendar-work-border);color:var(--calendar-work-text)}
+.calendar-day--shortened{border-style:dashed}
+.calendar-day--weekend{background:var(--calendar-weekend-bg);border-color:var(--calendar-weekend-border);color:var(--calendar-weekend-text)}
+.calendar-day--holiday{background:var(--calendar-holiday-bg);border-color:var(--calendar-holiday-border);color:var(--calendar-holiday-text)}
+.calendar-day--missing{border-style:dashed;color:var(--color-muted);background:var(--color-surface-raised)}
 .calendar-blank{min-height:1px}
 @media(max-width:1000px){.worktime-summary{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:760px){

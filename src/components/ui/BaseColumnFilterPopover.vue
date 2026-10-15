@@ -162,6 +162,6 @@ watch(() => [props.options.length, props.query], async () => {
 .filter-reset{border:1px solid var(--color-stroke-strong);background:var(--color-surface);color:var(--color-text)}
 .filter-scope{margin:0;color:var(--color-muted);font-size:10px;line-height:15px}
 .filter-empty{padding:10px;color:var(--color-muted);font-size:12px}
-:global(:root[data-theme="dark"]) .filter-search img{filter:brightness(0) invert(.8)}
+:global(:root[data-theme="dark"] .filter-search img){filter:brightness(0) invert(.8)}
 @media(max-width:600px){.hrm-column-filter-popover{gap:7px;padding:8px}.filter-choice-list{max-height:min(400px,calc(100vh - 183px))}}
 </style>

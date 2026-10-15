@@ -170,11 +170,11 @@ function closeMobile() { if (props.mobileOpen) emit('update:mobileOpen', false) 
   .hrm-sidebar--collapsed .sidebar-foot{justify-content:flex-start;padding:10px 17px}
   .hrm-sidebar--collapsed .sidebar-foot-copy{display:grid}
 }
-:global(:root[data-theme="dark"]) .nav-svg-icon,
-:global(:root[data-theme="dark"]) .icon-control img{
+:global(:root[data-theme="dark"] .nav-svg-icon),
+:global(:root[data-theme="dark"] .icon-control img){
   filter:brightness(0) saturate(100%) invert(77%) sepia(21%) saturate(592%) hue-rotate(157deg) brightness(93%) contrast(92%);
 }
-:global(:root[data-theme="dark"]) .nav-item.is-active .nav-svg-icon{
+:global(:root[data-theme="dark"] .nav-item.is-active .nav-svg-icon){
   filter:brightness(0) saturate(100%) invert(67%) sepia(86%) saturate(1928%) hue-rotate(157deg) brightness(108%) contrast(95%);
 }
 @media(prefers-reduced-motion:reduce){.nav-item,.hrm-sidebar{transition:none}}

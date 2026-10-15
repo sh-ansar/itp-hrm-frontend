@@ -196,9 +196,9 @@ onBeforeUnmount(() => window.removeEventListener('keydown', handleShortcut))
 .logout-button:disabled{opacity:.5;cursor:wait}
 .logout-button img{width:18px;height:18px;object-fit:contain}
 .mobile-nav-trigger{display:none}
-:global(:root[data-theme="dark"]) .search-leading-icon,
-:global(:root[data-theme="dark"]) .search-clear img,
-:global(:root[data-theme="dark"]) .logout-button img{
+:global(:root[data-theme="dark"] .search-leading-icon),
+:global(:root[data-theme="dark"] .search-clear img),
+:global(:root[data-theme="dark"] .logout-button img){
   filter:brightness(0) saturate(100%) invert(78%) sepia(24%) saturate(460%) hue-rotate(156deg) brightness(92%) contrast(88%);
 }
 @media(max-width:1100px){

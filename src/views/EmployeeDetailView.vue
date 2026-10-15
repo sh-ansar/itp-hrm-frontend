@@ -4,6 +4,7 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { Plus } from 'lucide-vue-next'
 import { useRoute } from 'vue-router'
 import EmployeeProfileSection from '../components/EmployeeProfileSection.vue'
+import EmployeePrivateProfileEditor from '../components/EmployeePrivateProfileEditor.vue'
 import EmployeePhoto from '../components/EmployeePhoto.vue'
 import EmployeeDocumentsPanel from '../components/EmployeeDocumentsPanel.vue'
 import EmployeeDataGrid from '../components/EmployeeDataGrid.vue'
@@ -16,7 +17,7 @@ import EmployeeAssignmentCreateForm from '../components/EmployeeAssignmentCreate
 import EmployeeRecordForm from '../components/EmployeeRecordForm.vue'
 import BaseDialog from '../components/ui/BaseDialog.vue'
 import BaseViewTabs from '../components/ui/BaseViewTabs.vue'
-import { getEmployee, type EmployeeAssignment, type EmployeeDetail, type ProfileEditRow, type ProfileSection } from '../api/personnel'
+import { getEmployee, type EmployeeAssignment, type EmployeeDetail, type EmployeeReferenceProfile, type EmployeePrivateSection, type ProfileEditRow, type ProfileSection } from '../api/personnel'
 import { localTodayISO } from '../utils/localDate'
 import { useUiFormatters } from '../composables/useUiFormatters'
 
@@ -33,6 +34,7 @@ const editing = ref<{ section: ProfileSection; record: ProfileEditRow } | null>(
 const assignmentEditing = ref<EmployeeAssignment | null>(null)
 const assignmentTransitioning = ref<EmployeeAssignment | null>(null)
 const identityEditOpen = ref(false)
+const privateEditorSection = ref<EmployeePrivateSection | null>(null)
 const assignmentCreateOpen = ref(false)
 const profileCreateOpen = ref(false)
 const activeSection = ref('personal')
@@ -97,7 +99,25 @@ const initials = computed(() => {
   return [data.first_name, data.last_name].filter(Boolean).map(value => value.charAt(0).toUpperCase()).join('')
 })
 
-const reference = computed(() => profile.value?.reference_profile)
+const reference = computed<EmployeeReferenceProfile | undefined>(() => {
+  if (profile.value?.reference_profile) return profile.value.reference_profile
+  // Connected mode: project ONLY real HR-authorized database records.
+  // Missing payroll/documents are empty, not synthetic demo data.
+  const source = profile.value?.private_profile
+  if (!source) return undefined
+  return {
+    personal: source.personal,
+    military: source.military,
+    identity_document: {},
+    family: [],
+    banking: {},
+    employment: {},
+    payroll: {},
+    schedule: {},
+    documents: [],
+    history: [],
+  }
+})
 const genderLabel = computed(() => profile.value?.data.gender === 'male' ? 'Мужчина' : profile.value?.data.gender === 'female' ? 'Женщина' : '—')
 function money(value: number | null | undefined, currency = 'KZT'): string {
   return value == null ? '—' : `${fmt.number(Number(value), 0)} ${currency}`
@@ -440,6 +460,7 @@ async function load() {
   assignmentEditing.value = null
   assignmentTransitioning.value = null
   identityEditOpen.value = false
+  privateEditorSection.value = null
   assignmentCreateOpen.value = false
   profileCreateOpen.value = false
   error.value = ''
@@ -524,6 +545,9 @@ onMounted(load)
       <BaseViewTabs v-model="activeSection" :options="sectionTabs" :label="tr('Разделы карточки сотрудника')" />
       <template v-if="activeSection === 'personal' && profile.meta.extended_sections_visible">
         <EmployeeProfileSection :title="tr('Основные личные данные')">
+          <template v-if="profile.meta.private_profile_writes_enabled" #actions>
+            <BaseButton variant="secondary" @click="privateEditorSection = 'personal'">{{ tr('Изменить') }}</BaseButton>
+          </template>
           <EmployeeDataGrid :fields="personalFields" />
         </EmployeeProfileSection>
         <EmployeeProfileSection :title="tr('Контакты и адреса')">
@@ -543,6 +567,9 @@ onMounted(load)
           </BaseDataTable>
         </EmployeeProfileSection>
         <EmployeeProfileSection :title="tr('Воинский учёт')">
+          <template v-if="profile.meta.private_profile_writes_enabled" #actions>
+            <BaseButton variant="secondary" @click="privateEditorSection = 'military'">{{ tr('Изменить') }}</BaseButton>
+          </template>
           <EmployeeDataGrid :fields="militaryFields" />
         </EmployeeProfileSection>
       </template>
@@ -796,6 +823,10 @@ onMounted(load)
         @cancelled="identityEditOpen = false"
       />
     </BaseDialog>
+    <EmployeePrivateProfileEditor v-if="profile && privateEditorSection !== null"
+      :open="true" :company-id="String(route.params.company)" :employee-id="profile.data.id"
+      :section="privateEditorSection" :profile="profile.private_profile"
+      @close="privateEditorSection = null" @saved="privateEditorSection = null; load()" />
   </section>
 </template>
 

@@ -70,6 +70,41 @@ export interface EmployeeAssignment extends Record<string, unknown> {
   revision: number
 }
 
+/**
+ * HR-only sensitive profile. Never include these records in registry results.
+ */
+export type EmployeePrivateSection = 'personal' | 'military'
+export interface EmployeePrivatePersonal {
+  revision: number | null
+  login: string | null
+  iin: string | null
+  nationality: string | null
+  citizenship: string | null
+  marital_status: string | null
+  residence_address: string | null
+  registration_address: string | null
+  address_entrance: string | null
+  address_floor: string | null
+  address_apartment: string | null
+  place_of_birth: string | null
+  emergency_contact_name: string | null
+  emergency_contact_phone: string | null
+}
+export interface EmployeeMilitaryRecord {
+  revision: number | null
+  status: string | null
+  category: string | null
+  document_reference: string | null
+  comment: string | null
+}
+export interface EmployeePrivateProfile {
+  personal: EmployeePrivatePersonal
+  military: EmployeeMilitaryRecord
+}
+export type EmployeePrivateWritePayload = {
+  revision: number | null
+} & Record<string, string | number | null>
+
 export interface EmployeeReferenceProfile {
   personal: {
     iin?: string | null
@@ -342,6 +377,7 @@ export interface EmployeeDetail {
   training: Array<{ id: string; revision: number; training_type: string; training_mode: string; topic: string; provider: string | null; city: string | null; started_on: string; ended_on: string | null; document_reference: string | null }>
   history?: EmployeeReferenceProfile['history']
   reference_profile?: EmployeeReferenceProfile
+  private_profile?: EmployeePrivateProfile
   meta: {
     history_limit?: number
     history_truncated?: boolean
@@ -349,6 +385,7 @@ export interface EmployeeDetail {
     assignments_truncated: boolean
     extended_sections_visible: boolean
     profile_writes_enabled: boolean
+    private_profile_writes_enabled?: boolean
     assignment_writes_enabled: boolean
     employee_writes_enabled: boolean
   }
@@ -490,5 +527,25 @@ export function transitionEmployeeAssignment(
   return apiRequest(`/companies/${companyId}/employees/${employeeId}/assignments/${assignmentId}/transition`, {
     method: 'POST',
     body: JSON.stringify({ ...payload, revision }),
+  })
+}
+
+
+/** B71: submit one complete section snapshot; server checks tenant, role and revision. */
+export function saveEmployeePrivateSection(
+  companyId: string,
+  employeeId: string,
+  section: EmployeePrivateSection,
+  payload: EmployeePrivateWritePayload,
+): Promise<{ data: { section: EmployeePrivateSection; revision: number } }> {
+  if (!uuid.test(companyId) || !uuid.test(employeeId)) {
+    throw new Error('Некорректный идентификатор сотрудника или компании')
+  }
+  if (!['personal', 'military'].includes(section)) {
+    throw new Error('Неизвестный раздел личного дела')
+  }
+  return apiRequest('/companies/' + companyId + '/employees/' + employeeId + '/private-profile/' + section, {
+    method: 'PUT',
+    body: JSON.stringify(payload),
   })
 }

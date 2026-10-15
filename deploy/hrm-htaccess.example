@@ -1,0 +1,13 @@
+# This file belongs ONLY inside /hrm/ static dist.
+# No changes to the parent platform Apache site are required.
+Options -Indexes -MultiViews
+DirectoryIndex index.html
+RewriteEngine On
+RewriteBase /hrm/
+RewriteRule ^index\.html$ - [L]
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^ index.html [L]
+<IfModule mod_headers.c>
+  Header always set X-Content-Type-Options "nosniff"
+</IfModule>

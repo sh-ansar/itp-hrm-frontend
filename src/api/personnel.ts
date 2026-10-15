@@ -656,3 +656,38 @@ export function archiveEmployeePrivateRecord(
     body: JSON.stringify({ revision }),
   })
 }
+
+
+/** B74: the company/employee path is never derived from untrusted local record content. */
+function employeeEducationPath(companyId: string, employeeId: string, recordId?: string): string {
+  if (!uuid.test(companyId) || !uuid.test(employeeId) || (recordId && !uuid.test(recordId))) {
+    throw new Error('Invalid company, employee or education record id')
+  }
+  const path = '/companies/' + companyId + '/employees/' + employeeId + '/education'
+  return recordId ? path + '/' + recordId : path
+}
+
+export function createEmployeeEducationRecord(
+  companyId: string, employeeId: string, data: EducationRecordInput,
+): Promise<{ data: { id: string; revision: number } }> {
+  return apiRequest(employeeEducationPath(companyId, employeeId), {
+    method: 'POST', body: JSON.stringify(data),
+  })
+}
+export function updateEmployeeEducationRecord(
+  companyId: string, employeeId: string, recordId: string,
+  revision: number, data: EducationRecordInput,
+): Promise<{ data: { id: string; revision: number } }> {
+  if (!Number.isSafeInteger(revision) || revision < 1) throw new Error('Invalid revision')
+  return apiRequest(employeeEducationPath(companyId, employeeId, recordId), {
+    method: 'PUT', body: JSON.stringify({ ...data, revision }),
+  })
+}
+export function archiveEmployeeEducationRecord(
+  companyId: string, employeeId: string, recordId: string, revision: number,
+): Promise<{ data: { id: string; revision: number; archived: boolean } }> {
+  if (!Number.isSafeInteger(revision) || revision < 1) throw new Error('Invalid revision')
+  return apiRequest(employeeEducationPath(companyId, employeeId, recordId), {
+    method: 'DELETE', body: JSON.stringify({ revision }),
+  })
+}

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { publicAsset } from '../utils/publicAsset'
 import { useActiveCompanySelection } from '../composables/useActiveCompanySelection'
 import { computed, onMounted, ref, watch } from 'vue'
 import { BookOpenCheck, Plus, Search, ShieldCheck } from 'lucide-vue-next'
@@ -224,7 +225,7 @@ onMounted(loadCompanies)
 <template>
   <section class="development-page">
     <div class="development-breadcrumb">
-      <img src="/prototype-icons/Home.svg" alt="" aria-hidden="true" />
+      <img :src="publicAsset('prototype-icons/Home.svg')" alt="" aria-hidden="true" />
       <span>/</span><RouterLink to="/employees">Сотрудники</RouterLink>
       <span>/</span><strong>{{ title }}</strong>
     </div>

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { publicAsset } from '../utils/publicAsset'
 import { useActiveCompanySelection } from '../composables/useActiveCompanySelection'
 import { computed, onMounted, ref, watch } from 'vue'
 import { ArrowRightLeft, LogIn, LogOut, Plus } from 'lucide-vue-next'
@@ -144,7 +145,7 @@ onMounted(loadCompanies)
 <template>
   <section class="actions-page">
     <div class="actions-breadcrumb">
-      <img src="/prototype-icons/Home.svg" alt="" aria-hidden="true" />
+      <img :src="publicAsset('prototype-icons/Home.svg')" alt="" aria-hidden="true" />
       <span>/</span><strong>Кадровые процессы</strong>
     </div>
 

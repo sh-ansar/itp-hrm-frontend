@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { publicAsset } from '../utils/publicAsset'
 import { computed, onMounted, ref } from 'vue'
 import { Plus, Search, ShieldCheck } from 'lucide-vue-next'
 import BaseActionDropdown from '../components/ui/BaseActionDropdown.vue'
@@ -292,7 +293,7 @@ onMounted(load)
 <template>
   <section class="roles-page">
     <div class="roles-breadcrumb">
-      <img src="/prototype-icons/Home.svg" alt="" aria-hidden="true" />
+      <img :src="publicAsset('prototype-icons/Home.svg')" alt="" aria-hidden="true" />
       <span>/</span><strong>Роли и доступы</strong>
     </div>
 
@@ -306,13 +307,13 @@ onMounted(load)
 
     <BaseKpiGrid label="Сводка по ролям">
       <BaseRegistryMetricCard title="Пользователи без ролей" :value="unassignedCount"
-        description="требуют назначения доступа" icon="/prototype-icons/Info.svg" tone="danger" />
+        description="требуют назначения доступа" :icon="publicAsset('prototype-icons/Info.svg')" tone="danger" />
       <BaseRegistryMetricCard title="Несколько ролей" :value="multiRoleCount"
-        description="пользователей с несколькими ролями" icon="/prototype-icons/Info.svg" />
+        description="пользователей с несколькими ролями" :icon="publicAsset('prototype-icons/Info.svg')" />
       <BaseRegistryMetricCard title="Количество ролей" :value="roles.length"
-        description="ролей в текущей матрице" icon="/prototype-icons/Info.svg" />
+        description="ролей в текущей матрице" :icon="publicAsset('prototype-icons/Info.svg')" />
       <BaseRegistryMetricCard title="С правом согласования" :value="approvalRoleCount"
-        description="ролей могут согласовывать" icon="/prototype-icons/Info.svg" />
+        description="ролей могут согласовывать" :icon="publicAsset('prototype-icons/Info.svg')" />
     </BaseKpiGrid>
 
     <BaseCard v-if="activeTab === 'assignments'" class="roles-card">

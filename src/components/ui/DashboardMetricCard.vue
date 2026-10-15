@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { publicAsset } from '../../utils/publicAsset'
 import { computed } from 'vue'
 
 const props = withDefaults(defineProps<{
@@ -27,7 +28,7 @@ const ringStyle = computed(() => ({
   <RouterLink class="metric-card" :to="to" :title="'Открыть раздел: '+title">
     <div class="metric-heading">
       <h3>{{ title }}</h3>
-      <img src="/prototype-icons/Arrow-more.svg" alt="" aria-hidden="true" />
+      <img :src="publicAsset('prototype-icons/Arrow-more.svg')" alt="" aria-hidden="true" />
     </div>
     <div class="metric-body">
       <span class="metric-ring" :class="{ 'metric-ring--unknown': progress===null }" :style="ringStyle"

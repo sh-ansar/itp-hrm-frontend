@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { publicAsset } from '../utils/publicAsset'
 import { useActiveCompanySelection } from '../composables/useActiveCompanySelection'
 import { useWorkspaceI18n } from '../composables/useWorkspaceI18n'
 import { useUiFormatters } from '../composables/useUiFormatters'
@@ -164,7 +165,7 @@ onMounted(loadCompanies)
 <template>
   <section class="documents-page">
     <div class="documents-breadcrumb">
-      <img src="/prototype-icons/Home.svg" alt="" aria-hidden="true" />
+      <img :src="publicAsset('prototype-icons/Home.svg')" alt="" aria-hidden="true" />
       <span>/</span><strong>{{ tr('Документы и приказы') }}</strong>
     </div>
 

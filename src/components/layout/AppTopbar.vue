@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { publicAsset } from '../../utils/publicAsset'
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { Moon, Sun, Menu } from 'lucide-vue-next'
 import { useRoute, useRouter } from 'vue-router'
@@ -75,16 +76,16 @@ onBeforeUnmount(() => window.removeEventListener('keydown', handleShortcut))
 
     <form v-if="showEmployeeSearch" class="topbar-search" role="search" @submit.prevent="searchEmployees">
       <div class="search-field">
-        <img class="search-leading-icon" src="/prototype-icons/Search.svg" alt="" aria-hidden="true" />
+        <img class="search-leading-icon" :src="publicAsset('prototype-icons/Search.svg')" alt="" aria-hidden="true" />
         <input ref="searchInput" v-model="searchTerm" type="search"
           :aria-label="t('topbar.searchEmployee')" :placeholder="t('topbar.search')" autocomplete="off" />
         <button v-if="searchTerm" class="search-clear" type="button"
           :aria-label="t('topbar.clearSearch')" @click="clearSearch">
-          <img src="/prototype-icons/Close.svg" alt="" aria-hidden="true" />
+          <img :src="publicAsset('prototype-icons/Close.svg')" alt="" aria-hidden="true" />
         </button>
       </div>
       <button class="search-submit" type="submit" :aria-label="t('topbar.findEmployees')" :title="t('topbar.findEmployees')">
-        <img src="/prototype-icons/Search.svg" alt="" aria-hidden="true" />
+        <img :src="publicAsset('prototype-icons/Search.svg')" alt="" aria-hidden="true" />
       </button>
     </form>
 
@@ -111,7 +112,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', handleShortcut))
       </div>
       <button v-if="canSignOut" class="logout-button" type="button" :disabled="session.loading"
         :aria-label="t('topbar.signOutAria')" :title="t('topbar.signOutTitle')" @click="logout">
-        <img src="/prototype-icons/Log-Out.svg" alt="" aria-hidden="true" />
+        <img :src="publicAsset('prototype-icons/Log-Out.svg')" alt="" aria-hidden="true" />
         <span>{{ t('topbar.signOut') }}</span>
       </button>
     </div>

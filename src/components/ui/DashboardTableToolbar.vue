@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { publicAsset } from '../../utils/publicAsset'
 import { nextTick,ref } from 'vue'
 type FilterOption={id:string;label:string}
 const props=withDefaults(defineProps<{query:string;filter:string;searchLabel:string;filterLabel:string;options:FilterOption[];loading?:boolean}>(),{loading:false})
@@ -11,10 +12,10 @@ function filter(e:Event){emit('update:filter',(e.target as HTMLSelectElement).va
 <template>
   <div class="dashboard-toolbar">
     <button type="button" class="toolbar-button" :aria-expanded="searchOpen" :aria-label="searchOpen?'Скрыть поиск: '+searchLabel:'Открыть поиск: '+searchLabel" @click="toggleSearch">
-      <img src="/prototype-icons/Search.svg" alt="" aria-hidden="true" />Поиск
+      <img :src="publicAsset('prototype-icons/Search.svg')" alt="" aria-hidden="true" />Поиск
     </button>
     <button type="button" class="toolbar-button" :aria-expanded="filtersOpen" :aria-label="filtersOpen?'Скрыть фильтры: '+searchLabel:'Открыть фильтры: '+searchLabel" @click="filtersOpen=!filtersOpen">
-      <img src="/prototype-icons/Filter.svg" alt="" aria-hidden="true" />Фильтры
+      <img :src="publicAsset('prototype-icons/Filter.svg')" alt="" aria-hidden="true" />Фильтры
     </button>
     <form v-if="searchOpen" class="toolbar-popover toolbar-search" role="search" @submit.prevent="emit('search')">
       <input ref="searchField" type="search" :value="query" :aria-label="searchLabel" :placeholder="searchLabel" @input="input" />

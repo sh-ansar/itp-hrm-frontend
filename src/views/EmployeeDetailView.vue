@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { publicAsset } from '../utils/publicAsset'
 import { useWorkspaceI18n } from '../composables/useWorkspaceI18n'
 import { computed, onMounted, ref, watch } from 'vue'
 import { Plus } from 'lucide-vue-next'
@@ -500,7 +501,7 @@ onMounted(load)
 <template>
   <section class="employee-profile">
     <nav class="employee-breadcrumb" :aria-label="tr('Навигация по разделам')">
-      <img src="/prototype-icons/Home.svg" alt="" aria-hidden="true" />
+      <img :src="publicAsset('prototype-icons/Home.svg')" alt="" aria-hidden="true" />
       <span>/</span>
       <RouterLink to="/employees">{{ tr('Сотрудники') }}</RouterLink>
       <span>/</span>
@@ -511,12 +512,12 @@ onMounted(load)
     <div class="employee-page-heading">
       <div class="employee-page-title-row">
         <RouterLink class="employee-back-button" to="/employees" :title="tr('К реестру сотрудников')" :aria-label="tr('К реестру сотрудников')">
-          <img src="/prototype-icons/arrow-back.svg" alt="" />
+          <img :src="publicAsset('prototype-icons/arrow-back.svg')" alt="" />
         </RouterLink>
         <h1>{{ displayName }}</h1>
       </div>
       <BaseButton v-if="profile?.meta.employee_writes_enabled" variant="secondary" @click="identityEditOpen = true">
-        <img src="/prototype-icons/Edit.svg" class="employee-edit-icon" alt="" /> {{ tr('Изменить карточку') }}</BaseButton>
+        <img :src="publicAsset('prototype-icons/Edit.svg')" class="employee-edit-icon" alt="" /> {{ tr('Изменить карточку') }}</BaseButton>
     </div>
 
     <BaseNotice v-if="error" tone="error">{{ error }}</BaseNotice>

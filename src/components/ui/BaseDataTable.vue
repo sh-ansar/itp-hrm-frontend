@@ -1,4 +1,5 @@
 <script setup lang="ts" generic="T extends Record<string, unknown>">
+import { publicAsset } from '../../utils/publicAsset'
 import { computed, nextTick, ref, shallowRef, watch } from 'vue'
 import BaseEmptyState from './BaseEmptyState.vue'
 import BaseColumnFilterPopover from './BaseColumnFilterPopover.vue'
@@ -336,13 +337,13 @@ watch(() => props.columns.map(column => column.key).join(','), () => {
                     :aria-expanded="editingColumn===column.key" data-column-filter-trigger
                     :title="tr('Фильтр по загруженным строкам:') + ' ' + column.label"
                     @click="toggleFilter(column.key, $event)">
-                    <img src="/prototype-icons/Filter.svg" alt="" aria-hidden="true" />
+                    <img :src="publicAsset('prototype-icons/Filter.svg')" alt="" aria-hidden="true" />
                   </button>
                   <button v-if="canSort(column)" type="button" class="heading-icon"
                     :aria-label="tr('Сортировать:') + ' ' + column.label"
                     :title="tr('Сортировка загруженных строк:') + ' ' + column.label"
                     @click="sortBy(column.key)">
-                    <img src="/prototype-icons/Sort.svg" alt="" aria-hidden="true" />
+                    <img :src="publicAsset('prototype-icons/Sort.svg')" alt="" aria-hidden="true" />
                   </button>
                 </div>
               </div>

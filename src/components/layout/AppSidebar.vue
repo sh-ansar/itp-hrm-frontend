@@ -44,7 +44,7 @@ function closeMobile() { if (props.mobileOpen) emit('update:mobileOpen', false) 
       </button>
       <button class="mobile-nav-close icon-control" type="button"
         :aria-label="t('shell.closeMenu')" @click="closeMobile">
-        <img src="/prototype-icons/Close.svg" alt="" aria-hidden="true" />
+        <img :src="publicAsset('prototype-icons/Close.svg')" alt="" aria-hidden="true" />
       </button>
     </div>
 

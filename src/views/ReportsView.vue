@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { publicAsset } from '../utils/publicAsset'
 import { computed, onMounted, ref, watch } from 'vue'
 import { BriefcaseBusiness, GraduationCap, UserRoundCheck, UsersRound } from 'lucide-vue-next'
 import BaseCard from '../components/ui/BaseCard.vue'
@@ -441,7 +442,7 @@ onMounted(loadCompanies)
 <template>
   <section class="reports-page">
     <div class="reports-breadcrumb">
-      <img src="/prototype-icons/Home.svg" alt="" aria-hidden="true" />
+      <img :src="publicAsset('prototype-icons/Home.svg')" alt="" aria-hidden="true" />
       <span>/</span><strong>Отчёты и аналитика</strong>
     </div>
 

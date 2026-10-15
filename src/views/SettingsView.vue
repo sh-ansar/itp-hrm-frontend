@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { publicAsset } from '../utils/publicAsset'
 import { useActiveCompanySelection } from '../composables/useActiveCompanySelection'
 import { computed, onMounted, ref } from 'vue'
 import BaseButton from '../components/ui/BaseButton.vue'
@@ -227,7 +228,7 @@ onMounted(reload)
 <template>
   <section class="settings-page">
     <div class="settings-breadcrumb">
-      <img src="/prototype-icons/Home.svg" alt="" />
+      <img :src="publicAsset('prototype-icons/Home.svg')" alt="" />
       <span>/</span><h1>{{ t('settings.title') }}</h1><span>/</span>
       <span>{{ tabs.find(tab => tab.id === activeTab)?.label }}</span>
     </div>

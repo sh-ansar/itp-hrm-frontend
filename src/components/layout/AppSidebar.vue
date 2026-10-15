@@ -6,6 +6,7 @@ import { routeCapability } from '../../config/routeAccess'
 import { useCompanyAccessStore } from '../../stores/companyAccess'
 import { useUiPreferencesStore } from '../../stores/uiPreferences'
 import { useAppI18n } from '../../i18n'
+import { publicAsset } from '../../utils/publicAsset'
 
 const props = defineProps<{ mobileOpen: boolean }>()
 const emit = defineEmits<{ 'update:mobileOpen': [value: boolean] }>()
@@ -38,7 +39,7 @@ function closeMobile() { if (props.mobileOpen) emit('update:mobileOpen', false) 
         :aria-label="ui.sidebarCollapsed ? t('shell.expandMenu') : t('shell.collapseMenu')"
         :aria-expanded="!ui.sidebarCollapsed"
         @click="ui.toggleSidebar()">
-        <img :src="ui.sidebarCollapsed ? '/prototype-icons/Open-Side.svg' : '/prototype-icons/Collapsed-screen.svg'"
+        <img :src="publicAsset(ui.sidebarCollapsed ? 'prototype-icons/Open-Side.svg' : 'prototype-icons/Collapsed-screen.svg')"
           alt="" aria-hidden="true" />
       </button>
       <button class="mobile-nav-close icon-control" type="button"
@@ -54,7 +55,7 @@ function closeMobile() { if (props.mobileOpen) emit('update:mobileOpen', false) 
         :aria-current="active(link.to) ? 'page' : undefined"
         :title="ui.sidebarCollapsed && !mobileOpen ? linkLabel(link) : undefined"
         @click="closeMobile">
-        <img :src="link.icon" class="nav-svg-icon" alt="" aria-hidden="true" />
+        <img :src="publicAsset(link.icon)" class="nav-svg-icon" alt="" aria-hidden="true" />
         <span class="nav-label">{{ linkLabel(link) }}</span>
       </RouterLink>
       <div class="nav-divider" role="separator" :aria-label="t('shell.serviceSections')"></div>
@@ -64,7 +65,7 @@ function closeMobile() { if (props.mobileOpen) emit('update:mobileOpen', false) 
         :aria-current="active(link.to) ? 'page' : undefined"
         :title="ui.sidebarCollapsed && !mobileOpen ? linkLabel(link) : undefined"
         @click="closeMobile">
-        <img :src="link.icon" class="nav-svg-icon" alt="" aria-hidden="true" />
+        <img :src="publicAsset(link.icon)" class="nav-svg-icon" alt="" aria-hidden="true" />
         <span class="nav-label">{{ linkLabel(link) }}</span>
       </RouterLink>
     </nav>

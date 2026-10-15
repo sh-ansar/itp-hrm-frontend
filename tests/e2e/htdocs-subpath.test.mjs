@@ -1,0 +1,72 @@
+import { after, before, test } from 'node:test'
+import assert from 'node:assert/strict'
+import { chromium } from 'playwright'
+
+const baseURL = process.env.HRM_HTDOCS_BASE_URL || 'http://127.0.0.1:4177'
+let browser
+
+before(async () => { browser = await chromium.launch({ headless: true }) })
+after(async () => { await browser?.close() })
+
+test('static HRM build works under /hrm/ after direct navigation and refresh', async () => {
+  const context = await browser.newContext({ baseURL, viewport: { width: 375, height: 812 } })
+  const page = await context.newPage()
+  const requests = []
+  const errors = []
+  page.on('pageerror', error => errors.push(error.message))
+  page.on('console', msg => {
+    if (msg.type() === 'error' && !/401 \(Unauthorized\)/.test(msg.text())) errors.push('console: ' + msg.text())
+  })
+  page.on('response', response => {
+    const pathname = new URL(response.url()).pathname
+    if (response.status() >= 400 && !(response.status() === 401 && pathname.startsWith('/hrm-api/'))) {
+      errors.push('HTTP ' + response.status() + ' ' + pathname)
+    }
+  })
+  page.on('request', request => {
+    const pathname = new URL(request.url()).pathname
+    requests.push(pathname)
+  })
+  // Production backend is deliberately absent in this static-only test.
+  // All /hrm-api paths are handled as denied, without contacting shared /api.
+  await page.route('**/hrm-api/**', route => route.fulfill({
+    status: 401, contentType: 'application/json', body: '{"message":"Unauthenticated"}',
+  }))
+  try {
+    await page.goto('/hrm/login', { waitUntil: 'networkidle' })
+    assert.equal(await page.locator('input[type="email"]').count(), 1)
+    assert.equal(await page.locator('input[type="password"]').count(), 1)
+    assert.ok(requests.some(path => path.startsWith('/hrm/assets/') && path.endsWith('.js')))
+    assert.ok(requests.some(path => path.startsWith('/hrm/assets/') && path.endsWith('.css')))
+    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1), false)
+
+    await page.goto('/hrm/employees', { waitUntil: 'networkidle' })
+    await page.waitForURL(url => url.pathname === '/hrm/login')
+    assert.match(new URL(page.url()).search, /redirect/)
+    assert.ok(requests.includes('/hrm-api/auth/me'))
+    assert.ok(!requests.some(path => path.startsWith('/api/') || path.startsWith('/auth/') || path.startsWith('/sanctum/')))
+
+    await page.reload({ waitUntil: 'networkidle' })
+    assert.equal(await page.locator('input[type="email"]').count(), 1)
+    assert.deepEqual(errors, [])
+  } finally {
+    await context.close()
+  }
+})
+
+test('every HRM deep link is served by the frontend and never returns server 404', async () => {
+  const context = await browser.newContext({ baseURL })
+  const page = await context.newPage()
+  await page.route('**/hrm-api/**', route => route.fulfill({
+    status: 401, contentType: 'application/json', body: '{"message":"Unauthenticated"}',
+  }))
+  try {
+    for (const path of ['/hrm/organization', '/hrm/staffing', '/hrm/documents', '/hrm/leaves']) {
+      const response = await page.goto(path, { waitUntil: 'domcontentloaded' })
+      assert.equal(response.status(), 200, path)
+      assert.match(await page.title(), /ITP HRM/)
+    }
+  } finally {
+    await context.close()
+  }
+})

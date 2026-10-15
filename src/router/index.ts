@@ -26,7 +26,7 @@ export const browserLoginEnabled = import.meta.env.VITE_ENABLE_BROWSER_LOGIN ===
 
 
 export const router = createRouter({
-  history: createWebHistory(),
+  history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
     { path: '/', name: 'overview', component: OverviewView },
     { path: '/login', name: 'login', component: LoginView },

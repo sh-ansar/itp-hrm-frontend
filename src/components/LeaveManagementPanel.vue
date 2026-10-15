@@ -10,6 +10,7 @@ import BaseNotice from './ui/BaseNotice.vue'
 import BasePagination from './ui/BasePagination.vue'
 import EmployeeLookupField from './EmployeeLookupField.vue'
 import { useLeaveWorkflowI18n } from '../i18n/leaveWorkflow'
+import { useLeaveCategoryI18n } from '../i18n/leaveCategory'
 import { useUiFormatters } from '../composables/useUiFormatters'
 import { useSessionStore } from '../stores/session'
 import { ApiError } from '../api/client'
@@ -17,11 +18,13 @@ import {
   getLeaveRequests, getLeaveTypes, createLeaveRequest, updateLeaveRequest,
   createLeaveType, submitLeaveRequest, cancelLeaveRequest, decideLeaveRequest,
   type LeaveRequestRecord, type LeaveTypeRecord, type LeavePlanInput,
+  type LeaveCategory, type LeaveTypeInput,
 } from '../api/leaves'
 
 const props = defineProps<{ companyId: string }>()
 const emit = defineEmits<{ published: [] }>()
 const { t } = useLeaveWorkflowI18n()
+const { ct } = useLeaveCategoryI18n()
 const fmt = useUiFormatters()
 const session = useSessionStore()
 const loading = ref(false)
@@ -49,6 +52,8 @@ const typeCode = ref('')
 const typeName = ref('')
 const annualDays = ref('24')
 const calculation = ref<'calendar_days' | 'working_days'>('calendar_days')
+const category = ref<LeaveCategory>('ordinary')
+const supportsProtectedTypes = ref(false)
 let loadGeneration = 0
 
 const typeOptions = computed(() => types.value.map(item => ({ id: item.id, name: item.name })))
@@ -60,6 +65,20 @@ const calcOptions = computed(() => [
   { id: 'calendar_days', name: t('calendarDays') },
   { id: 'working_days', name: t('workingDays') },
 ])
+const categoryOptions = computed(() => ([
+  { id: 'ordinary', name: ct('ordinary') },
+  { id: 'maternity', name: ct('maternity') },
+  { id: 'childcare', name: ct('childcare') },
+  { id: 'medical', name: ct('medical') },
+]))
+watch(category, value => {
+  if (value !== 'ordinary') {
+    calculation.value = 'calendar_days'
+    annualDays.value = ''
+  } else if (!annualDays.value.trim()) {
+    annualDays.value = '24'
+  }
+})
 function statusLabel(status: LeaveRequestRecord['status']): string {
   return status === 'submitted' ? t('awaiting') : t(status)
 }
@@ -75,6 +94,10 @@ async function load() {
     ])
     if (current !== loadGeneration) return
     types.value = kinds.data
+    // Avoid silently creating ordinary leave on old Laravel versions.
+    supportsProtectedTypes.value = ['maternity', 'childcare', 'medical'].every(
+      item => kinds.meta.supported_categories?.includes(item as LeaveCategory),
+    )
     requests.value = records.data
     canManageTypes.value = kinds.meta.can_manage_leave_types
     canApprove.value = records.meta.can_approve_leave_requests
@@ -93,6 +116,7 @@ watch(() => props.companyId, () => {
   editorOpen.value = false
   typeOpen.value = false
   rejectionTarget.value = null
+  category.value = 'ordinary'
   void load()
 }, { immediate: true })
 
@@ -165,7 +189,8 @@ async function addType() {
     error.value = t('checkFields')
     return
   }
-  const days = annualDays.value.trim() ? Number(annualDays.value) : null
+  const days = category.value === 'ordinary' && annualDays.value.trim()
+    ? Number(annualDays.value) : null
   if (days !== null && (!Number.isInteger(days) || days < 1 || days > 366)) {
     error.value = t('checkFields')
     return
@@ -173,12 +198,16 @@ async function addType() {
   busy.value = true
   error.value = ''
   try {
-    await createLeaveType(props.companyId, {
-      code, name: typeName.value.trim(), annual_days: days, balance_method: calculation.value,
-    })
+    const payload: LeaveTypeInput = {
+      code, name: typeName.value.trim(), annual_days: days,
+      balance_method: category.value === 'ordinary' ? calculation.value : 'calendar_days',
+    }
+    if (supportsProtectedTypes.value) payload.category = category.value
+    await createLeaveType(props.companyId, payload)
     typeOpen.value = false
     typeName.value = ''
     typeCode.value = ''
+    category.value = 'ordinary'
     info.value = t('typeSaved')
     await load()
   } catch (cause) {
@@ -282,10 +311,15 @@ async function transition(row: LeaveRequestRecord, action: 'submit' | 'cancel' |
   <BaseDrawer :open="typeOpen" :title="t('newType')" :description="t('companyTypes')"
     :close-label="t('close')" @close="typeOpen = false">
     <div class="leave-form">
+      <BaseSelectField v-if="supportsProtectedTypes" v-model="category"
+        :label="ct('category')" :options="categoryOptions" :disabled="busy" />
+      <BaseNotice v-if="supportsProtectedTypes && category !== 'ordinary'" tone="info">{{ ct('hint') }}</BaseNotice>
       <BaseFormField v-model="typeCode" :label="t('typeCode')" required :disabled="busy" />
       <BaseFormField v-model="typeName" :label="t('typeName')" required :disabled="busy" />
-      <BaseFormField v-model="annualDays" type="number" :label="t('annualDays')" :disabled="busy" />
-      <BaseSelectField v-model="calculation" :label="t('method')" :options="calcOptions" :disabled="busy" />
+      <BaseFormField v-model="annualDays" type="number" :label="t('annualDays')"
+        :disabled="busy || category !== 'ordinary'" />
+      <BaseSelectField v-model="calculation" :label="t('method')" :options="calcOptions"
+        :disabled="busy || category !== 'ordinary'" />
       <BaseNotice v-if="error" tone="error">{{ error }}</BaseNotice>
     </div>
     <template #footer>

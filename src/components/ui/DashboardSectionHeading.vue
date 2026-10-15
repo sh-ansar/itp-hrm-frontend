@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { publicAsset } from '../../utils/publicAsset'
 defineProps<{title:string;to:string;actionLabel:string;subtitle?:string}>()
 </script>
 <template>
@@ -6,7 +7,7 @@ defineProps<{title:string;to:string;actionLabel:string;subtitle?:string}>()
     <div class="section-copy"><h2>{{ title }}</h2><p v-if="subtitle">{{ subtitle }}</p></div>
     <div class="section-actions"><slot name="actions"></slot>
       <RouterLink class="section-open" :to="to" :aria-label="actionLabel" :title="actionLabel">
-        <span>{{ actionLabel }}</span><img src="/prototype-icons/Arrow-more.svg" alt="" aria-hidden="true" />
+        <span>{{ actionLabel }}</span><img :src="publicAsset('prototype-icons/Arrow-more.svg')" alt="" aria-hidden="true" />
       </RouterLink>
     </div>
   </div>

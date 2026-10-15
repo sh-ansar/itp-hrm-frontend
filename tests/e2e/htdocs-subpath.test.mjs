@@ -1,5 +1,7 @@
 import { after, before, test } from 'node:test'
 import assert from 'node:assert/strict'
+import { readdirSync, readFileSync } from 'node:fs'
+import { join, resolve } from 'node:path'
 import { chromium } from 'playwright'
 
 const baseURL = process.env.HRM_HTDOCS_BASE_URL || 'http://127.0.0.1:4177'
@@ -58,6 +60,35 @@ test('static HRM build works under /hrm/ after direct navigation and refresh', a
     await page.reload({ waitUntil: 'networkidle' })
     assert.equal(await page.locator('input[type="email"]').count(), 1)
     assert.deepEqual(errors, [])
+  } finally {
+    await context.close()
+  }
+})
+
+test('all prototype SVG icons resolve under /hrm/ and never use root asset paths', async () => {
+  const sources = []
+  const visit = directory => {
+    for (const entry of readdirSync(directory, { withFileTypes: true })) {
+      const fullPath = join(directory, entry.name)
+      if (entry.isDirectory()) visit(fullPath)
+      else if (/\.(?:vue|ts|css)$/.test(entry.name)) sources.push(readFileSync(fullPath, 'utf8'))
+    }
+  }
+  visit(resolve('src'))
+
+  const combined = sources.join('\n')
+  assert.doesNotMatch(combined, /(?:\bsrc="|\bicon="|\bicon:\s*')\/prototype-icons\//)
+  const names = [...new Set([...combined.matchAll(/prototype-icons\/([a-zA-Z0-9._-]+\.svg)/g)].map(match => match[1]))]
+  assert.ok(names.length >= 12, 'Icon inventory should not be empty')
+
+  const context = await browser.newContext({ baseURL })
+  try {
+    for (const name of names) {
+      const response = await context.request.get('/hrm/prototype-icons/' + name)
+      assert.equal(response.status(), 200, name)
+      assert.match(response.headers()['content-type'] ?? '', /image\/svg\+xml/, name)
+      assert.match(await response.text(), /<svg[\s>]/i, name)
+    }
   } finally {
     await context.close()
   }

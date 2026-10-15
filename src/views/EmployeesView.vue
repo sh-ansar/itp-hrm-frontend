@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { publicAsset } from '../utils/publicAsset'
 import { useActiveCompanySelection } from '../composables/useActiveCompanySelection'
 import { useWorkspaceI18n } from '../composables/useWorkspaceI18n'
 import { useUiFormatters } from '../composables/useUiFormatters'
@@ -623,7 +624,7 @@ onMounted(() => {
 
 <template>
   <section class="personnel-page">
-    <div class="registry-breadcrumb"><img src="/prototype-icons/Home.svg" alt="" aria-hidden="true" /><span>/</span><strong>{{ tr('Сотрудники') }}</strong><span>/</span><span>{{ activeTab === 'archive' ? tr('Архив сотрудников') : tr('Реестр сотрудников') }}</span></div>
+    <div class="registry-breadcrumb"><img :src="publicAsset('prototype-icons/Home.svg')" alt="" aria-hidden="true" /><span>/</span><strong>{{ tr('Сотрудники') }}</strong><span>/</span><span>{{ activeTab === 'archive' ? tr('Архив сотрудников') : tr('Реестр сотрудников') }}</span></div>
 
     <BaseNotice v-if="error" tone="error">{{ error }}</BaseNotice>
     <BaseViewTabs :model-value="activeTab" :options="tabOptions" :label="tr('Разделы реестра сотрудников')"
@@ -632,17 +633,17 @@ onMounted(() => {
     <BaseKpiGrid class="registry-metrics" :label="tr('Сводка по персоналу')">
       <BaseRegistryMetricCard :title="tr('Сотрудники')" :value="counters.active"
         :description="tr('активных сотрудников работают в компании')"
-        icon="/prototype-icons/Info.svg" />
+        :icon="publicAsset('prototype-icons/Info.svg')" />
       <BaseRegistryMetricCard :title="tr('Отделы')" :value="counters.departments"
         :description="tr('структурных подразделений в компании')"
-        icon="/prototype-icons/Info.svg" to="/organization" />
+        :icon="publicAsset('prototype-icons/Info.svg')" to="/organization" />
       <BaseRegistryMetricCard :title="tr('Вакантные позиции')" :value="counters.vacancies"
         kind="ring" :percentage="vacancyPercent"
         :description="counters.plannedUnits === null ? tr('Нет данных утверждённого штата') : tr('из ')+counters.plannedUnits+tr(' штатных единиц')"
-        icon="/prototype-icons/Link-External.svg" to="/staffing?view=vacant" />
+        :icon="publicAsset('prototype-icons/Link-External.svg')" to="/staffing?view=vacant" />
       <BaseRegistryMetricCard :title="tr('Истекающие договоры')" :value="counters.expiring"
         :description="tr('сроки договоров пока не учитываются в API')"
-        icon="/prototype-icons/Info.svg" tone="danger" />
+        :icon="publicAsset('prototype-icons/Info.svg')" tone="danger" />
     </BaseKpiGrid>
 
     <BaseCard class="registry-card" :class="{ 'registry-card--fullscreen': fullscreen }">
@@ -687,7 +688,7 @@ onMounted(() => {
               :aria-label="tr('Очистить поиск')" @click="clearSearch">×</BaseButton>
           </form>
           <BaseButton variant="secondary" @click="openFilters" :aria-expanded="filtersOpen">
-            <img src="/prototype-icons/Filter.svg" alt="" class="toolbar-icon" /> {{ tr('Фильтры') }}</BaseButton>
+            <img :src="publicAsset('prototype-icons/Filter.svg')" alt="" class="toolbar-icon" /> {{ tr('Фильтры') }}</BaseButton>
           <BaseActionDropdown
             :label="groupMode === 'none' ? tr('Группировка') : groupModeLabels[groupMode]"
             :options="groupOptions" @select="setGroupMode" />
@@ -731,7 +732,7 @@ onMounted(() => {
             <div class="employee-row-actions">
               <RouterLink class="employee-link" :to="{ name: 'employee-detail', params: { company: selectedCompany, employee: row.id } }"
                 :aria-label="tr('Открыть карточку: ') + row.full_name" :title="tr('Открыть карточку: ') + row.full_name">
-                <img src="/prototype-icons/Edit.svg" alt="" /><span class="sr-only">{{ tr('Открыть карточку') }}</span>
+                <img :src="publicAsset('prototype-icons/Edit.svg')" alt="" /><span class="sr-only">{{ tr('Открыть карточку') }}</span>
               </RouterLink>
               <BaseActionDropdown variant="icon" :label="tr('Действия сотрудника: ')+row.full_name"
                 :options="rowActionOptions" @select="doRowAction($event, row)" />

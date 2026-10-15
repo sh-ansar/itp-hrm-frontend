@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { publicAsset } from '../utils/publicAsset'
 import { useActiveCompanySelection } from '../composables/useActiveCompanySelection'
 import { useWorkspaceI18n } from '../composables/useWorkspaceI18n'
 import { useUiFormatters } from '../composables/useUiFormatters'
@@ -368,16 +369,16 @@ onMounted(loadCompanies)
       <BaseKpiGrid class="org-metrics" :label="tr('Показатели организационной структуры')">
         <BaseRegistryMetricCard :title="tr('Подразделения')" :value="total"
           :description="tr('структурных подразделений в доступном контуре')"
-          icon="/prototype-icons/Info.svg" />
+          :icon="publicAsset('prototype-icons/Info.svg')" />
         <BaseRegistryMetricCard :title="tr('Штатные единицы')" :value="orgMetrics.planned"
           :description="tr('по утверждённому штатному расписанию')"
-          icon="/prototype-icons/Info.svg" to="/staffing" />
+          :icon="publicAsset('prototype-icons/Info.svg')" to="/staffing" />
         <BaseRegistryMetricCard :title="tr('Занято')" :value="orgMetrics.occupied"
           :description="occupancyDescription"
-          icon="/prototype-icons/Info.svg" />
+          :icon="publicAsset('prototype-icons/Info.svg')" />
         <BaseRegistryMetricCard :title="tr('Вакантные позиции')" :value="orgMetrics.vacant"
           :description="tr('открытых штатных единиц на текущую дату')"
-          icon="/prototype-icons/Link-External.svg" to="/staffing?view=vacant" />
+          :icon="publicAsset('prototype-icons/Link-External.svg')" to="/staffing?view=vacant" />
       </BaseKpiGrid>
       <div class="section-title">
         <h1>{{ tr('Организационная структура') }}<span class="structure-total">({{ fmt.number(total, 0) }})</span></h1>

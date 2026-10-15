@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { publicAsset } from '../../utils/publicAsset'
 import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 
 const props = withDefaults(defineProps<{
@@ -49,7 +50,7 @@ onBeforeUnmount(() => {
             <p v-if="description">{{ description }}</p>
           </div>
           <button type="button" class="drawer-close" :aria-label="closeLabel" @click="close">
-            <img src="/prototype-icons/Close.svg" alt="" aria-hidden="true" />
+            <img :src="publicAsset('prototype-icons/Close.svg')" alt="" aria-hidden="true" />
           </button>
         </header>
         <div class="drawer-content"><slot /></div>

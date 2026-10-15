@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { publicAsset } from '../../utils/publicAsset'
 import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useWorkspaceI18n } from '../../composables/useWorkspaceI18n'
 const { tr } = useWorkspaceI18n()
@@ -100,7 +101,7 @@ watch(() => [props.options.length, props.query], async () => {
     <section ref="panel" class="hrm-column-filter-popover" role="group"
       :aria-label="tr('Фильтр столбца:') + ' ' + tr(label)" :style="panelPosition">
       <label class="filter-search">
-        <img src="/prototype-icons/Search.svg" alt="" aria-hidden="true" />
+        <img :src="publicAsset('prototype-icons/Search.svg')" alt="" aria-hidden="true" />
         <input ref="queryField" :value="query" type="search"
           :aria-label="tr('Значение фильтра:') + ' ' + tr(label)"
            :placeholder="tr('Поиск')" autocomplete="off"

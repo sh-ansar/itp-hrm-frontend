@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { publicAsset } from '../utils/publicAsset'
 import { useActiveCompanySelection } from '../composables/useActiveCompanySelection'
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { Maximize2, Minimize2, Search } from 'lucide-vue-next'
@@ -299,7 +300,7 @@ onMounted(()=>{
 <template>
   <section class="employee-development-page" :class="{ 'is-fullscreen': fullscreen }">
     <div class="registry-breadcrumb">
-      <img src="/prototype-icons/Home.svg" alt="" aria-hidden="true" />
+      <img :src="publicAsset('prototype-icons/Home.svg')" alt="" aria-hidden="true" />
       <span>/</span><strong>Сотрудники</strong><span>/</span><span>Кадровый резерв и обучение</span>
     </div>
 

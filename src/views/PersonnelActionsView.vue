@@ -12,6 +12,8 @@ import BasePagination from '../components/ui/BasePagination.vue'
 import BaseSelectField from '../components/ui/BaseSelectField.vue'
 import BaseViewTabs from '../components/ui/BaseViewTabs.vue'
 import PersonnelActionForm from '../components/PersonnelActionForm.vue'
+import BonusManagementPanel from '../components/BonusManagementPanel.vue'
+import { useBonusWorkflowI18n } from '../i18n/bonusWorkflow'
 import PersonnelActionMobileList from '../components/PersonnelActionMobileList.vue'
 import { listCompanies, type CompanyRecord } from '../api/organization'
 import {
@@ -20,7 +22,7 @@ import {
   type PersonnelActionType,
 } from '../api/personnelActions'
 
-type ActionFilter = 'all' | PersonnelActionType
+type ActionFilter = 'all' | PersonnelActionType | 'bonuses'
 
 const companies = ref<CompanyRecord[]>([])
 const company = ref('')
@@ -38,12 +40,14 @@ const createOpen = ref(false)
 const summary = ref<{ hire:number; transfer:number; termination:number } | null>(null)
 
 const selectedCompany = computed(() => companies.value.find(item => item.id === company.value) ?? null)
-const actionTabs = [
+const { t: bonusT } = useBonusWorkflowI18n()
+const actionTabs = computed(() => [
   { id:'all', label:'Все действия' },
   { id:'hire', label:'Приём' },
   { id:'transfer', label:'Перевод' },
   { id:'termination', label:'Увольнение' },
-]
+  { id:'bonuses', label:bonusT('title') },
+])
 const columns = [
   { key:'effective_on', label:'Дата' },
   { key:'action_type', label:'Действие' },
@@ -70,7 +74,7 @@ function displayDate(value: unknown): string {
   return value.slice(8,10) + '.' + value.slice(5,7) + '.' + value.slice(0,4)
 }
 function setActionFilter(value: string) {
-  typeFilter.value = (['hire','transfer','termination'].includes(value) ? value : 'all') as ActionFilter
+  typeFilter.value = (['hire','transfer','termination','bonuses'].includes(value) ? value : 'all') as ActionFilter
 }
 
 async function loadCompanies() {
@@ -94,14 +98,14 @@ let generation = 0
 async function loadActions() {
   const companyId = company.value
   const current = ++generation
-  if (!companyId) return
+  if (!companyId || typeFilter.value === 'bonuses') return
   busy.value = true
   error.value = ''
   try {
     const result = await listPersonnelActions(
       companyId,
       page.value,
-      typeFilter.value === 'all' ? '' : typeFilter.value,
+      ['all','bonuses'].includes(typeFilter.value) ? '' : typeFilter.value as PersonnelActionType,
     )
     if (current !== generation || companyId !== company.value) return
     rows.value = result.data
@@ -156,7 +160,7 @@ onMounted(loadCompanies)
         </div>
         <div class="actions-heading-controls">
           <BaseSelectField v-model="company" label="Компания" :options="companies" />
-          <BaseButton v-if="writesEnabled" @click="createOpen = true">
+          <BaseButton v-if="writesEnabled && typeFilter !== 'bonuses'" @click="createOpen = true">
             <Plus :size="17" /> Новое действие
           </BaseButton>
         </div>
@@ -165,7 +169,7 @@ onMounted(loadCompanies)
       <BaseViewTabs :model-value="typeFilter" :options="actionTabs"
         label="Тип кадрового действия" @update:model-value="setActionFilter" />
 
-      <div v-if="summary" class="action-metrics" aria-label="Сводка кадровых действий">
+      <div v-if="summary && typeFilter !== 'bonuses'" class="action-metrics" aria-label="Сводка кадровых действий">
         <BaseCard class="action-metric">
           <LogIn :size="18" aria-hidden="true" />
           <span>Приём</span>
@@ -183,7 +187,9 @@ onMounted(loadCompanies)
         </BaseCard>
       </div>
 
-      <BaseCard class="action-register">
+      <BonusManagementPanel v-if="typeFilter === 'bonuses'" :company-id="company" />
+
+      <BaseCard v-else class="action-register">
         <div class="section-heading">
           <div>
             <h2>{{ actionTabs.find(item => item.id === typeFilter)?.label }}</h2>

@@ -90,6 +90,7 @@ test('HR persists relatives and encrypted identity documents through the real AP
 
     await section(page, 'Семейные данные').getByRole('button', { name: 'Изменить' }).click()
     await family.waitFor()
+    page.once('dialog', dialog => dialog.accept())
     await family.getByRole('button', { name: 'В архив' }).click()
     await page.getByRole('cell', { name: 'Synthetic Relative Updated' }).waitFor({ state: 'hidden' })
     assert.deepEqual(failures, [])

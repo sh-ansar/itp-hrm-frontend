@@ -23,7 +23,7 @@ test('HR creates, edits and archives real formal education independently of trai
     await page.getByRole('button', { name: 'Войти' }).click()
     await page.getByRole('heading', { name: 'Главная', level: 1 }).waitFor()
 
-    await page.goto('/employees/' + company + '/' + employee)
+    await page.goto('/employees/' + company + '/' + employee + '?tab=development')
     const tabs = page.getByRole('navigation', { name: 'Разделы карточки сотрудника' })
     await tabs.getByRole('button', { name: 'Кадровый резерв и обучение' }).click()
 

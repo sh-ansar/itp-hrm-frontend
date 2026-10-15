@@ -16,6 +16,9 @@ import ReportsView from '../views/ReportsView.vue'
 import SettingsView from '../views/SettingsView.vue'
 import RolesView from '../views/RolesView.vue'
 import NotFoundView from '../views/NotFoundView.vue'
+import AccessDeniedView from '../views/AccessDeniedView.vue'
+import { useCompanyAccessStore } from '../stores/companyAccess'
+import { routeCapability } from '../config/routeAccess'
 import LoginView from '../views/LoginView.vue'
 import { useSessionStore } from '../stores/session'
 
@@ -27,6 +30,7 @@ export const router = createRouter({
   routes: [
     { path: '/', name: 'overview', component: OverviewView },
     { path: '/login', name: 'login', component: LoginView },
+    { path: '/access-denied', name: 'access-denied', component: AccessDeniedView },
     { path: '/employees', name: 'employees', component: EmployeesView },
     { path: '/employees/:company/:employee', name: 'employee-detail', component: EmployeeDetailView },
     { path: '/employees-development', name: 'employees-development', component: EmployeeDevelopmentView },
@@ -54,5 +58,13 @@ router.beforeEach(async (to) => {
   if (!session.checked) await session.refresh()
 
   if (!session.user) return { name: 'login', query: { redirect: to.fullPath } }
+  if (to.name === 'access-denied' || to.name === 'not-found') return true
+  const access = useCompanyAccessStore()
+  await access.refresh()
+  if (access.error) return to.name === 'settings' ? true : { name: 'access-denied' }
+  const scopedCompany = typeof to.params.company === 'string' ? to.params.company : null
+  if (scopedCompany && !access.chooseCompany(scopedCompany)) return { name: 'access-denied' }
+  const required = routeCapability(to.path)
+  if (required && !access.can(required)) return { name: 'access-denied' }
   return true
 })

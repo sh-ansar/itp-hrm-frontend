@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useActiveCompanySelection } from '../composables/useActiveCompanySelection'
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { Maximize2, Minimize2, Search } from 'lucide-vue-next'
 import { useRouter } from 'vue-router'
@@ -41,6 +42,7 @@ const router = useRouter()
 const fmt = useUiFormatters()
 const companies = ref<CompanyRecord[]>([])
 const company = ref('')
+const { preferCompany } = useActiveCompanySelection(company)
 const employees = ref<EmployeeRecord[]>([])
 const training = ref<TrainingRow[]>([])
 const reserve = ref<ReserveRow[]>([])
@@ -256,7 +258,7 @@ async function loadCompanies(){
   try{
     const result=await listCompanies()
     companies.value=result.data
-    if(!companies.value.some(item=>item.id===company.value))company.value=result.data[0]?.id??''
+    if(!companies.value.some(item=>item.id===company.value))company.value = preferCompany(companies.value)
   }catch(cause){
     error.value=cause instanceof Error?cause.message:'Не удалось загрузить компании'
     companies.value=[];company.value=''

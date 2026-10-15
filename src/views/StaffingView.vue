@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useActiveCompanySelection } from '../composables/useActiveCompanySelection'
 import { useWorkspaceI18n } from '../composables/useWorkspaceI18n'
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
@@ -41,6 +42,7 @@ const router = useRouter()
 const fmt = useUiFormatters()
 const companies = ref<CompanyRecord[]>([])
 const company = ref('')
+const { preferCompany } = useActiveCompanySelection(company)
 const plans = ref<StaffingPlanRecord[]>([])
 const historyRows = ref<StaffingHistoryEvent[]>([])
 const historyPage = ref(1)
@@ -178,7 +180,7 @@ async function refreshCompanies() {
     const response = await listCompanies()
     companies.value = response.data
     if (!companies.value.some(item => item.id === company.value)) {
-      company.value = companies.value[0]?.id ?? ''
+      company.value = preferCompany(companies.value)
     }
   } catch (cause) {
     error.value = cause instanceof Error ? cause.message : 'Не удалось загрузить компании'

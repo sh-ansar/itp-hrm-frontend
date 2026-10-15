@@ -39,6 +39,15 @@ const ru = {
   confidentiality: 'Личные номера доступны только уполномоченным кадровым пользователям и шифруются на сервере.',
   truncated: 'Показаны не все записи. Для полной истории нужен отдельный просмотр.',
   optional: 'Необязательно',
+  educationTitle: 'Образование и квалификация',
+  educationEmpty: 'Сведения об образовании пока не внесены.',
+  addEducation: 'Добавить образование',
+  educationType: 'Уровень / вид образования',
+  organization: 'Учебное заведение',
+  specialization: 'Специальность / квалификация',
+  startedOn: 'Дата начала',
+  endedOn: 'Дата окончания',
+  educationNote: 'Это история образования, а не учебных курсов. Подтверждающие файлы прикрепляются отдельно в защищённом реестре.',
 }
 type Key = keyof typeof ru
 const kk: Record<Key,string> = {
@@ -63,6 +72,15 @@ const kk: Record<Key,string> = {
   confidentiality:'Жеке нөмірлерді тек уәкілетті кадр қызметкерлері көре алады. Олар серверде шифрланады.',
   truncated:'Жазбалардың бір бөлігі көрсетілді. Толық тарих үшін бөлек қарау қажет.',
   optional:'Міндетті емес',
+  educationTitle:'Білім және біліктілік',
+  educationEmpty:'Білім туралы деректер әлі енгізілмеген.',
+  addEducation:'Білім туралы жазба қосу',
+  educationType:'Білім деңгейі / түрі',
+  organization:'Оқу орны',
+  specialization:'Мамандық / біліктілік',
+  startedOn:'Басталу күні',
+  endedOn:'Аяқталу күні',
+  educationNote:'Бұл білім тарихы, оқу курстары емес. Құжат файлдары қорғалған тізілімге бөлек тіркеледі.',
 }
 const en: Record<Key,string> = {
   familyTitle:'Employee relatives', identityTitle:'Identity documents',
@@ -86,6 +104,15 @@ const en: Record<Key,string> = {
   confidentiality:'Only authorized HR roles may view personal numbers. They are encrypted on the server.',
   truncated:'Not all records are shown. Use a dedicated history view for the complete list.',
   optional:'Optional',
+  educationTitle:'Education and qualifications',
+  educationEmpty:'No education records entered yet.',
+  addEducation:'Add education record',
+  educationType:'Education type or level',
+  organization:'Institution',
+  specialization:'Specialization or qualification',
+  startedOn:'Start date',
+  endedOn:'Completion date',
+  educationNote:'These are formal education records, not training courses. Supporting files belong in the protected document register.',
 }
 const ka: Record<Key,string> = {
   familyTitle:'თანამშრომლის ოჯახის წევრები', identityTitle:'პირადობის დოკუმენტები',
@@ -110,6 +137,15 @@ const ka: Record<Key,string> = {
   confidentiality:'პირადი ნომრები ხელმისაწვდომია მხოლოდ უფლებამოსილი კადრებისთვის და ინახება დაშიფრულად.',
   truncated:'ყველა ჩანაწერი არ ჩანს. სრული ისტორიისთვის საჭიროა ცალკე გვერდი.',
   optional:'არასავალდებულო',
+  educationTitle:'განათლება და კვალიფიკაცია',
+  educationEmpty:'განათლების შესახებ ჩანაწერები ჯერ არ არის.',
+  addEducation:'განათლების ჩანაწერის დამატება',
+  educationType:'განათლების ტიპი / დონე',
+  organization:'სასწავლებელი',
+  specialization:'სპეციალობა / კვალიფიკაცია',
+  startedOn:'დაწყების თარიღი',
+  endedOn:'დამთავრების თარიღი',
+  educationNote:'ეს ფორმალური განათლების ჩანაწერია და არა კურსი. დამადასტურებელი ფაილი აიტვირთება დაცულ რეესტრში.',
 }
 const dictionaries: Record<UiLocale,Record<Key,string>>={ru,kk,en,ka}
 export function usePrivateRecordsI18n(){

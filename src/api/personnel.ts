@@ -97,9 +97,41 @@ export interface EmployeeMilitaryRecord {
   document_reference: string | null
   comment: string | null
 }
+/** B72: repeatable HR-only family and identity records. */
+export type EmployeePrivateRecordSection = 'family' | 'identity'
+export interface EmployeeFamilyMember {
+  id: string
+  relationship: string
+  full_name: string
+  birth_date: string | null
+  document_reference: string | null
+  revision: number
+}
+export interface EmployeeIdentityDocument {
+  id: string
+  type: string
+  number: string
+  personal_number: string | null
+  country_of_issue: string | null
+  issued_by: string | null
+  issued_on: string | null
+  expires_on: string | null
+  is_primary: boolean
+  revision: number
+}
+export type FamilyMemberPayload = Pick<EmployeeFamilyMember,
+  'relationship' | 'full_name' | 'birth_date' | 'document_reference'>
+export type IdentityDocumentPayload = Pick<EmployeeIdentityDocument,
+  'type' | 'number' | 'personal_number' | 'country_of_issue' | 'issued_by' |
+  'issued_on' | 'expires_on' | 'is_primary'>
+export type PrivateRecordPayload = FamilyMemberPayload | IdentityDocumentPayload
 export interface EmployeePrivateProfile {
   personal: EmployeePrivatePersonal
   military: EmployeeMilitaryRecord
+  family?: EmployeeFamilyMember[]
+  identity_documents?: EmployeeIdentityDocument[]
+  family_truncated?: boolean
+  identity_documents_truncated?: boolean
 }
 export type EmployeePrivateWritePayload = {
   revision: number | null
@@ -386,6 +418,8 @@ export interface EmployeeDetail {
     extended_sections_visible: boolean
     profile_writes_enabled: boolean
     private_profile_writes_enabled?: boolean
+    private_family_truncated?: boolean
+    private_identities_truncated?: boolean
     assignment_writes_enabled: boolean
     employee_writes_enabled: boolean
   }
@@ -547,5 +581,62 @@ export function saveEmployeePrivateSection(
   return apiRequest('/companies/' + companyId + '/employees/' + employeeId + '/private-profile/' + section, {
     method: 'PUT',
     body: JSON.stringify(payload),
+  })
+}
+
+
+/**
+ * B72: all mutations are tenant scoped, revision-checked and committed with
+ * privacy-safe audit by Laravel. The caller must reload after success.
+ */
+function privateRecordUrl(
+  companyId: string, employeeId: string, section: EmployeePrivateRecordSection,
+  recordId?: string,
+): string {
+  if (!uuid.test(companyId) || !uuid.test(employeeId) || (recordId && !uuid.test(recordId))) {
+    throw new Error('Некорректный идентификатор записи')
+  }
+  if (section !== 'family' && section !== 'identity') throw new Error('Неизвестный раздел')
+  const base = '/companies/' + companyId + '/employees/' + employeeId
+    + '/private-records/' + section
+  return recordId ? base + '/' + recordId : base
+}
+
+export function createEmployeePrivateRecord(
+  companyId: string,
+  employeeId: string,
+  section: EmployeePrivateRecordSection,
+  payload: PrivateRecordPayload,
+): Promise<{ data: { id: string; revision: number } }> {
+  return apiRequest(privateRecordUrl(companyId, employeeId, section), {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
+}
+export function updateEmployeePrivateRecord(
+  companyId: string,
+  employeeId: string,
+  section: EmployeePrivateRecordSection,
+  recordId: string,
+  revision: number,
+  payload: PrivateRecordPayload,
+): Promise<{ data: { id: string; revision: number } }> {
+  if (!Number.isSafeInteger(revision) || revision < 1) throw new Error('Неверная версия записи')
+  return apiRequest(privateRecordUrl(companyId, employeeId, section, recordId), {
+    method: 'PUT',
+    body: JSON.stringify({ ...payload, revision }),
+  })
+}
+export function archiveEmployeePrivateRecord(
+  companyId: string,
+  employeeId: string,
+  section: EmployeePrivateRecordSection,
+  recordId: string,
+  revision: number,
+): Promise<{ data: { id: string; revision: number; archived: boolean } }> {
+  if (!Number.isSafeInteger(revision) || revision < 1) throw new Error('Неверная версия записи')
+  return apiRequest(privateRecordUrl(companyId, employeeId, section, recordId), {
+    method: 'DELETE',
+    body: JSON.stringify({ revision }),
   })
 }

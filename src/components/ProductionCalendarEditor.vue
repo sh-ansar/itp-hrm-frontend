@@ -74,7 +74,8 @@ function changed(day: DraftDay): boolean {
 }
 const pending = computed(() => drafts.value.filter(changed))
 const workdays = computed(() => drafts.value.filter(d => d.day_type === 'workday' || d.day_type === 'shortened').length)
-const offdays = computed(() => drafts.value.filter(d => d.day_type === 'weekend' || d.day_type === 'holiday').length)
+const offdays = computed(() => drafts.value.filter(d => d.day_type === 'weekend').length)
+const holidays = computed(() => drafts.value.filter(d => d.day_type === 'holiday').length)
 const missing = computed(() => drafts.value.filter(d => d.day_type === 'missing').length)
 function chooseType(value: string) {
   const draft = selectedDay.value
@@ -157,16 +158,31 @@ async function save() {
       <p class="calendar-editor-month"><strong>{{ t('month') }}:</strong> {{ month }}</p>
       <div class="calendar-editor-stats">
         <span>{{ t('workdays') }}: <strong>{{ workdays }}</strong></span>
-        <span>{{ t('nonworkdays') }}: <strong>{{ offdays }}</strong></span>
+        <span>{{ t('weekend') }}: <strong>{{ offdays }}</strong></span>
+        <span>{{ t('holiday') }}: <strong>{{ holidays }}</strong></span>
         <span>{{ t('incomplete') }}: <strong>{{ missing }}</strong></span>
       </div>
       <BaseButton variant="secondary" :disabled="saving || missing === 0" @click="fillMissing52">{{ t('fill52') }}</BaseButton>
       <p class="calendar-editor-hint">{{ t('fillHint') }} {{ t('suggested') }}</p>
 
       <p class="calendar-editor-choose">{{ t('clickDay') }}</p>
+      <div class="calendar-editor-legend" role="list" aria-label="Обозначения дней">
+        <span role="listitem"><i class="editor-legend-key editor-legend-key--workday" aria-hidden="true" />{{ t('workday') }}</span>
+        <span role="listitem"><i class="editor-legend-key editor-legend-key--weekend" aria-hidden="true" />{{ t('weekend') }}</span>
+        <span role="listitem"><i class="editor-legend-key editor-legend-key--holiday" aria-hidden="true" />{{ t('holiday') }}</span>
+        <span role="listitem"><i class="editor-legend-key editor-legend-key--missing" aria-hidden="true" />{{ t('missing') }}</span>
+      </div>
       <div class="calendar-editor-days" role="group" :aria-label="t('selected')">
         <button v-for="day in drafts" :key="day.date" type="button" class="calendar-editor-day"
-          :class="{ selected: day.date === selectedDate, dirty: changed(day), missing: day.day_type === 'missing' }"
+          :class="{
+            selected: day.date === selectedDate,
+            dirty: changed(day),
+            workday: day.day_type === 'workday' || day.day_type === 'shortened',
+            shortened: day.day_type === 'shortened',
+            weekend: day.day_type === 'weekend',
+            holiday: day.day_type === 'holiday',
+            missing: day.day_type === 'missing',
+          }"
           :aria-pressed="day.date === selectedDate"
           :aria-label="day.date + ' – ' + (day.day_type === 'missing' ? t('missing') : t(day.day_type))"
           @click="selectedDate = day.date">
@@ -216,14 +232,25 @@ async function save() {
 .calendar-editor-stats span{border:1px solid var(--color-stroke);border-radius:7px;padding:7px 9px;background:var(--color-surface-raised);font-size:11px;color:var(--color-text)}
 .calendar-editor-hint{margin:0;color:var(--color-muted);font-size:12px;line-height:1.5}
 .calendar-editor-choose{margin:4px 0 0;font-weight:600;font-size:13px;color:var(--color-text)}
+.calendar-editor-legend{display:flex;flex-wrap:wrap;align-items:center;gap:7px 13px;color:var(--color-text);font-size:11px}
+.calendar-editor-legend span{display:inline-flex;align-items:center;gap:6px}
+.editor-legend-key{display:inline-block;width:12px;height:12px;border-radius:3px;border:1px solid var(--color-stroke-strong)}
+.editor-legend-key--workday{background:var(--calendar-work-bg);border-color:var(--calendar-work-border)}
+.editor-legend-key--weekend{background:var(--calendar-weekend-bg);border-color:var(--calendar-weekend-border)}
+.editor-legend-key--holiday{background:var(--calendar-holiday-bg);border-color:var(--calendar-holiday-border)}
+.editor-legend-key--missing{background:var(--color-surface-raised);border-style:dashed}
 .calendar-editor-days{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:5px}
-.calendar-editor-day{display:grid;align-content:start;gap:3px;min-width:0;min-height:47px;padding:5px 2px;border-radius:6px;border:1px solid var(--color-stroke);background:var(--color-surface-raised);color:var(--color-text);cursor:pointer}
-.calendar-editor-day strong{font-size:13px}
-.calendar-editor-day small{font-size:8px;line-height:1.2;overflow-wrap:anywhere;display:none}
-.calendar-editor-day.selected{border:2px solid var(--color-primary);background:var(--color-soft)}
-.calendar-editor-day.dirty{box-shadow:inset 0 -3px 0 var(--color-primary)}
+.calendar-editor-day{display:grid;align-content:start;gap:3px;min-width:0;min-height:52px;padding:5px 2px;border-radius:6px;border:1px solid var(--color-stroke);background:var(--color-surface-raised);color:var(--color-text);cursor:pointer}
+.calendar-editor-day strong{font-size:13px;color:inherit}
+.calendar-editor-day small{font-size:9px;line-height:1.2;overflow-wrap:anywhere;display:none;color:inherit}
+.calendar-editor-day.workday{background:var(--calendar-work-bg);border-color:var(--calendar-work-border);color:var(--calendar-work-text)}
+.calendar-editor-day.weekend{background:var(--calendar-weekend-bg);border-color:var(--calendar-weekend-border);color:var(--calendar-weekend-text)}
+.calendar-editor-day.holiday{background:var(--calendar-holiday-bg);border-color:var(--calendar-holiday-border);color:var(--calendar-holiday-text)}
+.calendar-editor-day.shortened{border-style:dashed}
 .calendar-editor-day.missing{border-style:dashed;color:var(--color-muted)}
-.calendar-editor-day:focus-visible{outline:2px solid var(--color-primary);outline-offset:2px}
+.calendar-editor-day.selected{outline:2px solid var(--color-primary);outline-offset:1px}
+.calendar-editor-day.dirty{box-shadow:inset 0 -3px 0 var(--color-primary)}
+.calendar-editor-day:focus-visible{outline:3px solid var(--color-primary);outline-offset:2px}
 .calendar-editor-details{display:grid;gap:12px;border-top:1px solid var(--color-stroke);padding-top:12px}
 .calendar-editor-details h3{margin:0;font-size:14px;color:var(--color-text)}
 .calendar-editor-field{display:grid;gap:5px;color:var(--color-text);font-size:12px}

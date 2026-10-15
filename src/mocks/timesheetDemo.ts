@@ -43,7 +43,8 @@ export interface DemoCalendarDay {
   date: string
   day: number
   weekday: string
-  type: 'workday' | 'weekend'
+  type: 'workday' | 'weekend' | 'holiday'
+  label?: string
 }
 
 const scheduleTemplates = [
@@ -69,15 +70,23 @@ function monthDays(month: string): Date[] {
   return result
 }
 
+// Explicit synthetic preview only. Live calendars must come from the company API.
+const demoHolidayNames: Record<string, string> = {
+  '2026-10-25': 'День Республики',
+}
+
 export function buildDemoCalendar(month: string): DemoCalendarDay[] {
   const weekdays = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб']
   return monthDays(month).map(date => {
     const weekday = date.getUTCDay()
+    const dateIso = date.toISOString().slice(0, 10)
+    const holidayName = demoHolidayNames[dateIso]
     return {
-      date: date.toISOString().slice(0, 10),
+      date: dateIso,
       day: date.getUTCDate(),
       weekday: weekdays[weekday],
-      type: weekday === 0 || weekday === 6 ? 'weekend' : 'workday',
+      type: holidayName ? 'holiday' : weekday === 0 || weekday === 6 ? 'weekend' : 'workday',
+      ...(holidayName ? { label: holidayName } : {}),
     }
   })
 }

@@ -130,11 +130,6 @@ const records = ref<CatalogRecord[]>(seeded)
 
 const currentGroups = computed(() => groups[activeSection.value] ?? [])
 const currentGroup = computed(() => currentGroups.value.find(item => item.id === activeGroup.value) ?? null)
-const splitIndex = computed(() => Math.ceil(currentGroups.value.length / 2))
-const groupColumns = computed(() => [
-  currentGroups.value.slice(0, splitIndex.value),
-  currentGroups.value.slice(splitIndex.value),
-])
 const statusOptions = [
   { id:'all',name:'Все статусы' },
   { id:'active',name:'Активные' },
@@ -167,7 +162,8 @@ function selectSection(id:string){
   statusFilter.value='all'
 }
 function toggleGroup(id:string){
-  activeGroup.value = activeGroup.value === id ? '' : id
+  if (activeGroup.value === id) return
+  activeGroup.value = id
   search.value=''
   statusFilter.value='all'
 }
@@ -207,50 +203,60 @@ function recordCount(groupId:string){return records.value.filter(row=>row.group=
       <RouterLink class="positions-link" to="/directories/positions">Справочник должностей</RouterLink>
     </div>
 
-    <div class="directory-columns">
-      <div v-for="(column,columnIndex) in groupColumns" :key="columnIndex" class="directory-column">
-        <BaseCard v-for="group in column" :key="group.id" class="directory-accordion"
-          :class="{ 'directory-accordion--open': activeGroup === group.id }">
-          <BaseButton type="button" variant="secondary" class="accordion-trigger"
-            :aria-expanded="activeGroup === group.id" @click="toggleGroup(group.id)">
-            <span>
-              <strong>{{ group.label }}</strong>
-              <small>{{ group.description }}</small>
-            </span>
-            <span class="accordion-meta">{{ recordCount(group.id) }}</span>
-            <ChevronDown :size="17" :class="{ rotated: activeGroup === group.id }" aria-hidden="true" />
-          </BaseButton>
+    <div class="directory-workspace">
+      <nav class="directory-index" aria-label="Справочники группы">
+        <div class="directory-index-heading">
+          <strong>Разделы</strong>
+          <small>{{ currentGroups.length }} справочников</small>
+        </div>
+        <BaseButton v-for="group in currentGroups" :key="group.id" type="button" variant="secondary"
+          class="directory-group-button" :class="{ 'is-active': activeGroup === group.id }"
+          :aria-expanded="activeGroup === group.id" aria-controls="directory-active-panel"
+          @click="toggleGroup(group.id)">
+          <span class="directory-group-copy">
+            <strong>{{ group.label }}</strong>
+            <small>{{ group.description }}</small>
+          </span>
+          <span class="directory-group-count">{{ recordCount(group.id) }}</span>
+          <ChevronDown :size="16" :class="{ rotated: activeGroup === group.id }" aria-hidden="true" />
+        </BaseButton>
+      </nav>
 
-          <div v-if="activeGroup === group.id" class="accordion-content">
-            <div class="directory-toolbar">
-              <label class="directory-search">
-                <Search :size="16" aria-hidden="true" />
-                <input v-model="search" type="search" placeholder="Поиск" aria-label="Поиск по справочнику" />
-              </label>
-              <BaseSelectField v-model="statusFilter" label="Статус" :options="statusOptions" />
-              <BaseButton :disabled="!demoMode" @click="openCreate"><Plus :size="16" /> Добавить</BaseButton>
-            </div>
-            <BaseFilterSummary :items="filterChips" label="Активные фильтры"
-              @remove="clearFilter" @clear="clearFilters" />
-
-            <div class="directory-table-scroll">
-              <BaseDataTable :rows="visibleRows" :columns="columns" row-key="id"
-                density="compact" :caption="group.label"
-                empty-title="Записей нет"
-                empty-description="Добавьте первую запись или измените фильтры.">
-                <template #cell-value="{value}">{{ value || '—' }}</template>
-                <template #cell-status="{row}">
-                  <BaseStatusPill :tone="row.status==='active'?'success':row.status==='draft'?'warning':'danger'">
-                    {{ row.status==='active'?'Активно':row.status==='draft'?'Черновик':'Неактивно' }}
-                  </BaseStatusPill>
-                </template>
-              </BaseDataTable>
-            </div>
+      <BaseCard v-if="currentGroup" id="directory-active-panel" class="directory-detail">
+        <div class="directory-detail-heading">
+          <div>
+            <span class="directory-eyebrow">Справочник · {{ tabs.find(tab=>tab.id===activeSection)?.label }}</span>
+            <h2>{{ currentGroup.label }}</h2>
+            <p>{{ currentGroup.description }}</p>
           </div>
-        </BaseCard>
-      </div>
+          <span class="directory-detail-count">{{ recordCount(currentGroup.id) }} записей</span>
+        </div>
+        <p v-if="!demoMode" class="directory-mode-note">Сейчас здесь показаны примеры из прототипа. Серверные изменения для этой группы ещё не подключены.</p>
+        <div class="directory-toolbar">
+          <label class="directory-search">
+            <Search :size="16" aria-hidden="true" />
+            <input v-model="search" type="search" placeholder="Поиск по названию или коду" aria-label="Поиск по справочнику" />
+          </label>
+          <BaseSelectField v-model="statusFilter" label="Статус" :options="statusOptions" />
+          <BaseButton v-if="demoMode" @click="openCreate"><Plus :size="16" /> Добавить запись</BaseButton>
+        </div>
+        <BaseFilterSummary :items="filterChips" label="Активные фильтры"
+          @remove="clearFilter" @clear="clearFilters" />
+        <div class="directory-table-scroll">
+          <BaseDataTable :rows="visibleRows" :columns="columns" row-key="id"
+            density="compact" :caption="currentGroup.label"
+            empty-title="Записей нет"
+            empty-description="Измените условия поиска или фильтры.">
+            <template #cell-value="{value}">{{ value || '—' }}</template>
+            <template #cell-status="{row}">
+              <BaseStatusPill :tone="row.status==='active'?'success':row.status==='draft'?'warning':'danger'">
+                {{ row.status==='active'?'Активно':row.status==='draft'?'Черновик':'Неактивно' }}
+              </BaseStatusPill>
+            </template>
+          </BaseDataTable>
+        </div>
+      </BaseCard>
     </div>
-
     <BaseDrawer :open="createOpen" :title="'Новая запись — '+(currentGroup?.label ?? '')"
       description="Демо-запись справочника. Серверный контракт будет подключён отдельно."
       @close="createOpen=false">
@@ -275,40 +281,44 @@ function recordCount(groupId:string){return records.value.filter(row=>row.group=
 .directory-breadcrumb{display:flex;align-items:center;gap:9px;min-height:22px;color:var(--color-muted);font-size:12px}
 .directory-breadcrumb img{width:15px;height:15px}.directory-breadcrumb strong{color:var(--color-text);font-weight:500}
 .directory-context{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap}
-.directory-context>div{display:grid;gap:2px}.directory-context strong{font-size:13px}.directory-context span{color:var(--color-muted);font-size:10px}
-.positions-link{display:inline-flex;align-items:center;min-height:34px;padding:7px 10px;border:1px solid var(--color-stroke);border-radius:8px;background:var(--color-surface);box-shadow:var(--shadow-control);color:var(--color-text);font-size:11px;font-weight:650}
+.directory-context>div{display:grid;gap:3px}.directory-context strong{font-size:14px}.directory-context span{color:var(--color-muted);font-size:11px}
+.positions-link{display:inline-flex;align-items:center;min-height:36px;padding:7px 11px;border:1px solid var(--color-stroke-strong);border-radius:8px;background:var(--color-surface);box-shadow:var(--shadow-control);color:var(--color-text);font-size:12px;font-weight:650}
 .positions-link:hover{background:var(--color-soft);border-color:var(--color-primary-stroke)}
-.directory-columns{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;align-items:start}
-.directory-column{display:grid;gap:9px;align-content:start;min-width:0}
-.directory-accordion{min-width:0;padding:0;overflow:hidden}
-.accordion-trigger{width:100%;display:grid;grid-template-columns:minmax(0,1fr) auto auto;align-items:center;gap:10px;padding:15px 16px;border:0;background:transparent;color:var(--color-text);text-align:left;cursor:pointer}
-.accordion-trigger:hover{background:var(--color-soft)}
-.accordion-trigger>span:first-child{display:grid;gap:3px;min-width:0}
-.accordion-trigger strong{font-size:14px;line-height:20px;font-weight:650}
-.accordion-trigger small{color:var(--color-muted);font-size:10px;line-height:14px;overflow-wrap:anywhere}
-.accordion-meta{display:grid;place-items:center;min-width:24px;height:24px;padding:0 6px;border-radius:999px;background:var(--color-soft);color:var(--color-muted);font-size:10px}
-.accordion-trigger svg{transition:transform .15s}.accordion-trigger svg.rotated{transform:rotate(180deg)}
-.accordion-content{display:grid;gap:9px;padding:0 16px 16px;border-top:1px solid var(--color-stroke)}
-.directory-toolbar{display:grid;grid-template-columns:minmax(170px,1fr) 155px auto;gap:8px;align-items:end;padding-top:14px}
-.directory-search{height:var(--control-height);display:flex;align-items:center;gap:8px;padding:0 10px;border:1px solid var(--color-stroke);border-radius:8px;background:var(--color-surface-raised);box-shadow:var(--shadow-control);color:var(--color-muted)}
-.directory-search input{width:100%;min-width:0;border:0;outline:0;background:transparent;color:var(--color-text);font:inherit;font-size:11px}
-.directory-table-scroll{min-width:0;overflow-x:auto;overflow-y:hidden;overscroll-behavior-inline:contain}
-.directory-table-scroll :deep(table){min-width:680px}
+.directory-workspace{display:grid;grid-template-columns:minmax(224px,270px) minmax(0,1fr);gap:12px;align-items:start;min-width:0}
+.directory-index{display:grid;gap:4px;padding:9px;border:1px solid var(--color-stroke);border-radius:9px;background:var(--color-surface);box-shadow:var(--shadow-card);min-width:0}
+.directory-index-heading{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:10px 10px 12px;border-bottom:1px solid var(--color-stroke);margin-bottom:5px}
+.directory-index-heading strong{font-size:13px;color:var(--color-text)}.directory-index-heading small{color:var(--color-muted);font-size:10px}
+.directory-group-button{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:10px;align-items:center;justify-content:stretch;height:auto;min-height:56px;width:100%;padding:10px 11px;border:1px solid transparent;border-radius:7px;background:transparent;backdrop-filter:none;box-shadow:none;color:var(--color-text);font:inherit;white-space:normal;text-align:left;cursor:pointer;transition:background .15s ease,color .15s ease}
+.directory-group-button.secondary:hover:not(:disabled){background:var(--color-hover)}
+.directory-group-button.is-active{background:var(--color-accent-soft);border-color:var(--color-primary-stroke);color:var(--color-primary)}
+.directory-group-button:focus-visible{outline:2px solid var(--color-focus);outline-offset:1px}
+.directory-group-copy{display:grid;gap:3px;min-width:0}
+.directory-group-copy strong{font-size:12px;line-height:17px;font-weight:700;color:inherit}
+.directory-group-copy small{font-size:10px;line-height:14px;color:var(--color-muted);overflow-wrap:anywhere}
+.directory-group-count{min-width:24px;padding:4px 6px;border-radius:6px;text-align:center;font-size:11px;font-weight:700;color:var(--color-muted);background:var(--color-soft)}
+.directory-group-button.is-active .directory-group-count{color:var(--color-primary);background:var(--color-surface)}
+.directory-group-button svg{color:var(--color-muted);transform:rotate(-90deg);transition:transform .15s}
+.directory-group-button svg.rotated{color:var(--color-primary);transform:rotate(0)}
+.directory-detail{min-width:0;display:grid;gap:14px;padding:17px;overflow:hidden}
+.directory-detail-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;padding-bottom:13px;border-bottom:1px solid var(--color-stroke)}
+.directory-detail-heading>div{display:grid;gap:5px;min-width:0}
+.directory-eyebrow{font-size:10px;color:var(--color-muted)}
+.directory-detail-heading h2{font-size:18px;line-height:24px;color:var(--color-text);font-weight:750;margin:0}
+.directory-detail-heading p{margin:0;font-size:11px;line-height:17px;color:var(--color-muted);max-width:570px}
+.directory-detail-count{flex:0 0 auto;padding:6px 9px;border:1px solid var(--color-stroke);border-radius:7px;font-size:11px;font-weight:700;color:var(--color-muted)}
+.directory-mode-note{font-size:11px;line-height:17px;color:var(--color-muted);margin:0}
+.directory-toolbar{display:grid;grid-template-columns:minmax(190px,1fr) minmax(138px,165px) auto;gap:10px;align-items:end;min-width:0}
+.directory-search{height:var(--control-height);display:flex;align-items:center;gap:8px;padding:0 11px;border:1px solid var(--color-stroke-strong);border-radius:8px;background:var(--color-surface-raised);box-shadow:var(--shadow-control);color:var(--color-muted)}
+.directory-search:focus-within{border-color:var(--color-primary)}
+.directory-search input{width:100%;min-width:0;border:0;outline:0;background:transparent;color:var(--color-text);font:inherit;font-size:12px}
+.directory-table-scroll{min-width:0;max-width:100%;overflow-x:auto;overflow-y:hidden;overscroll-behavior-inline:contain}
+.directory-table-scroll :deep(table){min-width:650px}
 .directory-create-form{display:grid;gap:16px;min-height:calc(100dvh - 160px)}
 .directory-create-form label{display:grid;gap:7px}.directory-create-form label span{font-size:12px;font-weight:600}
 .directory-create-form input{height:var(--control-height);padding:0 11px;border:1px solid var(--color-stroke);border-radius:8px;background:var(--color-surface-raised);color:var(--color-text);font:inherit}
 .create-actions{display:flex;justify-content:flex-end;gap:9px;margin-top:auto;padding-top:12px;border-top:1px solid var(--color-stroke)}
-@media(prefers-reduced-motion:reduce){.accordion-trigger svg{transition:none}}
-@media(max-width:920px){
-  .directory-columns{grid-template-columns:1fr}
-}
-@media(max-width:620px){
-  .directory-context{align-items:flex-start}
-  .positions-link{width:100%;justify-content:center}
-  .directory-toolbar{grid-template-columns:1fr}
-  .directory-toolbar :deep(.base-button){width:100%}
-  .accordion-trigger{padding:13px 12px}
-  .accordion-content{padding:0 12px 12px}
-  .create-actions :deep(.base-button){flex:1}
-}
+@media(prefers-reduced-motion:reduce){.directory-group-button,.directory-group-button svg{transition:none}}
+@media(max-width:1050px){.directory-workspace{grid-template-columns:minmax(195px,240px) minmax(0,1fr)}.directory-toolbar{grid-template-columns:minmax(150px,1fr) minmax(120px,150px)}.directory-toolbar :deep(.base-button){grid-column:1 / -1;justify-self:start}}
+@media(max-width:800px){.directory-workspace{grid-template-columns:minmax(0,1fr)}.directory-index{grid-template-columns:repeat(2,minmax(0,1fr))}.directory-index-heading{grid-column:1 / -1}.directory-group-button{min-height:51px}.directory-detail{padding:14px}.directory-toolbar{grid-template-columns:minmax(0,1fr) 150px}}
+@media(max-width:560px){.directory-index{display:flex;gap:5px;overflow-x:auto;overscroll-behavior-inline:contain;scrollbar-width:thin}.directory-index-heading{display:none}.directory-group-button{flex:0 0 180px;min-width:180px;min-height:46px;padding:9px}.directory-group-copy small,.directory-group-button svg{display:none}.directory-detail{padding:12px}.directory-toolbar{grid-template-columns:minmax(0,1fr)}.directory-toolbar :deep(.base-button){grid-column:auto;width:100%}.directory-detail-heading h2{font-size:16px}.create-actions :deep(.base-button){flex:1}}
 </style>

@@ -40,6 +40,17 @@
   --color-success:#12a131;
   --color-success-surface:#e2f1e7;
 
+  /* Production-calendar cells: consistent status colors in grid and editor. */
+  --calendar-work-bg:#d9f5de;
+  --calendar-work-border:#86cd98;
+  --calendar-work-text:#174f2c;
+  --calendar-weekend-bg:#fce1e1;
+  --calendar-weekend-border:#edaaaa;
+  --calendar-weekend-text:#8e2020;
+  --calendar-holiday-bg:#fff0b8;
+  --calendar-holiday-border:#eecb67;
+  --calendar-holiday-text:#764f05;
+
   /* Corporate typography scale used by the source prototype. */
   --font-page-heading:clamp(22px,1.4vw,27px);
   --font-section-heading:clamp(18px,1.2vw,23px);
@@ -112,6 +123,15 @@
   --color-warning-surface:rgba(229,165,0,.2);
   --color-success:#17cf3f;
   --color-success-surface:rgba(18,161,49,.24);
+  --calendar-work-bg:#163e30;
+  --calendar-work-border:#3e9264;
+  --calendar-work-text:#c8f5d9;
+  --calendar-weekend-bg:#4e2830;
+  --calendar-weekend-border:#b36a6a;
+  --calendar-weekend-text:#ffd4d4;
+  --calendar-holiday-bg:#584419;
+  --calendar-holiday-border:#b39249;
+  --calendar-holiday-text:#ffebad;
   --shadow-card:0 2px 4px rgba(0,0,0,.14);
   --shadow-control:0 2px 4px rgba(0,0,0,.12);
   --shadow-float:0 32px 70px rgba(0,0,0,.24),0 13px 29px rgba(0,0,0,.18);

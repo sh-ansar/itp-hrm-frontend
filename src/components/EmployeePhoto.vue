@@ -15,11 +15,18 @@ const error = ref('')
 const input = ref<HTMLInputElement | null>(null)
 let request: AbortController | null = null
 let generation = 0
+let displayedFor = ''
 function clearImage() { if (imageUrl.value) URL.revokeObjectURL(imageUrl.value); imageUrl.value = '' }
 watch(() => [props.companyId, props.employeeId, props.hasPhoto, props.revision], async () => {
   const current = ++generation
   request?.abort()
-  clearImage()
+  const identity = props.companyId + ':' + props.employeeId
+  // Keep the previous authorized photo visible while refreshing its revision.
+  // Otherwise a replacement briefly shows an empty avatar and upload validation
+  // may race with the new image request on slower browser/CI connections.
+  // A different employee or a removed photo must never inherit that image.
+  if (!props.hasPhoto || displayedFor !== identity) clearImage()
+  displayedFor = identity
   error.value = ''
   imageLoading.value = props.hasPhoto
   if (!props.hasPhoto) return
@@ -28,9 +35,17 @@ watch(() => [props.companyId, props.employeeId, props.hasPhoto, props.revision],
   const timeout = setTimeout(() => controller.abort(), 15000)
   try {
     const blob = await readEmployeePhoto(props.companyId, props.employeeId, controller.signal)
-    if (current === generation) imageUrl.value = URL.createObjectURL(blob)
+    if (current === generation) {
+      const nextUrl = URL.createObjectURL(blob)
+      clearImage()
+      imageUrl.value = nextUrl
+    }
   } catch (cause) {
-    if (current === generation) error.value = cause instanceof Error ? cause.message : 'Не удалось загрузить фото'
+    if (current === generation) {
+      // Fail closed when the refreshed request is denied or otherwise fails.
+      clearImage()
+      error.value = cause instanceof Error ? cause.message : 'Не удалось загрузить фото'
+    }
   } finally { clearTimeout(timeout); if (current === generation) imageLoading.value = false }
 }, { immediate: true })
 onBeforeUnmount(() => { generation++; request?.abort(); clearImage() })

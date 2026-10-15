@@ -75,17 +75,21 @@ export function getLeaves(
 
 
 // B69: the schedule (GET /leaves) is approved-only; these are separate drafts/decisions.
+export type LeaveCategory = 'ordinary' | 'maternity' | 'childcare' | 'medical'
+
 export interface LeaveTypeRecord {
   id: string
   code: string
   name: string
   annual_days: number | null
   balance_method: 'calendar_days' | 'working_days'
+  // Absent on earlier Laravel releases; never assume protected leave support.
+  category?: LeaveCategory
   revision: number
 }
 export interface LeaveTypesResponse {
   data: LeaveTypeRecord[]
-  meta: { can_manage_leave_types: boolean }
+  meta: { can_manage_leave_types: boolean; supported_categories?: LeaveCategory[] }
 }
 export type LeaveRequestStatus = 'draft' | 'submitted' | 'approved' | 'rejected' | 'cancelled'
 export interface LeaveRequestRecord {
@@ -127,6 +131,7 @@ export interface LeaveTypeInput {
   name: string
   annual_days: number | null
   balance_method: 'calendar_days' | 'working_days'
+  category?: LeaveCategory
 }
 
 function companyPath(companyId: string): string {

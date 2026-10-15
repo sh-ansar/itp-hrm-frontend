@@ -23,7 +23,9 @@ The build was produced **on the server**, in a private working directory:
 `C:\deploy\hrm\build-20261015\dist\`. Only generated `dist` files
 were copied to a new temporary sibling folder and atomically renamed
 to the new `hrm` directory. The nested `.htaccess` is based on
-`deploy/hrm-htaccess.example`.
+`deploy/hrm-htaccess.example`. It also forces HTTP to HTTPS on **HRM paths
+only**, and sets noindex, clickjacking and referrer protection headers;
+pre-existing platform/Unityre routes and VirtualHosts are unchanged.
 
 The checked pre-deploy hashes of the platform index, Unityre index,
 Apache vhost and Apache global configuration are stored **outside**

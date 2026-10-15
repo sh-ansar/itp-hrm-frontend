@@ -42,7 +42,7 @@ jobs:
       - name: Validate navigation, reload, CSS, icons, auth-route isolation
         env:
           HRM_HTDOCS_BASE_URL: http://127.0.0.1:4178
-        run: node --test tests/e2e/htdocs-subpath.test.mjs
+        run: node --test tests/e2e/htdocs-subpath.test.mjs tests/e2e/htdocs-xsrf-isolation.test.mjs
       - name: Print startup diagnostics on failure
         if: failure()
         run: tail -n 80 "$RUNNER_TEMP/hrm-subpath-preview.log" || true

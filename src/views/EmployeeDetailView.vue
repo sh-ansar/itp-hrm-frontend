@@ -5,6 +5,7 @@ import { Plus } from 'lucide-vue-next'
 import { useRoute } from 'vue-router'
 import EmployeeProfileSection from '../components/EmployeeProfileSection.vue'
 import EmployeePrivateProfileEditor from '../components/EmployeePrivateProfileEditor.vue'
+import EmployeePrivateRecordsManager from '../components/EmployeePrivateRecordsManager.vue'
 import EmployeePhoto from '../components/EmployeePhoto.vue'
 import EmployeeDocumentsPanel from '../components/EmployeeDocumentsPanel.vue'
 import EmployeeDataGrid from '../components/EmployeeDataGrid.vue'
@@ -17,7 +18,7 @@ import EmployeeAssignmentCreateForm from '../components/EmployeeAssignmentCreate
 import EmployeeRecordForm from '../components/EmployeeRecordForm.vue'
 import BaseDialog from '../components/ui/BaseDialog.vue'
 import BaseViewTabs from '../components/ui/BaseViewTabs.vue'
-import { getEmployee, type EmployeeAssignment, type EmployeeDetail, type EmployeeReferenceProfile, type EmployeePrivateSection, type ProfileEditRow, type ProfileSection } from '../api/personnel'
+import { getEmployee, type EmployeeAssignment, type EmployeeDetail, type EmployeeReferenceProfile, type EmployeePrivateSection, type EmployeePrivateRecordSection, type ProfileEditRow, type ProfileSection } from '../api/personnel'
 import { localTodayISO } from '../utils/localDate'
 import { useUiFormatters } from '../composables/useUiFormatters'
 
@@ -35,6 +36,7 @@ const assignmentEditing = ref<EmployeeAssignment | null>(null)
 const assignmentTransitioning = ref<EmployeeAssignment | null>(null)
 const identityEditOpen = ref(false)
 const privateEditorSection = ref<EmployeePrivateSection | null>(null)
+const privateRecordsSection = ref<EmployeePrivateRecordSection | null>(null)
 const assignmentCreateOpen = ref(false)
 const profileCreateOpen = ref(false)
 const activeSection = ref('personal')
@@ -108,8 +110,11 @@ const reference = computed<EmployeeReferenceProfile | undefined>(() => {
   return {
     personal: source.personal,
     military: source.military,
-    identity_document: {},
-    family: [],
+    // Primary document is the card's detail view; all versions are managed
+    // through the separate normalized document drawer.
+    identity_document: source.identity_documents?.find(document => document.is_primary)
+      ?? source.identity_documents?.[0] ?? {},
+    family: source.family ?? [],
     banking: {},
     employment: {},
     payroll: {},
@@ -461,6 +466,7 @@ async function load() {
   assignmentTransitioning.value = null
   identityEditOpen.value = false
   privateEditorSection.value = null
+  privateRecordsSection.value = null
   assignmentCreateOpen.value = false
   profileCreateOpen.value = false
   error.value = ''
@@ -554,12 +560,18 @@ onMounted(load)
           <EmployeeDataGrid :fields="contactFields" />
         </EmployeeProfileSection>
         <EmployeeProfileSection :title="tr('Документы, удостоверяющие личность')">
+          <template v-if="profile.meta.private_profile_writes_enabled" #actions>
+            <BaseButton variant="secondary" @click="privateRecordsSection = 'identity'">{{ tr('Изменить') }}</BaseButton>
+          </template>
           <EmployeeDataGrid :fields="documentFields" />
         </EmployeeProfileSection>
         <EmployeeProfileSection :title="tr('Место рождения')">
           <EmployeeDataGrid :fields="birthPlaceFields" />
         </EmployeeProfileSection>
         <EmployeeProfileSection :title="tr('Семейные данные')">
+          <template v-if="profile.meta.private_profile_writes_enabled" #actions>
+            <BaseButton variant="secondary" @click="privateRecordsSection = 'family'">{{ tr('Изменить') }}</BaseButton>
+          </template>
           <BaseDataTable density="compact" :rows="reference?.family ?? []" :columns="familyColumns" row-key="id"
             :caption="tr('Сведения о родственниках сотрудника')" :empty-title="tr('Семейные данные не внесены')"
             :empty-description="tr('Для сотрудника пока нет доступных сведений о родственниках.')">
@@ -827,6 +839,13 @@ onMounted(load)
       :open="true" :company-id="String(route.params.company)" :employee-id="profile.data.id"
       :section="privateEditorSection" :profile="profile.private_profile"
       @close="privateEditorSection = null" @saved="privateEditorSection = null; load()" />
+    <EmployeePrivateRecordsManager v-if="profile && privateRecordsSection !== null && profile.meta.private_profile_writes_enabled"
+      :open="true" :company-id="String(route.params.company)" :employee-id="profile.data.id"
+      :section="privateRecordsSection" :family="profile.private_profile?.family ?? []"
+      :identities="profile.private_profile?.identity_documents ?? []"
+      :truncated="privateRecordsSection === 'family' ? profile.meta.private_family_truncated : profile.meta.private_identities_truncated"
+      @close="privateRecordsSection = null" @saved="privateRecordsSection = null; load()"
+      @refresh="privateRecordsSection = null; load()" />
   </section>
 </template>
 

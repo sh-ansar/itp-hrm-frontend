@@ -6,6 +6,7 @@ import { useRoute } from 'vue-router'
 import EmployeeProfileSection from '../components/EmployeeProfileSection.vue'
 import EmployeePrivateProfileEditor from '../components/EmployeePrivateProfileEditor.vue'
 import EmployeePrivateRecordsManager from '../components/EmployeePrivateRecordsManager.vue'
+import EmployeeEducationManager from '../components/EmployeeEducationManager.vue'
 import EmployeePhoto from '../components/EmployeePhoto.vue'
 import EmployeeDocumentsPanel from '../components/EmployeeDocumentsPanel.vue'
 import EmployeeDataGrid from '../components/EmployeeDataGrid.vue'
@@ -37,6 +38,7 @@ const assignmentTransitioning = ref<EmployeeAssignment | null>(null)
 const identityEditOpen = ref(false)
 const privateEditorSection = ref<EmployeePrivateSection | null>(null)
 const privateRecordsSection = ref<EmployeePrivateRecordSection | null>(null)
+const educationEditOpen = ref(false)
 const assignmentCreateOpen = ref(false)
 const profileCreateOpen = ref(false)
 const activeSection = ref('personal')
@@ -468,6 +470,7 @@ async function load() {
   identityEditOpen.value = false
   privateEditorSection.value = null
   privateRecordsSection.value = null
+  educationEditOpen.value = false
   assignmentCreateOpen.value = false
   profileCreateOpen.value = false
   error.value = ''
@@ -746,6 +749,18 @@ onMounted(load)
           </EmployeeProfileSection>
 
           <EmployeeProfileSection :title="tr('Образование и квалификация')">
+          <template v-if="profile.meta.private_profile_writes_enabled" #actions>
+            <BaseButton variant="secondary" @click="educationEditOpen = true">{{ tr('Изменить') }}</BaseButton>
+          </template>
+          <div v-if="!demoMode && profile.private_profile?.education?.length" class="recorded-education">
+            <article v-for="item in profile.private_profile.education" :key="item.id" class="recorded-education-entry">
+              <strong>{{ item.organization }}</strong>
+              <span>{{ item.education_type }} · {{ item.specialization || '—' }}</span>
+              <small>{{ item.started_on || '—' }} — {{ item.ended_on || '—' }}
+                <template v-if="item.document_reference"> · {{ item.document_reference }}</template>
+              </small>
+            </article>
+          </div>
             <template v-if="profile.meta.private_profile_writes_enabled" #actions>
               <BaseButton variant="secondary" @click="privateRecordsSection = 'education'">{{ tr('Изменить') }}</BaseButton>
             </template>
@@ -853,6 +868,12 @@ onMounted(load)
         : profile.meta.private_identities_truncated"
       @close="privateRecordsSection = null" @saved="privateRecordsSection = null; load()"
       @refresh="privateRecordsSection = null; load()" />
+    <EmployeeEducationManager v-if="profile && educationEditOpen && profile.meta.private_profile_writes_enabled"
+      :open="educationEditOpen" :company-id="String(route.params.company)" :employee-id="profile.data.id"
+      :records="profile.private_profile?.education ?? []"
+      :truncated="profile.meta.private_education_truncated"
+      @close="educationEditOpen = false" @saved="educationEditOpen = false; load()"
+      @refresh="educationEditOpen = false; load()" />
   </section>
 </template>
 
@@ -997,4 +1018,9 @@ onMounted(load)
   .row-actions :deep(.base-button){width:100%}
 }
 @media(max-width:400px){.identity-name-fields{grid-template-columns:1fr}}
+
+.recorded-education{display:grid;gap:8px;margin:10px 0}
+.recorded-education-entry{display:grid;gap:5px;padding:10px 12px;min-width:0;background:var(--color-surface-raised);border:1px solid var(--color-stroke);border-radius:7px}
+.recorded-education-entry strong{color:var(--color-text);font-size:13px;overflow-wrap:anywhere}
+.recorded-education-entry span,.recorded-education-entry small{color:var(--color-muted);font-size:12px;overflow-wrap:anywhere}
 </style>

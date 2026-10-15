@@ -1,0 +1,36 @@
+# COPY ONLY INTO THE EXISTING platform.itpmining.kz *:443 VIRTUAL HOST.
+# Add AFTER review, HTTPS certificate check and config backup, not to global httpd.conf.
+# Existing /api, /unityre and /unityre-api entries are NOT changed.
+# Do not include this snippet until new frontend files exist at the target path.
+
+RedirectMatch 301 "^/hrm$" "/hrm/"
+Alias "/hrm/" "C:/xampp/htdocs/hrm/dist/"
+<Directory "C:/xampp/htdocs/hrm/dist/">
+    Options -Indexes +FollowSymLinks -MultiViews
+    AllowOverride None
+    Require all granted
+    DirectoryIndex index.html
+    RewriteEngine On
+    RewriteBase /hrm/
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule ^ index.html [L]
+</Directory>
+
+# ENABLE THIS SECTION ONLY AFTER A SEPARATE PHP >=8.4 LARAVEL SERVICE
+# IS HEALTHY ON 127.0.0.1:18080, WITH PRIVATE HRM POSTGRES AND SECRETS.
+# Reserve this route for HRM; NEVER repoint shared /api to HRM.
+# Note that this platform vhost currently sets X-Forwarded-Prefix globally
+# to "/unityre-api". Verify the effective HRM-only override below in staging.
+#
+# <Location "/hrm-api/">
+#     RequestHeader set X-Forwarded-Prefix "/hrm-api"
+# </Location>
+# ProxyPass "/hrm-api/" "http://127.0.0.1:18080/" connectiontimeout=3 timeout=40
+# ProxyPassReverse "/hrm-api/" "http://127.0.0.1:18080/"
+
+# Mandatory before HRM API activation:
+# - dedicated SESSION_COOKIE and HRM_XSRF_COOKIE_NAME (no cookie collisions)
+# - HTTPS proxy trust + no cross-company bypasses
+# - never expose Laravel .env/storage/source under any Alias
+# - httpd.exe -t, Apache config backup, pre/post live-host smoke tests, rollback

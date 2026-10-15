@@ -3,6 +3,7 @@ import { computed } from 'vue'
 import { RouterLink } from 'vue-router'
 import { useUiFormatters } from '../../composables/useUiFormatters'
 import { useWorkspaceI18n } from '../../composables/useWorkspaceI18n'
+import { publicAsset } from '../../utils/publicAsset'
 
 const props = withDefaults(defineProps<{
   title: string
@@ -31,7 +32,7 @@ const ringStyle = computed(() => ({
     :to="to || undefined">
     <div class="registry-summary-heading">
       <span>{{ title }}</span>
-      <img v-if="icon" :src="icon" alt="" aria-hidden="true" />
+      <img v-if="icon" :src="publicAsset(icon)" alt="" aria-hidden="true" />
     </div>
     <div v-if="kind==='ring'" class="registry-summary-ring-layout">
       <span class="registry-summary-ring" :style="ringStyle"

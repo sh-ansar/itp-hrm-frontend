@@ -1,0 +1,48 @@
+name: HRM htdocs subpath E2E
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  static-under-hrm:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install locked frontend dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Build real HRM frontend at /hrm/ (no mock backend)
+        run: npm run build:htdocs
+      - name: Install pinned Playwright Chromium test-only runtime
+        run: |
+          set -euo pipefail
+          npm install --prefix "$RUNNER_TEMP/hrm-subpath-playwright" --no-save --no-audit --no-fund playwright@1.56.1
+          ln -s "$RUNNER_TEMP/hrm-subpath-playwright/node_modules/playwright" node_modules/playwright
+          ln -s "$RUNNER_TEMP/hrm-subpath-playwright/node_modules/playwright-core" node_modules/playwright-core
+          "$RUNNER_TEMP/hrm-subpath-playwright/node_modules/.bin/playwright" install --with-deps chromium
+      - name: Serve static dist under its real base URL
+        run: |
+          set -euo pipefail
+          npm run preview -- --mode hrm --host 127.0.0.1 --port 4178 --strictPort > "$RUNNER_TEMP/hrm-subpath-preview.log" 2>&1 &
+          for i in $(seq 1 40); do
+            if curl --silent --fail http://127.0.0.1:4178/hrm/login > /dev/null; then
+              echo "Static /hrm/ SPA responds"
+              exit 0
+            fi
+            sleep 1
+          done
+          cat "$RUNNER_TEMP/hrm-subpath-preview.log"
+          exit 1
+      - name: Validate navigation, reload, CSS, icons, auth-route isolation
+        env:
+          HRM_HTDOCS_BASE_URL: http://127.0.0.1:4178
+        run: node --test tests/e2e/htdocs-subpath.test.mjs
+      - name: Print startup diagnostics on failure
+        if: failure()
+        run: tail -n 80 "$RUNNER_TEMP/hrm-subpath-preview.log" || true

@@ -7,6 +7,7 @@ import BaseCard from '../components/ui/BaseCard.vue'
 import BaseNotice from '../components/ui/BaseNotice.vue'
 import BaseButton from '../components/ui/BaseButton.vue'
 import BaseField from '../components/ui/BaseField.vue'
+import { publicAsset } from '../utils/publicAsset'
 
 const enabled = import.meta.env.VITE_ENABLE_BROWSER_LOGIN === 'true'
 const email = ref('')
@@ -43,7 +44,10 @@ async function submit() {
   <main class="login-page">
     <div class="login-wrap">
       <div class="login-brand">
-        <strong>ITP HRM</strong>
+        <div class="login-brand__row">
+          <img :src="publicAsset('brand/itp-mark.svg')" alt="ITP" width="62" height="47" />
+          <strong>HRM</strong>
+        </div>
         <span>Кадровая информационная система</span>
       </div>
 
@@ -89,7 +93,9 @@ async function submit() {
   opacity:1;visibility:visible;
 }
 .login-brand{display:flex;flex-direction:column;gap:4px;color:var(--color-text)}
-.login-brand strong{font-size:26px;line-height:32px;letter-spacing:-.02em}
+.login-brand__row{display:flex;align-items:center;gap:12px;min-height:49px}
+.login-brand__row img{display:block;flex:none;width:62px;height:47px;object-fit:contain}
+.login-brand strong{font-size:29px;line-height:36px;letter-spacing:-.035em}
 .login-brand span{font-size:13px;line-height:18px;color:var(--color-muted)}
 .login-wrap :deep(.base-card){
   width:100%;

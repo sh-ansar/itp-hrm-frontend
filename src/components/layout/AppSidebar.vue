@@ -29,9 +29,9 @@ function closeMobile() { if (props.mobileOpen) emit('update:mobileOpen', false) 
     :aria-label="t('shell.mainNavigation')">
     <div class="sidebar-head">
       <RouterLink :to="connected && !access.can('overview.view') ? '/settings' : '/'" class="brand-link" title="ITP HRM" @click="closeMobile">
-        <span class="brand-mark" aria-hidden="true">ITP</span>
+        <img class="brand-mark" :src="publicAsset('brand/itp-mark.svg')" alt="ITP" width="49" height="37" />
         <span class="brand-copy">
-          <strong>ITP <em>HRM</em></strong>
+          <strong>HRM</strong>
           <small>{{ t('shell.hrSystem') }}</small>
         </span>
       </RouterLink>
@@ -70,7 +70,7 @@ function closeMobile() { if (props.mobileOpen) emit('update:mobileOpen', false) 
       </RouterLink>
     </nav>
     <footer class="sidebar-foot">
-      <span class="sidebar-foot-mark" aria-hidden="true">ITP</span>
+      <img class="sidebar-foot-mark" :src="publicAsset('brand/itp-mark.svg')" alt="" aria-hidden="true" width="33" height="25" />
       <span class="sidebar-foot-copy">
         <strong>ITP HRM</strong><small>{{ t('shell.unifiedHrSystem') }}</small>
       </span>
@@ -87,16 +87,13 @@ function closeMobile() { if (props.mobileOpen) emit('update:mobileOpen', false) 
 }
 .brand-link{display:flex;align-items:center;gap:11px;min-width:0}
 .brand-mark{
-  display:grid;place-items:center;flex:0 0 35px;
-  width:35px;height:37px;border-radius:9px;
-  color:var(--color-primary);background:var(--color-accent-soft);
-  border:1px solid var(--color-primary-stroke);font-size:14px;line-height:1;font-weight:800;
-  letter-spacing:-.05em;
+  display:block;flex:0 0 49px;
+  width:49px;height:37px;object-fit:contain;
 }
 .brand-copy{display:grid;align-content:center;gap:2px;min-width:0;line-height:1.2}
 .brand-copy strong{
   white-space:nowrap;color:var(--color-text);
-  font-size:16px;font-weight:800;letter-spacing:-.02em;
+  font-size:19px;font-weight:800;letter-spacing:-.035em;
 }
 .brand-copy em{color:var(--color-primary);font-style:normal}
 .brand-copy small{white-space:nowrap;color:var(--color-muted);font-size:10px;line-height:13px}
@@ -136,9 +133,7 @@ function closeMobile() { if (props.mobileOpen) emit('update:mobileOpen', false) 
   padding:10px 17px;border-top:1px solid var(--color-stroke);
 }
 .sidebar-foot-mark{
-  display:grid;place-items:center;flex:0 0 28px;width:28px;height:28px;
-  border-radius:7px;color:var(--color-primary);background:var(--color-accent-soft);
-  font-size:10px;font-weight:800;
+  display:block;flex:0 0 33px;width:33px;height:25px;object-fit:contain;
 }
 .sidebar-foot-copy{display:grid;gap:2px;min-width:0;line-height:1.15}
 .sidebar-foot-copy strong{font-size:12px;font-weight:700}

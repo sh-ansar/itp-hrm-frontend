@@ -14,12 +14,14 @@ import {
   type EmployeePrivateRecordSection,
   type EmployeeFamilyMember,
   type EmployeeIdentityDocument,
+  type EmployeeEducationRecord,
   type FamilyMemberPayload,
   type IdentityDocumentPayload,
+  type EducationRecordPayload,
 } from '../api/personnel'
 import { ApiError } from '../api/client'
 
-type PrivateRecord = EmployeeFamilyMember | EmployeeIdentityDocument
+type PrivateRecord = EmployeeFamilyMember | EmployeeIdentityDocument | EmployeeEducationRecord
 type Field = {
   key: string
   label: PrivateRecordsKey
@@ -35,6 +37,7 @@ const props = defineProps<{
   section: EmployeePrivateRecordSection
   family: EmployeeFamilyMember[]
   identities: EmployeeIdentityDocument[]
+  education: EmployeeEducationRecord[]
   truncated?: boolean
 }>()
 const emit = defineEmits<{ close: []; saved: []; refresh: [] }>()
@@ -56,20 +59,40 @@ const identityFields: Field[] = [
   { key: 'issued_on', label: 'issuedOn', type: 'date', max: 10 },
   { key: 'expires_on', label: 'expiresOn', type: 'date', max: 10 },
 ]
-const fields = computed(() => props.section === 'family' ? familyFields : identityFields)
-const heading = computed(() => t(props.section === 'family' ? 'familyTitle' : 'identityTitle'))
-const entries = computed(() => props.section === 'family'
-  ? props.family.map(item => ({
+const educationFields: Field[] = [
+  { key: 'education_type', label: 'educationType', required: true, max: 100 },
+  { key: 'organization', label: 'organization', required: true, max: 255 },
+  { key: 'started_on', label: 'startedOn', type: 'date', max: 10 },
+  { key: 'ended_on', label: 'endedOn', type: 'date', max: 10 },
+  { key: 'specialization', label: 'specialization', max: 255 },
+  { key: 'document_reference', label: 'documentReference', max: 255 },
+]
+const fields = computed(() => props.section === 'family' ? familyFields
+  : props.section === 'education' ? educationFields : identityFields)
+const titleKey = computed<PrivateRecordsKey>(() => props.section === 'family' ? 'familyTitle'
+  : props.section === 'identity' ? 'identityTitle' : 'educationTitle')
+const addKey = computed<PrivateRecordsKey>(() => props.section === 'family' ? 'addFamily'
+  : props.section === 'identity' ? 'addIdentity' : 'addEducation')
+const emptyKey = computed<PrivateRecordsKey>(() => props.section === 'family' ? 'familyEmpty'
+  : props.section === 'identity' ? 'identityEmpty' : 'educationEmpty')
+const heading = computed(() => t(titleKey.value))
+const entries = computed(() => {
+  if (props.section === 'family') return props.family.map(item => ({
     record: item as PrivateRecord, title: item.full_name,
     detail: item.relationship + (item.birth_date ? ' · ' + fmt.date(item.birth_date) : ''),
     primary: false,
   }))
-  : props.identities.map(item => ({
+  if (props.section === 'education') return props.education.map(item => ({
+    record: item as PrivateRecord, title: item.organization,
+    detail: item.education_type + (item.ended_on ? ' · ' + fmt.date(item.ended_on) : ''),
+    primary: false,
+  }))
+  return props.identities.map(item => ({
     record: item as PrivateRecord, title: item.type,
-    // Full document numbers remain visible only in the authenticated editor.
     detail: item.number.length > 4 ? '••••' + item.number.slice(-4) : '••••',
     primary: item.is_primary,
-  })))
+  }))
+})
 
 const editing = ref<PrivateRecord | null>(null)
 const formOpen = ref(false)
@@ -133,7 +156,7 @@ function fail(cause: unknown) {
     : cause instanceof ApiError && cause.status === 422 ? t('invalid')
     : t('failed')
 }
-function buildPayload(): FamilyMemberPayload | IdentityDocumentPayload | null {
+function buildPayload(): FamilyMemberPayload | IdentityDocumentPayload | EducationRecordPayload | null {
   const values: Record<string, string | null> = {}
   for (const field of fields.value) {
     const raw = form.value[field.key]?.trim() ?? ''
@@ -146,6 +169,17 @@ function buildPayload(): FamilyMemberPayload | IdentityDocumentPayload | null {
       relationship: values.relationship ?? '',
       full_name: values.full_name ?? '',
       birth_date: values.birth_date,
+      document_reference: values.document_reference,
+    }
+  }
+  if (props.section === 'education') {
+    if (values.started_on && values.ended_on && values.ended_on < values.started_on) return null
+    return {
+      education_type: values.education_type ?? '',
+      organization: values.organization ?? '',
+      started_on: values.started_on,
+      ended_on: values.ended_on,
+      specialization: values.specialization,
       document_reference: values.document_reference,
     }
   }
@@ -212,10 +246,10 @@ async function archive(item: PrivateRecord) {
       <template v-if="!formOpen">
         <BaseButton :disabled="busy" class="record-create" @click="beginCreate">
           <Plus :size="16" aria-hidden="true" />
-          {{ t(section === 'family' ? 'addFamily' : 'addIdentity') }}
+          {{ t(addKey) }}
         </BaseButton>
         <p v-if="!entries.length" class="record-hint">
-          {{ t(section === 'family' ? 'familyEmpty' : 'identityEmpty') }}
+          {{ t(emptyKey) }}
         </p>
         <div v-else class="records-list">
           <article v-for="item in entries" :key="item.record.id" class="record-row">
@@ -247,7 +281,7 @@ async function archive(item: PrivateRecord) {
           {{ t('primary') }}
         </label>
         <p v-if="section === 'identity'" class="record-hint">{{ t('documentHint') }}</p>
-        <p class="record-hint">{{ t('confidentiality') }}</p>
+        <p class="record-hint">{{ t(section === 'education' ? 'educationNote' : 'confidentiality') }}</p>
       </form>
     </div>
     <template #footer>

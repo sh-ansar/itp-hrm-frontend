@@ -115,6 +115,7 @@ const reference = computed<EmployeeReferenceProfile | undefined>(() => {
     identity_document: source.identity_documents?.find(document => document.is_primary)
       ?? source.identity_documents?.[0] ?? {},
     family: source.family ?? [],
+    education: source.education ?? [],
     banking: {},
     employment: {},
     payroll: {},
@@ -745,6 +746,9 @@ onMounted(load)
           </EmployeeProfileSection>
 
           <EmployeeProfileSection :title="tr('Образование и квалификация')">
+            <template v-if="profile.meta.private_profile_writes_enabled" #actions>
+              <BaseButton variant="secondary" @click="privateRecordsSection = 'education'">{{ tr('Изменить') }}</BaseButton>
+            </template>
             <BaseDataTable density="compact" :rows="reference?.education ?? []"
               :columns="educationColumns" row-key="id"
               :caption="tr('Образование и квалификация сотрудника')"
@@ -843,7 +847,10 @@ onMounted(load)
       :open="true" :company-id="String(route.params.company)" :employee-id="profile.data.id"
       :section="privateRecordsSection" :family="profile.private_profile?.family ?? []"
       :identities="profile.private_profile?.identity_documents ?? []"
-      :truncated="privateRecordsSection === 'family' ? profile.meta.private_family_truncated : profile.meta.private_identities_truncated"
+      :education="profile.private_profile?.education ?? []"
+      :truncated="privateRecordsSection === 'family' ? profile.meta.private_family_truncated
+        : privateRecordsSection === 'education' ? profile.meta.private_education_truncated
+        : profile.meta.private_identities_truncated"
       @close="privateRecordsSection = null" @saved="privateRecordsSection = null; load()"
       @refresh="privateRecordsSection = null; load()" />
   </section>

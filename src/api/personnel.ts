@@ -98,7 +98,7 @@ export interface EmployeeMilitaryRecord {
   comment: string | null
 }
 /** B72: repeatable HR-only family and identity records. */
-export type EmployeePrivateRecordSection = 'family' | 'identity'
+export type EmployeePrivateRecordSection = 'family' | 'identity' | 'education'
 export interface EmployeeFamilyMember {
   id: string
   relationship: string
@@ -124,12 +124,27 @@ export type FamilyMemberPayload = Pick<EmployeeFamilyMember,
 export type IdentityDocumentPayload = Pick<EmployeeIdentityDocument,
   'type' | 'number' | 'personal_number' | 'country_of_issue' | 'issued_by' |
   'issued_on' | 'expires_on' | 'is_primary'>
-export type PrivateRecordPayload = FamilyMemberPayload | IdentityDocumentPayload
+export interface EmployeeEducationRecord {
+  id: string
+  education_type: string
+  organization: string
+  started_on: string | null
+  ended_on: string | null
+  specialization: string | null
+  document_reference: string | null
+  revision: number
+}
+export type EducationRecordPayload = Pick<EmployeeEducationRecord,
+  'education_type' | 'organization' | 'started_on' | 'ended_on' |
+  'specialization' | 'document_reference'>
+export type PrivateRecordPayload = FamilyMemberPayload | IdentityDocumentPayload | EducationRecordPayload
 export interface EmployeePrivateProfile {
   personal: EmployeePrivatePersonal
   military: EmployeeMilitaryRecord
   family?: EmployeeFamilyMember[]
   identity_documents?: EmployeeIdentityDocument[]
+  education?: EmployeeEducationRecord[]
+  education_truncated?: boolean
   family_truncated?: boolean
   identity_documents_truncated?: boolean
 }
@@ -420,6 +435,7 @@ export interface EmployeeDetail {
     private_profile_writes_enabled?: boolean
     private_family_truncated?: boolean
     private_identities_truncated?: boolean
+    private_education_truncated?: boolean
     assignment_writes_enabled: boolean
     employee_writes_enabled: boolean
   }
@@ -596,9 +612,9 @@ function privateRecordUrl(
   if (!uuid.test(companyId) || !uuid.test(employeeId) || (recordId && !uuid.test(recordId))) {
     throw new Error('Некорректный идентификатор записи')
   }
-  if (section !== 'family' && section !== 'identity') throw new Error('Неизвестный раздел')
+  if (section !== 'family' && section !== 'identity' && section !== 'education') throw new Error('Неизвестный раздел')
   const base = '/companies/' + companyId + '/employees/' + employeeId
-    + '/private-records/' + section
+    + (section === 'education' ? '/education' : '/private-records/' + section)
   return recordId ? base + '/' + recordId : base
 }
 

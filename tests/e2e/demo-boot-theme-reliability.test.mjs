@@ -47,6 +47,14 @@ test('light and dark HRM workspaces retain readable text/background contrast', a
         theme + ' body background/text mismatch: ' + JSON.stringify(body))
       assert.ok(ratio(body.color, content.background) >= 7,
         theme + ' content background/text mismatch: ' + JSON.stringify(content))
+      // Regression: a scoped :global selector once compiled into a filter on :root,
+      // turning the entire rendered HRM UI into a solid blue rectangle.
+      const rootFilter = await page.evaluate(() => getComputedStyle(document.documentElement).filter)
+      assert.equal(rootFilter, 'none', theme + ' must not apply an image filter to the full page')
+      await page.waitForTimeout(250) // let theme transitions finish before comparing pixels
+      const screenshot = await page.screenshot()
+      assert.ok(screenshot.byteLength > 20000,
+        theme + ' rendered viewport looks blank (PNG is only ' + screenshot.byteLength + ' bytes)')
     }
   } finally {
     await context.close()
@@ -61,7 +69,7 @@ test('loading fallback stays visible even when application JavaScript is unavail
       await page.addInitScript(value => {
         document.documentElement.dataset.theme = value
       }, theme)
-      await page.route('**/src/main.ts', route => route.abort())
+      await page.route('**/src/main.ts*', route => route.abort())
       await page.goto('/')
       const boot = page.locator('.boot-status__card')
       await boot.waitFor()

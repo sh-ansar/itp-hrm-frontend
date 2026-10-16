@@ -442,7 +442,7 @@ export async function mockApiRequest<T>(path:string,options:RequestInit={}):Prom
     }
     if(method==='DELETE'){directoryHubRows.splice(directoryHubRows.indexOf(record),1);return undefined as T}
   }
-  let m=p.match(/^\/companies\/[^/]+\/employees$/)
+  m=p.match(/^\/companies\/[^/]+\/employees$/)
   if(m&&method==='POST'){
     const body=options.body?JSON.parse(String(options.body)):{}
     const nextIndex=employees.length

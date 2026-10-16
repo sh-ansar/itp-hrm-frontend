@@ -16,6 +16,15 @@ test('HRM login sends its own XSRF token, never the platform cookie', async () =
     { name: 'XSRF-TOKEN', value: 'platform-only-token', url: baseURL },
     { name: 'HRM-XSRF-TOKEN', value: 'hrm-private-token', url: baseURL },
   ])
+  // Explicit readiness is required before the browser may send credentials.
+  // The real production server is fail-closed while login is switched off.
+  await page.route('**/hrm-api/api/v1/health', route => route.fulfill({
+    status: 200, contentType: 'application/json',
+    body: JSON.stringify({
+      status: 'ok', service: 'itp-hrm-api',
+      capabilities: { browser_login: true },
+    }),
+  }))
   await page.route('**/hrm-api/sanctum/csrf-cookie', route => {
     csrfRequested = true
     return route.fulfill({ status: 204 })

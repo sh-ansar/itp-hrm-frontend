@@ -35,6 +35,12 @@ jobs:
       SANCTUM_STATEFUL_DOMAINS: 127.0.0.1:5173,localhost:5173
       VITE_ENABLE_BROWSER_LOGIN: 'true'
       VITE_API_BASE_URL: /api/v1
+      # Synthetic, local-only credentials for an ephemeral CI MinIO instance.
+      MINIO_ENDPOINT: http://127.0.0.1:9000
+      MINIO_REGION: us-east-1
+      MINIO_BUCKET: hrm-ci-private-e2e
+      MINIO_ACCESS_KEY: hrm-ci-local-user
+      MINIO_SECRET_KEY: Synthetic-CI-MinIO-Private-Only-2026
     steps:
       - name: Checkout frontend
         uses: actions/checkout@v4
@@ -42,7 +48,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: sh-ansar/itp-hrm-backend
-          ref: 3e2469a79141e481c6b0f462d5a816f84b9b6343
+          ref: f3f37ac37a5c09d71638c52b244e17e7453a8f17
           path: backend
           persist-credentials: false
       - name: Set up PHP and SQLite
@@ -59,6 +65,32 @@ jobs:
       - name: Install backend dependencies
         working-directory: backend
         run: composer install --prefer-dist --no-interaction --no-progress
+      - name: Set up Go for upstream MinIO security-release source
+        if: ${{ matrix.mode == 'write-enabled' }}
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24.8'
+          cache: false
+      - name: Start isolated private MinIO for document upload/download browser test
+        if: ${{ matrix.mode == 'write-enabled' }}
+        run: |
+          set -euo pipefail
+          # Upstream images are not available anonymously. Build from the
+          # official, fixed upstream Git tag, not an untrusted container mirror.
+          GOMAXPROCS=2 go install -p 2 github.com/minio/minio@RELEASE.2025-10-15T17-29-55Z
+          mkdir -p "$RUNNER_TEMP/hrm-minio-data"
+          MINIO_ROOT_USER="$MINIO_ACCESS_KEY" MINIO_ROOT_PASSWORD="$MINIO_SECRET_KEY" \
+            "$HOME/go/bin/minio" server "$RUNNER_TEMP/hrm-minio-data" \
+              --address 127.0.0.1:9000 > "$RUNNER_TEMP/hrm-minio.log" 2>&1 &
+          for attempt in $(seq 1 60); do
+            if curl --silent --fail http://127.0.0.1:9000/minio/health/live > /dev/null; then
+              php tests/e2e/prepare-minio.php
+              exit 0
+            fi
+            sleep 1
+          done
+          tail -n 40 "$RUNNER_TEMP/hrm-minio.log"
+          exit 1
       - name: Install frontend and pinned browser test runtime
         run: |
           npm ci --no-audit --no-fund

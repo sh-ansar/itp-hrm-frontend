@@ -202,3 +202,61 @@ export function putProductionCalendar(
     body: JSON.stringify({ month, days }),
   })
 }
+
+
+export interface WorktimeDayEntry {
+  date: string
+  day_type: ProductionCalendarDayType
+  label: string | null
+  planned_minutes: number
+  worked_minutes: number | null
+  absence_minutes: number | null
+  overtime_minutes: number | null
+  revision: number | null
+}
+
+export interface WorktimeDayEntryResponse {
+  data: WorktimeDayEntry[]
+  meta: {
+    month: string
+    can_edit: boolean
+  }
+}
+
+export interface WorktimeDayChange {
+  date: string
+  worked_minutes: number | null
+  absence_minutes: number | null
+  overtime_minutes: number | null
+  revision: number | null
+}
+
+export function getEmployeeTimesheet(
+  companyId: string,
+  employeeId: string,
+  month: string,
+): Promise<WorktimeDayEntryResponse> {
+  assertCompany(companyId)
+  if (!uuid.test(employeeId)) throw new Error('Некорректный идентификатор сотрудника')
+  assertMonth(month)
+  const params = new URLSearchParams({ month })
+  return apiRequest<WorktimeDayEntryResponse>(
+    `/companies/${companyId}/worktime/timesheet/${employeeId}?${params.toString()}`,
+  )
+}
+
+export function putEmployeeTimesheet(
+  companyId: string,
+  employeeId: string,
+  month: string,
+  days: WorktimeDayChange[],
+): Promise<{ data: WorktimeDayEntry[]; meta: { month: string; created_count: number; updated_count: number } }> {
+  assertCompany(companyId)
+  if (!uuid.test(employeeId)) throw new Error('Некорректный идентификатор сотрудника')
+  assertMonth(month)
+  if (!days.length || days.length > 31) throw new Error('Ожидается от 1 до 31 дней табеля')
+  return apiRequest(`/companies/${companyId}/worktime/timesheet/${employeeId}`, {
+    method: 'PUT',
+    body: JSON.stringify({ month, days }),
+  })
+}

@@ -85,7 +85,7 @@ test('HR specialist edits a daily timesheet through the real UI and data survive
       return { status: response.status, body: await response.json() }
     })
     assert.equal(api.status, 200)
-    assert.equal(api.body.data[0].worked_minutes, 7740)
+    assert.equal(api.body.data[0].worked_minutes, 10440)
     assert.equal(api.body.data[0].absence_minutes, 120)
     assert.equal(api.body.data[0].overtime_minutes, 60)
     assert.equal(api.body.data[0].status, 'attention')

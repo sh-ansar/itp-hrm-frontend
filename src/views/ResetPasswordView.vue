@@ -5,6 +5,7 @@ import BaseButton from '../components/ui/BaseButton.vue'
 import BaseCard from '../components/ui/BaseCard.vue'
 import BaseField from '../components/ui/BaseField.vue'
 import BaseNotice from '../components/ui/BaseNotice.vue'
+import AuthAccessControls from '../components/ui/AuthAccessControls.vue'
 import { completePasswordReset } from '../api/session'
 import { publicAsset } from '../utils/publicAsset'
 
@@ -19,9 +20,10 @@ const confirmation = ref('')
 const busy = ref(false)
 const error = ref('')
 const success = ref('')
+const passwordValid = computed(() => nextPassword.value.length >= 8 && /\p{N}/u.test(nextPassword.value) && /[^\p{L}\p{N}\s]/u.test(nextPassword.value))
 
 async function submit() {
-  if (!validLink.value || busy.value || nextPassword.value.length < 14 || nextPassword.value !== confirmation.value) return
+  if (!validLink.value || busy.value || !passwordValid.value || nextPassword.value !== confirmation.value) return
   busy.value = true
   error.value = ''
   success.value = ''
@@ -42,6 +44,7 @@ async function submit() {
 <template>
   <main class="reset-page">
     <div class="reset-wrap">
+      <AuthAccessControls />
       <div class="reset-brand">
         <div class="reset-brand__row">
           <img :src="publicAsset('brand/itp-mark.svg')" alt="ITP" width="62" height="47" />
@@ -52,7 +55,7 @@ async function submit() {
 
       <BaseCard>
         <h1>Установка пароля</h1>
-        <p class="muted">Новый пароль должен содержать не менее 14 символов, буквы разных регистров, цифру и специальный знак.</p>
+        <p class="muted">Новый пароль: минимум 8 символов, минимум одна цифра и один специальный символ.</p>
 
         <BaseNotice v-if="success" tone="success">{{ success }}</BaseNotice>
         <BaseNotice v-else-if="!validLink" tone="warning">
@@ -61,14 +64,15 @@ async function submit() {
 
         <form v-else class="reset-form" @submit.prevent="submit">
           <div class="reset-email"><span>Учётная запись</span><strong>{{ email }}</strong></div>
-          <BaseField id="reset-new-password" v-model="nextPassword" label="Новый пароль" type="password"
+          <BaseField id="reset-new-password" v-model="nextPassword" label="Новый пароль" type="password" revealable
             autocomplete="new-password" required :disabled="busy" />
-          <BaseField id="reset-confirm-password" v-model="confirmation" label="Повторите пароль" type="password"
+          <BaseField id="reset-confirm-password" v-model="confirmation" label="Повторите пароль" type="password" revealable
             autocomplete="new-password" required :disabled="busy" />
+          <BaseNotice v-if="nextPassword && !passwordValid" tone="warning">Нужно минимум 8 символов, цифра и специальный символ.</BaseNotice>
           <BaseNotice v-if="confirmation && nextPassword !== confirmation" tone="error">Пароли не совпадают.</BaseNotice>
           <BaseNotice v-if="error" tone="error">{{ error }}</BaseNotice>
           <BaseButton type="submit"
-            :disabled="busy || nextPassword.length < 14 || nextPassword !== confirmation">
+            :disabled="busy || !passwordValid || nextPassword !== confirmation">
             {{ busy ? 'Сохранение…' : 'Установить пароль' }}
           </BaseButton>
         </form>

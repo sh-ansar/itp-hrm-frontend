@@ -40,11 +40,11 @@ test('HR creates, edits and assigns a work schedule through the real UI', async 
     let drawer = page.getByRole('dialog', { name: 'Новый график' })
     await drawer.waitFor()
 
-    await drawer.getByLabel('Код', { exact: true }).fill('E2E-5X2')
-    await drawer.getByLabel('Наименование', { exact: true }).fill('E2E стандарт 5/2')
-    await drawer.getByLabel('Тип графика', { exact: true }).selectOption('standard')
-    await drawer.getByLabel('Рабочее время', { exact: true }).fill('09:00–18:00')
-    await drawer.getByLabel('Часов в неделю', { exact: true }).fill('40')
+    await drawer.locator('input[placeholder="STD-5X2"]').fill('E2E-5X2')
+    await drawer.locator('input[placeholder="Стандарт 5/2"]').fill('E2E стандарт 5/2')
+    await drawer.locator('.form-grid select').selectOption('standard')
+    await drawer.locator('input[placeholder="09:00–18:00"]').fill('09:00–18:00')
+    await drawer.locator('.form-grid input[type="number"]').fill('40')
 
     const [createResponse] = await Promise.all([
       page.waitForResponse(r => r.url().endsWith('/worktime/schedules') && r.request().method() === 'POST'),
@@ -62,7 +62,7 @@ test('HR creates, edits and assigns a work schedule through the real UI', async 
     drawer = page.getByRole('dialog', { name: 'Редактировать график' })
     await drawer.waitFor()
 
-    await drawer.getByLabel('Наименование', { exact: true }).fill('E2E основной 5/2')
+    await drawer.locator('input[placeholder="Стандарт 5/2"]').fill('E2E основной 5/2')
     const [updateResponse] = await Promise.all([
       page.waitForResponse(r => r.url().includes('/worktime/schedules/') && r.request().method() === 'PUT'
         && !r.url().includes('/employees/')),
@@ -71,8 +71,8 @@ test('HR creates, edits and assigns a work schedule through the real UI', async 
     assert.equal(updateResponse.status(), 200)
     await drawer.getByText('График обновлён.', { exact: true }).waitFor()
 
-    await drawer.getByLabel('Сотрудник', { exact: true }).selectOption('77777777-7777-4777-8777-777777777777')
-    await drawer.getByLabel('Дата начала', { exact: true }).fill('2026-10-01')
+    await drawer.locator('.assignment-section select').selectOption('77777777-7777-4777-8777-777777777777')
+    await drawer.locator('.assignment-section input[type="date"]').fill('2026-10-01')
     const [assignResponse] = await Promise.all([
       page.waitForResponse(r => r.url().includes('/employees/77777777-7777-4777-8777-777777777777')
         && r.request().method() === 'PUT'),

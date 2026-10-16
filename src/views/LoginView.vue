@@ -9,24 +9,32 @@ import BaseButton from '../components/ui/BaseButton.vue'
 import BaseField from '../components/ui/BaseField.vue'
 import { publicAsset } from '../utils/publicAsset'
 import { getApiHealth } from '../api/client'
+import { requestPasswordReset } from '../api/session'
 
 const enabled = import.meta.env.VITE_ENABLE_BROWSER_LOGIN === 'true'
 const demoMode = import.meta.env.VITE_DEMO_MODE === 'true'
 const readiness = ref<'checking' | 'ready' | 'unavailable'>(enabled && !demoMode ? 'checking' : enabled ? 'ready' : 'unavailable')
 const loginReady = computed(() => enabled && readiness.value === 'ready')
+const recoveryReady = ref(false)
+const recoveryOpen = ref(false)
+const recoveryEmail = ref('')
+const recoveryBusy = ref(false)
+const recoveryMessage = ref('')
+const recoveryError = ref('')
 
 onMounted(async () => {
-  if (!enabled || demoMode) return
+  if (demoMode) return
   try {
     const response = await getApiHealth()
-    readiness.value = response.status === 'ok'
-      && response.service === 'itp-hrm-api'
-      && response.capabilities?.browser_login === true
+    const healthy = response.status === 'ok' && response.service === 'itp-hrm-api'
+    readiness.value = enabled && healthy && response.capabilities?.browser_login === true
       ? 'ready' : 'unavailable'
+    recoveryReady.value = healthy && response.capabilities?.password_reset === true
   } catch {
-    // Never offer a password form if the backend is offline, unavailable,
-    // misrouted to the platform HTML, or does not explicitly allow logins.
+    // Never offer credential actions if the backend is offline, unavailable,
+    // misrouted to platform HTML, or has not explicitly enabled that capability.
     readiness.value = 'unavailable'
+    recoveryReady.value = false
   }
 })
 const email = ref('')
@@ -36,6 +44,21 @@ const route = useRoute()
 const router = useRouter()
 const session = useSessionStore()
 const ui = useUiPreferencesStore()
+
+async function requestRecovery() {
+  if (!recoveryReady.value || recoveryBusy.value || !recoveryEmail.value.trim()) return
+  recoveryBusy.value = true
+  recoveryMessage.value = ''
+  recoveryError.value = ''
+  try {
+    await requestPasswordReset(recoveryEmail.value.trim())
+    recoveryMessage.value = 'Если активная учётная запись с таким адресом существует, письмо со ссылкой отправлено.'
+  } catch {
+    recoveryError.value = 'Не удалось отправить запрос. Проверьте подключение и повторите позднее.'
+  } finally {
+    recoveryBusy.value = false
+  }
+}
 
 async function submit() {
   if (!loginReady.value || session.loading) return
@@ -95,6 +118,24 @@ async function submit() {
             {{ session.loading ? 'Проверка данных…' : 'Войти' }}
           </BaseButton>
         </form>
+
+        <div v-if="recoveryReady" class="recovery-panel">
+          <button v-if="!recoveryOpen" class="recovery-link" type="button"
+            @click="recoveryOpen = true; recoveryEmail = email">
+            Забыли пароль или впервые входите?
+          </button>
+          <form v-else class="login-form recovery-form" @submit.prevent="requestRecovery">
+            <p class="muted">Укажите корпоративную почту. Ответ одинаков для существующих и неизвестных адресов.</p>
+            <BaseField id="recovery-email" v-model="recoveryEmail" label="Электронная почта" type="email"
+              autocomplete="email" required :disabled="recoveryBusy" />
+            <BaseNotice v-if="recoveryMessage" tone="success">{{ recoveryMessage }}</BaseNotice>
+            <BaseNotice v-if="recoveryError" tone="error">{{ recoveryError }}</BaseNotice>
+            <BaseButton type="submit" :disabled="recoveryBusy || !recoveryEmail">
+              {{ recoveryBusy ? 'Отправка…' : 'Получить ссылку' }}
+            </BaseButton>
+            <button class="recovery-link" type="button" @click="recoveryOpen = false">Отмена</button>
+          </form>
+        </div>
         <RouterLink class="login-back" to="/">Вернуться к обзору</RouterLink>
       </BaseCard>
 
@@ -134,6 +175,11 @@ async function submit() {
 .login-form{display:flex;flex-direction:column;gap:18px}
 .login-form :deep(.base-button){width:100%;min-height:44px;margin-top:4px}
 .login-back{display:inline-block;margin-top:20px;color:var(--color-primary);font-size:14px;text-decoration:underline}
+.recovery-panel{margin-top:18px;padding-top:18px;border-top:1px solid var(--color-stroke)}
+.recovery-form{margin-top:0}
+.recovery-form .muted{margin:0}
+.recovery-link{border:0;background:transparent;padding:0;color:var(--color-primary);font:inherit;font-size:14px;text-decoration:underline;cursor:pointer;text-align:left}
+.recovery-link:focus-visible{outline:2px solid var(--color-focus);outline-offset:3px;border-radius:2px}
 .login-footnote{font-size:12px;line-height:18px;color:var(--color-muted);text-align:center;margin:0}
 @media(max-width:520px){
   .login-page{align-items:flex-start;padding:20px 14px}

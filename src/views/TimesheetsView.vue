@@ -7,6 +7,7 @@ import BaseCard from '../components/ui/BaseCard.vue'
 import BaseButton from '../components/ui/BaseButton.vue'
 import ProductionCalendarEditor from '../components/ProductionCalendarEditor.vue'
 import TimesheetEntryEditor from '../components/TimesheetEntryEditor.vue'
+import WorkScheduleEditor from '../components/WorkScheduleEditor.vue'
 import BaseDataTable from '../components/ui/BaseDataTable.vue'
 import BaseStatusPill from '../components/ui/BaseStatusPill.vue'
 import BaseFormField from '../components/ui/BaseFormField.vue'
@@ -24,6 +25,7 @@ import {
   type ProductionCalendarDay,
   type ProductionCalendarResponse,
   type WorkScheduleRow,
+  type WorkScheduleResponse,
   type WorktimeAbsenceRow,
   type WorktimeTimesheetResponse,
   type WorktimeTimesheetRow,
@@ -62,6 +64,7 @@ interface ScheduleViewRow extends Record<string, unknown> {
   work_time: string
   week_hours: number | null
   employees: number
+  source: WorkScheduleRow
 }
 
 interface AbsenceViewRow extends Record<string, unknown> {
@@ -99,9 +102,12 @@ const productionCalendar = ref<ProductionCalendarDay[]>([])
 const productionAbsences = ref<WorktimeAbsenceRow[]>([])
 const productionTimesheetMeta = ref<WorktimeTimesheetResponse['meta'] | null>(null)
 const productionCalendarMeta = ref<ProductionCalendarResponse['meta'] | null>(null)
+const productionScheduleMeta = ref<WorkScheduleResponse['meta'] | null>(null)
 const calendarEditorOpen = ref(false)
 const timesheetEditorOpen = ref(false)
 const editingTimesheetEmployee = ref<TimesheetViewRow | null>(null)
+const scheduleEditorOpen = ref(false)
+const editingSchedule = ref<WorkScheduleRow | null>(null)
 const loadingCompanies = ref(false)
 const loading = ref(false)
 const error = ref('')
@@ -150,6 +156,7 @@ const scheduleRows = computed<ScheduleViewRow[]>(() => {
     work_time: row.work_time_label || '—',
     week_hours: hoursFromMinutes(row.weekly_minutes),
     employees: row.employees,
+    source: row,
   }))
 })
 
@@ -259,6 +266,7 @@ const scheduleColumns = [
   { key: 'work_time', label: 'Рабочее время' },
   { key: 'week_hours', label: 'Часов в неделю' },
   { key: 'employees', label: 'Сотрудников' },
+  { key: 'actions', label: 'Действия' },
 ]
 const absenceColumns = [
   { key: 'employee', label: 'Сотрудник' },
@@ -352,6 +360,7 @@ function resetProductionData() {
   productionAbsences.value = []
   productionTimesheetMeta.value = null
   productionCalendarMeta.value = null
+  productionScheduleMeta.value = null
 }
 
 async function loadCompanies() {
@@ -412,6 +421,7 @@ async function loadWorkspace() {
 
     if (schedules.status === 'fulfilled') {
       productionSchedules.value = schedules.value.data
+      productionScheduleMeta.value = schedules.value.meta
     } else unavailable.push('графики работы')
 
     if (calendar.status === 'fulfilled') {
@@ -451,6 +461,20 @@ function timesheetUpdated() {
   void loadWorkspace()
 }
 
+function openScheduleEditor(row?: ScheduleViewRow) {
+  editingSchedule.value = row?.source ?? null
+  scheduleEditorOpen.value = true
+}
+
+function closeScheduleEditor() {
+  scheduleEditorOpen.value = false
+  editingSchedule.value = null
+}
+
+function scheduleUpdated() {
+  void loadWorkspace()
+}
+
 function calendarUpdated() {
   calendarEditorOpen.value = false
   void loadWorkspace()
@@ -458,6 +482,7 @@ function calendarUpdated() {
 watch([company, month], () => {
   calendarEditorOpen.value = false
   closeTimesheetEditor()
+  closeScheduleEditor()
   void loadWorkspace()
 })
 onMounted(loadCompanies)
@@ -595,13 +620,24 @@ onMounted(loadCompanies)
             <h2>Графики работы</h2>
             <p>Основные, сменные, индивидуальные и суммированные графики.</p>
           </div>
-          <span>{{ scheduleRows.length }} графика</span>
+          <div class="section-actions">
+            <BaseButton v-if="!demoMode && productionScheduleMeta?.can_manage_schedules"
+              type="button" @click="openScheduleEditor()">Новый график</BaseButton>
+            <span>{{ scheduleRows.length }} графика</span>
+          </div>
         </div>
         <div class="worktime-desktop">
           <BaseDataTable :rows="scheduleRows" :columns="scheduleColumns" row-key="id"
             :loading="loading" caption="Графики работы"
             empty-title="Графики не найдены" empty-description="Для выбранной компании графики отсутствуют.">
             <template #cell-week_hours="{ value }">{{ hoursLabel(value) }}<template v-if="typeof value === 'number'"> ч</template></template>
+            <template #cell-actions="{ row }">
+              <BaseButton v-if="!demoMode && productionScheduleMeta?.can_manage_schedules"
+                variant="secondary" type="button" @click="openScheduleEditor(row)">
+                Управление
+              </BaseButton>
+              <span v-else>—</span>
+            </template>
           </BaseDataTable>
         </div>
         <div class="worktime-mobile">
@@ -612,6 +648,10 @@ onMounted(loadCompanies)
               <div><dt>Неделя</dt><dd>{{ hoursLabel(row.week_hours) }}<template v-if="row.week_hours !== null"> ч</template></dd></div>
               <div><dt>Сотрудники</dt><dd>{{ row.employees }}</dd></div>
             </dl>
+            <BaseButton v-if="!demoMode && productionScheduleMeta?.can_manage_schedules"
+              variant="secondary" type="button" @click="openScheduleEditor(row)">
+              Управление графиком
+            </BaseButton>
           </article>
         </div>
       </BaseCard>
@@ -720,6 +760,12 @@ onMounted(loadCompanies)
     :month="month"
     @close="closeTimesheetEditor"
     @saved="timesheetUpdated" />
+  <WorkScheduleEditor
+    :open="scheduleEditorOpen"
+    :company-id="company"
+    :schedule="editingSchedule"
+    @close="closeScheduleEditor"
+    @saved="scheduleUpdated" />
 </template>
 
 <style scoped>
@@ -743,6 +789,8 @@ onMounted(loadCompanies)
 .section-heading h2{margin:0;color:var(--color-text);font-size:16px;line-height:1.35;font-weight:600}
 .section-heading p{margin:4px 0 0;color:var(--color-muted);font-size:11px}
 .section-heading>span{color:var(--color-muted);font-size:11px}
+.section-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.section-actions>span{color:var(--color-muted);font-size:11px}
 .employee-cell{display:grid;gap:3px;min-width:180px}
 .employee-cell a{color:var(--color-text);font-size:13px;font-weight:600}
 .employee-cell a:hover{color:var(--color-primary)}

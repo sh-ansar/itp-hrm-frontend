@@ -31,9 +31,9 @@ export async function currentSession(): Promise<SessionUser> {
   return result.data
 }
 
-async function ensureXsrfCookie(): Promise<void> {
-  if (readXsrfCookie()) return
-
+async function refreshXsrfCookie(): Promise<void> {
+  // Always refresh before a credential-bearing action. Do not trust a stale
+  // cookie merely because the browser already has one on this shared host.
   await requestJson<void>(sessionPath('/sanctum/csrf-cookie'))
   if (!readXsrfCookie()) {
     throw new ApiError('invalid-response', 419, 'Сервер не выдал CSRF-токен')
@@ -42,7 +42,7 @@ async function ensureXsrfCookie(): Promise<void> {
 
 export async function loginSession(email: string, password: string): Promise<SessionUser> {
   // Sanctum issues the HRM-only XSRF cookie; credentials are never persisted.
-  await ensureXsrfCookie()
+  await refreshXsrfCookie()
 
   const result = await requestJson<SessionResponse>(sessionPath('/auth/login'), {
     method: 'POST',
@@ -66,7 +66,7 @@ export async function changePasswordSession(currentPassword: string, newPassword
 }
 
 export async function requestPasswordReset(email: string): Promise<void> {
-  await ensureXsrfCookie()
+  await refreshXsrfCookie()
   await requestJson<void>(sessionPath('/auth/password/request'), {
     method: 'POST',
     body: JSON.stringify({ email }),
@@ -79,7 +79,7 @@ export async function completePasswordReset(
   password: string,
   confirmation: string,
 ): Promise<void> {
-  await ensureXsrfCookie()
+  await refreshXsrfCookie()
   await requestJson<void>(sessionPath('/auth/password/reset'), {
     method: 'POST',
     body: JSON.stringify({

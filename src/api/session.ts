@@ -48,6 +48,18 @@ export async function loginSession(email: string, password: string): Promise<Ses
   return result.data
 }
 
+/** Authenticated, CSRF-protected password rotation. Never persist credentials in browser storage. */
+export async function changePasswordSession(currentPassword: string, newPassword: string, confirmation: string): Promise<void> {
+  await requestJson<void>(sessionPath('/auth/password'), {
+    method: 'POST',
+    body: JSON.stringify({
+      current_password: currentPassword,
+      new_password: newPassword,
+      new_password_confirmation: confirmation,
+    }),
+  })
+}
+
 export async function logoutSession(): Promise<void> {
   await requestJson<void>(sessionPath('/auth/logout'), {
     method: 'POST',

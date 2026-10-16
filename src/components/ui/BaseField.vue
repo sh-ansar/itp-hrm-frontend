@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import { publicAsset } from '../../utils/publicAsset'
 
 const model = defineModel<string>({ required: true })
 const props = withDefaults(defineProps<{
@@ -41,7 +42,7 @@ const inputType = computed(() => props.type === 'password' && props.revealable &
         :title="revealed ? 'Скрыть пароль' : 'Показать пароль'"
         @click="revealed = !revealed"
       >
-        {{ revealed ? 'Скрыть' : 'Показать' }}
+        <img :src="publicAsset(revealed ? 'prototype-icons/eye-slashf.svg' : 'prototype-icons/eyef.svg')" alt="" aria-hidden="true" />
       </button>
     </div>
   </div>
@@ -52,11 +53,12 @@ const inputType = computed(() => props.type === 'password' && props.revealable &
 .base-field label{color:var(--color-text);font-weight:600;font-size:14px}
 .base-field__control{position:relative}
 .base-field input{width:100%;min-height:44px;border:1px solid var(--color-stroke);background:var(--color-surface-raised);border-radius:var(--radius-md);padding:11px 13px;color:var(--color-text)}
-.base-field__control:has(.base-field__reveal) input{padding-right:88px}
+.base-field__control:has(.base-field__reveal) input{padding-right:48px}
 .base-field input:focus-visible{outline:3px solid var(--color-focus);outline-offset:1px}
 .base-field input[aria-invalid="true"]{border-color:var(--color-danger)}
 .base-field input:disabled{background:var(--color-soft);opacity:.65}
-.base-field__reveal{position:absolute;right:7px;top:50%;transform:translateY(-50%);border:0;background:transparent;color:var(--color-primary);font:inherit;font-size:12px;font-weight:600;padding:7px 8px;border-radius:var(--radius-sm);cursor:pointer}
+.base-field__reveal{position:absolute;right:7px;top:50%;transform:translateY(-50%);display:grid;place-items:center;width:34px;height:34px;border:0;background:transparent;padding:0;border-radius:var(--radius-sm);cursor:pointer}
+.base-field__reveal img{display:block;width:20px;height:20px}
 .base-field__reveal:hover{background:var(--color-soft)}
 .base-field__reveal:focus-visible{outline:2px solid var(--color-focus);outline-offset:1px}
 .base-field__reveal:disabled{opacity:.5;cursor:not-allowed}

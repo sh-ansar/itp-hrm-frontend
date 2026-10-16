@@ -89,6 +89,28 @@ function trainingTypeLabel(value: unknown): string {
 const today = localTodayISO()
 const currentAssignment = computed(() => profile.value?.assignments.find(item =>
   item.valid_from <= today && (item.valid_to === null || item.valid_to >= today)) ?? null)
+const currentContract = computed(() => contracts.value.find(item =>
+  item.valid_from <= today && (item.valid_to === null || item.valid_to >= today)) ?? null)
+function contractTypeLabel(value: unknown): string {
+  const labels: Record<string, string> = {
+    indefinite: 'Бессрочный',
+    fixed_term: 'Срочный',
+    temporary: 'Временный',
+    seasonal: 'Сезонный',
+    other: 'Другой',
+  }
+  return labels[String(value)] ?? String(value ?? '—')
+}
+function employmentTypeLabel(value: unknown): string {
+  const labels: Record<string, string> = {
+    full_time: 'Основное место, полная занятость',
+    part_time: 'Неполная занятость',
+    secondary: 'Совместительство',
+    remote: 'Дистанционная работа',
+    other: 'Другой',
+  }
+  return labels[String(value)] ?? String(value ?? '—')
+}
 const plannedAssignment = computed(() => profile.value?.assignments.find(item =>
   item.valid_from > today && item.valid_to === null) ?? null)
 const employmentStatus = computed(() => currentAssignment.value
@@ -233,17 +255,14 @@ const staffingStatusFields = computed<EmployeeDisplayField[]>(() => [
 ])
 
 const contractFields = computed<EmployeeDisplayField[]>(() => [
-  { label: 'Номер договора', value: reference.value?.employment.contract_number },
-  { label: 'Тип договора', value: reference.value?.employment.contract_type },
-  { label: 'Действует с', value: formatDate(reference.value?.employment.valid_from ?? reference.value?.employment.contract_date) },
-  { label: 'Действует до', value: formatDate(reference.value?.employment.valid_to) },
-  { label: 'Испытательный срок', value: reference.value?.employment.probation_enabled },
-  { label: 'Испытание с', value: formatDate(reference.value?.employment.probation_from) },
-  { label: 'Испытание до', value: formatDate(reference.value?.employment.probation_until) },
-  { label: 'Основание приёма', value: reference.value?.employment.hire_basis ?? currentAssignment.value?.basis_reference ?? plannedAssignment.value?.basis_reference, wide: true },
-  { label: 'Дата приёма', value: formatDate(reference.value?.employment.hire_date) },
-  { label: 'Вид занятости', value: reference.value?.employment.employment_type },
-  { label: 'Трудовой договор', value: reference.value?.employment.contract_attachment, wide: true },
+  { label: 'Номер договора', value: currentContract.value?.contract_number ?? reference.value?.employment.contract_number },
+  { label: 'Тип договора', value: currentContract.value ? contractTypeLabel(currentContract.value.contract_type) : reference.value?.employment.contract_type },
+  { label: 'Дата подписания', value: formatDate(currentContract.value?.signed_on ?? reference.value?.employment.contract_date) },
+  { label: 'Действует с', value: formatDate(currentContract.value?.valid_from ?? reference.value?.employment.valid_from) },
+  { label: 'Действует до', value: currentContract.value?.valid_to === null ? tr('Бессрочно') : formatDate(currentContract.value?.valid_to ?? reference.value?.employment.valid_to) },
+  { label: 'Испытание до', value: formatDate(currentContract.value?.probation_until ?? reference.value?.employment.probation_until) },
+  { label: 'Основание', value: currentContract.value?.basis_reference ?? reference.value?.employment.hire_basis ?? currentAssignment.value?.basis_reference ?? plannedAssignment.value?.basis_reference, wide: true },
+  { label: 'Вид занятости', value: currentContract.value ? employmentTypeLabel(currentContract.value.employment_type) : reference.value?.employment.employment_type },
 ])
 const seniorityFields = computed<EmployeeDisplayField[]>(() => [
   { label: 'Общий стаж', value: reference.value?.employment.total_seniority },
@@ -454,6 +473,16 @@ function beginEdit(section: ProfileSection, record: ProfileEditRow) {
 }
 
 let generation = 0
+const contractColumns = [
+  { key: 'contract_number', label: 'Номер договора' },
+  { key: 'contract_type', label: 'Тип договора' },
+  { key: 'employment_type', label: 'Вид занятости' },
+  { key: 'valid_from', label: 'Действует с' },
+  { key: 'valid_to', label: 'Действует до' },
+  { key: 'probation_until', label: 'Испытание до' },
+  { key: 'basis_reference', label: 'Основание' },
+  { key: 'edit', label: 'Действия' },
+]
 const columns = computed(() => [
   { key: 'department_name', label: 'Подразделение' },
   { key: 'position_name', label: 'Должность' },

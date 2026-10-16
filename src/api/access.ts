@@ -10,7 +10,7 @@ export type CapabilityKey =
   | 'worktime.view' | 'leaves.view' | 'documents.view' | 'directories.view'
   | 'development.view' | 'reports.view' | 'settings.view'
   | 'roles.interface' | 'employees.write' | 'staffing.write'
-  | 'documents.write' | 'worktime.calendar.edit'
+  | 'documents.write' | 'directories.write' | 'worktime.calendar.edit'
   | 'leave.requests.manage' | 'leave.requests.approve'
   | 'leave.types.manage' | 'roles.assign'
 

@@ -7,6 +7,7 @@ import BaseNotice from '../components/ui/BaseNotice.vue'
 import BaseSelectField from '../components/ui/BaseSelectField.vue'
 import BaseViewTabs from '../components/ui/BaseViewTabs.vue'
 import EmployeeProfileSection from '../components/EmployeeProfileSection.vue'
+import PasswordChangePanel from '../components/security/PasswordChangePanel.vue'
 import { listCompanies, type CompanyRecord } from '../api/organization'
 import { localeOptions, useAppI18n } from '../i18n'
 import { useSessionStore } from '../stores/session'
@@ -313,6 +314,8 @@ onMounted(reload)
             :options="inactivityOptions" :disabled="!demoMode" />
         </div>
       </EmployeeProfileSection>
+
+      <PasswordChangePanel v-if="session.user && !demoMode" />
 
       <EmployeeProfileSection :title="t('settings.sessions')">
         <div class="security-row">

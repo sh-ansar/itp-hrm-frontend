@@ -48,6 +48,28 @@ export async function loginSession(email: string, password: string): Promise<Ses
   return result.data
 }
 
+export async function changeOwnPassword(currentPassword: string, newPassword: string): Promise<void> {
+  await requestJson<void>(sessionPath('/auth/password'), {
+    method: 'POST',
+    body: JSON.stringify({
+      current_password: currentPassword,
+      password: newPassword,
+      password_confirmation: newPassword,
+    }),
+    timeoutMs: 30_000,
+  })
+
+  // A successful password change rotates session identity and CSRF token.
+  // Refresh the first-party HRM-only CSRF cookie for future protected actions.
+  try {
+    await requestJson<void>(sessionPath('/sanctum/csrf-cookie'))
+  } catch {
+    // The password was already changed. Reload rather than incorrectly
+    // displaying a failure or keeping a stale CSRF token in the browser.
+    if (typeof window !== 'undefined') window.location.reload()
+  }
+}
+
 export async function logoutSession(): Promise<void> {
   await requestJson<void>(sessionPath('/auth/logout'), {
     method: 'POST',

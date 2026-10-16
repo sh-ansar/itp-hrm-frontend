@@ -7,6 +7,7 @@ import BaseCard from '../components/ui/BaseCard.vue'
 import BaseNotice from '../components/ui/BaseNotice.vue'
 import BaseButton from '../components/ui/BaseButton.vue'
 import BaseField from '../components/ui/BaseField.vue'
+import AuthAccessControls from '../components/ui/AuthAccessControls.vue'
 import { publicAsset } from '../utils/publicAsset'
 import { getApiHealth } from '../api/client'
 import { requestPasswordReset } from '../api/session'
@@ -85,6 +86,7 @@ async function submit() {
 <template>
   <main class="login-page">
     <div class="login-wrap">
+      <AuthAccessControls />
       <div class="login-brand">
         <div class="login-brand__row">
           <img :src="publicAsset('brand/itp-mark.svg')" alt="ITP" width="62" height="47" />
@@ -111,7 +113,7 @@ async function submit() {
         <form v-if="enabled" class="login-form" @submit.prevent="submit">
           <BaseField id="login-email" v-model="email" label="Электронная почта" type="email"
             autocomplete="username" required :disabled="session.loading || !loginReady" :invalid="!!message" />
-          <BaseField id="login-password" v-model="password" label="Пароль" type="password"
+          <BaseField id="login-password" v-model="password" label="Пароль" type="password" revealable
             autocomplete="current-password" required :disabled="session.loading || !loginReady" :invalid="!!message" />
           <BaseNotice v-if="message || session.error" tone="error">{{ message || session.error }}</BaseNotice>
           <BaseButton type="submit" :disabled="session.loading || !loginReady || !email || !password">
@@ -120,16 +122,21 @@ async function submit() {
         </form>
 
         <div class="recovery-panel">
-          <BaseButton v-if="!recoveryOpen" variant="secondary" type="button"
-            @click="recoveryOpen = true; recoveryEmail = email">
-            Забыли пароль или впервые входите?
+          <BaseButton variant="secondary" type="button"
+            @click="recoveryOpen = true; recoveryEmail = email; recoveryMessage = ''; recoveryError = ''">
+            Забыли пароль?
           </BaseButton>
-          <div v-else>
+        </div>
+
+        <div v-if="recoveryOpen" class="recovery-modal" role="dialog" aria-modal="true" aria-labelledby="recovery-title">
+          <div class="recovery-modal__backdrop" @click="recoveryOpen = false"></div>
+          <BaseCard class="recovery-modal__card">
+            <h2 id="recovery-title">Сброс пароля</h2>
+            <p class="muted">Укажите корпоративную почту. Мы отправим ссылку для установки нового пароля.</p>
             <BaseNotice v-if="!recoveryReady" tone="info">
-              Восстановление пароля уже предусмотрено, но отправка писем будет доступна после активации корпоративного почтового ящика HRM.
+              Восстановление пароля временно недоступно. Попробуйте позднее.
             </BaseNotice>
             <form v-else class="login-form recovery-form" @submit.prevent="requestRecovery">
-              <p class="muted">Укажите корпоративную почту. Ответ одинаков для существующих и неизвестных адресов.</p>
               <BaseField id="recovery-email" v-model="recoveryEmail" label="Электронная почта" type="email"
                 autocomplete="email" required :disabled="recoveryBusy" />
               <BaseNotice v-if="recoveryMessage" tone="success">{{ recoveryMessage }}</BaseNotice>
@@ -138,8 +145,8 @@ async function submit() {
                 {{ recoveryBusy ? 'Отправка…' : 'Получить ссылку' }}
               </BaseButton>
             </form>
-            <BaseButton variant="secondary" type="button" @click="recoveryOpen = false">Отмена</BaseButton>
-          </div>
+            <BaseButton variant="secondary" type="button" @click="recoveryOpen = false">Закрыть</BaseButton>
+          </BaseCard>
         </div>
         <RouterLink class="login-back" to="/">Вернуться к обзору</RouterLink>
       </BaseCard>
@@ -184,6 +191,11 @@ async function submit() {
 .recovery-panel :deep(.base-button){width:100%}
 .recovery-form{margin-top:0}
 .recovery-form .muted{margin:0}
+.recovery-modal{position:fixed;inset:0;z-index:1000;display:grid;place-items:center;padding:20px}
+.recovery-modal__backdrop{position:absolute;inset:0;background:rgba(0,0,0,.48);backdrop-filter:blur(2px)}
+.recovery-modal__card{position:relative;z-index:1;width:min(100%,440px);display:grid;gap:16px}
+.recovery-modal__card h2{margin:0;font-size:22px}
+.recovery-modal__card :deep(.base-button){width:100%}
 .login-footnote{font-size:12px;line-height:18px;color:var(--color-muted);text-align:center;margin:0}
 @media(max-width:520px){
   .login-page{align-items:flex-start;padding:20px 14px}

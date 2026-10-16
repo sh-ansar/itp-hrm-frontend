@@ -176,7 +176,7 @@ test('password recovery is non-enumerating and completes a real one-time reset',
   const { page } = await createPage(t)
   await page.goto('/login')
 
-  const recoveryTrigger = page.getByRole('button', { name: 'Забыли пароль или впервые входите?' })
+  const recoveryTrigger = page.getByRole('button', { name: 'Забыли пароль?' })
   await recoveryTrigger.waitFor()
   await recoveryTrigger.click()
 

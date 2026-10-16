@@ -31,18 +31,21 @@ test('connected HR frontend uses server capabilities, hides demo role matrix and
     assert.equal(company.role_code, 'hr_specialist')
     assert.equal(company.capabilities['employees.view'], true)
     assert.equal(company.capabilities['roles.interface'], false)
-    assert.equal(company.capabilities['reports.view'], false)
+    assert.equal(company.capabilities['reports.view'], true)
     assert.equal(company.capabilities['worktime.calendar.edit'], false)
 
     const menu = page.getByRole('navigation', { name: 'Главная навигация' })
     assert.equal(await menu.getByRole('link', { name: 'Сотрудники' }).count(), 1)
     assert.equal(await menu.getByRole('link', { name: 'Роли и права' }).count(), 0)
-    assert.equal(await menu.getByRole('link', { name: 'Отчёты и аналитика' }).count(), 0)
-    for (const url of ['/roles', '/reports']) {
-      await page.goto(url)
-      await page.getByRole('heading', { name: 'Доступ ограничен' }).waitFor()
-      assert.equal(new URL(page.url()).pathname, '/access-denied')
-    }
+    assert.equal(await menu.getByRole('link', { name: 'Отчёты и аналитика' }).count(), 1)
+    await page.goto('/roles')
+    await page.getByRole('heading', { name: 'Доступ ограничен' }).waitFor()
+    assert.equal(new URL(page.url()).pathname, '/access-denied')
+
+    await page.goto('/reports')
+    await page.waitForURL(/\/reports$/)
+    await page.locator('.reports-page').waitFor()
+    assert.equal(await page.getByRole('button', { name: 'Сводка', exact: true }).count(), 1)
     await page.goto('/employees')
     await page.getByRole('heading', { name: 'Реестр сотрудников' }).waitFor()
     assert.equal(await page.getByRole('searchbox', { name: 'Поиск сотрудника' }).count(), 1)

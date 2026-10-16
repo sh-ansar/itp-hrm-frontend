@@ -64,7 +64,7 @@ interface ScheduleViewRow extends Record<string, unknown> {
   work_time: string
   week_hours: number | null
   employees: number
-  source: WorkScheduleRow
+  source?: WorkScheduleRow
 }
 
 interface AbsenceViewRow extends Record<string, unknown> {

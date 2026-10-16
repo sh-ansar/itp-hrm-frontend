@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useSessionStore } from '../stores/session'
 import { useUiPreferencesStore } from '../stores/uiPreferences'
@@ -8,8 +8,27 @@ import BaseNotice from '../components/ui/BaseNotice.vue'
 import BaseButton from '../components/ui/BaseButton.vue'
 import BaseField from '../components/ui/BaseField.vue'
 import { publicAsset } from '../utils/publicAsset'
+import { getApiHealth } from '../api/client'
 
 const enabled = import.meta.env.VITE_ENABLE_BROWSER_LOGIN === 'true'
+const demoMode = import.meta.env.VITE_DEMO_MODE === 'true'
+const readiness = ref<'checking' | 'ready' | 'unavailable'>(enabled && !demoMode ? 'checking' : enabled ? 'ready' : 'unavailable')
+const loginReady = computed(() => enabled && readiness.value === 'ready')
+
+onMounted(async () => {
+  if (!enabled || demoMode) return
+  try {
+    const response = await getApiHealth()
+    readiness.value = response.status === 'ok'
+      && response.service === 'itp-hrm-api'
+      && response.capabilities?.browser_login === true
+      ? 'ready' : 'unavailable'
+  } catch {
+    // Never offer a password form if the backend is offline, unavailable,
+    // misrouted to the platform HTML, or does not explicitly allow logins.
+    readiness.value = 'unavailable'
+  }
+})
 const email = ref('')
 const password = ref('')
 const message = ref('')
@@ -19,7 +38,7 @@ const session = useSessionStore()
 const ui = useUiPreferencesStore()
 
 async function submit() {
-  if (!enabled || session.loading) return
+  if (!loginReady.value || session.loading) return
 
   message.value = ''
   try {
@@ -59,13 +78,20 @@ async function submit() {
           Авторизация пока не включена. Подключение доступно после согласования безопасности и адресов размещения.
         </BaseNotice>
 
-        <form v-else class="login-form" @submit.prevent="submit">
+        <BaseNotice v-else-if="readiness === 'checking'" tone="info">
+          Проверяем защищённое подключение к серверу HRM…
+        </BaseNotice>
+        <BaseNotice v-else-if="!loginReady" tone="warning">
+          Вход временно недоступен: сервер HRM ещё не разрешил авторизацию. Повторите попытку позднее.
+        </BaseNotice>
+
+        <form v-if="enabled" class="login-form" @submit.prevent="submit">
           <BaseField id="login-email" v-model="email" label="Электронная почта" type="email"
-            autocomplete="username" required :disabled="session.loading" :invalid="!!message" />
+            autocomplete="username" required :disabled="session.loading || !loginReady" :invalid="!!message" />
           <BaseField id="login-password" v-model="password" label="Пароль" type="password"
-            autocomplete="current-password" required :disabled="session.loading" :invalid="!!message" />
+            autocomplete="current-password" required :disabled="session.loading || !loginReady" :invalid="!!message" />
           <BaseNotice v-if="message || session.error" tone="error">{{ message || session.error }}</BaseNotice>
-          <BaseButton type="submit" :disabled="session.loading || !email || !password">
+          <BaseButton type="submit" :disabled="session.loading || !loginReady || !email || !password">
             {{ session.loading ? 'Проверка данных…' : 'Войти' }}
           </BaseButton>
         </form>

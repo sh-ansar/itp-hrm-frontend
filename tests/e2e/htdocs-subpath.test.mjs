@@ -65,6 +65,40 @@ test('static HRM build works under /hrm/ after direct navigation and refresh', a
   }
 })
 
+test('browser login is enabled only after a verified HRM API readiness response', async () => {
+  for (const { response, allowed } of [
+    { response: { status: 200, contentType: 'application/json', body: JSON.stringify({ status: 'ok', service: 'itp-hrm-api', capabilities: { browser_login: false } }) }, allowed: false },
+    { response: { status: 200, contentType: 'text/html', body: '<!DOCTYPE html><html><body>Platform fallback</body></html>' }, allowed: false },
+    { response: { status: 200, contentType: 'application/json', body: JSON.stringify({ status: 'ok', service: 'itp-hrm-api', capabilities: { browser_login: true } }) }, allowed: true },
+  ]) {
+    const context = await browser.newContext({ baseURL })
+    const page = await context.newPage()
+    const attemptedLogins = []
+    await page.route('**/hrm-api/**', route => {
+      if (route.request().url().endsWith('/api/v1/health')) return route.fulfill(response)
+      if (route.request().url().endsWith('/auth/login')) attemptedLogins.push('unexpected')
+      return route.fulfill({ status: 401, contentType: 'application/json', body: '{"message":"Unauthenticated"}' })
+    })
+    try {
+      await page.goto('/hrm/login', { waitUntil: 'networkidle' })
+      const email = page.locator('input[type="email"]')
+      const password = page.locator('input[type="password"]')
+      const submit = page.locator('button[type="submit"]')
+      assert.equal(await email.isDisabled(), !allowed)
+      assert.equal(await password.isDisabled(), !allowed)
+      assert.equal(await submit.isDisabled(), true)
+      if (allowed) {
+        await email.fill('synthetic@example.test')
+        await password.fill('synthetic-only-not-a-real-credential')
+        assert.equal(await submit.isEnabled(), true)
+      }
+      assert.deepEqual(attemptedLogins, [])
+    } finally {
+      await context.close()
+    }
+  }
+})
+
 test('all prototype SVG icons resolve under /hrm/ and never use root asset paths', async () => {
   const sources = []
   const visit = directory => {

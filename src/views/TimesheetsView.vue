@@ -6,6 +6,7 @@ import { CalendarDays, Clock3, TriangleAlert, UsersRound } from 'lucide-vue-next
 import BaseCard from '../components/ui/BaseCard.vue'
 import BaseButton from '../components/ui/BaseButton.vue'
 import ProductionCalendarEditor from '../components/ProductionCalendarEditor.vue'
+import TimesheetEntryEditor from '../components/TimesheetEntryEditor.vue'
 import BaseDataTable from '../components/ui/BaseDataTable.vue'
 import BaseStatusPill from '../components/ui/BaseStatusPill.vue'
 import BaseFormField from '../components/ui/BaseFormField.vue'
@@ -99,6 +100,8 @@ const productionAbsences = ref<WorktimeAbsenceRow[]>([])
 const productionTimesheetMeta = ref<WorktimeTimesheetResponse['meta'] | null>(null)
 const productionCalendarMeta = ref<ProductionCalendarResponse['meta'] | null>(null)
 const calendarEditorOpen = ref(false)
+const timesheetEditorOpen = ref(false)
+const editingTimesheetEmployee = ref<TimesheetViewRow | null>(null)
 const loadingCompanies = ref(false)
 const loading = ref(false)
 const error = ref('')
@@ -248,6 +251,7 @@ const timesheetColumns = [
   { key: 'absence_hours', label: 'Неявки' },
   { key: 'overtime_hours', label: 'Сверхурочно' },
   { key: 'status', label: 'Состояние' },
+  { key: 'actions', label: 'Действия' },
 ]
 const scheduleColumns = [
   { key: 'name', label: 'График' },
@@ -433,12 +437,27 @@ async function loadWorkspace() {
   }
 }
 
+function openTimesheetEditor(row: TimesheetViewRow) {
+  editingTimesheetEmployee.value = row
+  timesheetEditorOpen.value = true
+}
+
+function closeTimesheetEditor() {
+  timesheetEditorOpen.value = false
+  editingTimesheetEmployee.value = null
+}
+
+function timesheetUpdated() {
+  void loadWorkspace()
+}
+
 function calendarUpdated() {
   calendarEditorOpen.value = false
   void loadWorkspace()
 }
 watch([company, month], () => {
   calendarEditorOpen.value = false
+  closeTimesheetEditor()
   void loadWorkspace()
 })
 onMounted(loadCompanies)
@@ -532,6 +551,13 @@ onMounted(loadCompanies)
                 {{ statusLabel(row) }}
               </BaseStatusPill>
             </template>
+            <template #cell-actions="{ row }">
+              <BaseButton v-if="!demoMode && productionTimesheetMeta?.worktime_writes_enabled"
+                variant="secondary" type="button" @click="openTimesheetEditor(row)">
+                Заполнить
+              </BaseButton>
+              <span v-else>—</span>
+            </template>
           </BaseDataTable>
         </div>
 
@@ -555,6 +581,10 @@ onMounted(loadCompanies)
               <div><dt>Неявки</dt><dd>{{ hoursLabel(row.absence_hours) }}<template v-if="row.absence_hours !== null"> ч</template></dd></div>
               <div><dt>Сверхурочно</dt><dd>{{ hoursLabel(row.overtime_hours) }}<template v-if="row.overtime_hours !== null"> ч</template></dd></div>
             </dl>
+            <BaseButton v-if="!demoMode && productionTimesheetMeta?.worktime_writes_enabled"
+              variant="secondary" type="button" @click="openTimesheetEditor(row)">
+              Заполнить табель
+            </BaseButton>
           </article>
         </div>
       </BaseCard>
@@ -682,6 +712,14 @@ onMounted(loadCompanies)
   </section>
   <ProductionCalendarEditor :open="calendarEditorOpen" :company-id="company" :month="month"
     :days="productionCalendar" @close="calendarEditorOpen = false" @saved="calendarUpdated" @refresh="calendarUpdated" />
+  <TimesheetEntryEditor v-if="editingTimesheetEmployee"
+    :open="timesheetEditorOpen"
+    :company-id="company"
+    :employee-id="editingTimesheetEmployee.employee_id"
+    :employee-name="editingTimesheetEmployee.full_name"
+    :month="month"
+    @close="closeTimesheetEditor"
+    @saved="timesheetUpdated" />
 </template>
 
 <style scoped>

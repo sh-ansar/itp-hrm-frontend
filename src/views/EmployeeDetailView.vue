@@ -17,9 +17,10 @@ import BaseLoadingState from '../components/ui/BaseLoadingState.vue'
 import EmployeeProfileCreateForm from '../components/EmployeeProfileCreateForm.vue'
 import EmployeeAssignmentCreateForm from '../components/EmployeeAssignmentCreateForm.vue'
 import EmployeeRecordForm from '../components/EmployeeRecordForm.vue'
+import EmployeeContractEditor from '../components/EmployeeContractEditor.vue'
 import BaseDialog from '../components/ui/BaseDialog.vue'
 import BaseViewTabs from '../components/ui/BaseViewTabs.vue'
-import { getEmployee, type EmployeeAssignment, type EmployeeDetail, type EmployeeReferenceProfile, type EmployeePrivateSection, type EmployeePrivateRecordSection, type ProfileEditRow, type ProfileSection } from '../api/personnel'
+import { getEmployee, listEmployeeContracts, type EmployeeAssignment, type EmployeeContract, type EmployeeDetail, type EmployeeReferenceProfile, type EmployeePrivateSection, type EmployeePrivateRecordSection, type ProfileEditRow, type ProfileSection } from '../api/personnel'
 import { localTodayISO } from '../utils/localDate'
 import { useUiFormatters } from '../composables/useUiFormatters'
 
@@ -40,6 +41,10 @@ const privateEditorSection = ref<EmployeePrivateSection | null>(null)
 const privateRecordsSection = ref<EmployeePrivateRecordSection | null>(null)
 const assignmentCreateOpen = ref(false)
 const profileCreateOpen = ref(false)
+const contracts = ref<EmployeeContract[]>([])
+const contractWritesEnabled = ref(false)
+const contractEditorOpen = ref(false)
+const editingContract = ref<EmployeeContract | null>(null)
 const activeSection = ref('personal')
 const sectionTabs = computed(() => [
   ...(profile.value?.meta.extended_sections_visible ? [

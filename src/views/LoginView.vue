@@ -119,22 +119,27 @@ async function submit() {
           </BaseButton>
         </form>
 
-        <div v-if="recoveryReady" class="recovery-panel">
+        <div class="recovery-panel">
           <BaseButton v-if="!recoveryOpen" variant="secondary" type="button"
             @click="recoveryOpen = true; recoveryEmail = email">
             Забыли пароль или впервые входите?
           </BaseButton>
-          <form v-else class="login-form recovery-form" @submit.prevent="requestRecovery">
-            <p class="muted">Укажите корпоративную почту. Ответ одинаков для существующих и неизвестных адресов.</p>
-            <BaseField id="recovery-email" v-model="recoveryEmail" label="Электронная почта" type="email"
-              autocomplete="email" required :disabled="recoveryBusy" />
-            <BaseNotice v-if="recoveryMessage" tone="success">{{ recoveryMessage }}</BaseNotice>
-            <BaseNotice v-if="recoveryError" tone="error">{{ recoveryError }}</BaseNotice>
-            <BaseButton type="submit" :disabled="recoveryBusy || !recoveryEmail">
-              {{ recoveryBusy ? 'Отправка…' : 'Получить ссылку' }}
-            </BaseButton>
+          <div v-else>
+            <BaseNotice v-if="!recoveryReady" tone="info">
+              Восстановление пароля уже предусмотрено, но отправка писем будет доступна после активации корпоративного почтового ящика HRM.
+            </BaseNotice>
+            <form v-else class="login-form recovery-form" @submit.prevent="requestRecovery">
+              <p class="muted">Укажите корпоративную почту. Ответ одинаков для существующих и неизвестных адресов.</p>
+              <BaseField id="recovery-email" v-model="recoveryEmail" label="Электронная почта" type="email"
+                autocomplete="email" required :disabled="recoveryBusy" />
+              <BaseNotice v-if="recoveryMessage" tone="success">{{ recoveryMessage }}</BaseNotice>
+              <BaseNotice v-if="recoveryError" tone="error">{{ recoveryError }}</BaseNotice>
+              <BaseButton type="submit" :disabled="recoveryBusy || !recoveryEmail">
+                {{ recoveryBusy ? 'Отправка…' : 'Получить ссылку' }}
+              </BaseButton>
+            </form>
             <BaseButton variant="secondary" type="button" @click="recoveryOpen = false">Отмена</BaseButton>
-          </form>
+          </div>
         </div>
         <RouterLink class="login-back" to="/">Вернуться к обзору</RouterLink>
       </BaseCard>

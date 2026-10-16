@@ -84,6 +84,13 @@ test('browser login is enabled only after a verified HRM API readiness response'
       const email = page.locator('input[type="email"]')
       const password = page.locator('input[type="password"]')
       const submit = page.locator('button[type="submit"]')
+      const recovery = page.getByRole('button', { name: 'Забыли пароль или впервые входите?' })
+      assert.equal(await recovery.isVisible(), true, 'recovery entry point must stay visible even before mail activation')
+      if (!allowed) {
+        await recovery.click()
+        assert.equal(await page.getByText('Восстановление пароля уже предусмотрено, но отправка писем будет доступна после активации корпоративного почтового ящика HRM.').isVisible(), true)
+        await page.getByRole('button', { name: 'Отмена' }).click()
+      }
       assert.equal(await email.isDisabled(), !allowed)
       assert.equal(await password.isDisabled(), !allowed)
       assert.equal(await submit.isDisabled(), true)

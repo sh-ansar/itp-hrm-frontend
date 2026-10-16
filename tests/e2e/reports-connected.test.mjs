@@ -33,7 +33,9 @@ test('company admin opens connected HR reports and all report tabs', async () =>
   try {
     await signIn(page)
     await page.goto('/reports')
-    await page.getByRole('heading', { name: 'Отчёты', exact: true }).waitFor()
+    await page.waitForURL(/\/reports$/)
+    await page.locator('.reports-page').waitFor()
+    await page.getByRole('button', { name: 'Сводка', exact: true }).waitFor()
     assert.equal(await page.getByText('Доступ запрещён', { exact: true }).count(), 0)
 
     for (const label of ['Сводка', 'Движение персонала', 'Штат и вакансии', 'Обучение', 'Рабочее время']) {

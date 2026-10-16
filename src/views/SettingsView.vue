@@ -111,7 +111,8 @@ const startScreenOptions = computed(() => {
   })
   return permitted.length ? permitted : [{ id: '/', name: t('nav.settings') }]
 })
-const timeZoneOptions = [
+const timeZoneOptions = computed(() => {
+  const options = [
   { id: 'Asia/Almaty', name: 'Asia/Almaty (UTC+5)' },
   { id: 'Asia/Aqtobe', name: 'Asia/Aqtobe (UTC+5)' },
   { id: 'Asia/Atyrau', name: 'Asia/Atyrau (UTC+5)' },
@@ -120,6 +121,11 @@ const timeZoneOptions = [
   { id: 'Europe/Moscow', name: 'Europe/Moscow (UTC+3)' },
   { id: 'UTC', name: 'UTC' },
 ]
+  if (!options.some(option => option.id === ui.timeZone)) {
+    options.unshift({ id: ui.timeZone, name: ui.timeZone })
+  }
+  return options
+})
 const dateFormatOptions = [
   { id: 'dd.mm.yyyy', name: 'DD.MM.YYYY' },
   { id: 'yyyy-mm-dd', name: 'YYYY-MM-DD' },

@@ -13,7 +13,7 @@ const actors = {
 }
 async function login(browser, actor, width = 1440) {
   const context = await browser.newContext({ baseURL, viewport: { width, height: 1000 } })
-  if (actor === 'employee') await context.addInitScript(() => localStorage.setItem('hrm-start-screen', '/employees'))
+  if (actor === 'employee') await context.addInitScript(() => { localStorage.setItem('hrm-start-screen', '/employees'); localStorage.setItem('hrm-time-zone', 'Asia/Qostanay') })
   if (actor === 'hr' || actor === 'manager') await context.addInitScript(() => localStorage.setItem('hrm-theme', 'dark'))
   const page = await context.newPage()
   await page.goto('/login')
@@ -46,6 +46,9 @@ test('four real user roles have distinct navigation, inputs, outputs and server 
       try {
         if (actor === 'employee') {
           await page.waitForURL('**/settings')
+          const timeZone = page.getByRole('combobox', { name: 'Часовой пояс', exact: true })
+          assert.equal(await timeZone.inputValue(), 'Asia/Qostanay')
+          assert.equal(await timeZone.locator('option:checked').innerText(), 'Asia/Qostanay')
           const start = page.getByRole('combobox', { name: 'Стартовый экран', exact: true })
           assert.deepEqual(await start.locator('option').evaluateAll(options => options.map(option => option.value)), ['/'])
           assert.equal(await start.inputValue(), '/')

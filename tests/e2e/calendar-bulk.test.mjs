@@ -26,6 +26,8 @@ test('admin bulk edits existing calendar dates, saves revisions and reloads at m
     assert.equal(await drawer.getByLabel('Минуты в рабочий день').isDisabled(), true)
     await drawer.getByRole('button', { name: 'Применить к периоду', exact: true }).click()
     assert.equal(await drawer.locator('.calendar-editor-day.dirty.holiday').count(), 3)
+    const saveButton = drawer.getByRole('button', { name: 'Сохранить изменения', exact: true })
+    assert.ok(await saveButton.evaluate(button => button.scrollWidth <= button.clientWidth + 1), 'Mobile save label is not clipped')
     const [response] = await Promise.all([
       page.waitForResponse(r => r.url().includes('/worktime/calendar') && r.request().method() === 'PUT'),
       drawer.getByRole('button', { name: 'Сохранить изменения', exact: true }).click(),

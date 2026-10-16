@@ -259,8 +259,8 @@ async function save() {
     <template #footer>
       <span class="calendar-editor-pending">{{ t('count') }}: {{ pending.length }}</span>
       <BaseButton v-if="error === t('conflict')" variant="secondary" :disabled="saving" @click="refresh">{{ t('refresh') }}</BaseButton>
-      <BaseButton variant="secondary" :disabled="saving" @click="close">{{ t('cancel') }}</BaseButton>
-      <BaseButton :disabled="!pending.length || saving" @click="save">{{ saving ? t('saving') : t('save') }}</BaseButton>
+      <BaseButton class="calendar-close" variant="secondary" :disabled="saving" @click="close">{{ t('cancel') }}</BaseButton>
+      <BaseButton class="calendar-save" :disabled="!pending.length || saving" @click="save">{{ saving ? t('saving') : t('save') }}</BaseButton>
     </template>
   </BaseDrawer>
 </template>
@@ -300,6 +300,8 @@ async function save() {
 .calendar-editor-field input,.calendar-editor-field select{width:100%;min-height:37px;border:1px solid var(--color-stroke);border-radius:7px;background:var(--color-surface-raised);color:var(--color-text);padding:0 9px;font:inherit}
 .calendar-editor-field input:disabled{opacity:.58}
 .calendar-editor-pending{align-self:center;color:var(--color-muted);font-size:11px;margin-right:auto}
+.calendar-save,.calendar-close{min-width:max-content}
+@media(max-width:560px){.calendar-editor-pending{flex-basis:100%;margin-right:0}}
 @media(min-width:500px){.calendar-editor-day small{display:block;max-height:24px;overflow:hidden}}
 @media(max-width:390px){.calendar-editor-days{gap:3px}.calendar-editor-day{min-height:40px}.calendar-editor-stats{gap:5px}}
 </style>

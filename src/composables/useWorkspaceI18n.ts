@@ -6,6 +6,9 @@ import { useUiPreferencesStore } from '../stores/uiPreferences'
  * Business data returned by the API is never translated here.
  */
 const workspaceCopy: Record<string, { kk: string; en: string }> = {
+  "договоров истекают в ближайшие 30 дней": { kk: "келесі 30 күнде аяқталатын шарттар", en: "contracts expiring within 30 days" },
+  "договоров истекают в ближайшие 60 дней": { kk: "келесі 60 күнде аяқталатын шарттар", en: "contracts expiring within 60 days" },
+  "договоров истекают в ближайшие 90 дней": { kk: "келесі 90 күнде аяқталатын шарттар", en: "contracts expiring within 90 days" },
   "Реестр сотрудников": { kk: "Қызметкерлер тізілімі", en: "Employee register" },
   "Кадровый резерв и обучение": { kk: "Кадрлық резерв және оқыту", en: "Talent pool and learning" },
   "Архив сотрудников": { kk: "Қызметкерлер мұрағаты", en: "Employee archive" },

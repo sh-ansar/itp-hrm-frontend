@@ -39,7 +39,7 @@ test('HR creates and edits an employment contract and registry expiry KPI become
   }
   const startedOn = dateOffset(-1)
   const expiresOn = dateOffset(14)
-  const revisedExpiry = dateOffset(20)
+  const revisedExpiry = dateOffset(45)
   try {
     await signIn(page)
     await page.goto(`/employees/${company}/${employee}?tab=employment`)
@@ -119,6 +119,28 @@ test('HR creates and edits an employment contract and registry expiry KPI become
     assert.equal(contractsApi.body.data[0].contract_number, 'E2E-TD-001A')
     assert.equal(contractsApi.body.data[0].valid_to, revisedExpiry)
     assert.equal(contractsApi.body.data[0].revision, 2)
+
+    await page.goto('/employees')
+    for (const [days, expected] of [['30', '0'], ['60', '1'], ['90', '1'], ['30', '0']]) {
+      const card = page.locator('.registry-summary-card').filter({ hasText: 'Истекающие договоры' })
+      const select = card.getByRole('combobox', { name: 'Период', exact: true })
+      if (await select.inputValue() !== days) {
+        const [response] = await Promise.all([
+          page.waitForResponse(r => r.url().includes('/employees?')
+            && new URL(r.url()).searchParams.get('contract_expiry_days') === days),
+          select.selectOption(days),
+        ])
+        assert.equal(response.status(), 200)
+        assert.equal((await response.json()).meta.registry_summary.expiring_contracts_days, Number(days))
+      }
+      await page.waitForFunction(expected => {
+        const card = [...document.querySelectorAll('.registry-summary-card')]
+          .find(node => node.textContent?.includes('Истекающие договоры'))
+        return card?.querySelector('.registry-summary-value')?.textContent?.trim() === expected
+      }, expected)
+      assert.equal(await card.locator('.registry-summary-value').textContent(), expected)
+    }
+
   } finally {
     await context.close()
   }

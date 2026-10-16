@@ -48,13 +48,15 @@ export interface EmployeeListResponse extends PagedResponse<EmployeeRecord> {
 }
 
 export function listEmployees(
-  companyId: string, page = 1, search = '', status: EmploymentFilter = 'all', perPage = 25,
+  companyId: string, page = 1, search = '', status: EmploymentFilter = 'all', perPage = 25, contractExpiryDays: 30 | 60 | 90 = 30,
 ): Promise<EmployeeListResponse> {
   if (!uuid.test(companyId)) throw new Error('Некорректный идентификатор компании')
   if (!Number.isSafeInteger(page) || page < 1) throw new Error('Некорректная страница')
   if (!Number.isSafeInteger(perPage) || perPage < 1 || perPage > 100)
     throw new Error('Некорректное количество строк на странице')
   const params = new URLSearchParams({ per_page: String(perPage), page: String(page) })
+  if (![30, 60, 90].includes(contractExpiryDays)) throw new Error('Некорректный период договоров')
+  params.set('contract_expiry_days', String(contractExpiryDays))
   if (search.trim()) params.set('search', search.trim())
   if (status !== 'all') params.set('status', status)
   return apiRequest<EmployeeListResponse>(`/companies/${companyId}/employees?${params.toString()}`)

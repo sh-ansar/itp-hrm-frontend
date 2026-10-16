@@ -35,6 +35,20 @@ test('BNT-style shell supports collapse, navigation groups and topbar employee s
     assert.equal(await primaryNavigation.getByRole('link', { name: 'Сотрудники' }).isVisible(), true)
     assert.equal(await primaryNavigation.getByRole('link', { name: 'Оргструктура и штатка' }).isVisible(), true)
 
+    const sidebarIcons = page.locator('.sidebar-nav .nav-svg-icon')
+    const iconCount = await sidebarIcons.count()
+    assert.ok(iconCount >= 8, 'Sidebar exposes navigation icons')
+    for (let index = 0; index < iconCount; index++) {
+      const state = await sidebarIcons.nth(index).evaluate(img => ({
+        src: img.getAttribute('src') || '',
+        complete: img.complete,
+        naturalWidth: img.naturalWidth,
+      }))
+      assert.equal(state.src.includes('/hrm/hrm/'), false, 'Icon path is not double-prefixed')
+      assert.equal(state.complete, true, 'Icon image request completed')
+      assert.ok(state.naturalWidth > 0, 'Sidebar icon loaded successfully')
+    }
+
     const search = page.getByRole('searchbox', { name: 'Поиск сотрудника' })
     await search.fill('E2E-001')
     await search.press('Enter')

@@ -55,7 +55,7 @@ function closeMobile() { if (props.mobileOpen) emit('update:mobileOpen', false) 
         :aria-current="active(link.to) ? 'page' : undefined"
         :title="ui.sidebarCollapsed && !mobileOpen ? linkLabel(link) : undefined"
         @click="closeMobile">
-        <img :src="publicAsset(link.icon)" class="nav-svg-icon" alt="" aria-hidden="true" />
+        <img :src="link.icon" class="nav-svg-icon" alt="" aria-hidden="true" />
         <span class="nav-label">{{ linkLabel(link) }}</span>
       </RouterLink>
       <div class="nav-divider" role="separator" :aria-label="t('shell.serviceSections')"></div>
@@ -65,7 +65,7 @@ function closeMobile() { if (props.mobileOpen) emit('update:mobileOpen', false) 
         :aria-current="active(link.to) ? 'page' : undefined"
         :title="ui.sidebarCollapsed && !mobileOpen ? linkLabel(link) : undefined"
         @click="closeMobile">
-        <img :src="publicAsset(link.icon)" class="nav-svg-icon" alt="" aria-hidden="true" />
+        <img :src="link.icon" class="nav-svg-icon" alt="" aria-hidden="true" />
         <span class="nav-label">{{ linkLabel(link) }}</span>
       </RouterLink>
     </nav>

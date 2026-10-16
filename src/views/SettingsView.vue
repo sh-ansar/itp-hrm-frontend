@@ -5,6 +5,7 @@ import { computed, onMounted, ref } from 'vue'
 import BaseButton from '../components/ui/BaseButton.vue'
 import BaseField from '../components/ui/BaseField.vue'
 import { changePasswordSession } from '../api/session'
+import { getUserPreferences, updateUserPreferences } from '../api/preferences'
 import BaseNotice from '../components/ui/BaseNotice.vue'
 import BaseSelectField from '../components/ui/BaseSelectField.vue'
 import BaseViewTabs from '../components/ui/BaseViewTabs.vue'
@@ -40,6 +41,8 @@ const confirmedPassword = ref('')
 const passwordBusy = ref(false)
 const passwordError = ref('')
 const passwordSuccess = ref('')
+const preferencesRevision = ref(0)
+const preferencesBusy = ref(false)
 
 const tabs = computed(() => [
   { id: 'interface', label: t('settings.interface') },
@@ -127,21 +130,11 @@ const notificationRules = ref([
   { id: 'learning_reserve', labelKey: 'settings.learningReserve', enabled: false },
   { id: 'document_deadlines', labelKey: 'settings.documentDeadlines', enabled: true },
 ])
-const mfaEnabled = ref(false)
-const ipRestriction = ref(false)
-const passwordPolicy = ref('strong')
-const inactivityTimeout = ref('30')
-const passwordPolicyOptions = [
-  { id: 'standard', name: '8+ символов / characters' },
-  { id: 'strong', name: '12+ · A-Z · a-z · 0-9 · symbol' },
-  { id: 'enterprise', name: '14+ · MFA · rotation policy' },
-]
-const inactivityOptions = [
-  { id: '15', name: '15 min' },
-  { id: '30', name: '30 min' },
-  { id: '60', name: '60 min' },
-  { id: '120', name: '120 min' },
-]
+const passwordMeetsRequirements = computed(() =>
+  nextPassword.value.length >= 8 &&
+  /\d/.test(nextPassword.value) &&
+  /[^A-Za-z0-9]/.test(nextPassword.value)
+)
 
 const passwordCopy = computed(() => ({
   ru: { heading: 'Смена пароля', current: 'Текущий пароль', next: 'Новый пароль', confirm: 'Повторите новый пароль', submit: 'Сменить пароль', busy: 'Сохранение…', saved: 'Пароль обновлён. Другие сеансы завершены.', requirements: 'От 8 символов, минимум одна цифра и один специальный символ.', mismatch: 'Пароли не совпадают.', failed: 'Не удалось сменить пароль. Проверьте текущий пароль и требования.' },
@@ -193,39 +186,49 @@ const scope = computed(() => {
     : ui.locale === 'kk' ? 'Компания бөлімшелері' : ui.locale === 'ka' ? 'კომპანიის განყოფილებები' : 'Подразделения компании'
 })
 
-const localSettingsKey = 'hrm-settings-profile-v2'
-function restoreLocalSettings() {
-  if (typeof window === 'undefined') return
+async function loadPreferences() {
+  if (demoMode || !session.user) return
+  preferencesBusy.value = true
   try {
-    const saved = JSON.parse(window.localStorage.getItem(localSettingsKey) || '{}') as Record<string, unknown>
-    const channels = saved.notificationChannels as Record<string, unknown> | undefined
-    const rules = saved.notificationRules as Record<string, unknown> | undefined
-    if (channels) notificationChannels.value.forEach(item => {
-      if (typeof channels[item.id] === 'boolean') item.enabled = Boolean(channels[item.id])
+    const response = await getUserPreferences()
+    preferencesRevision.value = response.data.revision
+    notificationChannels.value.forEach(item => {
+      item.enabled = response.data.notification_channels[item.id as 'email' | 'in_app']
     })
-    if (rules) notificationRules.value.forEach(item => {
-      if (typeof rules[item.id] === 'boolean') item.enabled = Boolean(rules[item.id])
+    notificationRules.value.forEach(item => {
+      item.enabled = response.data.notification_rules[item.id as 'employee_changes' | 'schedule_changes' | 'learning_reserve' | 'document_deadlines']
     })
-    if (typeof saved.mfaEnabled === 'boolean') mfaEnabled.value = saved.mfaEnabled
-    if (typeof saved.ipRestriction === 'boolean') ipRestriction.value = saved.ipRestriction
-    if (typeof saved.passwordPolicy === 'string' && ['standard', 'strong', 'enterprise'].includes(saved.passwordPolicy))
-      passwordPolicy.value = saved.passwordPolicy
-    if (typeof saved.inactivityTimeout === 'string' && ['15', '30', '60', '120'].includes(saved.inactivityTimeout))
-      inactivityTimeout.value = saved.inactivityTimeout
-  } catch { /* Invalid local profile falls back to defaults. */ }
+  } catch (cause) {
+    error.value = cause instanceof Error ? cause.message : 'Не удалось загрузить настройки уведомлений'
+  } finally {
+    preferencesBusy.value = false
+  }
 }
-function persistLocalSettings() {
-  if (typeof window === 'undefined') return
+
+async function saveNotificationPreferences() {
+  if (demoMode || preferencesBusy.value) return
+  preferencesBusy.value = true
+  error.value = ''
+  success.value = ''
   try {
-    window.localStorage.setItem(localSettingsKey, JSON.stringify({
-      notificationChannels: Object.fromEntries(notificationChannels.value.map(item => [item.id, item.enabled])),
-      notificationRules: Object.fromEntries(notificationRules.value.map(item => [item.id, item.enabled])),
-      mfaEnabled: mfaEnabled.value,
-      ipRestriction: ipRestriction.value,
-      passwordPolicy: passwordPolicy.value,
-      inactivityTimeout: inactivityTimeout.value,
-    }))
-  } catch { /* Storage can be unavailable. */ }
+    const response = await updateUserPreferences({
+      notification_channels: Object.fromEntries(notificationChannels.value.map(item => [item.id, item.enabled])) as { email: boolean; in_app: boolean },
+      notification_rules: Object.fromEntries(notificationRules.value.map(item => [item.id, item.enabled])) as {
+        employee_changes: boolean
+        schedule_changes: boolean
+        learning_reserve: boolean
+        document_deadlines: boolean
+      },
+      revision: preferencesRevision.value,
+    })
+    preferencesRevision.value = response.data.revision
+    success.value = t('settings.saved')
+  } catch (cause) {
+    error.value = cause instanceof Error ? cause.message : 'Не удалось сохранить настройки уведомлений'
+    await loadPreferences()
+  } finally {
+    preferencesBusy.value = false
+  }
 }
 
 async function reload() {
@@ -236,6 +239,7 @@ async function reload() {
     companies.value = response.data
     if (!companies.value.some(item => item.id === company.value)) company.value = preferCompany(companies.value)
     if (import.meta.env.VITE_ENABLE_BROWSER_LOGIN === 'true') await session.refresh()
+    await loadPreferences()
   } catch (cause) {
     error.value = cause instanceof Error ? cause.message : 'Не удалось загрузить настройки'
   } finally {
@@ -243,22 +247,13 @@ async function reload() {
   }
 }
 function saveSettings() {
-  persistLocalSettings()
   success.value = t('settings.saved')
 }
 function resetSettings() {
   ui.resetInterface()
-  notificationChannels.value.forEach(item => { item.enabled = true })
-  notificationRules.value.forEach((item, index) => { item.enabled = index !== 2 })
-  mfaEnabled.value = false
-  ipRestriction.value = false
-  passwordPolicy.value = 'strong'
-  inactivityTimeout.value = '30'
-  persistLocalSettings()
   success.value = t('settings.saved')
 }
 
-restoreLocalSettings()
 onMounted(reload)
 </script>
 
@@ -307,21 +302,25 @@ onMounted(reload)
       <EmployeeProfileSection :title="t('settings.notificationsChannels')">
         <label v-for="option in notificationChannels" :key="option.id" class="toggle-setting">
           <span>{{ t(option.labelKey) }}</span>
-          <input v-model="option.enabled" type="checkbox" :disabled="!demoMode" />
+          <input v-model="option.enabled" type="checkbox" :disabled="preferencesBusy" />
         </label>
       </EmployeeProfileSection>
 
       <EmployeeProfileSection :title="t('settings.notificationsRules')">
         <label v-for="option in notificationRules" :key="option.id" class="toggle-setting">
           <span>{{ t(option.labelKey) }}</span>
-          <input v-model="option.enabled" type="checkbox" :disabled="!demoMode" />
+          <input v-model="option.enabled" type="checkbox" :disabled="preferencesBusy" />
         </label>
         <p class="settings-help">
           {{ demoMode
-            ? (ui.locale === 'en' ? 'Notification rules are stored in this browser profile.' : ui.locale === 'kk' ? 'Хабарландыру ережелері осы браузер профилінде сақталады.' : ui.locale === 'ka' ? 'შეტყობინებების წესები ინახება ამ ბრაუზერის პროფილში.' : 'Правила уведомлений сохраняются в профиле этого браузера.')
-            : (ui.locale === 'en' ? 'Notification channels are managed by the company administrator.' : ui.locale === 'kk' ? 'Хабарландыру арналарын компания әкімшісі басқарады.' : ui.locale === 'ka' ? 'შეტყობინებების არხებს მართავს კომპანიის ადმინისტრატორი.' : 'Каналы уведомлений подключает администратор компании.') }}
+            ? (ui.locale === 'en' ? 'Demo notification settings are temporary.' : ui.locale === 'kk' ? 'Демо хабарландыру баптаулары уақытша.' : ui.locale === 'ka' ? 'დემო შეტყობინებების პარამეტრები დროებითია.' : 'В демо настройки уведомлений временные.')
+            : (ui.locale === 'en' ? 'Notification preferences are saved to your HRM account and follow you across browsers.' : ui.locale === 'kk' ? 'Хабарландыру баптаулары HRM тіркелгіңізде сақталады және браузерлер арасында қолданылады.' : ui.locale === 'ka' ? 'შეტყობინებების პარამეტრები ინახება თქვენს HRM ანგარიშში და მოქმედებს სხვადასხვა ბრაუზერში.' : 'Настройки уведомлений сохраняются в вашей учётной записи HRM и работают в разных браузерах.') }}
         </p>
-        <div v-if="demoMode" class="settings-actions"><BaseButton @click="saveSettings">{{ t('settings.save') }}</BaseButton></div>
+        <div v-if="!demoMode" class="settings-actions">
+          <BaseButton :disabled="preferencesBusy" @click="saveNotificationPreferences">
+            {{ preferencesBusy ? 'Сохранение…' : t('settings.save') }}
+          </BaseButton>
+        </div>
       </EmployeeProfileSection>
     </template>
 
@@ -334,23 +333,9 @@ onMounted(reload)
           <div class="read-setting">
             <span>Login</span><strong>{{ session.user ? t('topbar.workAccount') : 'Demo profile' }}</strong>
           </div>
-          <template v-if="demoMode">
-          <BaseSelectField
-            :model-value="mfaEnabled ? 'on' : 'off'" :label="t('settings.mfa')"
-            :options="[{id:'off',name:t('settings.disabled')},{id:'on',name:t('settings.enabled')}]"
-            :disabled="!demoMode"
-            @update:model-value="mfaEnabled = $event === 'on'" />
-          <BaseSelectField
-            :model-value="ipRestriction ? 'on' : 'off'" :label="t('settings.ipRestriction')"
-            :options="[{id:'off',name:t('settings.disabled')},{id:'on',name:t('settings.enabled')}]"
-            :disabled="!demoMode"
-            @update:model-value="ipRestriction = $event === 'on'" />
-          <BaseSelectField v-model="passwordPolicy" :label="t('settings.passwordPolicy')"
-            :options="passwordPolicyOptions" :disabled="!demoMode" />
-          <BaseSelectField v-model="inactivityTimeout" :label="t('settings.inactivityTimeout')"
-            :options="inactivityOptions" :disabled="!demoMode" />
-          </template>
-          <BaseNotice v-else tone="info">
+          <BaseNotice tone="info">
+            {{ ui.locale === 'en' ? 'MFA, IP restrictions and organization-wide security policies are enforced only when configured on the server. No decorative security switches are stored in this browser.' : ui.locale === 'kk' ? 'MFA, IP шектеулері және ұйымдық қауіпсіздік саясаты тек серверде бапталған кезде ғана қолданылады. Браузерде жалған қауіпсіздік ауыстырғыштары сақталмайды.' : ui.locale === 'ka' ? 'MFA, IP-შეზღუდვები და ორგანიზაციის უსაფრთხოების პოლიტიკა მოქმედებს მხოლოდ სერვერზე კონფიგურაციის შემთხვევაში. ბრაუზერში დეკორატიული უსაფრთხოების ჩამრთველები არ ინახება.' : 'MFA, ограничения IP и корпоративные политики безопасности применяются только при серверной настройке. Декоративные переключатели безопасности в браузере больше не сохраняются.' }}
+          </BaseNotice>
             {{ ui.locale === 'en' ? 'MFA, IP restrictions and organization-wide security policies require server configuration and are not enabled here.' : ui.locale === 'kk' ? 'MFA, IP шектеулері және қауіпсіздік саясаты серверде орнатылады. Бұл жерде олар қосылмаған.' : ui.locale === 'ka' ? 'MFA, IP-შეზღუდვები და უსაფრთხოების პოლიტიკა მოითხოვს სერვერის კონფიგურაციას. აქ ისინი არ არის ჩართული.' : 'MFA, ограничения IP и корпоративные политики безопасности пока требуют серверной настройки. Эти переключатели не активны.' }}
           </BaseNotice>
         </div>
@@ -371,7 +356,7 @@ onMounted(reload)
           <BaseNotice v-if="passwordError" tone="error">{{ passwordError }}</BaseNotice>
           <BaseNotice v-if="passwordSuccess" tone="success">{{ passwordSuccess }}</BaseNotice>
           <div class="settings-actions">
-            <BaseButton type="submit" :disabled="passwordBusy || !currentPassword || nextPassword.length < 14 || nextPassword !== confirmedPassword">
+            <BaseButton type="submit" :disabled="passwordBusy || !currentPassword || !passwordMeetsRequirements || nextPassword !== confirmedPassword">
               {{ passwordBusy ? passwordCopy.busy : passwordCopy.submit }}
             </BaseButton>
           </div>

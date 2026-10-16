@@ -20,8 +20,15 @@ export type RoleAuditRecord = {
   created_at: string
 }
 
+export type RoleCatalogRecord = {
+  code: SystemRoleCode
+  capabilities: Record<string, boolean>
+  assignable: boolean
+}
+
 export type MembershipListResponse = {
   data: MembershipRecord[]
+  roles: RoleCatalogRecord[]
   meta: {
     current_page: number
     last_page: number

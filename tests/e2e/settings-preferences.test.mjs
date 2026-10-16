@@ -45,11 +45,21 @@ test('notification preferences persist on the server and password rule is 8+ dig
     if (await emailToggle.isChecked()) await emailToggle.uncheck()
     if (!(await learningToggle.isChecked())) await learningToggle.check()
 
-    const [saveResponse] = await Promise.all([
-      page.waitForResponse(r => r.url().endsWith('/api/v1/me/preferences') && r.request().method() === 'PUT'),
-      page.getByRole('button', { name: 'Сохранить', exact: true }).click(),
-    ])
-    assert.equal(saveResponse.status(), 200)
+    const saveButton = page.getByRole('button', { name: 'Сохранить', exact: true })
+    assert.equal(await saveButton.isEnabled(), true)
+    await saveButton.click()
+
+    await page.waitForFunction(async () => {
+      const response = await fetch('/api/v1/me/preferences', {
+        credentials: 'same-origin',
+        headers: { Accept: 'application/json' },
+      })
+      if (!response.ok) return false
+      const body = await response.json()
+      return body.data?.notification_channels?.email === false
+        && body.data?.notification_rules?.learning_reserve === true
+        && Number(body.data?.revision || 0) >= 1
+    })
 
     const saved = await page.evaluate(async () => {
       const response = await fetch('/api/v1/me/preferences', {

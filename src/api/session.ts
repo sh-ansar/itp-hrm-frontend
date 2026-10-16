@@ -54,8 +54,8 @@ export async function changePasswordSession(currentPassword: string, newPassword
     method: 'POST',
     body: JSON.stringify({
       current_password: currentPassword,
-      new_password: newPassword,
-      new_password_confirmation: confirmation,
+      password: newPassword,
+      password_confirmation: confirmation,
     }),
   })
 }

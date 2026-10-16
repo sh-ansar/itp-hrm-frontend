@@ -32,6 +32,7 @@ export interface EmployeeRecord extends Record<string, unknown> {
   employee_category?: string | null
   personnel_type?: string | null
   contract_type?: string | null
+  contract_valid_to?: string | null
 }
 
 export interface EmployeeListResponse extends PagedResponse<EmployeeRecord> {
@@ -41,6 +42,7 @@ export interface EmployeeListResponse extends PagedResponse<EmployeeRecord> {
     registry_summary?: {
       vacancies?: number | null
       expiring_contracts?: number | null
+      expiring_contracts_days?: number | null
     }
   }
 }
@@ -56,6 +58,74 @@ export function listEmployees(
   if (search.trim()) params.set('search', search.trim())
   if (status !== 'all') params.set('status', status)
   return apiRequest<EmployeeListResponse>(`/companies/${companyId}/employees?${params.toString()}`)
+}
+
+export type EmployeeContractType = 'indefinite' | 'fixed_term' | 'temporary' | 'seasonal' | 'other'
+export type EmployeeEmploymentType = 'full_time' | 'part_time' | 'secondary' | 'remote' | 'other'
+
+export interface EmployeeContract extends Record<string, unknown> {
+  id: string
+  contract_number: string
+  contract_type: EmployeeContractType
+  employment_type: EmployeeEmploymentType | null
+  signed_on: string | null
+  valid_from: string
+  valid_to: string | null
+  probation_until: string | null
+  basis_reference: string | null
+  revision: number
+}
+
+export interface EmployeeContractPayload {
+  contract_number: string
+  contract_type: EmployeeContractType
+  employment_type: EmployeeEmploymentType | null
+  signed_on: string | null
+  valid_from: string
+  valid_to: string | null
+  probation_until: string | null
+  basis_reference: string | null
+}
+
+export interface EmployeeContractsResponse {
+  data: EmployeeContract[]
+  meta: {
+    total: number
+    truncated: boolean
+    writes_enabled: boolean
+  }
+}
+
+export function listEmployeeContracts(companyId: string, employeeId: string): Promise<EmployeeContractsResponse> {
+  if (!uuid.test(companyId) || !uuid.test(employeeId)) throw new Error('Некорректный идентификатор')
+  return apiRequest<EmployeeContractsResponse>(`/companies/${companyId}/employees/${employeeId}/contracts`)
+}
+
+export function createEmployeeContract(
+  companyId: string,
+  employeeId: string,
+  payload: EmployeeContractPayload,
+): Promise<{ data: EmployeeContract }> {
+  if (!uuid.test(companyId) || !uuid.test(employeeId)) throw new Error('Некорректный идентификатор')
+  return apiRequest<{ data: EmployeeContract }>(`/companies/${companyId}/employees/${employeeId}/contracts`, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
+}
+
+export function updateEmployeeContract(
+  companyId: string,
+  employeeId: string,
+  contractId: string,
+  revision: number,
+  payload: EmployeeContractPayload,
+): Promise<{ data: EmployeeContract }> {
+  if (![companyId, employeeId, contractId].every(id => uuid.test(id))) throw new Error('Некорректный идентификатор')
+  if (!Number.isSafeInteger(revision) || revision < 1) throw new Error('Неверная версия договора')
+  return apiRequest<{ data: EmployeeContract }>(
+    `/companies/${companyId}/employees/${employeeId}/contracts/${contractId}`,
+    { method: 'PUT', body: JSON.stringify({ ...payload, revision }) },
+  )
 }
 
 export interface EmployeeAssignment extends Record<string, unknown> {

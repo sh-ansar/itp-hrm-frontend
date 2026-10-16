@@ -1,5 +1,4 @@
 import { readXsrfCookie, requiresCsrf } from './csrf'
-import { mockApiRequest } from '../mocks/mockApi'
 
 export type ApiErrorKind = 'http' | 'network' | 'timeout' | 'invalid-response'
 
@@ -105,7 +104,7 @@ export async function requestJson<T>(
   }
 }
 
-export function apiRequest<T>(
+export async function apiRequest<T>(
   path: string,
   options: RequestInit & { timeoutMs?: number } = {},
 ): Promise<T> {
@@ -113,6 +112,7 @@ export function apiRequest<T>(
     throw new Error('API path must begin with one slash')
   }
   if (import.meta.env.VITE_DEMO_MODE === 'true') {
+    const { mockApiRequest } = await import('../mocks/mockApi')
     return mockApiRequest<T>(path, options)
   }
   return requestJson<T>(`${baseUrl}${path}`, options)

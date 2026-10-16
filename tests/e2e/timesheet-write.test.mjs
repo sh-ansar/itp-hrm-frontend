@@ -60,7 +60,7 @@ test('HR specialist edits a daily timesheet through the real UI and data survive
     assert.equal(saveResponse.status(), 200)
     await drawer.getByText('Табель сохранён.').waitFor()
 
-    await drawer.getByRole('button', { name: 'Закрыть' }).click()
+    await drawer.locator('.drawer-footer').getByRole('button', { name: 'Закрыть', exact: true }).click()
     await row.getByText('Требует внимания').waitFor()
 
     await page.reload()

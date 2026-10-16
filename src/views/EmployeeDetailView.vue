@@ -668,10 +668,36 @@ onMounted(load)
 
       <template v-if="activeSection === 'employment'">
         <EmployeeProfileSection :title="tr('Договор и приём')">
-          <template v-if="profile.meta.assignment_writes_enabled" #actions>
-            <BaseButton @click="assignmentCreateOpen = true"><Plus :size="16" /> {{ tr('Добавить назначение') }}</BaseButton>
+          <template v-if="contractWritesEnabled || profile.meta.assignment_writes_enabled" #actions>
+            <div class="row-actions">
+              <BaseButton v-if="contractWritesEnabled" @click="openContractEditor()">
+                <Plus :size="16" /> {{ tr('Новый договор') }}
+              </BaseButton>
+              <BaseButton v-if="profile.meta.assignment_writes_enabled" variant="secondary" @click="assignmentCreateOpen = true">
+                <Plus :size="16" /> {{ tr('Добавить назначение') }}
+              </BaseButton>
+            </div>
           </template>
           <EmployeeDataGrid :fields="contractFields" />
+
+          <template v-if="profile.meta.extended_sections_visible">
+            <h3 class="assignment-history-title">{{ tr('История трудовых договоров') }}</h3>
+            <BaseDataTable density="compact" :columns="contractColumns" :rows="contracts" row-key="id"
+              :caption="tr('История трудовых договоров сотрудника')"
+              :empty-title="tr('Трудовые договоры не внесены')"
+              :empty-description="tr('Добавьте первый трудовой договор сотрудника.')">
+              <template #cell-contract_type="{ value }">{{ contractTypeLabel(value) }}</template>
+              <template #cell-employment_type="{ value }">{{ employmentTypeLabel(value) }}</template>
+              <template #cell-valid_from="{ value }">{{ formatDate(typeof value === 'string' ? value : null) }}</template>
+              <template #cell-valid_to="{ value }">{{ typeof value === 'string' ? formatDate(value) : tr('Бессрочно') }}</template>
+              <template #cell-probation_until="{ value }">{{ formatDate(typeof value === 'string' ? value : null) }}</template>
+              <template #cell-edit="{ row }">
+                <BaseButton v-if="contractWritesEnabled" variant="secondary" @click="openContractEditor(row)">
+                  {{ tr('Изменить') }}
+                </BaseButton>
+              </template>
+            </BaseDataTable>
+          </template>
         </EmployeeProfileSection>
 
         <EmployeeProfileSection :title="tr('Стаж и трудовой опыт')">
@@ -904,6 +930,14 @@ onMounted(load)
       :open="true" :company-id="String(route.params.company)" :employee-id="profile.data.id"
       :section="privateEditorSection" :profile="profile.private_profile"
       @close="privateEditorSection = null" @saved="privateEditorSection = null; load()" />
+    <EmployeeContractEditor v-if="profile"
+      :open="contractEditorOpen"
+      :company-id="String(route.params.company)"
+      :employee-id="profile.data.id"
+      :contract="editingContract"
+      @close="contractEditorOpen = false; editingContract = null"
+      @saved="contractSaved" />
+
     <EmployeePrivateRecordsManager v-if="profile && privateRecordsSection !== null && profile.meta.private_profile_writes_enabled"
       :open="true" :company-id="String(route.params.company)" :employee-id="profile.data.id"
       :section="privateRecordsSection" :family="profile.private_profile?.family ?? []"

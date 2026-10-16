@@ -152,3 +152,45 @@ test('every HRM deep link is served by the frontend and never returns server 404
     await context.close()
   }
 })
+
+
+test('registry metric icons load in the real /hrm/ component without a second base prefix', async () => {
+  const context = await browser.newContext({ baseURL })
+  const page = await context.newPage()
+  const companyId = '11111111-1111-4111-8111-111111111111'
+  // Only this isolated static-build test uses synthetic read responses.
+  // Production continues to use authenticated Laravel APIs.
+  await page.route('**/hrm-api/**', route => {
+    const path = new URL(route.request().url()).pathname
+    let body = { data: [], meta: { total: 0, current_page: 1, last_page: 1, per_page: 25 } }
+    if (path.endsWith('/auth/me')) body = { data: { id: 1, name: 'Synthetic Asset QA' } }
+    else if (path.endsWith('/me/access')) body = {
+      data: { companies: [{ company_id: companyId, company_name: 'Synthetic Company',
+        role_code: 'company_admin', department_scopes: [], capabilities: {
+          'employees.view': true, 'employees.extended_view': true,
+          'organization.view': true, 'staffing.view': true,
+          'roles.interface': true, 'settings.view': true,
+        } }] }, meta: { schema_version: 1, source: 'server' },
+    }
+    else if (path.endsWith('/companies')) body = { data: [{ id: companyId, name: 'Synthetic Company' }], meta: { total: 1 } }
+    return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(body) })
+  })
+  try {
+    for (const path of ['/hrm/employees', '/hrm/organization', '/hrm/roles']) {
+      await page.goto(path, { waitUntil: 'networkidle' })
+      const icons = page.locator('.registry-summary-card img')
+      assert.equal(await icons.count(), 4, path + ' renders four metric icons')
+      await page.waitForFunction(() => [...document.querySelectorAll('.registry-summary-card img')]
+        .every(img => img.complete))
+      for (const state of await icons.evaluateAll(images => images.map(img => ({
+        src: img.getAttribute('src'), naturalWidth: img.naturalWidth,
+      })))) {
+        assert.ok(state.src.startsWith('/hrm/prototype-icons/'), state.src)
+        assert.equal(state.src.includes('/hrm/hrm/'), false, state.src)
+        assert.ok(state.naturalWidth > 0, path + ': ' + state.src)
+      }
+    }
+  } finally {
+    await context.close()
+  }
+})

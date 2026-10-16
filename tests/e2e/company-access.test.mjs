@@ -45,7 +45,7 @@ test('connected HR frontend uses server capabilities, hides demo role matrix and
     await page.goto('/reports')
     await page.waitForURL(/\/reports$/)
     await page.locator('.reports-page').waitFor()
-    assert.equal(await page.getByRole('button', { name: 'Сводка', exact: true }).count(), 1)
+    await page.getByRole('button', { name: 'Сводка', exact: true }).waitFor()
     await page.goto('/employees')
     await page.getByRole('heading', { name: 'Реестр сотрудников' }).waitFor()
     assert.equal(await page.getByRole('searchbox', { name: 'Поиск сотрудника' }).count(), 1)

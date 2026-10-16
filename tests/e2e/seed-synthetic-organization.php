@@ -23,6 +23,25 @@ if (\Illuminate\Support\Facades\DB::table('departments')->where('company_id', $a
 \Illuminate\Support\Facades\DB::table('positions')->insert(['id'=>'66666666-6666-4666-8666-666666666666','company_id'=>$a,'name'=>'Test Engineer']);
 \Illuminate\Support\Facades\DB::table('employees')->insert(['id'=>'77777777-7777-4777-8777-777777777777','company_id'=>$a,'personnel_number'=>'E2E-001','last_name'=>'Synthetic','first_name'=>'Employee']);
 \Illuminate\Support\Facades\DB::table('employee_assignments')->insert(['id'=>'88888888-8888-4888-8888-888888888888','employee_id'=>'77777777-7777-4777-8777-777777777777','department_id'=>'33333333-3333-4333-8333-333333333333','position_id'=>'66666666-6666-4666-8666-666666666666','valid_from'=>'2026-01-01']);
+$calendarDays = [];
+$cursor = new DateTimeImmutable('2026-10-01');
+$end = new DateTimeImmutable('2026-10-31');
+while ($cursor <= $end) {
+    $weekend = in_array((int) $cursor->format('N'), [6, 7], true);
+    $calendarDays[] = [
+        'id' => (string) \Illuminate\Support\Str::uuid(),
+        'company_id' => $a,
+        'work_date' => $cursor->format('Y-m-d'),
+        'day_type' => $weekend ? 'weekend' : 'workday',
+        'planned_minutes' => $weekend ? 0 : 480,
+        'label' => $weekend ? 'Weekend' : null,
+        'revision' => 1,
+        'created_at' => now(),
+        'updated_at' => now(),
+    ];
+    $cursor = $cursor->modify('+1 day');
+}
+\Illuminate\Support\Facades\DB::table('production_calendar_days')->insert($calendarDays);
 \Illuminate\Support\Facades\DB::table('employee_training')->insert([
     ['id'=>'9a111111-1111-4111-8111-111111111111','employee_id'=>'77777777-7777-4777-8777-777777777777',
         'training_type'=>'seminar','training_mode'=>'remote','topic'=>'E2E Completed Safety','started_on'=>'2026-01-05','ended_on'=>'2026-01-08'],

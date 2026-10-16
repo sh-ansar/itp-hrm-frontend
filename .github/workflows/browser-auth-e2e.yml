@@ -35,6 +35,12 @@ jobs:
       SANCTUM_STATEFUL_DOMAINS: 127.0.0.1:5173,localhost:5173
       VITE_ENABLE_BROWSER_LOGIN: 'true'
       VITE_API_BASE_URL: /api/v1
+      # Synthetic, local-only credentials for an ephemeral CI MinIO instance.
+      MINIO_ENDPOINT: http://127.0.0.1:9000
+      MINIO_REGION: us-east-1
+      MINIO_BUCKET: hrm-ci-private-e2e
+      MINIO_ACCESS_KEY: hrm-ci-local-user
+      MINIO_SECRET_KEY: Synthetic-CI-MinIO-Private-Only-2026
     steps:
       - name: Checkout frontend
         uses: actions/checkout@v4
@@ -59,6 +65,23 @@ jobs:
       - name: Install backend dependencies
         working-directory: backend
         run: composer install --prefer-dist --no-interaction --no-progress
+      - name: Start isolated private MinIO for the document upload/download browser test
+        if: ${{ matrix.mode == 'write-enabled' }}
+        run: |
+          set -euo pipefail
+          docker run --rm -d --name hrm-ci-minio -p 127.0.0.1:9000:9000 \
+            -e MINIO_ROOT_USER="$MINIO_ACCESS_KEY" \
+            -e MINIO_ROOT_PASSWORD="$MINIO_SECRET_KEY" \
+            quay.io/minio/minio:RELEASE.2025-10-15T17-29-55Z server /data
+          for attempt in $(seq 1 60); do
+            if curl --silent --fail http://127.0.0.1:9000/minio/health/live > /dev/null; then
+              php tests/e2e/prepare-minio.php
+              exit 0
+            fi
+            sleep 1
+          done
+          docker logs hrm-ci-minio | tail -n 40
+          exit 1
       - name: Install frontend and pinned browser test runtime
         run: |
           npm ci --no-audit --no-fund

@@ -193,7 +193,7 @@ onMounted(async()=>{try{await loadCompanies();if(company.value)await loadRecords
         </div>
         <BaseFilterSummary :items="filterChips" label="Активные фильтры" @remove="clearFilter" @clear="clearFilters" />
         <BaseLoadingState v-if="loading" label="Загрузка справочника" />
-        <div v-else class="directory-table-scroll">
+        <div class="directory-table-scroll">
           <BaseDataTable :rows="visibleRows" :columns="columns" row-key="id" density="compact" :caption="currentGroup.label"
             empty-title="Записей нет" empty-description="Добавьте первую запись или измените условия поиска.">
             <template #cell-value="{value}">{{ value || '—' }}</template>

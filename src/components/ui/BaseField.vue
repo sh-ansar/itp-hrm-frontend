@@ -37,7 +37,7 @@ const inputType = computed(() => props.type === 'password' && props.revealable &
         class="base-field__reveal"
         type="button"
         :disabled="disabled"
-        :aria-label="revealed ? 'Скрыть пароль' : 'Показать пароль'"
+        :aria-label="revealed ? 'Скрыть' : 'Показать'"
         :title="revealed ? 'Скрыть пароль' : 'Показать пароль'"
         @click="revealed = !revealed"
       >

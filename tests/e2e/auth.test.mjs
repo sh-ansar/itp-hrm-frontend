@@ -1,5 +1,6 @@
 import { before, after, test } from 'node:test'
 import assert from 'node:assert/strict'
+import { execFileSync } from 'node:child_process'
 import { chromium } from 'playwright'
 
 const appUrl = 'http://127.0.0.1:5173'
@@ -171,7 +172,7 @@ test('repeated credential failures produce an observable HTTP 429 lockout', asyn
   assert.match(await page.getByRole('alert').innerText(), /Слишком много попыток/)
 })
 
-test('password recovery stays non-enumerating and reset screen uses the real backend contract', async (t) => {
+test('password recovery is non-enumerating and completes a real one-time reset', async (t) => {
   const { page } = await createPage(t)
   await page.goto('/login')
 
@@ -185,7 +186,8 @@ test('password recovery stays non-enumerating and reset screen uses the real bac
     page.getByRole('button', { name: 'Получить ссылку' }).click(),
   ])
   assert.equal(response.status(), 204)
-  await page.getByText('Если активная учётная запись с таким адресом существует, письмо со ссылкой отправлено.').waitFor()
+  const genericMessage = 'Если активная учётная запись с таким адресом существует, письмо со ссылкой отправлено.'
+  await page.getByText(genericMessage).waitFor()
 
   await page.locator('#recovery-email').fill(userEmail)
   ;[response] = await Promise.all([
@@ -193,18 +195,43 @@ test('password recovery stays non-enumerating and reset screen uses the real bac
     page.getByRole('button', { name: 'Получить ссылку' }).click(),
   ])
   assert.equal(response.status(), 204)
-  assert.equal(await page.getByText('Если активная учётная запись с таким адресом существует, письмо со ссылкой отправлено.').count(), 1)
+  assert.equal(await page.getByText(genericMessage).count(), 1, 'known and unknown addresses must get the same UI response')
 
-  await page.goto('/reset-password?email=' + encodeURIComponent(userEmail) + '&token=synthetic-invalid-token')
+  const resetToken = execFileSync('php', ['tests/e2e/create-password-reset-token.php', userEmail], {
+    encoding: 'utf8',
+    env: process.env,
+  }).trim()
+  assert.ok(resetToken.length > 20, 'synthetic Laravel reset token must be created')
+
+  const replacement = 'Synthetic!RecoveryBrowser456'
+  await page.goto('/reset-password?email=' + encodeURIComponent(userEmail) + '&token=' + encodeURIComponent(resetToken))
   await page.getByRole('heading', { name: 'Установка пароля' }).waitFor()
   assert.equal(await page.locator('.app-shell').count(), 0, 'recovery must stay outside the authenticated HR shell')
-  await page.getByLabel('Новый пароль').fill('Synthetic!RecoveryBrowser456')
-  await page.getByLabel('Повторите пароль').fill('Synthetic!RecoveryBrowser456')
+  await page.getByLabel('Новый пароль').fill(replacement)
+  await page.getByLabel('Повторите пароль').fill(replacement)
   ;[response] = await Promise.all([
     page.waitForResponse((r) => r.url().endsWith('/auth/password/reset') && r.request().method() === 'POST'),
     page.getByRole('button', { name: 'Установить пароль' }).click(),
   ])
-  assert.equal(response.status(), 422)
+  assert.equal(response.status(), 204)
+  await page.getByText('Пароль установлен. Теперь можно вернуться на страницу входа.').waitFor()
+  assert.equal(new URL(page.url()).search, '', 'successful reset must remove token and email from the address bar')
+
+  await page.getByRole('link', { name: 'Вернуться ко входу' }).click()
+  const loginResponse = await signIn(page, userEmail, replacement)
+  assert.equal(loginResponse.status(), 200, 'new password must immediately authenticate')
+  await page.getByRole('heading', { name: 'Главная' }).waitFor()
+  await page.getByRole('button', { name: 'Выйти' }).click()
+  await page.getByRole('heading', { name: 'Вход в систему' }).waitFor()
+
+  await page.goto('/reset-password?email=' + encodeURIComponent(userEmail) + '&token=' + encodeURIComponent(resetToken))
+  await page.getByLabel('Новый пароль').fill('Synthetic!SecondAttempt789')
+  await page.getByLabel('Повторите пароль').fill('Synthetic!SecondAttempt789')
+  ;[response] = await Promise.all([
+    page.waitForResponse((r) => r.url().endsWith('/auth/password/reset') && r.request().method() === 'POST'),
+    page.getByRole('button', { name: 'Установить пароль' }).click(),
+  ])
+  assert.equal(response.status(), 422, 'reset token must be one-time')
   await page.getByText('Ссылка недействительна или истекла. Запросите новое письмо на странице входа.').waitFor()
 })
 

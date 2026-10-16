@@ -32,6 +32,14 @@ async function signIn(page) {
 test('HR creates and edits an employment contract and registry expiry KPI becomes live', async () => {
   const context = await browser.newContext({ baseURL, viewport: { width: 1440, height: 1000 } })
   const page = await context.newPage()
+  const dateOffset = days => {
+    const date = new Date()
+    date.setUTCDate(date.getUTCDate() + days)
+    return date.toISOString().slice(0, 10)
+  }
+  const startedOn = dateOffset(-1)
+  const expiresOn = dateOffset(14)
+  const revisedExpiry = dateOffset(20)
   try {
     await signIn(page)
     await page.goto(`/employees/${company}/${employee}?tab=employment`)
@@ -40,13 +48,13 @@ test('HR creates and edits an employment contract and registry expiry KPI become
 
     let dialog = page.getByRole('dialog', { name: 'Новый трудовой договор' })
     await dialog.waitFor()
-    await dialog.getByLabel('Номер договора', { exact: true }).fill('E2E-TD-001')
-    await dialog.getByLabel('Тип договора', { exact: true }).selectOption('fixed_term')
+    await dialog.getByRole('textbox', { name: 'Номер договора', exact: true }).fill('E2E-TD-001')
+    await dialog.getByRole('combobox', { name: 'Тип договора', exact: true }).selectOption('fixed_term')
     await dialog.getByLabel('Вид занятости', { exact: true }).selectOption('full_time')
-    await dialog.getByLabel('Дата подписания', { exact: true }).fill('2026-10-01')
-    await dialog.getByLabel('Действует с', { exact: true }).fill('2026-10-01')
-    await dialog.getByLabel('Действует до', { exact: true }).fill('2026-10-30')
-    await dialog.getByLabel('Испытательный срок до', { exact: true }).fill('2026-10-20')
+    await dialog.getByLabel('Дата подписания', { exact: true }).fill(startedOn)
+    await dialog.getByLabel(/^Действует с(?: \*)?$/).fill(startedOn)
+    await dialog.getByLabel(/^Действует до(?: \*)?$/).fill(expiresOn)
+    await dialog.getByLabel('Испытательный срок до', { exact: true }).fill(dateOffset(7))
     await dialog.getByLabel('Основание / приказ', { exact: true }).fill('E2E приказ № 1')
 
     const [createResponse] = await Promise.all([
@@ -55,15 +63,16 @@ test('HR creates and edits an employment contract and registry expiry KPI become
     ])
     assert.equal(createResponse.status(), 201)
 
-    await page.getByText('E2E-TD-001', { exact: true }).waitFor()
+    await page.getByRole('row').filter({ hasText: 'E2E-TD-001' }).waitFor()
     await page.getByText('Срочный', { exact: true }).first().waitFor()
 
     await page.goto('/employees')
     await page.getByText('Истекающие договоры', { exact: true }).waitFor()
-    const expiryCard = page.locator('.registry-metrics').filter({ hasText: 'Истекающие договоры' })
+    const expiryCard = page.locator('.registry-summary-card').filter({ hasText: 'Истекающие договоры' })
     await page.waitForFunction(() => {
-      const cards = [...document.querySelectorAll('.registry-metrics *')]
-      return cards.some(node => node.textContent?.includes('Истекающие договоры'))
+      const card = [...document.querySelectorAll('.registry-summary-card')]
+        .find(node => node.textContent?.includes('Истекающие договоры'))
+      return card?.querySelector('.registry-summary-value')?.textContent?.trim() === '1'
     })
     const registryApi = await page.evaluate(async companyId => {
       const response = await fetch(`/api/v1/companies/${companyId}/employees?status=active&per_page=25`, {
@@ -77,8 +86,8 @@ test('HR creates and edits an employment contract and registry expiry KPI become
     const row = registryApi.body.data.find(item => item.id === employee)
     assert.ok(row)
     assert.equal(row.contract_type, 'fixed_term')
-    assert.equal(row.contract_valid_to, '2026-10-30')
-    assert.ok(await expiryCard.count() >= 1)
+    assert.equal(row.contract_valid_to, expiresOn)
+    assert.equal(await expiryCard.locator('.registry-summary-value').textContent(), '1')
 
     await page.goto(`/employees/${company}/${employee}?tab=employment`)
     const contractRow = page.getByRole('row').filter({ hasText: 'E2E-TD-001' })
@@ -87,17 +96,17 @@ test('HR creates and edits an employment contract and registry expiry KPI become
 
     dialog = page.getByRole('dialog', { name: 'Редактировать трудовой договор' })
     await dialog.waitFor()
-    await dialog.getByLabel('Номер договора', { exact: true }).fill('E2E-TD-001A')
-    await dialog.getByLabel('Действует до', { exact: true }).fill('2026-11-05')
+    await dialog.getByRole('textbox', { name: 'Номер договора', exact: true }).fill('E2E-TD-001A')
+    await dialog.getByLabel(/^Действует до(?: \*)?$/).fill(revisedExpiry)
     const [updateResponse] = await Promise.all([
       page.waitForResponse(r => r.url().includes('/contracts/') && r.request().method() === 'PUT'),
       dialog.getByRole('button', { name: 'Сохранить изменения', exact: true }).click(),
     ])
     assert.equal(updateResponse.status(), 200)
 
-    await page.getByText('E2E-TD-001A', { exact: true }).waitFor()
+    await page.getByRole('row').filter({ hasText: 'E2E-TD-001A' }).waitFor()
     await page.reload()
-    await page.getByText('E2E-TD-001A', { exact: true }).waitFor()
+    await page.getByRole('row').filter({ hasText: 'E2E-TD-001A' }).waitFor()
 
     const contractsApi = await page.evaluate(async ({ companyId, employeeId }) => {
       const response = await fetch(`/api/v1/companies/${companyId}/employees/${employeeId}/contracts`, {
@@ -108,7 +117,7 @@ test('HR creates and edits an employment contract and registry expiry KPI become
     }, { companyId: company, employeeId: employee })
     assert.equal(contractsApi.status, 200)
     assert.equal(contractsApi.body.data[0].contract_number, 'E2E-TD-001A')
-    assert.equal(contractsApi.body.data[0].valid_to, '2026-11-05')
+    assert.equal(contractsApi.body.data[0].valid_to, revisedExpiry)
     assert.equal(contractsApi.body.data[0].revision, 2)
   } finally {
     await context.close()

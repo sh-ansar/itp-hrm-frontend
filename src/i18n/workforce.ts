@@ -1,6 +1,15 @@
 import { useUiPreferencesStore, type UiLocale } from '../stores/uiPreferences'
 
 const ru = {
+  bulkTitle: "Массовое изменение дат",
+  rangeFrom: "Период с",
+  rangeTo: "Период по",
+  bulkType: "Тип дней периода",
+  bulkMinutes: "Минуты в рабочий день",
+  bulkLabel: "Описание для периода",
+  bulkHint: "Будут изменены все даты выбранного периода, включая заполненные. Пустое описание очистит прежние подписи. Проверьте изменения и нажмите «Сохранить изменения».",
+  applyRange: "Применить к периоду",
+
   title: 'Редактор производственного календаря',
   description: 'Выходные, праздники и сокращённые дни компании',
   month: 'Месяц',
@@ -39,6 +48,15 @@ type WorkforceCopy = typeof ru
 export type WorkforceCopyKey = keyof WorkforceCopy
 
 const kk: Record<WorkforceCopyKey, string> = {
+  bulkTitle: "Күндерді жаппай өзгерту",
+  rangeFrom: "Кезеңнің басы",
+  rangeTo: "Кезеңнің соңы",
+  bulkType: "Кезең күндерінің түрі",
+  bulkMinutes: "Жұмыс күніндегі минут",
+  bulkLabel: "Кезең сипаттамасы",
+  bulkHint: "Толтырылған күндерді қоса, кезеңнің барлық күні өзгереді. Бос сипаттама бұрынғы жазуларды өшіреді. Өзгерістерді тексеріп, сақтау түймесін басыңыз.",
+  applyRange: "Кезеңге қолдану",
+
   title: 'Өндірістік күнтізбені өңдеу',
   description: 'Компанияның демалыс, мереке және қысқартылған күндері',
   month: 'Ай', missing: 'Дерек жоқ', workday: 'Жұмыс күні',
@@ -62,6 +80,15 @@ const kk: Record<WorkforceCopyKey, string> = {
   remaining: 'Қалған күндерді өзгертпей, толтырылған күндерді сақтауға болады',
 }
 const en: Record<WorkforceCopyKey, string> = {
+  bulkTitle: "Bulk edit dates",
+  rangeFrom: "Period from",
+  rangeTo: "Period to",
+  bulkType: "Day type for period",
+  bulkMinutes: "Minutes per workday",
+  bulkLabel: "Description for period",
+  bulkHint: "All dates in the period will change, including existing entries. An empty description clears previous labels. Review the changes and save them.",
+  applyRange: "Apply to period",
+
   title: 'Production calendar editor',
   description: 'Company weekends, holidays and shortened workdays',
   month: 'Month', missing: 'Not recorded', workday: 'Workday',
@@ -83,6 +110,15 @@ const en: Record<WorkforceCopyKey, string> = {
   remaining: 'You can save only changed dates and leave the rest untouched',
 }
 const ka: Record<WorkforceCopyKey, string> = {
+  bulkTitle: "თარიღების ერთობლივი შეცვლა",
+  rangeFrom: "პერიოდის დასაწყისი",
+  rangeTo: "პერიოდის დასასრული",
+  bulkType: "პერიოდის დღეების ტიპი",
+  bulkMinutes: "წუთები სამუშაო დღეში",
+  bulkLabel: "პერიოდის აღწერა",
+  bulkHint: "შეიცვლება პერიოდის ყველა თარიღი, შევსებულის ჩათვლით. ცარიელი აღწერა წაშლის ძველ წარწერებს. შეამოწმეთ ცვლილებები და შეინახეთ.",
+  applyRange: "პერიოდზე გამოყენება",
+
   title: 'საწარმოო კალენდრის რედაქტორი',
   description: 'კომპანიის დასვენების, უქმე და შემოკლებული დღეები',
   month: 'თვე', missing: 'მონაცემი არ არის', workday: 'სამუშაო დღე',

@@ -66,6 +66,7 @@ router.beforeEach(async (to) => {
   if (access.error) return to.name === 'settings' ? true : { name: 'access-denied' }
   const scopedCompany = typeof to.params.company === 'string' ? to.params.company : null
   if (scopedCompany && !access.chooseCompany(scopedCompany)) return { name: 'access-denied' }
+  if (to.name === 'overview' && !access.can('overview.view') && access.can('settings.view')) return { name: 'settings' }
   const required = routeCapability(to.path)
   if (required && !access.can(required)) return { name: 'access-denied' }
   return true

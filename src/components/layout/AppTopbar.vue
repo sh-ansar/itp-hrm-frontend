@@ -69,7 +69,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', handleShortcut))
 
 <template>
   <header class="topbar hrm-topbar">
-    <button class="mobile-nav-trigger topbar-icon" type="button" aria-label="Открыть меню"
+    <button v-if="showEmployeeSearch" class="mobile-nav-trigger topbar-icon" type="button" aria-label="Открыть меню"
       @click="emit('openMobileMenu')">
       <Menu :size="21" aria-hidden="true" />
     </button>

@@ -3,6 +3,8 @@ import { computed, ref, watch } from 'vue'
 import BaseButton from './ui/BaseButton.vue'
 import BaseDrawer from './ui/BaseDrawer.vue'
 import BaseNotice from './ui/BaseNotice.vue'
+import BaseFormField from './ui/BaseFormField.vue'
+import BaseSelectField from './ui/BaseSelectField.vue'
 import {
   putProductionCalendar,
   type ProductionCalendarDay,
@@ -30,6 +32,11 @@ const emit = defineEmits<{ close: []; saved: []; refresh: [] }>()
 const { t } = useWorkforceI18n()
 const drafts = ref<DraftDay[]>([])
 const selectedDate = ref('')
+const rangeFrom = ref('')
+const rangeTo = ref('')
+const rangeType = ref<ProductionCalendarDayType>('workday')
+const rangeMinutes = ref('480')
+const rangeLabel = ref('')
 const saving = ref(false)
 const error = ref('')
 const typeOptions: ProductionCalendarDayType[] = ['workday', 'shortened', 'weekend', 'holiday']
@@ -57,6 +64,9 @@ function createDrafts(): DraftDay[] {
 function resetDrafts() {
   drafts.value = createDrafts()
   selectedDate.value = drafts.value.find(day => day.day_type === 'missing')?.date ?? drafts.value[0]?.date ?? ''
+  rangeFrom.value = drafts.value[0]?.date ?? ''
+  rangeTo.value = drafts.value.at(-1)?.date ?? ''
+  rangeLabel.value = ''
   error.value = ''
 }
 watch(() => [props.open, props.month, props.companyId, props.days], () => {
@@ -77,6 +87,23 @@ const workdays = computed(() => drafts.value.filter(d => d.day_type === 'workday
 const offdays = computed(() => drafts.value.filter(d => d.day_type === 'weekend').length)
 const holidays = computed(() => drafts.value.filter(d => d.day_type === 'holiday').length)
 const missing = computed(() => drafts.value.filter(d => d.day_type === 'missing').length)
+const rangeOptions = computed(() => typeOptions.map(id => ({ id, name: t(id) })))
+const rangeIsWorking = computed(() => ['workday', 'shortened'].includes(rangeType.value))
+const rangeValid = computed(() => rangeFrom.value >= (drafts.value[0]?.date ?? '9999')
+  && rangeTo.value <= (drafts.value.at(-1)?.date ?? '') && rangeFrom.value <= rangeTo.value
+  && (!rangeIsWorking.value || (Number.isInteger(Number(rangeMinutes.value))
+    && Number(rangeMinutes.value) >= 1 && Number(rangeMinutes.value) <= 1440)))
+watch(rangeType, type => { rangeMinutes.value = type === 'workday' ? '480' : type === 'shortened' ? '360' : '0' })
+function applyRange() {
+  if (saving.value || !rangeValid.value) return
+  for (const day of drafts.value) {
+    if (day.date < rangeFrom.value || day.date > rangeTo.value) continue
+    day.day_type = rangeType.value
+    day.planned_minutes = rangeIsWorking.value ? Number(rangeMinutes.value) : 0
+    day.label = rangeLabel.value.trim()
+  }
+  error.value = ''
+}
 function chooseType(value: string) {
   const draft = selectedDay.value
   if (!draft || !typeOptions.includes(value as ProductionCalendarDayType)) return
@@ -165,6 +192,19 @@ async function save() {
       <BaseButton variant="secondary" :disabled="saving || missing === 0" @click="fillMissing52">{{ t('fill52') }}</BaseButton>
       <p class="calendar-editor-hint">{{ t('fillHint') }} {{ t('suggested') }}</p>
 
+      <details class="calendar-editor-bulk">
+        <summary>{{ t('bulkTitle') }}</summary>
+        <div class="calendar-editor-bulk-fields">
+          <BaseFormField v-model="rangeFrom" type="date" :label="t('rangeFrom')" :disabled="saving" />
+          <BaseFormField v-model="rangeTo" type="date" :label="t('rangeTo')" :disabled="saving" />
+          <BaseSelectField v-model="rangeType" :label="t('bulkType')" :options="rangeOptions" :disabled="saving" />
+          <BaseFormField v-model="rangeMinutes" type="number" :label="t('bulkMinutes')" :disabled="saving || !rangeIsWorking" />
+          <BaseFormField v-model="rangeLabel" :label="t('bulkLabel')" :disabled="saving" />
+          <p class="calendar-editor-hint">{{ t('bulkHint') }}</p>
+          <BaseButton variant="secondary" :disabled="saving || !rangeValid" @click="applyRange">{{ t('applyRange') }}</BaseButton>
+        </div>
+      </details>
+
       <p class="calendar-editor-choose">{{ t('clickDay') }}</p>
       <div class="calendar-editor-legend" role="list" aria-label="Обозначения дней">
         <span role="listitem"><i class="editor-legend-key editor-legend-key--workday" aria-hidden="true" />{{ t('workday') }}</span>
@@ -219,13 +259,16 @@ async function save() {
     <template #footer>
       <span class="calendar-editor-pending">{{ t('count') }}: {{ pending.length }}</span>
       <BaseButton v-if="error === t('conflict')" variant="secondary" :disabled="saving" @click="refresh">{{ t('refresh') }}</BaseButton>
-      <BaseButton variant="secondary" :disabled="saving" @click="close">{{ t('cancel') }}</BaseButton>
-      <BaseButton :disabled="!pending.length || saving" @click="save">{{ saving ? t('saving') : t('save') }}</BaseButton>
+      <BaseButton class="calendar-close" variant="secondary" :disabled="saving" @click="close">{{ t('cancel') }}</BaseButton>
+      <BaseButton class="calendar-save" :disabled="!pending.length || saving" @click="save">{{ saving ? t('saving') : t('save') }}</BaseButton>
     </template>
   </BaseDrawer>
 </template>
 
 <style scoped>
+.calendar-editor-bulk{border:1px solid var(--color-stroke);border-radius:var(--radius-sm);padding:12px}
+.calendar-editor-bulk summary{cursor:pointer;font-weight:600;color:var(--color-text)}
+.calendar-editor-bulk-fields{display:grid;gap:12px;margin-top:12px;min-width:0}
 .calendar-editor{display:grid;gap:14px;min-width:0}
 .calendar-editor-month{margin:0;color:var(--color-text)}
 .calendar-editor-stats{display:flex;gap:9px;flex-wrap:wrap}
@@ -257,6 +300,8 @@ async function save() {
 .calendar-editor-field input,.calendar-editor-field select{width:100%;min-height:37px;border:1px solid var(--color-stroke);border-radius:7px;background:var(--color-surface-raised);color:var(--color-text);padding:0 9px;font:inherit}
 .calendar-editor-field input:disabled{opacity:.58}
 .calendar-editor-pending{align-self:center;color:var(--color-muted);font-size:11px;margin-right:auto}
+.calendar-save,.calendar-close{min-width:max-content}
+@media(max-width:560px){.calendar-editor-pending{flex-basis:100%;margin-right:0}}
 @media(min-width:500px){.calendar-editor-day small{display:block;max-height:24px;overflow:hidden}}
 @media(max-width:390px){.calendar-editor-days{gap:3px}.calendar-editor-day{min-height:40px}.calendar-editor-stats{gap:5px}}
 </style>

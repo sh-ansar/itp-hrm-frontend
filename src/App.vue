@@ -1,13 +1,17 @@
 <script setup lang="ts">
-import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import AppSidebar from './components/layout/AppSidebar.vue'
 import AppTopbar from './components/layout/AppTopbar.vue'
 import BaseNotice from './components/ui/BaseNotice.vue'
+import { useCompanyAccessStore } from './stores/companyAccess'
 import { useUiPreferencesStore } from './stores/uiPreferences'
 
 const route = useRoute()
 const ui = useUiPreferencesStore()
+const access = useCompanyAccessStore()
+const connected = import.meta.env.VITE_ENABLE_BROWSER_LOGIN === 'true' && import.meta.env.VITE_DEMO_MODE !== 'true'
+const workspaceNavigation = computed(() => !connected || access.can('overview.view'))
 const logoutError = ref('')
 const mobileNavOpen = ref(false)
 function closeMobileNav() { mobileNavOpen.value = false }
@@ -33,10 +37,10 @@ onBeforeUnmount(() => {
 
 <template>
   <RouterView v-if="['login', 'reset-password'].includes(String(route.name))" />
-  <div v-else class="app-shell" :class="{ 'app-shell--collapsed': ui.sidebarCollapsed }">
+  <div v-else class="app-shell" :class="{ 'app-shell--collapsed': ui.sidebarCollapsed, 'app-shell--personal': !workspaceNavigation }">
     <button v-if="mobileNavOpen" class="nav-backdrop" type="button"
       aria-label="Закрыть боковое меню" @click="closeMobileNav" />
-    <AppSidebar v-model:mobile-open="mobileNavOpen" />
+    <AppSidebar v-if="workspaceNavigation" v-model:mobile-open="mobileNavOpen" />
     <div class="main">
       <AppTopbar @open-mobile-menu="openMobileNav" @logout-error="logoutError = $event" />
       <BaseNotice v-if="logoutError" class="shell-error" tone="error">{{ logoutError }}</BaseNotice>
@@ -48,6 +52,7 @@ onBeforeUnmount(() => {
 <style scoped>
 .app-shell{--app-sidebar-width:264px}
 .app-shell--collapsed{--app-sidebar-width:66px}
+.app-shell--personal{--app-sidebar-width:0px}
 .main{min-width:0;max-width:100%}
 .shell-error{margin:12px 24px}
 .nav-backdrop{display:none}

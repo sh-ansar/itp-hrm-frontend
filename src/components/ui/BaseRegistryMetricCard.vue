@@ -46,6 +46,7 @@ const ringStyle = computed(() => ({
     <template v-else>
       <strong class="registry-summary-value">{{ formattedValue }}</strong>
       <small class="registry-summary-description">{{ description }}</small>
+      <slot />
     </template>
   </component>
 </template>

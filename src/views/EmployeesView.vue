@@ -87,6 +87,10 @@ const error = ref('')
 const page = ref(1)
 const total = ref(0)
 const lastPage = ref(1)
+const contractExpiryDays = ref('30')
+const contractExpiryOptions = computed(() => [30, 60, 90].map(days => ({
+  id: String(days), name: tr('договоров истекают в ближайшие '+days+' дней'),
+})))
 const counters = ref({
   active: null as number | null,
   archived: null as number | null,
@@ -504,7 +508,7 @@ async function loadCounters() {
   counters.value = { active: null, archived: null, departments: null, vacancies: null, plannedUnits: null, expiring: null }
   if (!company) return
   const [activeResult, archivedResult, departmentResult, plansResult] = await Promise.allSettled([
-    listEmployees(company, 1, '', 'active', 1),
+    listEmployees(company, 1, '', 'active', 1, Number(contractExpiryDays.value) as 30 | 60 | 90),
     listEmployees(company, 1, '', 'archived', 1),
     listDepartments(company),
     listStaffingPlans(company),
@@ -592,6 +596,7 @@ async function employeeCreated(employee: EmployeeRecord) {
   await router.push({ name: 'employee-detail', params: { company: selectedCompany.value, employee: employee.id } })
 }
 
+watch(contractExpiryDays, () => { void loadCounters() })
 watch(visibleFields, next => {
   try { localStorage.setItem('hrm-employee-columns-v1', JSON.stringify(next)) }
   catch { /* Preferences can remain in memory. */ }
@@ -653,8 +658,11 @@ onMounted(() => {
         :description="counters.plannedUnits === null ? tr('Нет данных утверждённого штата') : tr('из ')+counters.plannedUnits+tr(' штатных единиц')"
         :icon="publicAsset('prototype-icons/Link-External.svg')" to="/staffing?view=vacant" />
       <BaseRegistryMetricCard :title="tr('Истекающие договоры')" :value="counters.expiring"
-        :description="tr('договоров истекают в ближайшие 30 дней')"
-        :icon="publicAsset('prototype-icons/Info.svg')" tone="danger" />
+        :description="tr('договоров истекают в ближайшие '+contractExpiryDays+' дней')"
+        :icon="publicAsset('prototype-icons/Info.svg')" tone="danger">
+        <BaseSelectField v-model="contractExpiryDays" :label="tr('Период')"
+          :options="contractExpiryOptions" />
+      </BaseRegistryMetricCard>
     </BaseKpiGrid>
 
     <BaseCard class="registry-card" :class="{ 'registry-card--fullscreen': fullscreen }">

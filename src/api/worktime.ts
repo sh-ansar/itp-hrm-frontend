@@ -59,6 +59,7 @@ export interface WorkScheduleRow extends Record<string, unknown> {
   schedule_type: string
   work_time_label: string | null
   weekly_minutes: number | null
+  revision: number
   employees: number
 }
 
@@ -68,6 +69,7 @@ export interface WorkScheduleResponse {
     as_of: string
     total: number
     worktime_writes_enabled: boolean
+    can_manage_schedules?: boolean
   }
 }
 
@@ -258,5 +260,63 @@ export function putEmployeeTimesheet(
   return apiRequest(`/companies/${companyId}/worktime/timesheet/${employeeId}`, {
     method: 'PUT',
     body: JSON.stringify({ month, days }),
+  })
+}
+
+
+export interface WorkSchedulePayload {
+  code: string
+  name: string
+  schedule_type: 'standard' | 'shift' | 'individual' | 'summarized'
+  work_time_label: string | null
+  weekly_minutes: number | null
+}
+
+export function createWorkSchedule(
+  companyId: string,
+  payload: WorkSchedulePayload,
+): Promise<{ data: WorkScheduleRow }> {
+  assertCompany(companyId)
+  return apiRequest<{ data: WorkScheduleRow }>(`/companies/${companyId}/worktime/schedules`, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
+}
+
+export function updateWorkSchedule(
+  companyId: string,
+  scheduleId: string,
+  payload: WorkSchedulePayload & { revision: number },
+): Promise<{ data: WorkScheduleRow }> {
+  assertCompany(companyId)
+  if (!uuid.test(scheduleId)) throw new Error('Некорректный идентификатор графика')
+  return apiRequest<{ data: WorkScheduleRow }>(`/companies/${companyId}/worktime/schedules/${scheduleId}`, {
+    method: 'PUT',
+    body: JSON.stringify(payload),
+  })
+}
+
+export function assignWorkSchedule(
+  companyId: string,
+  scheduleId: string,
+  employeeId: string,
+  validFrom: string,
+): Promise<{ data: {
+  id: string
+  employee_id: string
+  valid_from: string
+  valid_to: string | null
+  revision: number
+  schedule_id: string
+  schedule_code: string
+  schedule_name: string
+} }> {
+  assertCompany(companyId)
+  if (!uuid.test(scheduleId)) throw new Error('Некорректный идентификатор графика')
+  if (!uuid.test(employeeId)) throw new Error('Некорректный идентификатор сотрудника')
+  assertDate(validFrom)
+  return apiRequest(`/companies/${companyId}/worktime/schedules/${scheduleId}/employees/${employeeId}`, {
+    method: 'PUT',
+    body: JSON.stringify({ valid_from: validFrom }),
   })
 }

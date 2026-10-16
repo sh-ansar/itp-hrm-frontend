@@ -92,6 +92,8 @@ export async function completePasswordReset(
 }
 
 export async function logoutSession(): Promise<void> {
+  // The session can outlive its readable CSRF cookie. Refresh it before sign-out.
+  await refreshXsrfCookie()
   await requestJson<void>(sessionPath('/auth/logout'), {
     method: 'POST',
     timeoutMs: SESSION_CHECK_TIMEOUT_MS,

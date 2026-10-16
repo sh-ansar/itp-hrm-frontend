@@ -5,6 +5,7 @@ const company = '11111111-1111-4111-8111-111111111111'
 test('admin bulk edits existing calendar dates, saves revisions and reloads at mobile width', async () => {
   const browser = await chromium.launch({ headless: true })
   const context = await browser.newContext({ baseURL: 'http://127.0.0.1:5173', viewport: { width: 375, height: 900 } })
+  await context.addInitScript(() => localStorage.setItem('hrm-theme', 'dark'))
   const page = await context.newPage()
   try {
     await page.goto('/login')

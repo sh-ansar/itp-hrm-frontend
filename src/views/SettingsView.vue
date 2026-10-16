@@ -12,6 +12,8 @@ import BaseViewTabs from '../components/ui/BaseViewTabs.vue'
 import EmployeeProfileSection from '../components/EmployeeProfileSection.vue'
 import { listCompanies, type CompanyRecord } from '../api/organization'
 import { localeOptions, useAppI18n } from '../i18n'
+import { useCompanyAccessStore } from '../stores/companyAccess'
+import { routeCapability } from '../config/routeAccess'
 import { useSessionStore } from '../stores/session'
 import {
   useUiPreferencesStore,
@@ -24,6 +26,9 @@ import {
 } from '../stores/uiPreferences'
 
 const session = useSessionStore()
+const access = useCompanyAccessStore()
+const connected = import.meta.env.VITE_ENABLE_BROWSER_LOGIN === 'true' && import.meta.env.VITE_DEMO_MODE !== 'true'
+const hasWorkspaceNavigation = computed(() => !connected || access.can('overview.view'))
 const ui = useUiPreferencesStore()
 const { t } = useAppI18n()
 
@@ -79,7 +84,8 @@ const numberFormatModel = computed({
   set: value => ui.setNumberFormat(value as UiNumberFormat),
 })
 const startScreenModel = computed({
-  get: () => ui.startScreen,
+  get: () => startScreenOptions.value.some(option => option.id === ui.startScreen)
+    ? ui.startScreen : (startScreenOptions.value[0]?.id ?? '/'),
   set: value => ui.setStartScreen(value as UiStartScreen),
 })
 
@@ -91,12 +97,20 @@ const sidebarOptions = computed(() => [
   { id: 'expanded', name: t('settings.expandedSidebar') },
   { id: 'collapsed', name: t('settings.collapsedSidebar') },
 ])
-const startScreenOptions = computed(() => [
-  { id: '/', name: t('nav.home') },
-  { id: '/employees', name: t('nav.employees') },
-  { id: '/organization', name: t('nav.organization') },
-  { id: '/staffing', name: t('nav.organization') + ' — ' + (ui.locale === 'en' ? 'Staffing' : ui.locale === 'kk' ? 'Штат кестесі' : ui.locale === 'ka' ? 'საშტატო განრიგი' : 'Штатное расписание') },
-])
+const startScreenOptions = computed(() => {
+  const options = [
+    { id: '/', name: t('nav.home') },
+    { id: '/employees', name: t('nav.employees') },
+    { id: '/organization', name: t('nav.organization') },
+    { id: '/staffing', name: t('nav.organization') + ' — ' + (ui.locale === 'en' ? 'Staffing' : ui.locale === 'kk' ? 'Штат кестесі' : ui.locale === 'ka' ? 'საშტატო განრიგი' : 'Штатное расписание') },
+  ]
+  if (!connected) return options
+  const permitted = options.filter(option => {
+    const capability = routeCapability(option.id)
+    return capability && access.can(capability)
+  })
+  return permitted.length ? permitted : [{ id: '/', name: t('nav.settings') }]
+})
 const timeZoneOptions = [
   { id: 'Asia/Almaty', name: 'Asia/Almaty (UTC+5)' },
   { id: 'Asia/Aqtobe', name: 'Asia/Aqtobe (UTC+5)' },
@@ -166,18 +180,22 @@ async function updateOwnPassword() {
 }
 
 const selectedCompany = computed(() => companies.value.find(item => item.id === company.value))
+const selectedRole = computed(() => selectedCompany.value?.role_code ?? access.active?.role_code)
 
 const role = computed(() => {
-  const code = selectedCompany.value?.role_code ?? ''
+  const code = selectedRole.value ?? ''
   const labels: Record<UiLocale, Record<string, string>> = {
-    ru: { company_admin: 'Администратор компании', hr_specialist: 'HR-специалист', department_manager: 'Руководитель подразделения' },
-    kk: { company_admin: 'Компания әкімшісі', hr_specialist: 'HR-маман', department_manager: 'Бөлімше басшысы' },
-    en: { company_admin: 'Company administrator', hr_specialist: 'HR specialist', department_manager: 'Department manager' },
-    ka: { company_admin: 'კომპანიის ადმინისტრატორი', hr_specialist: 'HR სპეციალისტი', department_manager: 'განყოფილების ხელმძღვანელი' },
+    ru: { employee: 'Сотрудник', company_admin: 'Администратор компании', hr_specialist: 'HR-специалист', department_manager: 'Руководитель подразделения' },
+    kk: { employee: 'Қызметкер', company_admin: 'Компания әкімшісі', hr_specialist: 'HR-маман', department_manager: 'Бөлімше басшысы' },
+    en: { employee: 'Employee', company_admin: 'Company administrator', hr_specialist: 'HR specialist', department_manager: 'Department manager' },
+    ka: { employee: 'თანამშრომელი', company_admin: 'კომპანიის ადმინისტრატორი', hr_specialist: 'HR სპეციალისტი', department_manager: 'განყოფილების ხელმძღვანელი' },
   }
   return labels[ui.locale][code] ?? '—'
 })
 const scope = computed(() => {
+  if (selectedRole.value === 'employee') {
+    return { ru: 'Личные настройки', kk: 'Жеке параметрлер', en: 'Personal settings', ka: 'პირადი პარამეტრები' }[ui.locale]
+  }
   if (selectedCompany.value?.role_code === 'department_manager') {
     return selectedCompany.value.department_scopes?.map(item => item.name).join(', ') || '—'
   }
@@ -238,7 +256,7 @@ async function reload() {
     const response = await listCompanies()
     companies.value = response.data
     if (!companies.value.some(item => item.id === company.value)) company.value = preferCompany(companies.value)
-    if (import.meta.env.VITE_ENABLE_BROWSER_LOGIN === 'true') await session.refresh()
+    if (import.meta.env.VITE_ENABLE_BROWSER_LOGIN === 'true' && !session.checked) await session.refresh()
     await loadPreferences()
   } catch (cause) {
     error.value = cause instanceof Error ? cause.message : 'Не удалось загрузить настройки'
@@ -284,11 +302,11 @@ onMounted(reload)
       <EmployeeProfileSection :title="t('settings.general')">
         <div class="settings-fields">
           <BaseSelectField v-model="themeModel" :label="t('settings.theme')" :options="themeOptions" />
-          <BaseSelectField v-model="sidebarModel" :label="t('settings.sidebar')" :options="sidebarOptions" />
+          <BaseSelectField v-if="hasWorkspaceNavigation" v-model="sidebarModel" :label="t('settings.sidebar')" :options="sidebarOptions" />
           <BaseSelectField v-if="companies.length" v-model="company" :label="t('settings.company')" :options="companies" :disabled="busy" />
           <div class="read-setting">
             <span>{{ t('settings.startScreen') }}</span>
-            <RouterLink :to="ui.startScreen">{{ startScreenOptions.find(item => item.id === ui.startScreen)?.name }}</RouterLink>
+            <RouterLink :to="startScreenModel">{{ startScreenOptions.find(item => item.id === startScreenModel)?.name }}</RouterLink>
           </div>
         </div>
         <div class="settings-actions">

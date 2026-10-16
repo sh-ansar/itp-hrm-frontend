@@ -14,6 +14,7 @@ const actors = {
 async function login(browser, actor, width = 1440) {
   const context = await browser.newContext({ baseURL, viewport: { width, height: 1000 } })
   if (actor === 'employee') await context.addInitScript(() => localStorage.setItem('hrm-start-screen', '/employees'))
+  if (actor === 'hr' || actor === 'manager') await context.addInitScript(() => localStorage.setItem('hrm-theme', 'dark'))
   const page = await context.newPage()
   await page.goto('/login')
   await page.getByLabel('Электронная почта').fill(actors[actor][0])
@@ -45,6 +46,13 @@ test('four real user roles have distinct navigation, inputs, outputs and server 
       try {
         if (actor === 'employee') {
           await page.waitForURL('**/settings')
+          const start = page.getByRole('combobox', { name: 'Стартовый экран', exact: true })
+          assert.deepEqual(await start.locator('option').evaluateAll(options => options.map(option => option.value)), ['/'])
+          assert.equal(await start.inputValue(), '/')
+          await page.getByRole('button', { name: 'Безопасность', exact: true }).click()
+          await page.getByText('Сотрудник', { exact: true }).waitFor()
+          await page.getByText('Личные настройки', { exact: true }).waitFor()
+          assert.equal(await page.getByRole('combobox', { name: 'Боковое меню', exact: true }).count(), 0)
           assert.equal(await page.locator('.sidebar').count(), 0)
           assert.equal(await page.getByRole('searchbox', { name: 'Поиск сотрудника' }).count(), 0)
           assert.equal(await page.getByRole('button', { name: 'Открыть меню', exact: true }).count(), 0)
@@ -85,8 +93,13 @@ test('four real user roles have distinct navigation, inputs, outputs and server 
           assert.equal((await api(page, '/api/v1/companies/22222222-2222-4222-8222-222222222222/employees')).status, 403)
         }
         assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1))
-        await page.getByRole('button', { name: 'Выйти из системы', exact: true }).click()
-        await page.waitForURL('**/login')
+        if (actor === 'employee') await context.clearCookies({ name: 'XSRF-TOKEN' })
+        const [logout] = await Promise.all([
+          page.waitForResponse(r => r.url().endsWith('/auth/logout') && r.request().method() === 'POST'),
+          page.getByRole('button', { name: 'Выйти из системы', exact: true }).click(),
+        ])
+        assert.equal(logout.status(), 204, actor + ' signs out, even after CSRF-cookie expiry')
+        await page.waitForURL(url => url.pathname === '/login')
         assert.equal((await api(page, '/auth/me')).status, 401)
         await page.goto('/employees')
         await page.waitForURL(url => url.pathname === '/login')

@@ -20,6 +20,7 @@ import AccessDeniedView from '../views/AccessDeniedView.vue'
 import { useCompanyAccessStore } from '../stores/companyAccess'
 import { routeCapability } from '../config/routeAccess'
 import LoginView from '../views/LoginView.vue'
+import ResetPasswordView from '../views/ResetPasswordView.vue'
 import { useSessionStore } from '../stores/session'
 
 export const browserLoginEnabled = import.meta.env.VITE_ENABLE_BROWSER_LOGIN === 'true'
@@ -30,6 +31,7 @@ export const router = createRouter({
   routes: [
     { path: '/', name: 'overview', component: OverviewView },
     { path: '/login', name: 'login', component: LoginView },
+    { path: '/reset-password', name: 'reset-password', component: ResetPasswordView },
     { path: '/access-denied', name: 'access-denied', component: AccessDeniedView },
     { path: '/employees', name: 'employees', component: EmployeesView },
     { path: '/employees/:company/:employee', name: 'employee-detail', component: EmployeeDetailView },
@@ -52,7 +54,7 @@ export const router = createRouter({
 })
 
 router.beforeEach(async (to) => {
-  if (!browserLoginEnabled || to.name === 'login') return true
+  if (!browserLoginEnabled || to.name === 'login' || to.name === 'reset-password') return true
 
   const session = useSessionStore()
   if (!session.checked) await session.refresh()

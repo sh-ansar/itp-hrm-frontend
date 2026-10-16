@@ -121,7 +121,7 @@ export function apiRequest<T>(
 export interface HealthResponse {
   status: 'ok'
   service: 'itp-hrm-api'
-  capabilities?: { browser_login?: boolean }
+  capabilities?: { browser_login?: boolean; password_reset?: boolean }
 }
 
 export const getApiHealth = () => apiRequest<HealthResponse>('/health')

@@ -78,6 +78,13 @@ test('notification preferences persist on the server and password rule is 8+ dig
     const emailReloaded = page.locator('label.toggle-setting').filter({ hasText: 'Email' }).locator('input[type="checkbox"]')
     const learningReloaded = page.locator('label.toggle-setting').filter({ hasText: /Обучение|резерв/i }).locator('input[type="checkbox"]')
     await emailReloaded.waitFor()
+    await page.waitForFunction(() => {
+      const labels = [...document.querySelectorAll('label.toggle-setting')]
+      const email = labels.find(label => label.textContent?.trim().startsWith('Email'))
+        ?.querySelector('input[type="checkbox"]')
+      return email instanceof HTMLInputElement && !email.disabled && email.checked === false
+    })
+    assert.equal(await emailReloaded.isEnabled(), true)
     assert.equal(await emailReloaded.isChecked(), false)
     assert.equal(await learningReloaded.isChecked(), true)
 

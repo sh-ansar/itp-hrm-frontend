@@ -219,6 +219,16 @@ const registryRows = computed<EmployeeRow[]>(() => {
 function displayDate(value: unknown): string {
   return typeof value === 'string' ? fmt.date(value) : '—'
 }
+function contractTypeLabel(value: unknown): string {
+  const labels: Record<string, string> = {
+    indefinite: 'Бессрочный',
+    fixed_term: 'Срочный',
+    temporary: 'Временный',
+    seasonal: 'Сезонный',
+    other: 'Другой',
+  }
+  return labels[String(value)] ?? '—'
+}
 const groupModeLabels: Record<GroupMode, string> = {
   none: 'Без группировки',
   department: 'По подразделениям',
@@ -506,8 +516,9 @@ async function loadCounters() {
     departments: departmentResult.status === 'fulfilled' ? departmentResult.value.meta.total : null,
     vacancies: null as number | null,
     plannedUnits: null as number | null,
-    // Contracts do not have an authoritative expiry-date API yet.
-    expiring: null as number | null,
+    expiring: activeResult.status === 'fulfilled'
+      ? (activeResult.value.meta.registry_summary?.expiring_contracts ?? null)
+      : null,
   }
   if (plansResult.status === 'fulfilled') {
     const approved = preferredApprovedStaffingPlan(plansResult.value.data)
@@ -642,7 +653,7 @@ onMounted(() => {
         :description="counters.plannedUnits === null ? tr('Нет данных утверждённого штата') : tr('из ')+counters.plannedUnits+tr(' штатных единиц')"
         :icon="publicAsset('prototype-icons/Link-External.svg')" to="/staffing?view=vacant" />
       <BaseRegistryMetricCard :title="tr('Истекающие договоры')" :value="counters.expiring"
-        :description="tr('сроки договоров пока не учитываются в API')"
+        :description="tr('договоров истекают в ближайшие 30 дней')"
         :icon="publicAsset('prototype-icons/Info.svg')" tone="danger" />
     </BaseKpiGrid>
 
@@ -723,6 +734,7 @@ onMounted(() => {
           <template #cell-current_position_name="{ value }">{{ value ?? '—' }}</template>
           <template #cell-current_department_name="{ value }">{{ value ?? '—' }}</template>
           <template #cell-current_assignment_valid_from="{ value }">{{ displayDate(value) }}</template>
+          <template #cell-contract_type="{ value }">{{ contractTypeLabel(value) }}</template>
           <template #cell-status_label="{ row }">
             <BaseStatusPill :tone="row.employment_status === 'active' ? 'success'
               : row.employment_status === 'archived' ? 'danger'

@@ -17,9 +17,10 @@ import BaseLoadingState from '../components/ui/BaseLoadingState.vue'
 import EmployeeProfileCreateForm from '../components/EmployeeProfileCreateForm.vue'
 import EmployeeAssignmentCreateForm from '../components/EmployeeAssignmentCreateForm.vue'
 import EmployeeRecordForm from '../components/EmployeeRecordForm.vue'
+import EmployeeContractEditor from '../components/EmployeeContractEditor.vue'
 import BaseDialog from '../components/ui/BaseDialog.vue'
 import BaseViewTabs from '../components/ui/BaseViewTabs.vue'
-import { getEmployee, type EmployeeAssignment, type EmployeeDetail, type EmployeeReferenceProfile, type EmployeePrivateSection, type EmployeePrivateRecordSection, type ProfileEditRow, type ProfileSection } from '../api/personnel'
+import { getEmployee, listEmployeeContracts, type EmployeeAssignment, type EmployeeContract, type EmployeeDetail, type EmployeeReferenceProfile, type EmployeePrivateSection, type EmployeePrivateRecordSection, type ProfileEditRow, type ProfileSection } from '../api/personnel'
 import { localTodayISO } from '../utils/localDate'
 import { useUiFormatters } from '../composables/useUiFormatters'
 
@@ -40,6 +41,10 @@ const privateEditorSection = ref<EmployeePrivateSection | null>(null)
 const privateRecordsSection = ref<EmployeePrivateRecordSection | null>(null)
 const assignmentCreateOpen = ref(false)
 const profileCreateOpen = ref(false)
+const contracts = ref<EmployeeContract[]>([])
+const contractWritesEnabled = ref(false)
+const contractEditorOpen = ref(false)
+const editingContract = ref<EmployeeContract | null>(null)
 const activeSection = ref('personal')
 const sectionTabs = computed(() => [
   ...(profile.value?.meta.extended_sections_visible ? [
@@ -84,6 +89,28 @@ function trainingTypeLabel(value: unknown): string {
 const today = localTodayISO()
 const currentAssignment = computed(() => profile.value?.assignments.find(item =>
   item.valid_from <= today && (item.valid_to === null || item.valid_to >= today)) ?? null)
+const currentContract = computed(() => contracts.value.find(item =>
+  item.valid_from <= today && (item.valid_to === null || item.valid_to >= today)) ?? null)
+function contractTypeLabel(value: unknown): string {
+  const labels: Record<string, string> = {
+    indefinite: 'Бессрочный',
+    fixed_term: 'Срочный',
+    temporary: 'Временный',
+    seasonal: 'Сезонный',
+    other: 'Другой',
+  }
+  return labels[String(value)] ?? String(value ?? '—')
+}
+function employmentTypeLabel(value: unknown): string {
+  const labels: Record<string, string> = {
+    full_time: 'Основное место, полная занятость',
+    part_time: 'Неполная занятость',
+    secondary: 'Совместительство',
+    remote: 'Дистанционная работа',
+    other: 'Другой',
+  }
+  return labels[String(value)] ?? String(value ?? '—')
+}
 const plannedAssignment = computed(() => profile.value?.assignments.find(item =>
   item.valid_from > today && item.valid_to === null) ?? null)
 const employmentStatus = computed(() => currentAssignment.value
@@ -228,17 +255,14 @@ const staffingStatusFields = computed<EmployeeDisplayField[]>(() => [
 ])
 
 const contractFields = computed<EmployeeDisplayField[]>(() => [
-  { label: 'Номер договора', value: reference.value?.employment.contract_number },
-  { label: 'Тип договора', value: reference.value?.employment.contract_type },
-  { label: 'Действует с', value: formatDate(reference.value?.employment.valid_from ?? reference.value?.employment.contract_date) },
-  { label: 'Действует до', value: formatDate(reference.value?.employment.valid_to) },
-  { label: 'Испытательный срок', value: reference.value?.employment.probation_enabled },
-  { label: 'Испытание с', value: formatDate(reference.value?.employment.probation_from) },
-  { label: 'Испытание до', value: formatDate(reference.value?.employment.probation_until) },
-  { label: 'Основание приёма', value: reference.value?.employment.hire_basis ?? currentAssignment.value?.basis_reference ?? plannedAssignment.value?.basis_reference, wide: true },
-  { label: 'Дата приёма', value: formatDate(reference.value?.employment.hire_date) },
-  { label: 'Вид занятости', value: reference.value?.employment.employment_type },
-  { label: 'Трудовой договор', value: reference.value?.employment.contract_attachment, wide: true },
+  { label: 'Номер договора', value: currentContract.value?.contract_number ?? reference.value?.employment.contract_number },
+  { label: 'Тип договора', value: currentContract.value ? contractTypeLabel(currentContract.value.contract_type) : reference.value?.employment.contract_type },
+  { label: 'Дата подписания', value: formatDate(currentContract.value?.signed_on ?? reference.value?.employment.contract_date) },
+  { label: 'Действует с', value: formatDate(currentContract.value?.valid_from ?? reference.value?.employment.valid_from) },
+  { label: 'Действует до', value: currentContract.value?.valid_to === null ? tr('Бессрочно') : formatDate(currentContract.value?.valid_to ?? reference.value?.employment.valid_to) },
+  { label: 'Испытание до', value: formatDate(currentContract.value?.probation_until ?? reference.value?.employment.probation_until) },
+  { label: 'Основание', value: currentContract.value?.basis_reference ?? reference.value?.employment.hire_basis ?? currentAssignment.value?.basis_reference ?? plannedAssignment.value?.basis_reference, wide: true },
+  { label: 'Вид занятости', value: currentContract.value ? employmentTypeLabel(currentContract.value.employment_type) : reference.value?.employment.employment_type },
 ])
 const seniorityFields = computed<EmployeeDisplayField[]>(() => [
   { label: 'Общий стаж', value: reference.value?.employment.total_seniority },
@@ -449,6 +473,16 @@ function beginEdit(section: ProfileSection, record: ProfileEditRow) {
 }
 
 let generation = 0
+const contractColumns = [
+  { key: 'contract_number', label: 'Номер договора' },
+  { key: 'contract_type', label: 'Тип договора' },
+  { key: 'employment_type', label: 'Вид занятости' },
+  { key: 'valid_from', label: 'Действует с' },
+  { key: 'valid_to', label: 'Действует до' },
+  { key: 'probation_until', label: 'Испытание до' },
+  { key: 'basis_reference', label: 'Основание' },
+  { key: 'edit', label: 'Действия' },
+]
 const columns = computed(() => [
   { key: 'department_name', label: 'Подразделение' },
   { key: 'position_name', label: 'Должность' },
@@ -471,12 +505,27 @@ async function load() {
   privateRecordsSection.value = null
   assignmentCreateOpen.value = false
   profileCreateOpen.value = false
+  contractEditorOpen.value = false
+  editingContract.value = null
+  contracts.value = []
+  contractWritesEnabled.value = false
   error.value = ''
   profile.value = null
   try {
     const result = await getEmployee(company, employee)
+    let contractResult = null
+    if (result.meta.extended_sections_visible) {
+      try {
+        contractResult = await listEmployeeContracts(company, employee)
+      } catch (cause) {
+        if (current === generation)
+          error.value = cause instanceof Error ? cause.message : 'Не удалось загрузить трудовые договоры'
+      }
+    }
     if (current === generation) {
       profile.value = result
+      contracts.value = contractResult?.data ?? []
+      contractWritesEnabled.value = contractResult?.meta.writes_enabled ?? false
       // Keep the tab across refreshes and honor older deep-link names.
       activeSection.value = normalizeProfileTab(route.query.tab ?? activeSection.value)
     }
@@ -485,6 +534,17 @@ async function load() {
   } finally {
     if (current === generation) loading.value = false
   }
+}
+
+function openContractEditor(contract: EmployeeContract | null = null) {
+  editingContract.value = contract
+  contractEditorOpen.value = true
+}
+
+function contractSaved() {
+  contractEditorOpen.value = false
+  editingContract.value = null
+  void load()
 }
 
 watch(() => [route.params.company, route.params.employee], () => {
@@ -608,10 +668,36 @@ onMounted(load)
 
       <template v-if="activeSection === 'employment'">
         <EmployeeProfileSection :title="tr('Договор и приём')">
-          <template v-if="profile.meta.assignment_writes_enabled" #actions>
-            <BaseButton @click="assignmentCreateOpen = true"><Plus :size="16" /> {{ tr('Добавить назначение') }}</BaseButton>
+          <template v-if="contractWritesEnabled || profile.meta.assignment_writes_enabled" #actions>
+            <div class="row-actions">
+              <BaseButton v-if="contractWritesEnabled" @click="openContractEditor()">
+                <Plus :size="16" /> {{ tr('Новый договор') }}
+              </BaseButton>
+              <BaseButton v-if="profile.meta.assignment_writes_enabled" variant="secondary" @click="assignmentCreateOpen = true">
+                <Plus :size="16" /> {{ tr('Добавить назначение') }}
+              </BaseButton>
+            </div>
           </template>
           <EmployeeDataGrid :fields="contractFields" />
+
+          <template v-if="profile.meta.extended_sections_visible">
+            <h3 class="assignment-history-title">{{ tr('История трудовых договоров') }}</h3>
+            <BaseDataTable density="compact" :columns="contractColumns" :rows="contracts" row-key="id"
+              :caption="tr('История трудовых договоров сотрудника')"
+              :empty-title="tr('Трудовые договоры не внесены')"
+              :empty-description="tr('Добавьте первый трудовой договор сотрудника.')">
+              <template #cell-contract_type="{ value }">{{ contractTypeLabel(value) }}</template>
+              <template #cell-employment_type="{ value }">{{ employmentTypeLabel(value) }}</template>
+              <template #cell-valid_from="{ value }">{{ formatDate(typeof value === 'string' ? value : null) }}</template>
+              <template #cell-valid_to="{ value }">{{ typeof value === 'string' ? formatDate(value) : tr('Бессрочно') }}</template>
+              <template #cell-probation_until="{ value }">{{ formatDate(typeof value === 'string' ? value : null) }}</template>
+              <template #cell-edit="{ row }">
+                <BaseButton v-if="contractWritesEnabled" variant="secondary" @click="openContractEditor(row)">
+                  {{ tr('Изменить') }}
+                </BaseButton>
+              </template>
+            </BaseDataTable>
+          </template>
         </EmployeeProfileSection>
 
         <EmployeeProfileSection :title="tr('Стаж и трудовой опыт')">
@@ -844,6 +930,14 @@ onMounted(load)
       :open="true" :company-id="String(route.params.company)" :employee-id="profile.data.id"
       :section="privateEditorSection" :profile="profile.private_profile"
       @close="privateEditorSection = null" @saved="privateEditorSection = null; load()" />
+    <EmployeeContractEditor v-if="profile"
+      :open="contractEditorOpen"
+      :company-id="String(route.params.company)"
+      :employee-id="profile.data.id"
+      :contract="editingContract"
+      @close="contractEditorOpen = false; editingContract = null"
+      @saved="contractSaved" />
+
     <EmployeePrivateRecordsManager v-if="profile && privateRecordsSection !== null && profile.meta.private_profile_writes_enabled"
       :open="true" :company-id="String(route.params.company)" :employee-id="profile.data.id"
       :section="privateRecordsSection" :family="profile.private_profile?.family ?? []"

@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { useCompanyAccessStore } from '../stores/companyAccess'
+import { routeCapability } from '../config/routeAccess'
 import { useSessionStore } from '../stores/session'
 import { useUiPreferencesStore } from '../stores/uiPreferences'
 import BaseCard from '../components/ui/BaseCard.vue'
@@ -70,11 +72,17 @@ async function submit() {
     password.value = ''
 
     const requested = route.query.redirect
-    const destination = typeof requested === 'string'
+    let destination = typeof requested === 'string'
       && requested.startsWith('/')
       && !requested.startsWith('//')
       ? requested : ui.startScreen
 
+    const access = useCompanyAccessStore()
+    await access.refresh()
+    if (typeof requested !== 'string') {
+      const capability = routeCapability(router.resolve(destination).path)
+      if (capability && !access.can(capability)) destination = access.can('overview.view') ? '/' : '/settings'
+    }
     await router.replace(destination)
   } catch (cause) {
     password.value = ''

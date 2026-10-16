@@ -106,8 +106,8 @@ async function save() {
       overtime_minutes: minutes(row.overtime_hours),
       revision: row.revision,
     })))
-    success.value = 'Табель сохранён.'
     await load()
+    success.value = 'Табель сохранён.'
     emit('saved')
   } catch (cause) {
     error.value = cause instanceof Error ? cause.message : 'Не удалось сохранить табель'

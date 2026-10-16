@@ -65,14 +65,23 @@ jobs:
       - name: Install backend dependencies
         working-directory: backend
         run: composer install --prefer-dist --no-interaction --no-progress
-      - name: Start isolated private MinIO for the document upload/download browser test
+      - name: Set up Go for upstream MinIO security-release source
+        if: ${{ matrix.mode == 'write-enabled' }}
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24.8'
+          cache: false
+      - name: Start isolated private MinIO for document upload/download browser test
         if: ${{ matrix.mode == 'write-enabled' }}
         run: |
           set -euo pipefail
-          docker run --rm -d --name hrm-ci-minio -p 127.0.0.1:9000:9000 \
-            -e MINIO_ROOT_USER="$MINIO_ACCESS_KEY" \
-            -e MINIO_ROOT_PASSWORD="$MINIO_SECRET_KEY" \
-            quay.io/minio/minio:RELEASE.2025-10-15T17-29-55Z server /data
+          # Upstream images are not available anonymously. Build from the
+          # official, fixed upstream Git tag, not an untrusted container mirror.
+          GOMAXPROCS=2 go install -p 2 github.com/minio/minio@RELEASE.2025-10-15T17-29-55Z
+          mkdir -p "$RUNNER_TEMP/hrm-minio-data"
+          MINIO_ROOT_USER="$MINIO_ACCESS_KEY" MINIO_ROOT_PASSWORD="$MINIO_SECRET_KEY" \
+            "$HOME/go/bin/minio" server "$RUNNER_TEMP/hrm-minio-data" \
+              --address 127.0.0.1:9000 > "$RUNNER_TEMP/hrm-minio.log" 2>&1 &
           for attempt in $(seq 1 60); do
             if curl --silent --fail http://127.0.0.1:9000/minio/health/live > /dev/null; then
               php tests/e2e/prepare-minio.php
@@ -80,7 +89,7 @@ jobs:
             fi
             sleep 1
           done
-          docker logs hrm-ci-minio | tail -n 40
+          tail -n 40 "$RUNNER_TEMP/hrm-minio.log"
           exit 1
       - name: Install frontend and pinned browser test runtime
         run: |

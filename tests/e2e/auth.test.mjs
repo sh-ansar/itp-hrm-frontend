@@ -171,6 +171,43 @@ test('repeated credential failures produce an observable HTTP 429 lockout', asyn
   assert.match(await page.getByRole('alert').innerText(), /Слишком много попыток/)
 })
 
+test('password recovery stays non-enumerating and reset screen uses the real backend contract', async (t) => {
+  const { page } = await createPage(t)
+  await page.goto('/login')
+
+  const recoveryTrigger = page.getByRole('button', { name: 'Забыли пароль или впервые входите?' })
+  await recoveryTrigger.waitFor()
+  await recoveryTrigger.click()
+
+  await page.locator('#recovery-email').fill('unknown-recovery@example.test')
+  let [response] = await Promise.all([
+    page.waitForResponse((r) => r.url().endsWith('/auth/password/request') && r.request().method() === 'POST'),
+    page.getByRole('button', { name: 'Получить ссылку' }).click(),
+  ])
+  assert.equal(response.status(), 204)
+  await page.getByText('Если активная учётная запись с таким адресом существует, письмо со ссылкой отправлено.').waitFor()
+
+  await page.locator('#recovery-email').fill(userEmail)
+  ;[response] = await Promise.all([
+    page.waitForResponse((r) => r.url().endsWith('/auth/password/request') && r.request().method() === 'POST'),
+    page.getByRole('button', { name: 'Получить ссылку' }).click(),
+  ])
+  assert.equal(response.status(), 204)
+  assert.equal(await page.getByText('Если активная учётная запись с таким адресом существует, письмо со ссылкой отправлено.').count(), 1)
+
+  await page.goto('/reset-password?email=' + encodeURIComponent(userEmail) + '&token=synthetic-invalid-token')
+  await page.getByRole('heading', { name: 'Установка пароля' }).waitFor()
+  assert.equal(await page.locator('.app-shell').count(), 0, 'recovery must stay outside the authenticated HR shell')
+  await page.getByLabel('Новый пароль').fill('Synthetic!RecoveryBrowser456')
+  await page.getByLabel('Повторите пароль').fill('Synthetic!RecoveryBrowser456')
+  ;[response] = await Promise.all([
+    page.waitForResponse((r) => r.url().endsWith('/auth/password/reset') && r.request().method() === 'POST'),
+    page.getByRole('button', { name: 'Установить пароль' }).click(),
+  ])
+  assert.equal(response.status(), 422)
+  await page.getByText('Ссылка недействительна или истекла. Запросите новое письмо на странице входа.').waitFor()
+})
+
 test('other browser origins cannot obtain authenticated cross-origin JSON', async (t) => {
   const { page } = await createPage(t)
   await page.goto('/login')

@@ -404,6 +404,14 @@ const referenceProfileFor=(e:any,i:number)=>({
     {id:id(9502+i*10),action:'Обновлено организационное назначение',actor:'HR-служба',created_at:'2026-09-01T10:40:00+05:00',section:'Организационные данные',before:'Предыдущее назначение',after:e.current_position_name??'Назначение',result:'Успешно'},
   ],
 })
+const directoryHubRows:any[]=[
+  {id:id(9801),group:'tariff-types',code:'TRF-TYPE-001',name:'По грузам',category:'Тариф',unit:'KZT',value:'Базовый',status:'active',revision:1},
+  {id:id(9802),group:'tariff-types',code:'TRF-TYPE-002',name:'Дополнительные работы',category:'Тариф',unit:'KZT',value:'Повышенный',status:'active',revision:1},
+  {id:id(9810),group:'leave-types',code:'LEAVE-ANNUAL',name:'Ежегодный оплачиваемый отпуск',category:'Отпуск',unit:'дней',value:'24',status:'active',revision:1},
+  {id:id(9820),group:'work-conditions',code:'WC-NORMAL',name:'Нормальные условия труда',category:'Условия труда',unit:'—',value:null,status:'active',revision:1},
+  {id:id(9830),group:'training-types',code:'TRN-INT',name:'Внутреннее обучение',category:'Обучение',unit:'—',value:null,status:'active',revision:1},
+  {id:id(9840),group:'document-types',code:'DOC-ORDER',name:'Приказ',category:'Документ',unit:'—',value:null,status:'active',revision:1},
+]
 const page=(rows:any[],p:number,per=25,extra={})=>({data:structuredClone(rows.slice((p-1)*per,p*per)),meta:{current_page:p,last_page:Math.max(1,Math.ceil(rows.length/per)),per_page:per,total:rows.length,...extra}})
 const json=(o:any)=>JSON.stringify(o)
 export async function mockApiRequest<T>(path:string,options:RequestInit={}):Promise<T>{
@@ -413,6 +421,27 @@ export async function mockApiRequest<T>(path:string,options:RequestInit={}):Prom
   if(p==='/companies') return page([{id:companyId,name:'ITP HRM Demo',role_code:'hr_specialist',department_scopes:[]}],1,100,{role_management_enabled:false}) as T
   const scopedCompany=p.match(/^\/companies\/([^/]+)(?:\/|$)/)
   if(scopedCompany&&scopedCompany[1]!==companyId)throw new Error('Компания недоступна')
+  let m=p.match(/^\/companies\/[^/]+\/directories\/([^/]+)(?:\/([^/]+))?$/)
+  if(m){
+    const group=decodeURIComponent(m[1]),recordId=m[2],body=options.body?JSON.parse(String(options.body)):{}
+    const rows=directoryHubRows.filter(row=>row.group===group)
+    if(method==='GET'&&!recordId)return {data:structuredClone(rows),meta:{group,writes_enabled:true}} as T
+    if(method==='POST'&&!recordId){
+      const code=String(body.code||'').trim(),name=String(body.name||'').trim()
+      if(!code||!name)throw new Error('Код и наименование обязательны')
+      if(rows.some(row=>row.code.toLowerCase()===code.toLowerCase()))throw new Error('Такая запись уже существует')
+      const created:any={id:crypto.randomUUID(),group,code,name,category:body.category??null,unit:body.unit??null,value:body.value??null,status:body.status??'active',revision:1}
+      directoryHubRows.push(created);return {data:structuredClone(created)} as T
+    }
+    const record:any=directoryHubRows.find(row=>row.group===group&&row.id===recordId)
+    if(!record)throw new Error('Запись не найдена')
+    if(Number(body.revision)!==Number(record.revision))throw new Error('Запись уже изменена. Обновите страницу')
+    if(method==='PUT'){
+      Object.assign(record,{code:String(body.code||'').trim(),name:String(body.name||'').trim(),category:body.category??null,unit:body.unit??null,value:body.value??null,status:body.status??'active',revision:record.revision+1})
+      return {data:structuredClone(record)} as T
+    }
+    if(method==='DELETE'){directoryHubRows.splice(directoryHubRows.indexOf(record),1);return undefined as T}
+  }
   let m=p.match(/^\/companies\/[^/]+\/employees$/)
   if(m&&method==='POST'){
     const body=options.body?JSON.parse(String(options.body)):{}

@@ -120,10 +120,10 @@ async function submit() {
         </form>
 
         <div v-if="recoveryReady" class="recovery-panel">
-          <button v-if="!recoveryOpen" class="recovery-link" type="button"
+          <BaseButton v-if="!recoveryOpen" variant="secondary" type="button"
             @click="recoveryOpen = true; recoveryEmail = email">
             Забыли пароль или впервые входите?
-          </button>
+          </BaseButton>
           <form v-else class="login-form recovery-form" @submit.prevent="requestRecovery">
             <p class="muted">Укажите корпоративную почту. Ответ одинаков для существующих и неизвестных адресов.</p>
             <BaseField id="recovery-email" v-model="recoveryEmail" label="Электронная почта" type="email"
@@ -133,7 +133,7 @@ async function submit() {
             <BaseButton type="submit" :disabled="recoveryBusy || !recoveryEmail">
               {{ recoveryBusy ? 'Отправка…' : 'Получить ссылку' }}
             </BaseButton>
-            <button class="recovery-link" type="button" @click="recoveryOpen = false">Отмена</button>
+            <BaseButton variant="secondary" type="button" @click="recoveryOpen = false">Отмена</BaseButton>
           </form>
         </div>
         <RouterLink class="login-back" to="/">Вернуться к обзору</RouterLink>
@@ -176,10 +176,9 @@ async function submit() {
 .login-form :deep(.base-button){width:100%;min-height:44px;margin-top:4px}
 .login-back{display:inline-block;margin-top:20px;color:var(--color-primary);font-size:14px;text-decoration:underline}
 .recovery-panel{margin-top:18px;padding-top:18px;border-top:1px solid var(--color-stroke)}
+.recovery-panel :deep(.base-button){width:100%}
 .recovery-form{margin-top:0}
 .recovery-form .muted{margin:0}
-.recovery-link{border:0;background:transparent;padding:0;color:var(--color-primary);font:inherit;font-size:14px;text-decoration:underline;cursor:pointer;text-align:left}
-.recovery-link:focus-visible{outline:2px solid var(--color-focus);outline-offset:3px;border-radius:2px}
 .login-footnote{font-size:12px;line-height:18px;color:var(--color-muted);text-align:center;margin:0}
 @media(max-width:520px){
   .login-page{align-items:flex-start;padding:20px 14px}

@@ -33,6 +33,7 @@ test('directories use the five-tab prototype split workspace responsively',async
       const tariffTrigger=page.getByRole('button',{name:/Виды тарифов/})
       await tariffTrigger.waitFor()
       assert.equal(await tariffTrigger.getAttribute('aria-expanded'),'true')
+      await page.getByRole('table',{name:'Виды тарифов'}).waitFor()
       assert.equal(await page.getByRole('table',{name:'Виды тарифов'}).count(),1)
       assert.equal(await page.locator('.directory-detail').count(),1)
       assert.equal(await page.locator('.directory-index').count(),1)
@@ -41,6 +42,7 @@ test('directories use the five-tab prototype split workspace responsively',async
       const leaveTrigger=page.getByRole('button',{name:/Виды отпусков/})
       await leaveTrigger.waitFor()
       assert.equal(await leaveTrigger.getAttribute('aria-expanded'),'true')
+      await page.getByRole('table',{name:'Виды отпусков'}).waitFor()
       assert.equal(await page.getByRole('table',{name:'Виды отпусков'}).count(),1)
 
       const scroll=page.locator('.directory-table-scroll').first()

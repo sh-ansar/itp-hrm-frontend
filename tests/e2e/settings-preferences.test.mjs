@@ -45,7 +45,7 @@ test('notification preferences persist on the server and password rule is 8+ dig
     if (await emailToggle.isChecked()) await emailToggle.uncheck()
     if (!(await learningToggle.isChecked())) await learningToggle.check()
 
-    const saveButton = page.getByRole('button', { name: 'Сохранить', exact: true })
+    const saveButton = page.getByRole('button', { name: 'Обновить данные', exact: true })
     assert.equal(await saveButton.isEnabled(), true)
     await saveButton.click()
 

@@ -505,12 +505,27 @@ async function load() {
   privateRecordsSection.value = null
   assignmentCreateOpen.value = false
   profileCreateOpen.value = false
+  contractEditorOpen.value = false
+  editingContract.value = null
+  contracts.value = []
+  contractWritesEnabled.value = false
   error.value = ''
   profile.value = null
   try {
     const result = await getEmployee(company, employee)
+    let contractResult = null
+    if (result.meta.extended_sections_visible) {
+      try {
+        contractResult = await listEmployeeContracts(company, employee)
+      } catch (cause) {
+        if (current === generation)
+          error.value = cause instanceof Error ? cause.message : 'Не удалось загрузить трудовые договоры'
+      }
+    }
     if (current === generation) {
       profile.value = result
+      contracts.value = contractResult?.data ?? []
+      contractWritesEnabled.value = contractResult?.meta.writes_enabled ?? false
       // Keep the tab across refreshes and honor older deep-link names.
       activeSection.value = normalizeProfileTab(route.query.tab ?? activeSection.value)
     }
@@ -519,6 +534,17 @@ async function load() {
   } finally {
     if (current === generation) loading.value = false
   }
+}
+
+function openContractEditor(contract: EmployeeContract | null = null) {
+  editingContract.value = contract
+  contractEditorOpen.value = true
+}
+
+function contractSaved() {
+  contractEditorOpen.value = false
+  editingContract.value = null
+  void load()
 }
 
 watch(() => [route.params.company, route.params.employee], () => {

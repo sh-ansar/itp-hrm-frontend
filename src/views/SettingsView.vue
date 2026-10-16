@@ -336,8 +336,6 @@ onMounted(reload)
           <BaseNotice tone="info">
             {{ ui.locale === 'en' ? 'MFA, IP restrictions and organization-wide security policies are enforced only when configured on the server. No decorative security switches are stored in this browser.' : ui.locale === 'kk' ? 'MFA, IP шектеулері және ұйымдық қауіпсіздік саясаты тек серверде бапталған кезде ғана қолданылады. Браузерде жалған қауіпсіздік ауыстырғыштары сақталмайды.' : ui.locale === 'ka' ? 'MFA, IP-შეზღუდვები და ორგანიზაციის უსაფრთხოების პოლიტიკა მოქმედებს მხოლოდ სერვერზე კონფიგურაციის შემთხვევაში. ბრაუზერში დეკორატიული უსაფრთხოების ჩამრთველები არ ინახება.' : 'MFA, ограничения IP и корпоративные политики безопасности применяются только при серверной настройке. Декоративные переключатели безопасности в браузере больше не сохраняются.' }}
           </BaseNotice>
-            {{ ui.locale === 'en' ? 'MFA, IP restrictions and organization-wide security policies require server configuration and are not enabled here.' : ui.locale === 'kk' ? 'MFA, IP шектеулері және қауіпсіздік саясаты серверде орнатылады. Бұл жерде олар қосылмаған.' : ui.locale === 'ka' ? 'MFA, IP-შეზღუდვები და უსაფრთხოების პოლიტიკა მოითხოვს სერვერის კონფიგურაციას. აქ ისინი არ არის ჩართული.' : 'MFA, ограничения IP и корпоративные политики безопасности пока требуют серверной настройки. Эти переключатели не активны.' }}
-          </BaseNotice>
         </div>
       </EmployeeProfileSection>
 

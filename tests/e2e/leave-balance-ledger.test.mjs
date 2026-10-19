@@ -63,7 +63,7 @@ test('admin UI grants, corrects, carries year; employee-scoped API cannot be for
     // The 24-day guideline is NOT a grant; the administrator enters 10 explicitly.
     await annualCard.getByRole('button', { name: 'Назначить фонд', exact: true }).click()
     await enterNumberAndConfirm(page, 'Назначить фонд отпуска', 10, 'Reviewed synthetic entitlement 2026')
-    await annualCard.getByText('10 дн.', { exact: true }).waitFor()
+    await annualCard.getByText('10 дн.', { exact: true }).first().waitFor()
     let balance = (await api(page, base + `/leave-balances?year=2026&employee_id=${employee}`))
       .body.data.find(row => row.leave_type_id === typeId)
     assert.equal(balance.granted_days, 10)

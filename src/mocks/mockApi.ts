@@ -1,3 +1,4 @@
+import { tryDemoRoleApi } from './demoRoles'
 import { getDemoEmployeePhoto } from './employeePhotos'
 const companyId='11111111-1111-4111-8111-111111111111'
 const id=(n:number)=>`00000000-0000-4000-8000-${String(n).padStart(12,'0')}`
@@ -418,9 +419,11 @@ export async function mockApiRequest<T>(path:string,options:RequestInit={}):Prom
   await new Promise(r=>setTimeout(r,80))
   const method=(options.method||'GET').toUpperCase(),u=new URL(path,'https://demo.local'),p=u.pathname
   if(p==='/health') return {status:'ok',service:'itp-hrm-api'} as T
-  if(p==='/companies') return page([{id:companyId,name:'ITP HRM Demo',role_code:'hr_specialist',department_scopes:[]}],1,100,{role_management_enabled:false}) as T
+  if(p==='/companies') return page([{id:companyId,name:'ITP HRM Demo',role_code:'company_admin',department_scopes:[]}],1,100,{role_management_enabled:true}) as T
   const scopedCompany=p.match(/^\/companies\/([^/]+)(?:\/|$)/)
   if(scopedCompany&&scopedCompany[1]!==companyId)throw new Error('Компания недоступна')
+  const demoRoleResult=tryDemoRoleApi(p,method,u.searchParams,options.body,{departments:deps,employees})
+  if(demoRoleResult.handled)return demoRoleResult.response as T
   let m=p.match(/^\/companies\/[^/]+\/directories\/([^/]+)(?:\/([^/]+))?$/)
   if(m){
     const group=decodeURIComponent(m[1]),recordId=m[2],body=options.body?JSON.parse(String(options.body)):{}

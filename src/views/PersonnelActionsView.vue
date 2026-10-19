@@ -2,6 +2,7 @@
 import { publicAsset } from '../utils/publicAsset'
 import { useActiveCompanySelection } from '../composables/useActiveCompanySelection'
 import { computed, onMounted, ref, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import { ArrowRightLeft, LogIn, LogOut, Plus } from 'lucide-vue-next'
 import BaseButton from '../components/ui/BaseButton.vue'
 import BaseCard from '../components/ui/BaseCard.vue'
@@ -14,6 +15,7 @@ import BaseSelectField from '../components/ui/BaseSelectField.vue'
 import BaseViewTabs from '../components/ui/BaseViewTabs.vue'
 import PersonnelActionForm from '../components/PersonnelActionForm.vue'
 import BonusManagementPanel from '../components/BonusManagementPanel.vue'
+import ApprovalInboxPanel from '../components/ApprovalInboxPanel.vue'
 import { useBonusWorkflowI18n } from '../i18n/bonusWorkflow'
 import PersonnelActionMobileList from '../components/PersonnelActionMobileList.vue'
 import { listCompanies, type CompanyRecord } from '../api/organization'
@@ -24,6 +26,7 @@ import {
 } from '../api/personnelActions'
 
 type ActionFilter = 'all' | PersonnelActionType | 'bonuses'
+const route = useRoute()
 
 const companies = ref<CompanyRecord[]>([])
 const company = ref('')
@@ -36,7 +39,7 @@ const page = ref(1)
 const pages = ref(1)
 const total = ref(0)
 const writesEnabled = ref(false)
-const typeFilter = ref<ActionFilter>('all')
+const typeFilter = ref<ActionFilter>(route.query.view === 'bonuses' ? 'bonuses' : 'all')
 const createOpen = ref(false)
 const summary = ref<{ hire:number; transfer:number; termination:number } | null>(null)
 
@@ -135,7 +138,10 @@ async function saved() {
 
 watch(company, () => {
   page.value = 1
-  typeFilter.value = 'all'
+  typeFilter.value = route.query.view === 'bonuses' ? 'bonuses' : 'all'
+})
+watch(() => route.query.view, value => {
+  if (value === 'bonuses') typeFilter.value = 'bonuses'
 })
 watch(typeFilter, () => { page.value = 1 })
 watch([company,page,typeFilter], loadActions)
@@ -167,6 +173,7 @@ onMounted(loadCompanies)
         </div>
       </div>
 
+      <ApprovalInboxPanel v-if="company" :company-id="company" />
       <BaseViewTabs :model-value="typeFilter" :options="actionTabs"
         label="Тип кадрового действия" @update:model-value="setActionFilter" />
 

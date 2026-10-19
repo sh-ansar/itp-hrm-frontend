@@ -93,9 +93,18 @@ export async function completePasswordReset(
 
 export async function logoutSession(): Promise<void> {
   // The session can outlive its readable CSRF cookie. Refresh it before sign-out.
-  await refreshXsrfCookie()
-  await requestJson<void>(sessionPath('/auth/logout'), {
-    method: 'POST',
-    timeoutMs: SESSION_CHECK_TIMEOUT_MS,
-  })
+  // A 401 means the server has already invalidated the session: sign-out is
+  // complete for this browser and we must clear the client-side account state.
+  // Never swallow network, CSRF (419) or server errors, because those do not
+  // prove that the server-side session was revoked.
+  try {
+    await refreshXsrfCookie()
+    await requestJson<void>(sessionPath('/auth/logout'), {
+      method: 'POST',
+      timeoutMs: SESSION_CHECK_TIMEOUT_MS,
+    })
+  } catch (cause) {
+    if (cause instanceof ApiError && cause.status === 401) return
+    throw cause
+  }
 }

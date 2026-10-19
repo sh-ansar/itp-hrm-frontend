@@ -5,6 +5,7 @@ import type { CapabilityKey } from '../api/access'
  * never replaces authentication or authorization on the server.
  */
 export function routeCapability(path: string): CapabilityKey | null {
+  if (path === '/my') return 'self_service.view'
   if (path === '/') return 'overview.view'
   if (path === '/settings') return 'settings.view'
   if (path === '/roles') return 'roles.interface'

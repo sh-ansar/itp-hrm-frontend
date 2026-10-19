@@ -43,6 +43,7 @@ onBeforeUnmount(() => {
     <AppSidebar v-if="workspaceNavigation" v-model:mobile-open="mobileNavOpen" />
     <div class="main">
       <AppTopbar @open-mobile-menu="openMobileNav" @logout-error="logoutError = $event" />
+      <RouterLink v-if="access.can('self_service.view') && route.path !== '/my'" class="shell-error" to="/my">{{ { ru: 'Мой кабинет', kk: 'Менің кабинетім', en: 'My workspace', ka: 'ჩემი კაბინეტი' }[ui.locale] }}</RouterLink>
       <BaseNotice v-if="logoutError" class="shell-error" tone="error">{{ logoutError }}</BaseNotice>
       <main id="main-content" class="content"><RouterView /></main>
     </div>

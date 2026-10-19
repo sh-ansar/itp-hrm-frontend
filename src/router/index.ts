@@ -14,6 +14,7 @@ import TimesheetsView from '../views/TimesheetsView.vue'
 import LeavesView from '../views/LeavesView.vue'
 import ReportsView from '../views/ReportsView.vue'
 import SettingsView from '../views/SettingsView.vue'
+import MyWorkspaceView from '../views/MyWorkspaceView.vue'
 import RolesView from '../views/RolesView.vue'
 import NotFoundView from '../views/NotFoundView.vue'
 import AccessDeniedView from '../views/AccessDeniedView.vue'
@@ -30,6 +31,7 @@ export const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
     { path: '/', name: 'overview', component: OverviewView },
+    { path: '/my', name: 'my-workspace', component: MyWorkspaceView },
     { path: '/login', name: 'login', component: LoginView },
     { path: '/reset-password', name: 'reset-password', component: ResetPasswordView },
     { path: '/access-denied', name: 'access-denied', component: AccessDeniedView },
@@ -66,7 +68,7 @@ router.beforeEach(async (to) => {
   if (access.error) return to.name === 'settings' ? true : { name: 'access-denied' }
   const scopedCompany = typeof to.params.company === 'string' ? to.params.company : null
   if (scopedCompany && !access.chooseCompany(scopedCompany)) return { name: 'access-denied' }
-  if (to.name === 'overview' && !access.can('overview.view') && access.can('settings.view')) return { name: 'settings' }
+  if (to.name === 'overview' && !access.can('overview.view') && access.can('settings.view')) return { name: access.can('self_service.view') ? 'my-workspace' : 'settings' }
   const required = routeCapability(to.path)
   if (required && !access.can(required)) return { name: 'access-denied' }
   return true

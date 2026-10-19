@@ -3,10 +3,8 @@ declare(strict_types=1);
 require __DIR__.'/../../backend/vendor/autoload.php';
 $app = require __DIR__.'/../../backend/bootstrap/app.php';
 $app->make(\Illuminate\Contracts\Console\Kernel::class)->bootstrap();
-if (app()->environment('production') || !str_contains((string) config('database.connections.sqlite.database'), 'browser-e2e.sqlite')) {
-    throw new RuntimeException('Synthetic organization seed must run only in browser E2E SQLite.');
-}
-$db = \Illuminate\Support\Facades\DB::table('companies');
+require __DIR__.'/assert-disposable-ci-database.php';
+assertDisposableBrowserDatabase();$db = \Illuminate\Support\Facades\DB::table('companies');
 $user = \App\Models\User::query()->where('email', 'synthetic-e2e@example.test')->firstOrFail();
 $a = '11111111-1111-4111-8111-111111111111';
 $b = '22222222-2222-4222-8222-222222222222';

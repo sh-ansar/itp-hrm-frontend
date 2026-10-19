@@ -73,7 +73,7 @@ jobs:
       HRM_E2E_XSRF_COOKIE_NAME: HRM-XSRF-TOKEN
       MINIO_ENDPOINT: http://127.0.0.1:9000
       MINIO_REGION: us-east-1
-      MINIO_BUCKET: hrm-postgres-browser-ci
+      MINIO_BUCKET: hrm-ci-postgres-browser
       MINIO_ACCESS_KEY: hrm-postgres-ci
       MINIO_SECRET_KEY: Synthetic-Isolated-MinIO-CI-2026
     steps:

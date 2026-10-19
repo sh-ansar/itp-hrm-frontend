@@ -17,7 +17,7 @@ test('employee KPI grid stays compact at intermediate desktop and mobile widths'
     const page = await context.newPage()
     try {
       await page.goto('/employees')
-      await page.getByRole('heading', { name: 'Реестр сотрудников', exact: true }).waitFor()
+      await page.locator('.register-title h1').waitFor()
       const cards = page.locator('.registry-metrics .registry-summary-card')
       assert.equal(await cards.count(), 4)
       const coords = await cards.evaluateAll(nodes => nodes.map(node => {

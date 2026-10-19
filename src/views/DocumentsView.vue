@@ -20,6 +20,8 @@ import DocumentMobileList from '../components/DocumentMobileList.vue'
 import EmployeeLookupField from '../components/EmployeeLookupField.vue'
 import DocumentDraftForm from '../components/DocumentDraftForm.vue'
 import DocumentUploadForm from '../components/DocumentUploadForm.vue'
+import OrderReviewControls from '../components/OrderReviewControls.vue'
+import { useOrderReviewCopy } from '../i18n/orderReview'
 import { getDemoDocumentUrl } from '../mocks/demoDocumentFiles'
 import { listCompanies, type CompanyRecord } from '../api/organization'
 import {
@@ -34,6 +36,7 @@ import {
 
 const { tr } = useWorkspaceI18n()
 const { sharing } = useDocumentSharingCopy()
+const { orderCopy } = useOrderReviewCopy()
 const fmt = useUiFormatters()
 
 const companies = ref<CompanyRecord[]>([])
@@ -45,6 +48,8 @@ const rows = ref<DocumentRow[]>([])
 const error = ref('')
 const success = ref('')
 const writesEnabled = ref(false)
+const orderApprovalsEnabled = ref(false)
+const canReviewOrders = ref(false)
 const page = ref(1)
 const lastPage = ref(1)
 const total = ref(0)
@@ -81,6 +86,7 @@ function employeeName(row: DocumentRow): string {
   return [row.last_name, row.first_name].filter(Boolean).join(' ')
 }
 function statusLabel(status: string): string {
+  if (status === 'submitted' || status === 'approved' || status === 'rejected') return orderCopy.value[status]
   return tr(status === 'draft' ? 'Черновик' : 'Документ')
 }
 function displayDate(value: string | null): string {
@@ -112,6 +118,8 @@ async function loadDocuments() {
   const selected = company.value
   rows.value = []
   writesEnabled.value = false
+  orderApprovalsEnabled.value = false
+  canReviewOrders.value = false
   if (!selected) {
     total.value = 0
     lastPage.value = 1
@@ -132,6 +140,8 @@ async function loadDocuments() {
     total.value = result.meta.total
     lastPage.value = result.meta.last_page
     writesEnabled.value = result.meta.document_writes_enabled
+    orderApprovalsEnabled.value = !!result.meta.order_approvals_enabled
+    canReviewOrders.value = !!result.meta.can_review_orders
   } catch (cause) {
     if (current !== generation) return
     error.value = cause instanceof Error ? cause.message : 'Не удалось загрузить документы'
@@ -159,6 +169,11 @@ async function fileSaved() {
 
 function canShare(row: DocumentRow): boolean {
   return !demoMode && writesEnabled.value && row.has_file && ['order', 'contract'].includes(row.document_type)
+    && (row.document_type !== 'order' || !orderApprovalsEnabled.value || row.status === 'approved')
+}
+async function orderChanged(_status: string): Promise<void> {
+  success.value = orderCopy.value.confirmed
+  await loadDocuments()
 }
 function showShareDialog(row: DocumentRow): void {
   if (!canShare(row) && !row.employee_visible) return
@@ -296,9 +311,14 @@ onMounted(loadCompanies)
               <span class="relation-label">{{ row.personnel_action_id ? tr('Кадровое действие') : '—' }}</span>
             </template>
             <template #cell-status="{ row }">
-              <BaseStatusPill :tone="row.status === 'draft' ? 'info' : 'success'">
-                {{ statusLabel(row.status) }}
-              </BaseStatusPill>
+              <div class="order-status-cell">
+                <BaseStatusPill :tone="row.status === 'draft' ? 'info' : row.status === 'submitted' ? 'warning' : row.status === 'rejected' ? 'danger' : 'success'">
+                  {{ statusLabel(row.status) }}
+                </BaseStatusPill>
+                <OrderReviewControls v-if="!demoMode && orderApprovalsEnabled && row.document_type === 'order'"
+                  :company-id="company" :row="row" :enabled="orderApprovalsEnabled"
+                  :review-enabled="canReviewOrders" @changed="orderChanged" />
+              </div>
             </template>
             <template #cell-file="{ row }">
               <a v-if="row.has_file && demoMode && getDemoDocumentUrl(row.id)" class="download-link"
@@ -329,7 +349,9 @@ onMounted(loadCompanies)
 
         <div class="documents-mobile">
           <DocumentMobileList :rows="rows" :company-id="company" :writes-enabled="writesEnabled"
-            :loading="documentsBusy" @upload="uploadTarget = $event" @share="showShareDialog" />
+            :order-approvals-enabled="orderApprovalsEnabled" :can-review-orders="canReviewOrders"
+            :loading="documentsBusy" @upload="uploadTarget = $event" @share="showShareDialog"
+            @order-changed="orderChanged" />
         </div>
 
         <BasePagination :page="page" :last-page="lastPage" :loading="documentsBusy"
@@ -410,6 +432,7 @@ onMounted(loadCompanies)
 .download-link:focus-visible{outline:3px solid var(--color-focus)}
 .muted{color:var(--color-muted);font-size:11px}
 .document-access{display:flex;align-items:center;gap:8px;flex-wrap:wrap;min-width:0}
+.order-status-cell{display:grid;align-items:start;justify-items:start;gap:var(--space-2);min-width:0}
 .document-access :deep(.base-button){font-size:11px}
 .sharing-confirmation{display:grid;gap:12px;overflow-wrap:anywhere}
 .sharing-confirmation p{margin:0;line-height:1.55}

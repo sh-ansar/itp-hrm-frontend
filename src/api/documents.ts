@@ -28,6 +28,12 @@ export interface DocumentRow extends Record<string, unknown> {
   issued_on: string | null
   status: string
   revision: number
+  created_by_user_id?: number | null
+  submitted_by_user_id?: number | null
+  submitted_at?: string | null
+  reviewed_by_user_id?: number | null
+  reviewed_at?: string | null
+  review_note?: string | null
   created_at: string
   personnel_number: string
   first_name: string
@@ -44,6 +50,8 @@ export interface DocumentListResponse {
     per_page: number
     total: number
     document_writes_enabled: boolean
+    order_approvals_enabled?: boolean
+    can_review_orders?: boolean
   }
 }
 export interface DocumentDraft {

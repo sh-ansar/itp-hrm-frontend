@@ -43,9 +43,34 @@ test('admin links an account; employee saves, reloads, submits; admin approves; 
     await admin.page.getByText('Связь учётной записи сохранена.', { exact: true }).waitFor()
     const typeResult = await api(admin.page, base + '/leave-types', 'POST', { code: 'self_annual', name: 'Synthetic self-service leave', annual_days: 24, balance_method: 'calendar_days', category: 'ordinary' })
     assert.equal(typeResult.status, 201)
+    // Record one attendance day through the authorized HRM worktime API before employee reload.
+    const recorded = await api(admin.page, base + `/worktime/timesheet/${employee}`, 'PUT', {
+      month: '2026-10', days: [{
+        date: '2026-10-15', worked_minutes: 420, absence_minutes: 60,
+        overtime_minutes: 0, revision: null,
+      }],
+    })
+    assert.equal(recorded.status, 200)
     await page.reload()
     await page.getByRole('heading', { name: 'Synthetic Employee', exact: true }).waitFor()
     assert.equal(await page.locator('.sidebar').count(), 0)
+    // The employee can read own hours, not change an administrative timesheet.
+    await page.getByRole('heading', { name: 'Мой табель', exact: true }).waitFor()
+    await page.getByLabel('Месяц', { exact: true }).fill('2026-10')
+    const recordedDay = page.locator('.own-timesheet__table tbody tr').filter({ hasText: '2026-10-15' })
+    await recordedDay.getByText('7 ч', { exact: true }).waitFor()
+    assert.equal(await page.locator('.own-timesheet__table tbody tr').count(), 31)
+    const ownTimesheet = await api(page, base + '/me/timesheet?month=2026-10')
+    assert.equal(ownTimesheet.status, 200)
+    assert.equal(ownTimesheet.body.meta.can_edit, false)
+    assert.equal(ownTimesheet.body.data.find(day => day.date === '2026-10-15').worked_minutes, 420)
+    assert.equal(ownTimesheet.body.data.find(day => day.date === '2026-10-16').worked_minutes, null)
+    assert.equal((await api(page, base + '/me/timesheet?month=2026-10&employee_id=' + employee)).status, 422)
+    assert.equal((await api(page, base + `/worktime/timesheet/${employee}?month=2026-10`)).status, 403)
+    await page.getByLabel('Месяц', { exact: true }).fill('2026-11')
+    await page.getByText('Производственный календарь за этот месяц пока не заполнен.', { exact: true }).waitFor()
+    await page.getByLabel('Месяц', { exact: true }).fill('2026-10')
+    await recordedDay.getByText('7 ч', { exact: true }).waitFor()
     await page.getByRole('button', { name: 'Подать заявку', exact: true }).click()
     await page.getByRole('combobox', { name: 'Вид отпуска', exact: true }).selectOption(typeResult.body.data.id)
     await page.getByLabel('Начало отпуска', { exact: false }).fill('2026-11-01')

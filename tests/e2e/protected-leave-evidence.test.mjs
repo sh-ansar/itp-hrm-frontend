@@ -80,6 +80,10 @@ test('employee uploads private protected PDF, HR verifies, approval requires evi
       name: 'private-e2e.pdf', mimeType: 'application/pdf', buffer: pdf,
     })
     const observed = []
+    const clientDiagnostics = []
+    staff.page.on('console', message => {
+      if (message.text().startsWith('HRM_PROTECTED_')) clientDiagnostics.push(message.text())
+    })
     staff.page.on('request', req => {
       if (req.url().endsWith('/evidence/file') && req.method() === 'POST') observed.push(req.url())
     })
@@ -92,14 +96,14 @@ test('employee uploads private protected PDF, HR verifies, approval requires evi
     const uiState = await panel.innerText()
     console.log('E2E_PROTECTED_UPLOAD_STAGE', JSON.stringify({
       selectedInfo, requestsSent: observed.length,
-      text: uiState.slice(0, 450),
+      text: uiState.slice(0, 450), clientDiagnostics,
     }))
     if (!uiState.includes('Ожидает проверки HR')) {
       const latest = await api(staff.page, base + '/me/workspace')
       const item = latest.body.data.requests.find(row => row.id === request.id)
       throw new Error('Evidence did not reach pending: ' + JSON.stringify({
         selectedInfo, postCount: observed.length,
-        evidenceStatus: item?.evidence_status, ui: uiState.slice(0, 450),
+        evidenceStatus: item?.evidence_status, ui: uiState.slice(0, 450), clientDiagnostics,
       }))
     }
     const afterUpload = await api(staff.page, base + '/me/workspace')

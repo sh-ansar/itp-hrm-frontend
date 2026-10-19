@@ -115,7 +115,7 @@ test('Georgian is selectable at runtime, persists and stays legible in dark them
       return { background: style.backgroundColor, color: style.color }
     })
     assert.equal(darkColors.background, 'rgb(23, 27, 32)', 'dark theme body must have a dark background')
-    assert.equal(darkColors.color, 'rgb(229, 246, 255)', 'dark theme must use visible text')
+    assert.equal(darkColors.color, 'rgb(232, 237, 241)', 'dark theme must use visible text')
     await page.reload()
     await page.locator('main#main-content h1').first().waitFor()
     assert.equal(await page.locator('.locale-control select').inputValue(), 'ka')
@@ -161,7 +161,7 @@ test('Georgian dark theme has no pale page overlay or horizontal viewport overfl
         assert.equal(visual.lang, 'ka', 'Georgian locale lost on ' + path)
         assert.equal(visual.background, 'rgb(23, 27, 32)', 'Wrong page background on ' + path)
         assert.equal(visual.contentBackground, 'rgb(23, 27, 32)', 'Wrong content surface on ' + path)
-        assert.equal(visual.foreground, 'rgb(229, 246, 255)', 'Wrong foreground on ' + path)
+        assert.equal(visual.foreground, 'rgb(232, 237, 241)', 'Wrong foreground on ' + path)
         assert.ok(visual.overflow <= 1, 'Horizontal overflow on ' + path + ' at ' + width + ': ' + visual.overflow)
         assert.equal(visual.overlay, false, 'Unexpected overlay on ' + path)
       }

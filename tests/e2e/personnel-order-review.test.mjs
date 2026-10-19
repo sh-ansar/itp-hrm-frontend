@@ -69,7 +69,7 @@ test('HR prepares an order PDF; separate company admin approves; employee sees o
   })
   try {
     const hr = await login(browser, 'hr')
-    const admin = await login(browser, 'admin', 375)
+    const admin = await login(browser, 'admin', 1440)
     const staff = await login(browser, 'employee', 375)
 
     const row = await createOrderViaHR(hr.page, 'Synthetic internal approval order', 'ORD-WF-2026-1')
@@ -100,6 +100,7 @@ test('HR prepares an order PDF; separate company admin approves; employee sees o
     assert.equal((await api(staff.page, base + '/me/documents')).body.data.length, 0)
 
     // Mobile uses the same review component as desktop.
+    await admin.page.setViewportSize({ width: 375, height: 960 })
     await admin.page.goto('/documents')
     const mobile = admin.page.locator('.document-mobile-card')
       .filter({ hasText: 'Synthetic internal approval order' })

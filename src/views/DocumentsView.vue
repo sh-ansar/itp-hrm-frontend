@@ -26,6 +26,7 @@ import {
   documentTypeLabel,
   documentTypes,
   listDocuments,
+  setEmployeeDocumentVisibility,
   type DocumentRow,
   type DocumentType,
 } from '../api/documents'
@@ -49,6 +50,9 @@ const typeFilter = ref('all')
 const employeeFilter = ref('')
 const createOpen = ref(false)
 const uploadTarget = ref<DocumentRow | null>(null)
+const shareTarget = ref<DocumentRow | null>(null)
+const shareBusy = ref(false)
+const shareError = ref('')
 const demoMode = import.meta.env.VITE_DEMO_MODE === 'true'
 let generation = 0
 
@@ -68,6 +72,7 @@ const columns = [
   { key: 'relation', label: 'Связь' },
   { key: 'status', label: 'Статус' },
   { key: 'file', label: 'PDF' },
+  { key: 'employee_access', label: 'Доступ сотрудника' },
 ]
 
 function employeeName(row: DocumentRow): string {
@@ -149,12 +154,52 @@ async function fileSaved() {
   await loadDocuments()
 }
 
+
+function canShare(row: DocumentRow): boolean {
+  return !demoMode && writesEnabled.value && row.has_file && ['order', 'contract'].includes(row.document_type)
+}
+function showShareDialog(row: DocumentRow): void {
+  if (!canShare(row) && !row.employee_visible) return
+  shareTarget.value = row
+  shareError.value = ''
+}
+function closeShareDialog(): void {
+  if (shareBusy.value) return
+  shareTarget.value = null
+  shareError.value = ''
+}
+async function confirmShare(): Promise<void> {
+  const target = shareTarget.value
+  if (!target || shareBusy.value || demoMode || !company.value) return
+  const currentCompany = company.value
+  shareBusy.value = true
+  shareError.value = ''
+  error.value = ''
+  success.value = ''
+  try {
+    await setEmployeeDocumentVisibility(currentCompany, target.id, target.revision, !target.employee_visible)
+    if (company.value === currentCompany) {
+      shareTarget.value = null
+      success.value = target.employee_visible
+        ? 'Доступ сотрудника к PDF отозван.'
+        : 'PDF теперь доступен сотруднику в личном кабинете.'
+      await loadDocuments()
+    }
+  } catch (cause) {
+    shareError.value = cause instanceof Error ? cause.message : 'Не удалось изменить доступ. Обновите реестр.'
+  } finally {
+    shareBusy.value = false
+  }
+}
+
 watch(company, () => {
   page.value = 1
   typeFilter.value = 'all'
   employeeFilter.value = ''
   createOpen.value = false
   uploadTarget.value = null
+  shareTarget.value = null
+  shareError.value = ''
   success.value = ''
 })
 watch([company, page, typeFilter, employeeFilter], loadDocuments)
@@ -265,12 +310,24 @@ onMounted(loadCompanies)
                 @click="uploadTarget = row">{{ tr('Прикрепить PDF') }}</BaseButton>
               <span v-else class="muted">{{ tr('Не прикреплён') }}</span>
             </template>
+
+            <template #cell-employee_access="{ row }">
+              <div class="document-access">
+                <BaseStatusPill :tone="row.employee_visible ? 'success' : 'info'">
+                  {{ tr(row.employee_visible ? 'Доступен сотруднику' : 'Закрыт') }}
+                </BaseStatusPill>
+                <BaseButton v-if="!demoMode && writesEnabled && (canShare(row) || row.employee_visible)"
+                  variant="secondary" @click="showShareDialog(row)">
+                  {{ tr(row.employee_visible ? 'Отозвать доступ' : 'Поделиться') }}
+                </BaseButton>
+              </div>
+            </template>
           </BaseDataTable>
         </div>
 
         <div class="documents-mobile">
           <DocumentMobileList :rows="rows" :company-id="company" :writes-enabled="writesEnabled"
-            :loading="documentsBusy" @upload="uploadTarget = $event" />
+            :loading="documentsBusy" @upload="uploadTarget = $event" @share="showShareDialog" />
         </div>
 
         <BasePagination :page="page" :last-page="lastPage" :loading="documentsBusy"
@@ -291,6 +348,28 @@ onMounted(loadCompanies)
     <BaseDialog :open="uploadTarget !== null" :title="tr('Прикрепить PDF')" @close="uploadTarget = null">
       <DocumentUploadForm v-if="uploadTarget" :key="uploadTarget.id + ':' + uploadTarget.revision"
         :company-id="company" :document="uploadTarget" @saved="fileSaved" @cancelled="uploadTarget = null" />
+    </BaseDialog>
+
+    <BaseDialog :open="shareTarget !== null" :title="tr('Доступ сотрудника к PDF')" @close="closeShareDialog">
+      <div v-if="shareTarget" class="sharing-confirmation">
+        <strong>{{ shareTarget.title }}</strong>
+        <BaseNotice v-if="shareError" tone="error">{{ shareError }}</BaseNotice>
+        <p v-if="shareTarget.employee_visible">
+          {{ tr('Отозвать доступ к файлу? Сотрудник больше не сможет скачать этот PDF, но документ останется в приватном архиве HR.') }}
+        </p>
+        <p v-else>
+          {{ tr('Поделиться PDF с сотрудником? Проверьте содержимое документа: после подтверждения сотрудник сможет скачать его из личного кабинета. Это не является электронной подписью.') }}
+        </p>
+        <BaseNotice tone="info">
+          {{ tr('Доступ предоставляется только сотруднику, связанному с кадровой записью, и фиксируется в журнале действий.') }}
+        </BaseNotice>
+      </div>
+      <template #footer>
+        <BaseButton variant="secondary" :disabled="shareBusy" @click="closeShareDialog">{{ tr('Отмена') }}</BaseButton>
+        <BaseButton :disabled="shareBusy" @click="confirmShare">
+          {{ tr(shareTarget?.employee_visible ? 'Отозвать доступ' : 'Поделиться') }}
+        </BaseButton>
+      </template>
     </BaseDialog>
   </section>
 </template>
@@ -328,6 +407,11 @@ onMounted(loadCompanies)
 .download-link{text-decoration:underline;text-underline-offset:3px}
 .download-link:focus-visible{outline:3px solid var(--color-focus)}
 .muted{color:var(--color-muted);font-size:11px}
+.document-access{display:flex;align-items:center;gap:8px;flex-wrap:wrap;min-width:0}
+.document-access :deep(.base-button){font-size:11px}
+.sharing-confirmation{display:grid;gap:12px;overflow-wrap:anywhere}
+.sharing-confirmation p{margin:0;line-height:1.55}
+
 .documents-mobile{display:none}
 .documents-register :deep(.base-pagination){margin-top:14px}
 @media(max-width:900px){.summary-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}

@@ -9,11 +9,14 @@ import BaseDrawer from '../components/ui/BaseDrawer.vue'
 import { useCompanyAccessStore } from '../stores/companyAccess'
 import { useUiPreferencesStore } from '../stores/uiPreferences'
 import { useLeaveWorkflowI18n } from '../i18n/leaveWorkflow'
-import { getOwnWorkspace, getOwnTimesheet, saveOwnLeave, transitionOwnLeave, type OwnTimesheetDay, type OwnWorkspace, type OwnRequest } from '../api/selfService'
+import { useUiFormatters } from '../composables/useUiFormatters'
+import { getOwnWorkspace, getOwnTimesheet, getOwnDocuments, ownDocumentFileUrl, saveOwnLeave, transitionOwnLeave, type OwnDocument, type OwnTimesheetDay, type OwnWorkspace, type OwnRequest } from '../api/selfService'
 
 const access = useCompanyAccessStore()
 const ui = useUiPreferencesStore()
 const { t } = useLeaveWorkflowI18n()
+const fmt = useUiFormatters()
+const connectedDocuments = import.meta.env.VITE_ENABLE_BROWSER_LOGIN === 'true' && import.meta.env.VITE_DEMO_MODE !== 'true'
 const copy = computed(() => ({
   ru: ['Мой кабинет', 'Мои отпуска', 'Мои заявки', 'Подать заявку', 'Учётная запись не связана с сотрудником. Обратитесь к администратору компании.', 'Настройки', 'Нет отпусков', 'Компания', 'Предыдущая', 'Следующая'],
   kk: ['Менің кабинетім', 'Менің демалыстарым', 'Менің өтінімдерім', 'Өтінім беру', 'Тіркелгі қызметкермен байланыстырылмаған. Компания әкімшісіне хабарласыңыз.', 'Баптаулар', 'Демалыстар жоқ', 'Компания', 'Алдыңғы', 'Келесі'],
@@ -77,6 +80,41 @@ async function loadOwnTimesheet() {
   }
 }
 
+
+const documentsCopy = computed(() => ({
+  ru: { title: 'Мои документы', loading: 'Загружаем документы…', none: 'Документы пока не опубликованы для вас.', date: 'Дата', order: 'Приказ', contract: 'Трудовой договор', download: 'Скачать PDF', previous: 'Предыдущая', next: 'Следующая', page: 'Страница', refresh: 'Повторить' },
+  kk: { title: 'Менің құжаттарым', loading: 'Құжаттар жүктелуде…', none: 'Сізге арналған құжаттар әзірге жарияланбаған.', date: 'Күні', order: 'Бұйрық', contract: 'Еңбек шарты', download: 'PDF жүктеу', previous: 'Алдыңғы', next: 'Келесі', page: 'Бет', refresh: 'Қайталау' },
+  en: { title: 'My documents', loading: 'Loading documents…', none: 'No documents have been shared with you yet.', date: 'Date', order: 'Order', contract: 'Employment contract', download: 'Download PDF', previous: 'Previous', next: 'Next', page: 'Page', refresh: 'Retry' },
+  ka: { title: 'ჩემი დოკუმენტები', loading: 'დოკუმენტები იტვირთება…', none: 'დოკუმენტები ჯერ არ არის თქვენთვის გაზიარებული.', date: 'თარიღი', order: 'ბრძანება', contract: 'შრომითი ხელშეკრულება', download: 'PDF ჩამოტვირთვა', previous: 'წინა', next: 'შემდეგი', page: 'გვერდი', refresh: 'ხელახლა' },
+}[ui.locale]))
+const ownDocuments = ref<OwnDocument[]>([])
+const ownDocumentsPage = ref(1)
+const ownDocumentsLastPage = ref(1)
+const ownDocumentsLoading = ref(false)
+const ownDocumentsError = ref('')
+let documentsGeneration = 0
+async function loadOwnDocuments(): Promise<void> {
+  const current = ++documentsGeneration
+  ownDocuments.value = []
+  ownDocumentsError.value = ''
+  if (!connectedDocuments || !access.activeCompanyId || !workspace.value?.data.employee) {
+    ownDocumentsLoading.value = false
+    return
+  }
+  ownDocumentsLoading.value = true
+  try {
+    const result = await getOwnDocuments(access.activeCompanyId, ownDocumentsPage.value)
+    if (current === documentsGeneration) {
+      ownDocuments.value = result.data
+      ownDocumentsLastPage.value = result.meta.last_page
+    }
+  } catch (cause) {
+    if (current === documentsGeneration) ownDocumentsError.value = cause instanceof Error ? cause.message : t('failed')
+  } finally {
+    if (current === documentsGeneration) ownDocumentsLoading.value = false
+  }
+}
+
 let generation = 0
 async function load() {
   const current = ++generation
@@ -90,6 +128,12 @@ async function load() {
 watch(() => access.activeCompanyId, () => { open.value = false; requestsPage.value = 1; leavesPage.value = 1; void load() }, { immediate: true })
 watch([requestsPage, leavesPage], () => void load())
 watch([() => workspace.value?.data.employee?.id, () => access.activeCompanyId, timesheetMonth], () => void loadOwnTimesheet(), { immediate: true })
+watch([() => workspace.value?.data.employee?.id, () => access.activeCompanyId], () => {
+  ownDocumentsPage.value = 1
+  void loadOwnDocuments()
+}, { immediate: true })
+watch(ownDocumentsPage, () => void loadOwnDocuments())
+
 function edit(request?: OwnRequest) {
   editing.value = request; type.value = request?.leave_type_id ?? ''
   start.value = request?.planned_started_on ?? ''; end.value = request?.planned_ended_on ?? ''; note.value = request?.note ?? ''
@@ -147,6 +191,32 @@ function status(request: OwnRequest) {
             <p v-if="leave.actual_started_on">{{ leave.actual_started_on }} — {{ leave.actual_ended_on ?? '…' }} · {{ leave.actual_days ?? '—' }}</p></article>
           <div class="actions"><BaseButton :disabled="loading || leavesPage === 1" variant="secondary" @click="leavesPage--">{{ copy[8] }}</BaseButton>
             <span>{{ leavesPage }} / {{ workspace.meta.leaves_last_page }}</span><BaseButton :disabled="loading || leavesPage >= workspace.meta.leaves_last_page" variant="secondary" @click="leavesPage++">{{ copy[9] }}</BaseButton></div>
+        </BaseCard>
+
+        <BaseCard v-if="connectedDocuments" class="personal-documents">
+          <header><h2>{{ documentsCopy.title }}</h2></header>
+          <BaseNotice v-if="ownDocumentsError" tone="error">{{ ownDocumentsError }}</BaseNotice>
+          <BaseButton v-if="ownDocumentsError" variant="secondary" @click="loadOwnDocuments">{{ documentsCopy.refresh }}</BaseButton>
+          <p v-if="ownDocumentsLoading" role="status">{{ documentsCopy.loading }}</p>
+          <p v-else-if="!ownDocumentsError && !ownDocuments.length">{{ documentsCopy.none }}</p>
+          <div v-for="document in ownDocuments" v-else-if="!ownDocumentsError" :key="document.id" class="personal-documents__row">
+            <div class="personal-documents__details">
+              <strong>{{ document.title }}</strong>
+              <span>{{ document.document_type === 'contract' ? documentsCopy.contract : documentsCopy.order }}
+                · {{ documentsCopy.date }}: {{ document.issued_on ? fmt.date(document.issued_on) : '—' }}</span>
+            </div>
+            <a :href="ownDocumentFileUrl(access.activeCompanyId, document.id)"
+              class="personal-documents__download" download="document.pdf" rel="noreferrer">
+              {{ documentsCopy.download }}
+            </a>
+          </div>
+          <div v-if="ownDocumentsLastPage > 1" class="actions">
+            <BaseButton variant="secondary" :disabled="ownDocumentsLoading || ownDocumentsPage === 1"
+              @click="ownDocumentsPage--">{{ documentsCopy.previous }}</BaseButton>
+            <span>{{ documentsCopy.page }} {{ ownDocumentsPage }} / {{ ownDocumentsLastPage }}</span>
+            <BaseButton variant="secondary" :disabled="ownDocumentsLoading || ownDocumentsPage >= ownDocumentsLastPage"
+              @click="ownDocumentsPage++">{{ documentsCopy.next }}</BaseButton>
+          </div>
         </BaseCard>
         <BaseCard class="own-timesheet">
           <header class="own-timesheet__header">
@@ -213,6 +283,11 @@ header,.actions{display:flex;align-items:center;justify-content:space-between;ga
 h1,h2,p{overflow-wrap:anywhere}h2{font-size:var(--font-body-size)}
 article{padding:var(--space-4) 0;border-top:1px solid var(--color-stroke)}
 .actions{justify-content:flex-start}a{color:var(--color-primary)}
+.personal-documents__row{display:flex;align-items:center;justify-content:space-between;gap:var(--space-4);flex-wrap:wrap;border-top:1px solid var(--color-stroke);padding:var(--space-4) 0}
+.personal-documents__details{display:grid;gap:var(--space-1);min-width:0;overflow-wrap:anywhere}
+.personal-documents__details span{font-size:var(--font-caption-size);color:var(--color-muted)}
+.personal-documents__download{display:inline-flex;min-height:var(--control-height);align-items:center;padding:var(--space-2) var(--space-3);border:1px solid var(--color-stroke);border-radius:var(--space-2);font-weight:600;text-decoration:none}
+.personal-documents__download:focus-visible{outline:2px solid var(--color-primary);outline-offset:2px}
 .own-timesheet__header{align-items:flex-end}
 .own-timesheet__header .field{min-width:145px}
 .own-timesheet__summary{font-weight:500}

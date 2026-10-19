@@ -95,7 +95,7 @@ export function tryDemoRoleApi(path:string,method:string,search:URLSearchParams,
     person.department_scopes=(ids as string[]).map(id=>deps.departments.find(d=>d.id===id)!)
     person.updated_at=new Date().toISOString()
     logChange('company.role_changed',person.name)
-    return{handled:true,response:{data:{user_id,role_code:next,department_ids:ids}}}
+    return{handled:true,response:{data:{user_id:userId,role_code:next,department_ids:ids}}}
   }
   if(person&&method==='DELETE'&&!match[2]){
     if(person.role_code==='company_admin')throw new Error('Роль администратора защищена')

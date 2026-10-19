@@ -422,7 +422,7 @@ export async function mockApiRequest<T>(path:string,options:RequestInit={}):Prom
   if(p==='/companies') return page([{id:companyId,name:'ITP HRM Demo',role_code:'company_admin',department_scopes:[]}],1,100,{role_management_enabled:true}) as T
   const scopedCompany=p.match(/^\/companies\/([^/]+)(?:\/|$)/)
   if(scopedCompany&&scopedCompany[1]!==companyId)throw new Error('Компания недоступна')
-  const demoRoleResult=tryDemoRoleApi(p,method,u.searchParams,options.body,{departments:deps,employees})
+  const demoRoleResult=tryDemoRoleApi(p,method,u.searchParams,options.body,{departments:deps.map(d=>({id:d.id,name:String(d.name??'')})),employees})
   if(demoRoleResult.handled)return demoRoleResult.response as T
   let m=p.match(/^\/companies\/[^/]+\/directories\/([^/]+)(?:\/([^/]+))?$/)
   if(m){

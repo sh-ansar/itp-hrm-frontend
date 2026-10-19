@@ -37,6 +37,14 @@ test('personnel action preview is localized for RU KK EN KA and never executes o
     await page.getByLabel('Пароль').fill('SyntheticE2E-Only!2026')
     await page.getByRole('button', { name:'Войти', exact:true }).click()
     await page.waitForURL(url => !url.pathname.endsWith('/login'))
+    const totalActions = async () => page.evaluate(async () => {
+      const response = await fetch('/api/v1/companies/11111111-1111-4111-8111-111111111111/personnel-actions',
+        { credentials:'same-origin', headers:{ Accept:'application/json' } })
+      if (!response.ok) throw new Error('Cannot verify staffing unchanged: HTTP ' + response.status)
+      const body = await response.json()
+      return body.meta.total
+    })
+    const baseline = await totalActions()
     for (const lang of languages) {
       await page.evaluate(locale => localStorage.setItem('hrm-locale', locale), lang.locale)
       await page.goto('/personnel-actions')
@@ -58,7 +66,9 @@ test('personnel action preview is localized for RU KK EN KA and never executes o
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1),
         false, 'No horizontal viewport overflow in ' + lang.locale)
       assert.equal(await page.locator('.action-mobile-card').filter({hasText:'I18N-PREVIEW-NO-WRITE'}).count(),
-        0, 'Cancelled preview must not execute any action for ' + lang.locale)
+        0, 'Cancelled preview must not show any action for ' + lang.locale)
+      assert.equal(await totalActions(), baseline,
+        'Cancelling localized preview must not write personnel actions for ' + lang.locale)
     }
   } finally {
     await context.close()

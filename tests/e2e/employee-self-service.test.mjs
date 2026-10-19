@@ -109,7 +109,7 @@ test('admin links an account; employee saves, reloads, submits; admin approves; 
     admin.page.once('dialog', dialog => dialog.accept())
     await requestRow.getByRole('button', { name: 'Утвердить', exact: true }).click()
     await page.reload()
-    await page.getByText(/Утверждено/).waitFor()
+    await page.getByText('Утверждено', { exact: true }).first().waitFor()
     const result = await api(page, base + '/me/workspace')
     assert.equal(result.body.data.requests[0].status, 'approved')
     assert.equal(result.body.data.leaves.length, 1)

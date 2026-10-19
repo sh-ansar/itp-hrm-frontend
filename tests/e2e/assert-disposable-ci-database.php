@@ -28,7 +28,7 @@ function assertDisposableBrowserDatabase(): void
         || (string) config('database.connections.pgsql.port') !== '5432'
         || (string) config('database.connections.pgsql.database') !== 'itp_hrm_browser_ci'
         || (string) config('database.connections.pgsql.username') !== 'hrm_browser_ci'
-        || (string) config('database.connections.pgsql.search_path') !== 'public') {
+        || (string) config('database.connections.pgsql.search_path') !== 'hrm') {
         throw new RuntimeException('Synthetic fixtures require an exact disposable CI database identity.');
     }
 

@@ -35,7 +35,7 @@ jobs:
       DB_HOST: 127.0.0.1
       DB_PORT: '5432'
       DB_DATABASE: itp_hrm_browser_ci
-      DB_SCHEMA: public
+      DB_SCHEMA: hrm
       DB_USERNAME: hrm_browser_ci
       DB_PASSWORD: synthetic_ci_pg_only
       CACHE_STORE: database
@@ -106,6 +106,7 @@ jobs:
         run: |
           set -euo pipefail
           php tests/e2e/verify-disposable-ci-db.php
+          php tests/e2e/create-ci-schema.php
           php backend/artisan migrate --force
       - name: Set up pinned official MinIO source
         uses: actions/setup-go@v5

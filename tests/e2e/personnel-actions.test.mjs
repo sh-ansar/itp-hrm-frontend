@@ -20,7 +20,7 @@ async function openActionForSynthetic(page){
   await dialog.waitFor()
   await dialog.getByLabel('Поиск сотрудника').fill('E2E-001')
   await dialog.getByRole('button',{name:'Найти'}).click()
-  await dialog.getByText(/Текущее назначение|Открытого назначения нет/).waitFor()
+  await dialog.locator('.employee-summary').getByText(/Текущее назначение|Открытого назначения нет/).waitFor()
   return dialog
 }
 

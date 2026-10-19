@@ -45,23 +45,19 @@ export async function uploadProtectedEvidence(company: string, request: string,
   const data = new FormData()
   data.append('file', file, 'supporting-document.pdf')
   data.append('request_revision', String(requestRevision))
+  // Validate the first-party URL outside the network-error catch.
+  const url = privateEvidenceFileUrl(company, request)
   const controller = new AbortController()
   const timeout = setTimeout(() => controller.abort(), 45_000)
   try {
     let response: Response
     try {
-      response = await fetch(privateEvidenceFileUrl(company, request), {
+      response = await fetch(url, {
         method: 'POST', credentials: 'same-origin',
         headers: { Accept: 'application/json', 'X-XSRF-TOKEN': csrf },
         body: data, signal: controller.signal,
       })
-    } catch (cause) {
-      // This diagnostic reports only the error class/text, never file contents,
-      // names, document UUIDs or medical information.
-      console.warn('HRM_PROTECTED_FETCH_DIAGNOSTIC', {
-        kind: cause instanceof Error ? cause.name : 'unknown',
-        detail: cause instanceof Error ? cause.message : 'unknown',
-      })
+    } catch {
       throw new ApiError(controller.signal.aborted ? 'timeout' : 'network', null,
         controller.signal.aborted ? 'Private PDF upload timed out' : 'Could not upload private PDF')
     }

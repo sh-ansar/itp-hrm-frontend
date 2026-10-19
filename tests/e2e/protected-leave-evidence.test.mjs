@@ -79,33 +79,13 @@ test('employee uploads private protected PDF, HR verifies, approval requires evi
     await panel.locator('input[type="file"]').setInputFiles({
       name: 'private-e2e.pdf', mimeType: 'application/pdf', buffer: pdf,
     })
-    const observed = []
-    const clientDiagnostics = []
-    staff.page.on('console', message => {
-      if (message.text().startsWith('HRM_PROTECTED_')) clientDiagnostics.push(message.text())
-    })
-    staff.page.on('request', req => {
-      if (req.url().endsWith('/evidence/file') && req.method() === 'POST') observed.push(req.url())
-    })
-    const selectedInfo = await panel.locator('input[type="file"]').evaluate(input => ({
-      type: input.files?.[0]?.type, size: input.files?.[0]?.size,
-      csrfPresent: document.cookie.split('; ').some(pair => pair.startsWith('XSRF-TOKEN=')),
-    }))
+    const uploadResponse = staff.page.waitForResponse(
+      response => response.url().endsWith('/evidence/file') && response.request().method() === 'POST',
+      { timeout: 20_000 },
+    )
     await panel.getByRole('button', { name: 'Прикрепить PDF', exact: true }).click()
-    await staff.page.waitForTimeout(550)
-    const uiState = await panel.innerText()
-    console.log('E2E_PROTECTED_UPLOAD_STAGE', JSON.stringify({
-      selectedInfo, requestsSent: observed.length,
-      text: uiState.slice(0, 450), clientDiagnostics,
-    }))
-    if (!uiState.includes('Ожидает проверки HR')) {
-      const latest = await api(staff.page, base + '/me/workspace')
-      const item = latest.body.data.requests.find(row => row.id === request.id)
-      throw new Error('Evidence did not reach pending: ' + JSON.stringify({
-        selectedInfo, postCount: observed.length,
-        evidenceStatus: item?.evidence_status, ui: uiState.slice(0, 450), clientDiagnostics,
-      }))
-    }
+    assert.equal((await uploadResponse).status(), 200, 'Protected PDF upload HTTP response')
+    await panel.getByText('Ожидает проверки HR', { exact: true }).waitFor({ timeout: 20_000 })
     const afterUpload = await api(staff.page, base + '/me/workspace')
     assert.equal(afterUpload.body.data.requests[0].evidence_status, 'pending')
     assert.equal(afterUpload.body.data.requests[0].evidence_revision, 1)

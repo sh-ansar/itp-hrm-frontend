@@ -41,13 +41,7 @@ async function upload(): Promise<void> {
     selected.value = null
     success.value = copy.value.changed
     emit('changed')
-  } catch (cause) {
-    // The backend never returns sensitive medical data here; client errors are
-    // normalized, not copied verbatim to the employee-facing UI.
-    const code = cause instanceof Error ? cause.name : 'Unknown'
-    const reason = cause instanceof Error ? cause.message : 'Unknown error'
-    console.warn('HRM_PROTECTED_UPLOAD_DIAGNOSTIC', { code, reason,
-      requestRevision: props.request.revision, hasEmployeeCompany: !!props.companyId })
+  } catch {
     error.value = copy.value.failed
   } finally {
     busy.value = false

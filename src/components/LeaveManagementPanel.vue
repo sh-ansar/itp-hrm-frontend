@@ -9,6 +9,7 @@ import BaseSelectField from './ui/BaseSelectField.vue'
 import BaseNotice from './ui/BaseNotice.vue'
 import BasePagination from './ui/BasePagination.vue'
 import EmployeeLookupField from './EmployeeLookupField.vue'
+import ProtectedLeaveEvidencePanel from './ProtectedLeaveEvidencePanel.vue'
 import { useLeaveWorkflowI18n } from '../i18n/leaveWorkflow'
 import { useLeaveCategoryI18n } from '../i18n/leaveCategory'
 import { useUiFormatters } from '../composables/useUiFormatters'
@@ -54,6 +55,8 @@ const annualDays = ref('24')
 const calculation = ref<'calendar_days' | 'working_days'>('calendar_days')
 const category = ref<LeaveCategory>('ordinary')
 const supportsProtectedTypes = ref(false)
+const evidenceUploadsEnabled = ref(false)
+const evidenceRequired = ref(false)
 let loadGeneration = 0
 
 const typeOptions = computed(() => types.value.map(item => ({ id: item.id, name: item.name })))
@@ -101,6 +104,8 @@ async function load() {
     requests.value = records.data
     canManageTypes.value = kinds.meta.can_manage_leave_types
     canApprove.value = records.meta.can_approve_leave_requests
+    evidenceUploadsEnabled.value = records.meta.protected_evidence_uploads_enabled ?? false
+    evidenceRequired.value = records.meta.protected_evidence_required ?? false
     page.value = records.meta.current_page
     lastPage.value = records.meta.last_page
     total.value = records.meta.total
@@ -269,9 +274,12 @@ async function transition(row: LeaveRequestRecord, action: 'submit' | 'cancel' |
             <p>{{ row.leave_type_name }} · {{ fmt.date(row.planned_started_on) }} — {{ fmt.date(row.planned_ended_on) }}</p>
             <small>{{ t('plannedDays') }}: {{ fmt.number(row.planned_days, 0) }} · {{ t('status') }}: {{ statusLabel(row.status) }}</small>
             <p v-if="row.decision_comment" class="leave-management-comment">{{ row.decision_comment }}</p>
+            <ProtectedLeaveEvidencePanel v-if="row.category && row.category !== 'ordinary'"
+              :company-id="companyId" :request="row" :can-upload="evidenceUploadsEnabled"
+              :can-review="evidenceUploadsEnabled" :required="evidenceRequired" @changed="load" />
           </div>
           <div class="leave-management-row-actions">
-            <BaseButton v-if="row.status === 'draft'" variant="secondary" :disabled="busy" @click="openEdit(row)">{{ t('edit') }}</BaseButton>
+            <BaseButton v-if="row.status === 'draft' && !row.evidence_status" variant="secondary" :disabled="busy" @click="openEdit(row)">{{ t('edit') }}</BaseButton>
             <BaseButton v-if="row.status === 'draft'" :disabled="busy" @click="transition(row, 'submit')">{{ t('submit') }}</BaseButton>
             <BaseButton v-if="['draft','submitted'].includes(row.status)" variant="secondary" :disabled="busy"
               @click="transition(row, 'cancel')">{{ t('cancel') }}</BaseButton>

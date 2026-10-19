@@ -1,10 +1,12 @@
 import { apiRequest } from './client'
-import type { LeaveRequestStatus } from './leaves'
+import type { LeaveRequestStatus, LeaveCategory } from './leaves'
 
 export interface OwnRequest {
   id: string; leave_type_id: string; leave_type_name: string
   planned_started_on: string; planned_ended_on: string; planned_days: number
   status: LeaveRequestStatus; revision: number; note: string | null; decision_comment: string | null
+  category?: LeaveCategory; evidence_status?: 'pending' | 'verified' | 'rejected' | null
+  evidence_revision?: number | null
 }
 export interface OwnLeave {
   id: string; leave_type_name: string; planned_started_on: string; planned_ended_on: string
@@ -15,7 +17,8 @@ export interface OwnWorkspace {
     employee: { id: string; first_name: string; last_name: string; middle_name: string | null; personnel_number: string } | null
     requests: OwnRequest[]; leaves: OwnLeave[]; leave_types: { id: string; name: string; category: string }[]
   }
-  meta: { can_request: boolean; requests_last_page: number; leaves_last_page: number }
+  meta: { can_request: boolean; requests_last_page: number; leaves_last_page: number
+    protected_evidence_uploads_enabled?: boolean; protected_evidence_required?: boolean }
 }
 export type OwnLeaveInput = Pick<OwnRequest, 'leave_type_id' | 'planned_started_on' | 'planned_ended_on' | 'note'>
 const base = (company: string) => `/companies/${company}/me`

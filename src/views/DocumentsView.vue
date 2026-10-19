@@ -3,6 +3,7 @@ import { publicAsset } from '../utils/publicAsset'
 import { useActiveCompanySelection } from '../composables/useActiveCompanySelection'
 import { useWorkspaceI18n } from '../composables/useWorkspaceI18n'
 import { useUiFormatters } from '../composables/useUiFormatters'
+import { useDocumentSharingCopy } from '../i18n/documentSharing'
 import { computed, onMounted, ref, watch } from 'vue'
 import { FileCheck2, FilePlus2, FileText, Paperclip } from 'lucide-vue-next'
 import BaseButton from '../components/ui/BaseButton.vue'
@@ -32,6 +33,7 @@ import {
 } from '../api/documents'
 
 const { tr } = useWorkspaceI18n()
+const { sharing } = useDocumentSharingCopy()
 const fmt = useUiFormatters()
 
 const companies = ref<CompanyRecord[]>([])
@@ -64,7 +66,7 @@ const typeTabs = [
 const pagePdfCount = computed(() => rows.value.filter(row => row.has_file).length)
 const pageDraftCount = computed(() => rows.value.filter(row => row.status === 'draft').length)
 
-const columns = [
+const columns = computed(() => [
   { key: 'issued_on', label: 'Дата' },
   { key: 'document_type', label: 'Вид' },
   { key: 'title', label: 'Документ' },
@@ -72,8 +74,8 @@ const columns = [
   { key: 'relation', label: 'Связь' },
   { key: 'status', label: 'Статус' },
   { key: 'file', label: 'PDF' },
-  { key: 'employee_access', label: 'Доступ сотрудника' },
-]
+  { key: 'employee_access', label: sharing.value.access },
+])
 
 function employeeName(row: DocumentRow): string {
   return [row.last_name, row.first_name].filter(Boolean).join(' ')
@@ -181,8 +183,8 @@ async function confirmShare(): Promise<void> {
     if (company.value === currentCompany) {
       shareTarget.value = null
       success.value = target.employee_visible
-        ? 'Доступ сотрудника к PDF отозван.'
-        : 'PDF теперь доступен сотруднику в личном кабинете.'
+        ? sharing.value.revokeMessage
+        : sharing.value.sharedMessage
       await loadDocuments()
     }
   } catch (cause) {
@@ -314,11 +316,11 @@ onMounted(loadCompanies)
             <template #cell-employee_access="{ row }">
               <div class="document-access">
                 <BaseStatusPill :tone="row.employee_visible ? 'success' : 'info'">
-                  {{ tr(row.employee_visible ? 'Доступен сотруднику' : 'Закрыт') }}
+                  {{ row.employee_visible ? sharing.available : sharing.private }}
                 </BaseStatusPill>
                 <BaseButton v-if="!demoMode && writesEnabled && (canShare(row) || row.employee_visible)"
                   variant="secondary" @click="showShareDialog(row)">
-                  {{ tr(row.employee_visible ? 'Отозвать доступ' : 'Поделиться') }}
+                  {{ row.employee_visible ? sharing.revoke : sharing.share }}
                 </BaseButton>
               </div>
             </template>
@@ -350,24 +352,24 @@ onMounted(loadCompanies)
         :company-id="company" :document="uploadTarget" @saved="fileSaved" @cancelled="uploadTarget = null" />
     </BaseDialog>
 
-    <BaseDialog :open="shareTarget !== null" :title="tr('Доступ сотрудника к PDF')" @close="closeShareDialog">
+    <BaseDialog :open="shareTarget !== null" :title="sharing.title" @close="closeShareDialog">
       <div v-if="shareTarget" class="sharing-confirmation">
         <strong>{{ shareTarget.title }}</strong>
         <BaseNotice v-if="shareError" tone="error">{{ shareError }}</BaseNotice>
         <p v-if="shareTarget.employee_visible">
-          {{ tr('Отозвать доступ к файлу? Сотрудник больше не сможет скачать этот PDF, но документ останется в приватном архиве HR.') }}
+          {{ sharing.revokeQuestion }}
         </p>
         <p v-else>
-          {{ tr('Поделиться PDF с сотрудником? Проверьте содержимое документа: после подтверждения сотрудник сможет скачать его из личного кабинета. Это не является электронной подписью.') }}
+          {{ sharing.shareQuestion }}
         </p>
         <BaseNotice tone="info">
-          {{ tr('Доступ предоставляется только сотруднику, связанному с кадровой записью, и фиксируется в журнале действий.') }}
+          {{ sharing.notice }}
         </BaseNotice>
       </div>
       <template #footer>
-        <BaseButton variant="secondary" :disabled="shareBusy" @click="closeShareDialog">{{ tr('Отмена') }}</BaseButton>
+        <BaseButton variant="secondary" :disabled="shareBusy" @click="closeShareDialog">{{ sharing.cancel }}</BaseButton>
         <BaseButton :disabled="shareBusy" @click="confirmShare">
-          {{ tr(shareTarget?.employee_visible ? 'Отозвать доступ' : 'Поделиться') }}
+          {{ shareTarget?.employee_visible ? sharing.revoke : sharing.share }}
         </BaseButton>
       </template>
     </BaseDialog>

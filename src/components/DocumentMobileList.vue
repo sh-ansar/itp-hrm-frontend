@@ -7,8 +7,10 @@ import BaseStatusPill from './ui/BaseStatusPill.vue'
 import type { DocumentRow } from '../api/documents'
 import { documentFileUrl, documentTypeLabel } from '../api/documents'
 import { getDemoDocumentUrl } from '../mocks/demoDocumentFiles'
+import { useDocumentSharingCopy } from '../i18n/documentSharing'
 
 const { tr } = useWorkspaceI18n()
+const { sharing } = useDocumentSharingCopy()
 const fmt = useUiFormatters()
 
 const props = defineProps<{
@@ -66,12 +68,12 @@ function displayDate(value: string | null): string {
 
       <footer>
         <BaseStatusPill :tone="row.employee_visible ? 'success' : 'info'">
-          {{ tr(row.employee_visible ? 'Доступен сотруднику' : 'Закрыт') }}
+          {{ row.employee_visible ? sharing.available : sharing.private }}
         </BaseStatusPill>
         <BaseButton v-if="!demoMode && writesEnabled && row.has_file &&
             (row.employee_visible || ['order','contract'].includes(row.document_type))"
           variant="secondary" @click="emit('share', row)">
-          {{ tr(row.employee_visible ? 'Отозвать доступ' : 'Поделиться') }}
+          {{ row.employee_visible ? sharing.revoke : sharing.share }}
         </BaseButton>
         <a v-if="row.has_file && demoMode && getDemoDocumentUrl(row.id)"
           class="download-link" :href="documentFileUrl(companyId, row.id)" target="_blank" rel="noopener">

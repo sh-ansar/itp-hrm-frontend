@@ -23,8 +23,24 @@ async function api(page, path, method = 'GET', body) {
 
 async function enterNumberAndConfirm(page, title, days, reason, label = 'Количество дней') {
   const dialog = page.getByRole('dialog', { name: title, exact: true })
-  await dialog.getByLabel(label, { exact: true }).fill(String(days))
-  await dialog.getByLabel('Основание решения').fill(reason)
+  // Capture the actual mounted drawer state so failed UI transitions are diagnosable.
+  try {
+    await dialog.waitFor({ state: 'visible', timeout: 5000 })
+  } catch (error) {
+    const state = await page.evaluate(() => ({
+      dialogs: [...document.querySelectorAll('[role="dialog"]')].map(node => ({
+        title: node.getAttribute('aria-label'),
+        text: (node.textContent || '').slice(0,420),
+        fields: [...node.querySelectorAll('input')].map(input => input.getAttribute('type')),
+      })),
+      buttons: [...document.querySelectorAll('button')].filter(node =>
+        node.textContent?.includes('Назначить фонд')).map(node => node.textContent?.trim()),
+    }))
+    throw new Error(`Expected ${title}, mounted UI: ${JSON.stringify(state)}; ${error.message}`)
+  }
+  const number = dialog.locator('input[type="number"]')
+  await number.fill(String(days))
+  await dialog.getByRole('textbox', { name: 'Основание решения' }).fill(reason)
   await dialog.getByRole('button', { name: 'Подтвердить', exact: true }).click()
   await dialog.waitFor({ state: 'hidden' })
 }

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
+import { Building2, ArrowUpRight } from 'lucide-vue-next'
 import { useRoute, useRouter } from 'vue-router'
 import BaseDataTable from '../components/ui/BaseDataTable.vue'
 import BaseTableBulkActions from '../components/ui/BaseTableBulkActions.vue'
@@ -259,7 +260,8 @@ onMounted(()=>{
       :position-name="onboardingEmployee?.current_position_name||''"
       @completed="completeOnboarding" />
     <template v-else>
-    <BaseKpiGrid class="overview-metrics" label="Основные показатели компании">
+    <div class="overview-hero">
+    <BaseKpiGrid class="overview-metrics" :columns="3" label="Основные показатели компании">
       <DashboardMetricCard title="Вакантные позиции" color="amber"
         :value="staffingError?'—':formatUnits(vacantUnits)" :percent="staffingError?null:vacancyShare"
         :detail="'ставок из '+(plannedUnits?formatUnits(plannedUnits):'—')"
@@ -272,11 +274,30 @@ onMounted(()=>{
         :value="documentsTotal" :percent="null"
         detail="документов в реестре" :footnote="documentExpiryAvailable?'Сроки документов рассчитаны':'Сроки действия пока не учитываются'"
         to="/documents" />
-      <DashboardMetricCard title="Сотрудники в штате" color="blue"
-        :value="staffCount" :percent="activeShare"
-        :detail="'работают из '+(allEmployeeCount??'—')+' записей'"
-        footnote="По реестру персонала" to="/employees" />
     </BaseKpiGrid>
+    <aside class="overview-company-panel" aria-label="Сводка организации">
+      <header class="overview-company-panel__header">
+        <span class="overview-company-panel__icon"><Building2 :size="20" aria-hidden="true" /></span>
+        <div class="overview-company-panel__identity">
+          <strong>{{ companyName || 'Компания' }}</strong>
+          <span>Сводка на {{ fmt.date(localTodayISO()) }}</span>
+        </div>
+      </header>
+      <dl class="overview-company-panel__stats">
+        <div>
+          <dt>Сотрудники в штате</dt>
+          <dd>{{ staffCount ?? '—' }}</dd>
+        </div>
+        <div>
+          <dt>Доля работающих</dt>
+          <dd>{{ activeShare === null ? '—' : Math.round(activeShare) + '%' }}</dd>
+        </div>
+      </dl>
+      <RouterLink class="overview-company-panel__link" to="/employees">
+        Открыть реестр <ArrowUpRight :size="15" aria-hidden="true" />
+      </RouterLink>
+    </aside>
+    </div>
 
     <section class="overview-section" aria-label="Реестр сотрудников на главной">
       <DashboardSectionHeading title="Реестр сотрудников" to="/employees" action-label="Полный реестр">
@@ -372,6 +393,24 @@ onMounted(()=>{
 .overview-count{margin:8px 0 0;color:var(--color-muted);font-size:11px;line-height:17px}
 .overview-count a{color:var(--color-primary);font-weight:600}
 .overview-actions{padding-bottom:16px}
+
+.overview-hero{display:grid;grid-template-columns:minmax(0,1fr) minmax(190px,218px);gap:14px;align-items:stretch;min-width:0}
+.overview-metrics{min-width:0;align-content:stretch}
+.overview-metrics :deep(.metric-card){height:100%;min-height:168px}
+.overview-company-panel{display:grid;grid-template-rows:auto 1fr auto;gap:14px;min-width:0;padding:13px;border:1px solid var(--color-stroke);border-radius:8px;background:var(--color-surface);box-shadow:var(--shadow-card)}
+.overview-company-panel__header{display:flex;align-items:start;gap:9px;min-width:0}
+.overview-company-panel__icon{display:grid;place-items:center;flex:0 0 30px;height:30px;border-radius:8px;background:var(--color-accent-soft);color:var(--color-primary)}
+.overview-company-panel__identity{display:grid;gap:4px;min-width:0}
+.overview-company-panel__identity strong{font-size:12px;line-height:17px;overflow-wrap:anywhere}
+.overview-company-panel__identity span{font-size:10px;line-height:14px;color:var(--color-muted)}
+.overview-company-panel__stats{display:grid;gap:8px;align-content:center;margin:0}
+.overview-company-panel__stats div{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
+.overview-company-panel__stats dt{font-size:11px;line-height:15px;color:var(--color-muted)}
+.overview-company-panel__stats dd{font-size:16px;line-height:20px;font-weight:650;font-variant-numeric:tabular-nums;margin:0}
+.overview-company-panel__link{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:11px;line-height:17px;color:var(--color-primary);font-weight:600;text-decoration:none}
+.overview-company-panel__link:hover{text-decoration:underline}
+@media(max-width:1340px){.overview-hero{grid-template-columns:minmax(0,1fr)}.overview-company-panel{grid-template-columns:auto minmax(0,1fr) auto;grid-template-rows:1fr;align-items:center}.overview-company-panel__stats{display:flex;align-items:center;flex-wrap:wrap;gap:18px}.overview-company-panel__stats div{gap:6px}}
+@media(max-width:760px){.overview-company-panel{grid-template-columns:minmax(0,1fr);grid-template-rows:auto auto auto;gap:11px}.overview-company-panel__stats{justify-content:space-between}}
 @media(max-width:700px){
   .overview-page{gap:21px}
 }

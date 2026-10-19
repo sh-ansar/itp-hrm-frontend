@@ -199,7 +199,8 @@ function status(request: OwnRequest) {
           <BaseButton v-if="ownDocumentsError" variant="secondary" @click="loadOwnDocuments">{{ documentsCopy.refresh }}</BaseButton>
           <p v-if="ownDocumentsLoading" role="status">{{ documentsCopy.loading }}</p>
           <p v-else-if="!ownDocumentsError && !ownDocuments.length">{{ documentsCopy.none }}</p>
-          <div v-for="document in ownDocuments" v-else-if="!ownDocumentsError" :key="document.id" class="personal-documents__row">
+          <template v-else-if="!ownDocumentsError">
+          <div v-for="document in ownDocuments" :key="document.id" class="personal-documents__row">
             <div class="personal-documents__details">
               <strong>{{ document.title }}</strong>
               <span>{{ document.document_type === 'contract' ? documentsCopy.contract : documentsCopy.order }}
@@ -210,6 +211,7 @@ function status(request: OwnRequest) {
               {{ documentsCopy.download }}
             </a>
           </div>
+          </template>
           <div v-if="ownDocumentsLastPage > 1" class="actions">
             <BaseButton variant="secondary" :disabled="ownDocumentsLoading || ownDocumentsPage === 1"
               @click="ownDocumentsPage--">{{ documentsCopy.previous }}</BaseButton>

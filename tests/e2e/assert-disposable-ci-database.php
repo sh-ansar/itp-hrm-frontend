@@ -41,7 +41,9 @@ function assertDisposableBrowserDatabase(): void
     if (!$row
         || $row->database_name !== 'itp_hrm_browser_ci'
         || $row->user_name !== 'hrm_browser_ci'
-        || $row->address !== '127.0.0.1'
+        // In GitHub Actions the PostgreSQL server is in a container, so the
+        // server-side address is a Docker bridge IP. DB_HOST is already
+        // restricted to 127.0.0.1 and only port 5432 is forwarded on runner.
         || (int) $row->port !== 5432) {
         throw new RuntimeException('Connected PostgreSQL is not the ephemeral HRM browser CI service.');
     }

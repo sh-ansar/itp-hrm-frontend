@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { localTodayISO } from '../utils/localDate'
+import { usePersonnelActionCopy } from '../i18n/personnelActionWorkflow'
 import BaseButton from './ui/BaseButton.vue'
 import BaseDialog from './ui/BaseDialog.vue'
 import BaseFormField from './ui/BaseFormField.vue'
@@ -21,6 +22,7 @@ import {
 } from '../api/personnelActions'
 
 const props=defineProps<{companyId:string}>()
+const { copy } = usePersonnelActionCopy()
 const emit=defineEmits<{saved:[];cancelled:[]}>()
 
 const search=ref('')
@@ -47,22 +49,22 @@ const openAssignment=computed(()=>assignments.value.find(item=>item.valid_to===n
 const availableOperations=computed(()=>{
   if(openAssignment.value){
     return [
-      {id:'transfer',name:'Перевод'},
-      {id:'termination',name:'Увольнение'},
+      {id:'transfer',name:copy.value.transfer},
+      {id:'termination',name:copy.value.termination},
     ]
   }
-  return [{id:'hire',name:'Приём на работу'}]
+  return [{id:'hire',name:copy.value.hire}]
 })
 const employeeOptions=computed(()=>employees.value.map(item=>({
   id:item.id,
   name:`${item.last_name} ${item.first_name}${item.middle_name?' '+item.middle_name:''} · ${item.personnel_number}`,
 })))
-const operationLabel=computed(()=>operation.value==='hire'?'Приём на работу':operation.value==='transfer'?'Перевод':'Увольнение')
+const operationLabel=computed(()=>operation.value==='hire'?copy.value.hire:operation.value==='transfer'?copy.value.transfer:copy.value.termination)
 const targetDepartment=computed(()=>departments.value.find(item=>item.id===departmentId.value)?.name??'—')
 const targetPosition=computed(()=>positions.value.find(item=>item.id===positionId.value)?.name??'—')
 const currentAssignmentSummary=computed(()=>openAssignment.value
   ? [openAssignment.value.position_name,openAssignment.value.department_name].filter(Boolean).join(' · ')
-  : 'Нет открытого назначения')
+  : copy.value.noAssignmentShort)
 
 async function searchEmployees(){
   selectedEmployeeId.value=''
@@ -78,7 +80,7 @@ async function searchEmployees(){
       selectedEmployeeId.value=result.data[0].id
     }
   }catch(cause){
-    error.value=cause instanceof Error?cause.message:'Не удалось найти сотрудников'
+    error.value=cause instanceof Error?cause.message:copy.value.employeeSearchFailed
     employees.value=[]
   }finally{searchBusy.value=false}
 }
@@ -104,7 +106,7 @@ async function loadSelectedEmployee(){
       positionId.value=''
     }
   }catch(cause){
-    error.value=cause instanceof Error?cause.message:'Не удалось открыть сотрудника'
+    error.value=cause instanceof Error?cause.message:copy.value.employeeLoadFailed
     selectedEmployee.value=null
     assignments.value=[]
   }finally{detailBusy.value=false}
@@ -120,21 +122,21 @@ async function loadDirectories(){
     departments.value=d.data
     positions.value=p.data
   }catch(cause){
-    error.value=cause instanceof Error?cause.message:'Не удалось загрузить подразделения и должности'
+    error.value=cause instanceof Error?cause.message:copy.value.directoriesFailed
   }finally{directoriesBusy.value=false}
 }
 
 function validate(): string | null {
-  if (!selectedEmployee.value) return 'Выберите сотрудника'
-  if (!effectiveOn.value || !basisReference.value.trim()) return 'Укажите дату действия и основание'
+  if (!selectedEmployee.value) return copy.value.missingEmployee
+  if (!effectiveOn.value || !basisReference.value.trim()) return copy.value.missingDateBasis
   if (operation.value !== 'termination' && (!departmentId.value || !positionId.value)) {
-    return 'Выберите подразделение и должность'
+    return copy.value.missingDestination
   }
   if ((operation.value === 'transfer' || operation.value === 'termination') && !openAssignment.value) {
-    return 'У сотрудника нет открытого назначения для этой операции'
+    return copy.value.missingAssignment
   }
   if (operation.value === 'hire' && openAssignment.value) {
-    return 'У сотрудника уже есть открытое назначение. Обновите сведения.'
+    return copy.value.alreadyAssigned
   }
   return null
 }
@@ -186,7 +188,7 @@ async function execute() {
     confirmOpen.value = false
     emit('saved')
   } catch (cause) {
-    error.value = cause instanceof Error ? cause.message : 'Не удалось провести кадровое действие'
+    error.value = cause instanceof Error ? cause.message : copy.value.actionFailed
   } finally {
     saving.value = false
   }
@@ -207,17 +209,17 @@ loadDirectories()
     <BaseNotice v-if="error" tone="error" role="alert">{{ error }}</BaseNotice>
 
     <div class="employee-search">
-      <BaseFormField v-model="search" label="Поиск сотрудника" placeholder="ФИО или табельный номер" :disabled="searchBusy||saving" />
+      <BaseFormField v-model="search" :label="copy.search" :placeholder="copy.searchPlaceholder" :disabled="searchBusy||saving" />
       <BaseButton type="button" variant="secondary" :disabled="searchBusy||saving" @click="searchEmployees">
-        {{ searchBusy?'Поиск…':'Найти' }}
+        {{ searchBusy?copy.searching:copy.find }}
       </BaseButton>
     </div>
 
     <BaseSelectField
       v-if="employees.length"
       v-model="selectedEmployeeId"
-      label="Сотрудник"
-      placeholder="Выберите сотрудника"
+      :label="copy.employee"
+      :placeholder="copy.chooseEmployee"
       :options="employeeOptions"
       :disabled="detailBusy||saving"
       required
@@ -225,30 +227,30 @@ loadDirectories()
 
     <div v-if="selectedEmployee" class="employee-summary">
       <strong>{{ selectedEmployee.last_name }} {{ selectedEmployee.first_name }} {{ selectedEmployee.middle_name ?? '' }}</strong>
-      <span>Табельный № {{ selectedEmployee.personnel_number }}</span>
+      <span>{{ copy.personnelNumber }} {{ selectedEmployee.personnel_number }}</span>
       <span v-if="openAssignment">
-        Текущее назначение: {{ openAssignment.position_name }} · {{ openAssignment.department_name }} с {{ openAssignment.valid_from }}
+        {{ copy.currentAssignment }}: {{ openAssignment.position_name }} · {{ openAssignment.department_name }} {{ copy.since }} {{ openAssignment.valid_from }}
       </span>
-      <span v-else>Открытого назначения нет — доступен приём на работу.</span>
+      <span v-else>{{ copy.noAssignment }}</span>
     </div>
 
     <BaseSelectField
       v-if="selectedEmployee"
       v-model="operation"
-      label="Кадровое действие"
+      :label="copy.operation"
       :options="availableOperations"
       :disabled="saving"
       required
     />
 
     <div v-if="selectedEmployee" class="form-grid">
-      <BaseFormField v-model="effectiveOn" label="Дата действия" type="date" :disabled="saving" required />
-      <BaseFormField v-model="basisReference" label="Основание" placeholder="Приказ № / заявление / договор" :disabled="saving" required />
+      <BaseFormField v-model="effectiveOn" :label="copy.effectiveDate" type="date" :disabled="saving" required />
+      <BaseFormField v-model="basisReference" :label="copy.basis" :placeholder="copy.basisPlaceholder" :disabled="saving" required />
       <BaseSelectField
         v-if="operation!=='termination'"
         v-model="departmentId"
-        label="Подразделение"
-        placeholder="Выберите подразделение"
+        :label="copy.department"
+        :placeholder="copy.chooseDepartment"
         :options="departments"
         :disabled="directoriesBusy||saving"
         required
@@ -256,49 +258,49 @@ loadDirectories()
       <BaseSelectField
         v-if="operation!=='termination'"
         v-model="positionId"
-        label="Должность"
-        placeholder="Выберите должность"
+        :label="copy.position"
+        :placeholder="copy.choosePosition"
         :options="positions"
         :disabled="directoriesBusy||saving"
         required
       />
-      <BaseFormField v-model="notes" label="Комментарий" placeholder="Необязательно" :disabled="saving" />
+      <BaseFormField v-model="notes" :label="copy.note" :placeholder="copy.optional" :disabled="saving" />
     </div>
 
     <BaseNotice v-if="selectedEmployee&&operation==='termination'" tone="warning">
-      Увольнение закроет текущее открытое назначение датой увольнения. Проведённое кадровое действие не редактируется и не удаляется.
+      {{ copy.terminationWarning }}
     </BaseNotice>
     <BaseNotice v-else-if="selectedEmployee&&operation==='transfer'" tone="info">
-      Перевод атомарно закроет текущее назначение на день раньше новой даты и создаст новое назначение.
+      {{ copy.transferWarning }}
     </BaseNotice>
 
     <div class="actions">
-      <BaseButton type="button" variant="secondary" :disabled="saving" @click="emit('cancelled')">Отмена</BaseButton>
+      <BaseButton type="button" variant="secondary" :disabled="saving" @click="emit('cancelled')">{{ copy.cancel }}</BaseButton>
       <BaseButton type="submit" :disabled="saving||detailBusy||!selectedEmployee">
-        {{ saving?'Проведение…':'Продолжить: '+operationLabel }}
+        {{ saving?copy.processing:copy.continue+operationLabel }}
       </BaseButton>
     </div>
 
-    <BaseDialog :open="confirmOpen" title="Подтверждение кадрового действия" @close="closeConfirmation">
+    <BaseDialog :open="confirmOpen" :title="copy.confirmation" @close="closeConfirmation">
       <div class="action-confirmation">
         <BaseNotice tone="warning">
-          После подтверждения данные назначений будут изменены в системе. Эта операция не является созданием или электронной подписью приказа.
+          {{ copy.confirmationWarning }}
         </BaseNotice>
         <dl>
-          <div><dt>Действие</dt><dd>{{ operationLabel }}</dd></div>
-          <div><dt>Сотрудник</dt><dd>{{ selectedEmployee?.last_name }} {{ selectedEmployee?.first_name }} · {{ selectedEmployee?.personnel_number }}</dd></div>
-          <div><dt>Дата</dt><dd>{{ effectiveOn }}</dd></div>
-          <div><dt>Текущее назначение</dt><dd>{{ currentAssignmentSummary }}</dd></div>
-          <div v-if="operation!=='termination'"><dt>Новое подразделение</dt><dd>{{ targetDepartment }}</dd></div>
-          <div v-if="operation!=='termination'"><dt>Новая должность</dt><dd>{{ targetPosition }}</dd></div>
-          <div><dt>Основание</dt><dd>{{ basisReference }}</dd></div>
+          <div><dt>{{ copy.action }}</dt><dd>{{ operationLabel }}</dd></div>
+          <div><dt>{{ copy.employee }}</dt><dd>{{ selectedEmployee?.last_name }} {{ selectedEmployee?.first_name }} · {{ selectedEmployee?.personnel_number }}</dd></div>
+          <div><dt>{{ copy.date }}</dt><dd>{{ effectiveOn }}</dd></div>
+          <div><dt>{{ copy.currentAssignment }}</dt><dd>{{ currentAssignmentSummary }}</dd></div>
+          <div v-if="operation!=='termination'"><dt>{{ copy.targetDepartment }}</dt><dd>{{ targetDepartment }}</dd></div>
+          <div v-if="operation!=='termination'"><dt>{{ copy.targetPosition }}</dt><dd>{{ targetPosition }}</dd></div>
+          <div><dt>{{ copy.basis }}</dt><dd>{{ basisReference }}</dd></div>
         </dl>
         <BaseNotice v-if="error" tone="error" role="alert">{{ error }}</BaseNotice>
       </div>
       <template #footer>
-        <BaseButton type="button" variant="secondary" :disabled="saving" @click="closeConfirmation">Вернуться</BaseButton>
+        <BaseButton type="button" variant="secondary" :disabled="saving" @click="closeConfirmation">{{ copy.back }}</BaseButton>
         <BaseButton type="button" :disabled="saving" @click="execute">
-          {{ saving ? 'Проведение…' : 'Подтвердить и провести' }}
+          {{ saving ? copy.processing : copy.execute }}
         </BaseButton>
       </template>
     </BaseDialog>

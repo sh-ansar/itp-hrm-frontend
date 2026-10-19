@@ -7,7 +7,7 @@ const base = (import.meta.env.VITE_API_BASE_URL || '/api/v1').replace(/\/$/, '')
 const validate = (value: string) => { if (!uuid.test(value)) throw new Error('Invalid identifier') }
 function path(company: string, request: string): string {
   validate(company); validate(request)
-  return \`/companies/\${company}/leave-requests/\${request}/evidence\`
+  return `/companies/${company}/leave-requests/${request}/evidence`
 }
 export interface EvidenceRequest {
   id: string
@@ -19,13 +19,13 @@ export interface EvidenceRequest {
 }
 export function privateEvidenceFileUrl(company: string, request: string): string {
   if (!base.startsWith('/') || base.startsWith('//')) throw new Error('API base must be same-origin')
-  return \`\${base}\${path(company, request)}/file\`
+  return `${base}${path(company, request)}/file`
 }
 export function reviewProtectedEvidence(company: string, request: string,
   revision: number, decision: 'verified' | 'rejected', comment: string | null) {
   if (!Number.isSafeInteger(revision) || revision < 1) throw new Error('Invalid revision')
   return apiRequest<{ data: { status: 'verified' | 'rejected'; revision: number } }>(
-    \`\${path(company, request)}/review\`, {
+    `${path(company, request)}/review`, {
       method: 'POST', body: JSON.stringify({ revision, decision, comment }),
     },
   )

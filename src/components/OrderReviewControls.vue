@@ -79,11 +79,11 @@ async function confirm(): Promise<void> {
       {{ row.review_note }}
     </p>
     <div class="order-review-controls__buttons">
-      <BaseButton v-if="showSubmit" variant="secondary" size="sm" :disabled="!canSubmit || busy"
+      <BaseButton v-if="showSubmit" variant="secondary" :disabled="!canSubmit || busy"
         @click="open('submit')">{{ copy.submit }}</BaseButton>
-      <BaseButton v-if="showReview" variant="secondary" size="sm" :disabled="busy"
+      <BaseButton v-if="showReview" variant="secondary" :disabled="busy"
         @click="open('approve')">{{ copy.approve }}</BaseButton>
-      <BaseButton v-if="showReview" variant="secondary" size="sm" :disabled="busy"
+      <BaseButton v-if="showReview" variant="secondary" :disabled="busy"
         @click="open('reject')">{{ copy.reject }}</BaseButton>
     </div>
     <p v-if="showSubmit && !canSubmit" class="order-review-controls__note">{{ copy.missing }}</p>

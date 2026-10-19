@@ -54,9 +54,12 @@ function bonusPath(companyId: string, bonusId: string) {
   if (!uuid.test(bonusId)) throw new Error('Invalid bonus id')
   return companyPath(companyId) + '/' + bonusId
 }
-export function getEmployeeBonuses(companyId: string, page = 1): Promise<EmployeeBonusesResponse> {
+export function getEmployeeBonuses(companyId: string, page = 1,
+  status?: BonusStatus): Promise<EmployeeBonusesResponse> {
   if (!Number.isSafeInteger(page) || page < 1) throw new Error('Invalid page')
-  return apiRequest<EmployeeBonusesResponse>(companyPath(companyId) + '?page=' + page)
+  const params = new URLSearchParams({ page: String(page) })
+  if (status) params.set('status', status)
+  return apiRequest<EmployeeBonusesResponse>(companyPath(companyId) + '?' + params.toString())
 }
 export function createEmployeeBonus(companyId: string, values: BonusInput, requestKey: string): Promise<BonusResponse> {
   if (!uuid.test(requestKey)) throw new Error('Invalid request key')

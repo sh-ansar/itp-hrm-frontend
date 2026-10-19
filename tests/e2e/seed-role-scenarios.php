@@ -3,12 +3,11 @@
 require __DIR__.'/../../backend/vendor/autoload.php';
 $app = require __DIR__.'/../../backend/bootstrap/app.php';
 $app->make(\Illuminate\Contracts\Console\Kernel::class)->bootstrap();
-if (app()->environment('production') || config('database.default') !== 'sqlite'
-    || !str_contains((string) config('database.connections.sqlite.database'), 'browser-e2e.sqlite')
-    || !config('hrm.role_management_enabled')) {
-    throw new RuntimeException('Role scenario seed requires the isolated role-enabled browser database.');
-}
-$company = '11111111-1111-4111-8111-111111111111';
+require __DIR__.'/assert-disposable-ci-database.php';
+assertDisposableBrowserDatabase();
+if (!config('hrm.role_management_enabled')) {
+    throw new RuntimeException('Role fixtures require role management enabled.');
+}$company = '11111111-1111-4111-8111-111111111111';
 foreach (['manager' => 'department_manager', 'employee' => 'employee'] as $name => $role) {
     $user = \App\Models\User::query()->updateOrCreate(['email' => "synthetic-{$name}@example.test"], [
         'name' => 'Synthetic '.ucfirst($name).' User',

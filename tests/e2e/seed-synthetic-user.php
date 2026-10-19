@@ -2,17 +2,15 @@
 
 declare(strict_types=1);
 
-// This is for an ephemeral CI SQLite database only. It creates no real users.
+// This is for an disposable CI SQLite or PostgreSQL browser database only. It creates no real users.
 // No registration or impersonation routes are exposed to the HTTP application.
 require __DIR__.'/../../backend/vendor/autoload.php';
 
 $app = require __DIR__.'/../../backend/bootstrap/app.php';
 $app->make(\Illuminate\Contracts\Console\Kernel::class)->bootstrap();
 
-if (app()->environment('production') || !str_contains((string) config('database.connections.sqlite.database'), 'browser-e2e.sqlite')) {
-    throw new RuntimeException('Refusing to provision synthetic user outside isolated browser E2E database.');
-}
-
+require __DIR__.'/assert-disposable-ci-database.php';
+assertDisposableBrowserDatabase();
 \App\Models\User::query()->updateOrCreate(
     ['email' => 'synthetic-e2e@example.test'],
     [

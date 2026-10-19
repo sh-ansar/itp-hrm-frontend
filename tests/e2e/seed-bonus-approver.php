@@ -2,17 +2,16 @@
 
 declare(strict_types=1);
 
-// Only executed after migrate:fresh on an ephemeral browser-e2e SQLite DB.
+// Only executed after migrate:fresh on an disposable CI browser database.
 require __DIR__.'/../../backend/vendor/autoload.php';
 $app = require __DIR__.'/../../backend/bootstrap/app.php';
 $app->make(\Illuminate\Contracts\Console\Kernel::class)->bootstrap();
 
-if (app()->environment('production')
-    || ! str_contains((string) config('database.connections.sqlite.database'), 'browser-e2e.sqlite')
-    || ! (bool) config('hrm.bonus_writes_enabled')) {
-    throw new RuntimeException('Bonus approver fixture is restricted to isolated write-enabled browser E2E tests.');
+require __DIR__.'/assert-disposable-ci-database.php';
+assertDisposableBrowserDatabase();
+if (!(bool) config('hrm.bonus_writes_enabled')) {
+    throw new RuntimeException('Synthetic bonus approver requires HRM bonus writes enabled.');
 }
-
 $company = '11111111-1111-4111-8111-111111111111';
 if (! \Illuminate\Support\Facades\DB::table('companies')->where('id', $company)->exists()) {
     throw new RuntimeException('Synthetic test company not found.');

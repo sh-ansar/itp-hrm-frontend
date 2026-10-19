@@ -42,6 +42,17 @@ test('static HRM build works under /hrm/ after direct navigation and refresh', a
     assert.equal(favicon, '/hrm/brand/itp-mark.svg')
     const iconResponse = await page.request.get(favicon)
     assert.equal(iconResponse.status(), 200)
+    const fontsStylesheet = await page.request.get('/hrm/fonts.css')
+    assert.equal(fontsStylesheet.status(), 200, 'The prefixed font declaration must load')
+    const fontCss = await fontsStylesheet.text()
+    assert.match(fontCss, /\.\/fonts\/GolosText\.ttf/, 'Font URL must be relative to /hrm/')
+    const fontFile = await page.request.get('/hrm/fonts/GolosText.ttf')
+    assert.equal(fontFile.status(), 200, 'The local Golos font must resolve under /hrm/')
+    const fontReady = await page.evaluate(async () => {
+      await document.fonts.ready
+      return document.fonts.check('14px "Golos Text"')
+    })
+    assert.equal(fontReady, true, 'Golos font must be usable in /hrm/ after production build')
     const icon = await iconResponse.text()
     assert.match(icon, /viewBox="0 0 39 29"/)
     assert.match(icon, /fill="#0697E0"/)

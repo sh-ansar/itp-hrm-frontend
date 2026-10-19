@@ -27,6 +27,8 @@ import {
   type SystemRoleCode,
 } from '../api/roles'
 
+const demoMode = import.meta.env.VITE_DEMO_MODE === 'true'
+
 const roleLabels: Record<SystemRoleCode, string> = {
   company_admin: 'Администратор компании',
   hr_specialist: 'HR-специалист',
@@ -312,13 +314,14 @@ onMounted(async () => {
     </div>
 
     <BaseNotice v-if="error" tone="error">{{ error }}</BaseNotice>
+    <BaseNotice v-if="demoMode" tone="info">Демонстрационные учётные записи и роли. Изменения сохраняются только до перезагрузки страницы.</BaseNotice>
     <BaseNotice v-if="success" tone="success">{{ success }}</BaseNotice>
 
     <BaseViewTabs v-model="activeTab" :options="tabs" label="Разделы ролей и доступов" />
 
     <BaseKpiGrid label="Сводка по ролям">
       <BaseRegistryMetricCard title="Пользователи" :value="memberships.length"
-        description="реальных учётных записей с доступом" :icon="publicAsset('prototype-icons/People-groupf.svg')" />
+        description="учётных записей с доступом" :icon="publicAsset('prototype-icons/People-groupf.svg')" />
       <BaseRegistryMetricCard title="Администраторы" :value="roleCounts.company_admin ?? 0"
         description="защищённые назначения" :icon="publicAsset('prototype-icons/Info.svg')" />
       <BaseRegistryMetricCard title="HR-специалисты" :value="roleCounts.hr_specialist ?? 0"
@@ -331,7 +334,7 @@ onMounted(async () => {
       <div class="roles-heading">
         <div>
           <h1>Назначение ролей</h1>
-          <p>{{ selectedCompany?.name }} · данные из HRM API</p>
+          <p>{{ selectedCompany?.name }} · {{ demoMode ? 'Демо-данные' : 'данные из HRM API' }}</p>
         </div>
         <BaseSelectField v-if="companies.length > 1" v-model="company" label="Компания" :options="companies" />
       </div>
@@ -374,7 +377,7 @@ onMounted(async () => {
       <div class="roles-heading">
         <div>
           <h1>Права системных ролей</h1>
-          <p>Read-only проекция текущей серверной политики доступа</p>
+          <p>{{ demoMode ? 'Демонстрационная матрица прав' : 'Read-only проекция текущей серверной политики доступа' }}</p>
         </div>
         <BaseSelectField v-model="selectedRoleForMatrix" label="Роль" :options="matrixRoleOptions" />
       </div>

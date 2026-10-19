@@ -81,5 +81,14 @@ const ringStyle = computed(() => ({
 .registry-summary-ring-copy{display:grid;gap:4px;min-width:0}
 .registry-summary-ring-copy strong{font-size:12px;line-height:18px;color:var(--color-text);font-weight:600}
 .registry-summary-ring-copy small{font-size:12px;line-height:18px;color:var(--color-muted);overflow-wrap:anywhere}
-@media(max-width:600px){.registry-summary-card{min-height:115px;padding:12px}}
+@media(max-width:600px){
+  .registry-summary-card{min-height:116px;padding:11px;gap:5px}
+  .registry-summary-heading span{font-size:10px;line-height:15px;overflow-wrap:anywhere}
+  .registry-summary-value{font-size:23px;line-height:26px}
+  .registry-summary-description{font-size:11px;line-height:15px}
+  .registry-summary-ring-layout{align-items:flex-start;flex-direction:column;gap:7px;margin-top:1px}
+  .registry-summary-ring{width:43px;height:43px;flex-basis:43px}
+  .registry-summary-ring-copy{gap:3px}
+  .registry-summary-ring-copy strong,.registry-summary-ring-copy small{font-size:10px;line-height:14px}
+}
 </style>

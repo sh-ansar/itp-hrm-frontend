@@ -5,16 +5,18 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>ITP HRM</title>
   <link rel="icon" type="image/svg+xml" href="%BASE_URL%brand/itp-mark.svg" />
+  <!-- Prefix-aware local font; works on / and on platform /hrm/. -->
+  <link rel="stylesheet" href="%BASE_URL%fonts.css" />
   <meta name="application-name" content="ITP HRM" />
-  <meta name="theme-color" content="#092634" />
+  <meta name="theme-color" content="#171b20" />
   <!-- Critical styles must not depend on a separate DNS request. The generated Vite CSS
        still owns the full application, while these styles keep startup and theme contrast
        readable if a stylesheet request fails or is cached out of sequence. -->
   <style>
     :root{color:#093044;background:#f8fafb}
-    :root[data-theme="dark"]{color:#e5f6ff;background:#092634}
+    :root[data-theme="dark"]{color:#e8edf1;background:#171b20}
     body{margin:0;min-height:100vh;min-height:100dvh;color:#093044;background:#f8fafb}
-    :root[data-theme="dark"] body{color:#e5f6ff;background:#092634}
+    :root[data-theme="dark"] body{color:#e8edf1;background:#171b20}
     .boot-status{
       box-sizing:border-box;min-height:100vh;min-height:100dvh;display:flex;
       align-items:center;justify-content:center;padding:20px;
@@ -31,10 +33,10 @@
     .boot-status__card p{margin:0;font-size:14px;line-height:20px}
     .boot-status__card small{color:var(--color-muted,#7199ac);font-size:12px;line-height:18px}
     :root[data-theme="dark"] .boot-status{
-      background:var(--color-page,#092634);color:var(--color-text,#e5f6ff)
+      background:var(--color-page,#171b20);color:var(--color-text,#e8edf1)
     }
     :root[data-theme="dark"] .boot-status__card{
-      background:var(--color-surface,#032130);border-color:rgba(141,192,216,.12)
+      background:var(--color-surface,#20252b);border-color:rgba(141,192,216,.12)
     }
   </style>
 </head>

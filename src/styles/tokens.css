@@ -1,6 +1,5 @@
 /* HRM visual contract aligned to sh-ansar/demo_bnt_dt.
    Page components should consume semantic tokens instead of page-local values. */
-@font-face{font-family:"Golos Text";src:url("/fonts/GolosText.ttf") format("truetype");font-weight:400 900;font-style:normal;font-display:swap}
 
 :root {
   font-family:"Golos Text",Golos,"Segoe UI",Arial,sans-serif;
@@ -93,48 +92,49 @@
 }
 
 :root[data-theme="dark"] {
-  color:#e5f6ff;
-  background:#092634;
-  --color-primary:#20b9ee;
-  --color-primary-hover:#38c4f2;
-  --color-primary-stroke:rgba(141,192,216,.28);
-  --color-text:#e5f6ff;
-  --color-text-secondary:#ffffff;
-  --color-muted:#8dc0d8;
-  --color-page:#092634;
-  --color-surface:#032130;
-  --color-surface-raised:rgba(3,33,48,.92);
-  --color-soft:#0b2b3a;
-  --color-stroke:rgba(141,192,216,.12);
-  --color-stroke-strong:rgba(141,192,216,.28);
-  --color-accent-soft:rgba(0,136,204,.2);
-  --color-hover:rgba(147,206,224,.08);
-  --color-focus:#57b0de;
-  --color-table-heading:#123747;
-  --color-table-border:rgba(141,192,216,.20);
-  --color-table-heading-text:#e5f6ff;
-  --color-table-hover:rgba(147,206,224,.06);
-  --color-on-primary:#fefefe;
-  --color-overlay:rgba(0,12,20,.62);
-  --color-danger:#f42525;
-  --color-danger-border:rgba(244,37,37,.36);
-  --color-danger-surface:rgba(208,23,23,.2);
-  --color-warning:#e5a500;
-  --color-warning-surface:rgba(229,165,0,.2);
-  --color-success:#17cf3f;
-  --color-success-surface:rgba(18,161,49,.24);
-  --calendar-work-bg:#163e30;
-  --calendar-work-border:#3e9264;
-  --calendar-work-text:#c8f5d9;
-  --calendar-weekend-bg:#4e2830;
-  --calendar-weekend-border:#b36a6a;
-  --calendar-weekend-text:#ffd4d4;
-  --calendar-holiday-bg:#584419;
-  --calendar-holiday-border:#b39249;
-  --calendar-holiday-text:#ffebad;
-  --shadow-card:0 2px 4px rgba(0,0,0,.14);
-  --shadow-control:0 2px 4px rgba(0,0,0,.12);
-  --shadow-float:0 32px 70px rgba(0,0,0,.24),0 13px 29px rgba(0,0,0,.18);
+  /* Slate / neutral dark surface: the source prototype must not become a blue wash. */
+  color:#e8edf1;
+  background:#171b20;
+  --color-primary:#45bce9;
+  --color-primary-hover:#63caef;
+  --color-primary-stroke:rgba(93,184,221,.35);
+  --color-text:#e8edf1;
+  --color-text-secondary:#f8fafb;
+  --color-muted:#a5b2bd;
+  --color-page:#171b20;
+  --color-surface:#20252b;
+  --color-surface-raised:#292f35;
+  --color-soft:#252b31;
+  --color-stroke:rgba(203,217,227,.13);
+  --color-stroke-strong:rgba(203,217,227,.28);
+  --color-accent-soft:rgba(69,188,233,.15);
+  --color-hover:rgba(226,238,247,.075);
+  --color-focus:#7cccf0;
+  --color-table-heading:#2b343b;
+  --color-table-border:rgba(197,211,222,.22);
+  --color-table-heading-text:#e8edf1;
+  --color-table-hover:rgba(220,235,245,.055);
+  --color-on-primary:#08222f;
+  --color-overlay:rgba(7,9,12,.68);
+  --color-danger:#ff7777;
+  --color-danger-border:rgba(255,119,119,.38);
+  --color-danger-surface:rgba(185,56,61,.2);
+  --color-warning:#f5bb54;
+  --color-warning-surface:rgba(215,166,59,.19);
+  --color-success:#65d89a;
+  --color-success-surface:rgba(65,166,116,.22);
+  --calendar-work-bg:#1d4130;
+  --calendar-work-border:#478962;
+  --calendar-work-text:#d5f1df;
+  --calendar-weekend-bg:#492b30;
+  --calendar-weekend-border:#a66a6a;
+  --calendar-weekend-text:#ffdcda;
+  --calendar-holiday-bg:#4b3c22;
+  --calendar-holiday-border:#ae8d4a;
+  --calendar-holiday-text:#ffebb9;
+  --shadow-card:0 2px 10px rgba(0,0,0,.16);
+  --shadow-control:0 2px 7px rgba(0,0,0,.13);
+  --shadow-float:0 35px 80px rgba(0,0,0,.4),0 12px 30px rgba(0,0,0,.22);
 }
 
 @media(max-width:959px){

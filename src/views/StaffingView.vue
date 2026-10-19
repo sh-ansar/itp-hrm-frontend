@@ -614,4 +614,16 @@ onMounted(refreshCompanies)
 .staffing-summary-item strong{font-size:24px;font-weight:600;color:var(--color-primary)}
 .staffing-summary-item span{font-size:13px;text-transform:uppercase;color:var(--color-text)}
 @media(max-width:700px){.plan-header .plan-title{min-width:0}.plan-header .snapshot-row{width:100%;justify-content:space-between}.staffing-summary-strip{gap:10px}.staffing-summary-item{min-height:94px;padding:13px}}
+
+/* The real 1180px viewport must not clip date actions beside the plan name. */
+@media(min-width:701px) and (max-width:1420px){
+  .staffing-heading{grid-template-columns:minmax(0,1fr);align-items:start;gap:11px}
+  .staffing-heading-actions{justify-content:flex-start;flex-wrap:wrap;gap:8px}
+  .staffing-heading-actions :deep(.base-select-field){flex:0 1 220px;max-width:260px;width:220px}
+  .plan-header{flex-direction:column;align-items:stretch;gap:9px}
+  .plan-header .plan-title{flex:none;min-width:0;width:100%}
+  .plan-header .snapshot-row{order:2;display:flex;flex-wrap:wrap;justify-content:flex-start;align-items:flex-end;gap:8px;width:100%}
+  .plan-header .snapshot-row :deep(.field){max-width:205px;width:205px}
+  .plan-header .snapshot-row :deep(button){flex:0 0 auto;white-space:nowrap}
+}
 </style>

@@ -4,9 +4,13 @@ import type { LeaveCategory, LeaveRequestStatus } from './leaves'
 
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 const base = (import.meta.env.VITE_API_BASE_URL || '/api/v1').replace(/\/$/, '')
-const validate = (value: string) => { if (!uuid.test(value)) throw new Error('Invalid identifier') }
+const validate = (value: string, label: 'company' | 'request') => {
+  if (typeof value !== 'string' || !uuid.test(value)) {
+    throw new Error(`Invalid ${label} identifier (type ${typeof value}, length ${typeof value === 'string' ? value.length : 'n/a'})`)
+  }
+}
 function path(company: string, request: string): string {
-  validate(company); validate(request)
+  validate(company, 'company'); validate(request, 'request')
   return `/companies/${company}/leave-requests/${request}/evidence`
 }
 export interface EvidenceRequest {

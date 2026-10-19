@@ -6,9 +6,12 @@ import BaseNotice from './ui/BaseNotice.vue'
 import BaseSelectField from './ui/BaseSelectField.vue'
 import EmployeeLookupField from './EmployeeLookupField.vue'
 import { createDocumentDraft, documentTypes, type DocumentType } from '../api/documents'
+import { useOrderReviewCopy } from '../i18n/orderReview'
 import { listPersonnelActions, type PersonnelActionRow } from '../api/personnelActions'
 
-const props = defineProps<{ companyId: string }>()
+const props = defineProps<{ companyId: string; orderApprovalsEnabled?: boolean }>()
+const { orderCopy } = useOrderReviewCopy()
+const orderRequired = computed(() => !!props.orderApprovalsEnabled && type.value === 'order')
 const emit = defineEmits<{ saved: [documentId: string]; cancelled: [] }>()
 
 const employeeId = ref('')
@@ -54,6 +57,10 @@ async function save() {
     error.value = 'Введите название документа'
     return
   }
+  if (orderRequired.value && (!documentNumber.value.trim() || !issuedOn.value)) {
+    error.value = orderCopy.value.missing
+    return
+  }
   saving.value = true
   try {
     const result = await createDocumentDraft(props.companyId, {
@@ -86,8 +93,9 @@ watch(employeeId, loadPersonnelActions)
       :options="actionOptions" :disabled="saving || actionsBusy" />
     <BaseFormField v-model="title" label="Название документа" placeholder="Например: Приказ о переводе" :disabled="saving" required />
     <div class="two-columns">
-      <BaseFormField v-model="documentNumber" label="Номер документа" placeholder="Необязательно" :disabled="saving" />
-      <BaseFormField v-model="issuedOn" label="Дата документа" type="date" :disabled="saving" />
+      <BaseFormField v-model="documentNumber" label="Номер документа" :required="orderRequired"
+        :placeholder="orderRequired ? '№ приказа' : 'Необязательно'" :disabled="saving" />
+      <BaseFormField v-model="issuedOn" label="Дата документа" type="date" :required="orderRequired" :disabled="saving" />
     </div>
 
     <div class="buttons">

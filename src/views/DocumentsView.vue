@@ -367,6 +367,7 @@ onMounted(loadCompanies)
 
     <BaseDialog :open="createOpen" :title="tr('Новый черновик документа')" @close="createOpen = false">
       <DocumentDraftForm v-if="createOpen && company" :key="company" :company-id="company"
+        :order-approvals-enabled="orderApprovalsEnabled"
         @saved="documentSaved" @cancelled="createOpen = false" />
     </BaseDialog>
     <BaseDialog :open="uploadTarget !== null" :title="tr('Прикрепить PDF')" @close="uploadTarget = null">

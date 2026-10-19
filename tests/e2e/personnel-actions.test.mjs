@@ -20,7 +20,7 @@ async function openActionForSynthetic(page){
   await dialog.waitFor()
   await dialog.getByLabel('Поиск сотрудника').fill('E2E-001')
   await dialog.getByRole('button',{name:'Найти'}).click()
-  await dialog.getByText(/Текущее назначение|Открытого назначения нет/).waitFor()
+  await dialog.locator('.employee-summary').getByText(/Текущее назначение|Открытого назначения нет/).waitFor()
   return dialog
 }
 
@@ -41,7 +41,18 @@ test('HR conducts transfer termination and rehire through personnel actions work
     await dialog.getByLabel('Основание').fill('ORDER-E2E-TRANSFER')
     await dialog.getByLabel('Подразделение').selectOption({label:'Visible Finance Child'})
     await dialog.getByLabel('Должность').selectOption({label:'Test Engineer'})
-    await dialog.getByRole('button',{name:/Провести: Перевод/}).click()
+    await dialog.getByRole('button',{name:/Продолжить: Перевод/}).click()
+    let confirmation=page.getByRole('dialog',{name:'Подтверждение кадрового действия'})
+    await confirmation.getByText('Visible Finance Child',{exact:true}).waitFor()
+    assert.equal(await page.locator('.action-mobile-card').filter({ hasText: 'ORDER-E2E-TRANSFER' }).count(),0,
+      'Transfer must not execute at preflight stage')
+    await confirmation.getByRole('button',{name:'Вернуться'}).click()
+    await confirmation.waitFor({state:'hidden'})
+    assert.equal(await page.locator('.action-mobile-card').filter({ hasText: 'ORDER-E2E-TRANSFER' }).count(),0,
+      'Cancelling preflight must not mutate staffing')
+    await dialog.getByRole('button',{name:/Продолжить: Перевод/}).click()
+    confirmation=page.getByRole('dialog',{name:'Подтверждение кадрового действия'})
+    await confirmation.getByRole('button',{name:'Подтвердить и провести'}).click()
 
     const transferRow=page.locator('.action-mobile-card').filter({ hasText: 'ORDER-E2E-TRANSFER' })
     await Promise.race([
@@ -55,7 +66,12 @@ test('HR conducts transfer termination and rehire through personnel actions work
     await dialog.getByLabel('Кадровое действие').selectOption('termination')
     await dialog.getByLabel('Дата действия').fill('2026-10-10')
     await dialog.getByLabel('Основание').fill('ORDER-E2E-TERM')
-    await dialog.getByRole('button',{name:/Провести: Увольнение/}).click()
+    await dialog.getByRole('button',{name:/Продолжить: Увольнение/}).click()
+    confirmation=page.getByRole('dialog',{name:'Подтверждение кадрового действия'})
+    await confirmation.getByText('Увольнение',{exact:true}).waitFor()
+    assert.equal(await page.locator('.action-mobile-card').filter({ hasText: 'ORDER-E2E-TERM' }).count(),0,
+      'Termination is not applied before the final confirmation')
+    await confirmation.getByRole('button',{name:'Подтвердить и провести'}).click()
 
     const terminationRow=page.locator('.action-mobile-card').filter({ hasText: 'ORDER-E2E-TERM' })
     await terminationRow.waitFor()
@@ -75,7 +91,10 @@ test('HR conducts transfer termination and rehire through personnel actions work
     await dialog.getByLabel('Основание').fill('ORDER-E2E-REHIRE')
     await dialog.getByLabel('Подразделение').selectOption({label:'Visible Finance'})
     await dialog.getByLabel('Должность').selectOption({label:'Test Engineer'})
-    await dialog.getByRole('button',{name:/Провести: Приём на работу/}).click()
+    await dialog.getByRole('button',{name:/Продолжить: Приём на работу/}).click()
+    confirmation=page.getByRole('dialog',{name:'Подтверждение кадрового действия'})
+    await confirmation.getByText('Visible Finance',{exact:true}).waitFor()
+    await confirmation.getByRole('button',{name:'Подтвердить и провести'}).click()
 
     const hireRow=page.locator('.action-mobile-card').filter({ hasText: 'ORDER-E2E-REHIRE' })
     await hireRow.waitFor()

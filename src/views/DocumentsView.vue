@@ -5,6 +5,7 @@ import { useWorkspaceI18n } from '../composables/useWorkspaceI18n'
 import { useUiFormatters } from '../composables/useUiFormatters'
 import { useDocumentSharingCopy } from '../i18n/documentSharing'
 import { computed, onMounted, ref, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import { FileCheck2, FilePlus2, FileText, Paperclip } from 'lucide-vue-next'
 import BaseButton from '../components/ui/BaseButton.vue'
 import BaseCard from '../components/ui/BaseCard.vue'
@@ -37,6 +38,17 @@ import {
 const { tr } = useWorkspaceI18n()
 const { sharing } = useDocumentSharingCopy()
 const { orderCopy } = useOrderReviewCopy()
+const route = useRoute()
+type OrderStatusFilter = 'all' | 'draft' | 'submitted' | 'approved' | 'rejected'
+function queryType(): string {
+  const requested = route.query.type
+  return typeof requested === 'string' && documentTypes.some(type => type.id === requested) ? requested : 'all'
+}
+function queryStatus(): OrderStatusFilter {
+  const requested = route.query.status
+  return requested === 'draft' || requested === 'submitted' || requested === 'approved' || requested === 'rejected'
+    ? requested : 'all'
+}
 const fmt = useUiFormatters()
 
 const companies = ref<CompanyRecord[]>([])
@@ -53,7 +65,13 @@ const canReviewOrders = ref(false)
 const page = ref(1)
 const lastPage = ref(1)
 const total = ref(0)
-const typeFilter = ref('all')
+const typeFilter = ref(queryType())
+const statusFilter = ref<OrderStatusFilter>(queryType() === 'order' ? queryStatus() : 'all')
+const statusOptions = computed(() => [
+  { id: 'all', name: tr('Все статусы') },
+  ...(['draft', 'submitted', 'approved', 'rejected'] as const)
+    .map(status => ({ id: status, name: orderCopy.value[status] })),
+])
 const employeeFilter = ref('')
 const createOpen = ref(false)
 const uploadTarget = ref<DocumentRow | null>(null)
@@ -134,6 +152,7 @@ async function loadDocuments() {
       page.value,
       typeFilter.value === 'all' ? '' : typeFilter.value as DocumentType,
       employeeFilter.value,
+      typeFilter.value === 'order' && statusFilter.value !== 'all' ? statusFilter.value : '',
     )
     if (current !== generation) return
     rows.value = result.data
@@ -211,7 +230,8 @@ async function confirmShare(): Promise<void> {
 
 watch(company, () => {
   page.value = 1
-  typeFilter.value = 'all'
+  typeFilter.value = queryType()
+  statusFilter.value = typeFilter.value === 'order' ? queryStatus() : 'all'
   employeeFilter.value = ''
   createOpen.value = false
   uploadTarget.value = null
@@ -219,8 +239,13 @@ watch(company, () => {
   shareError.value = ''
   success.value = ''
 })
-watch([company, page, typeFilter, employeeFilter], loadDocuments)
-watch([typeFilter, employeeFilter], () => { page.value = 1 })
+watch([company, page, typeFilter, employeeFilter, statusFilter], loadDocuments)
+watch([typeFilter, employeeFilter, statusFilter], () => { page.value = 1 })
+watch(typeFilter, value => { if (value !== 'order') statusFilter.value = 'all' })
+watch(() => [route.query.type, route.query.status], () => {
+  typeFilter.value = queryType()
+  statusFilter.value = typeFilter.value === 'order' ? queryStatus() : 'all'
+})
 onMounted(loadCompanies)
 </script>
 
@@ -253,6 +278,8 @@ onMounted(loadCompanies)
 
       <div class="documents-filter-row">
         <EmployeeLookupField v-if="company" :key="company" v-model="employeeFilter" :company-id="company" allow-all />
+        <BaseSelectField v-if="orderApprovalsEnabled && typeFilter === 'order'"
+          v-model="statusFilter" label="Статус приказа" :options="statusOptions" />
       </div>
 
       <div class="summary-grid" :aria-label="tr('Сводка документов')">
@@ -409,7 +436,8 @@ onMounted(loadCompanies)
 .documents-heading p{margin:6px 0 0;color:var(--color-muted);font-size:12px}
 .documents-heading-controls{display:flex;align-items:end;justify-content:flex-end;gap:10px;flex-wrap:wrap}
 .documents-heading-controls :deep(.base-select-field){width:220px;max-width:220px}
-.documents-filter-row{display:flex;align-items:end;justify-content:flex-end;min-width:0}
+.documents-filter-row{display:flex;align-items:end;justify-content:flex-end;gap:var(--space-3);flex-wrap:wrap;min-width:0}
+.documents-filter-row :deep(.base-select-field){width:210px;max-width:100%}
 .documents-filter-row :deep(.lookup){width:min(420px,100%)}
 .summary-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
 .summary-card{display:grid;grid-template-columns:auto minmax(0,1fr);align-content:start;gap:5px 9px;min-height:104px}
@@ -452,6 +480,7 @@ onMounted(loadCompanies)
   .documents-heading-controls :deep(.base-button){width:100%}
   .documents-filter-row{justify-content:stretch}
   .documents-filter-row :deep(.lookup){width:100%}
+  .documents-filter-row :deep(.base-select-field){width:100%}
   .summary-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
 }
 </style>

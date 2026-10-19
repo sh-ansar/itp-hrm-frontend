@@ -80,6 +80,19 @@ test('HR prepares an order PDF; separate company admin approves; employee sees o
     await row.getByText('На согласовании', { exact: true }).waitFor()
     assert.equal(await row.getByRole('button', { name: 'Поделиться' }).count(), 0)
 
+    // Server-filtered inbox totals must count only pending orders, not draft/approved.
+    await hr.page.goto('/personnel-actions')
+    const inbox = hr.page.getByRole('region', { name: 'Ожидают согласования' })
+    const pendingOrders = inbox.locator('.approval-inbox__card--orders')
+    await pendingOrders.getByText('1', { exact: true }).waitFor()
+    assert.match(await pendingOrders.innerText(), /Приказы/)
+    await pendingOrders.click()
+    await hr.page.waitForURL(url => url.pathname.endsWith('/documents')
+      && url.searchParams.get('type') === 'order'
+      && url.searchParams.get('status') === 'submitted')
+    assert.equal(await hr.page.getByRole('combobox', { name: 'Статус приказа' }).inputValue(), 'submitted')
+    await hr.page.getByRole('row').filter({ hasText: 'Synthetic internal approval order' }).waitFor()
+
     const hrList = await api(hr.page, base + '/documents?document_type=order')
     const order = hrList.body.data.find(r => r.title === 'Synthetic internal approval order')
     assert.ok(order)

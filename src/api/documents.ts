@@ -75,6 +75,7 @@ export function listDocuments(
   page = 1,
   documentType: DocumentType | '' = '',
   employeeId = '',
+  status: 'draft' | 'submitted' | 'approved' | 'rejected' | '' = '',
 ): Promise<DocumentListResponse> {
   validateId(companyId)
   if (!Number.isSafeInteger(page) || page < 1) throw new Error('Некорректная страница')
@@ -83,6 +84,7 @@ export function listDocuments(
   const params = new URLSearchParams({ page: String(page), per_page: '25' })
   if (documentType) params.set('document_type', documentType)
   if (employeeId) params.set('employee_id', employeeId)
+  if (status) params.set('status', status)
   return apiRequest<DocumentListResponse>(`/companies/${companyId}/documents?${params.toString()}`)
 }
 

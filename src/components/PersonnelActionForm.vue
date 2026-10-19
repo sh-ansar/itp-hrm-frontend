@@ -2,6 +2,7 @@
 import { computed, ref, watch } from 'vue'
 import { localTodayISO } from '../utils/localDate'
 import BaseButton from './ui/BaseButton.vue'
+import BaseDialog from './ui/BaseDialog.vue'
 import BaseFormField from './ui/BaseFormField.vue'
 import BaseNotice from './ui/BaseNotice.vue'
 import BaseSelectField from './ui/BaseSelectField.vue'
@@ -40,6 +41,7 @@ const positions=ref<PositionRecord[]>([])
 const directoriesBusy=ref(false)
 const saving=ref(false)
 const error=ref('')
+const confirmOpen=ref(false)
 
 const openAssignment=computed(()=>assignments.value.find(item=>item.valid_to===null)??null)
 const availableOperations=computed(()=>{
@@ -56,6 +58,11 @@ const employeeOptions=computed(()=>employees.value.map(item=>({
   name:`${item.last_name} ${item.first_name}${item.middle_name?' '+item.middle_name:''} · ${item.personnel_number}`,
 })))
 const operationLabel=computed(()=>operation.value==='hire'?'Приём на работу':operation.value==='transfer'?'Перевод':'Увольнение')
+const targetDepartment=computed(()=>departments.value.find(item=>item.id===departmentId.value)?.name??'—')
+const targetPosition=computed(()=>positions.value.find(item=>item.id===positionId.value)?.name??'—')
+const currentAssignmentSummary=computed(()=>openAssignment.value
+  ? [openAssignment.value.position_name,openAssignment.value.department_name].filter(Boolean).join(' · ')
+  : 'Нет открытого назначения')
 
 async function searchEmployees(){
   selectedEmployeeId.value=''
@@ -117,62 +124,72 @@ async function loadDirectories(){
   }finally{directoriesBusy.value=false}
 }
 
-async function submit(){
-  error.value=''
-  if(!selectedEmployee.value){
-    error.value='Выберите сотрудника'
-    return
+function validate(): string | null {
+  if (!selectedEmployee.value) return 'Выберите сотрудника'
+  if (!effectiveOn.value || !basisReference.value.trim()) return 'Укажите дату действия и основание'
+  if (operation.value !== 'termination' && (!departmentId.value || !positionId.value)) {
+    return 'Выберите подразделение и должность'
   }
-  if(!effectiveOn.value||!basisReference.value.trim()){
-    error.value='Укажите дату действия и основание'
-    return
+  if ((operation.value === 'transfer' || operation.value === 'termination') && !openAssignment.value) {
+    return 'У сотрудника нет открытого назначения для этой операции'
   }
-  if(operation.value!=='termination'&&(!departmentId.value||!positionId.value)){
-    error.value='Выберите подразделение и должность'
-    return
+  if (operation.value === 'hire' && openAssignment.value) {
+    return 'У сотрудника уже есть открытое назначение. Обновите сведения.'
   }
-  if((operation.value==='transfer'||operation.value==='termination')&&!openAssignment.value){
-    error.value='У сотрудника нет открытого назначения для этой операции'
-    return
-  }
+  return null
+}
 
-  saving.value=true
-  try{
-    if(operation.value==='hire' && openAssignment.value){
-      error.value='У сотрудника уже есть открытое назначение. Обновите сведения.'
-      return
+function prepare() {
+  error.value = validate() ?? ''
+  if (!error.value) confirmOpen.value = true
+}
+function closeConfirmation() {
+  if (!saving.value) confirmOpen.value = false
+}
+async function execute() {
+  if (!confirmOpen.value || saving.value) return
+  error.value = validate() ?? ''
+  if (error.value) {
+    confirmOpen.value = false
+    return
+  }
+  saving.value = true
+  try {
+    const employeeId = selectedEmployee.value!.id
+    if (operation.value === 'hire') {
+      await hireEmployee(props.companyId, employeeId, {
+        department_id: departmentId.value,
+        position_id: positionId.value,
+        effective_on: effectiveOn.value,
+        basis_reference: basisReference.value.trim(),
+        notes: notes.value.trim() || null,
+      })
+    } else if (operation.value === 'transfer' && openAssignment.value) {
+      await transferEmployee(props.companyId, employeeId, {
+        source_assignment_id: openAssignment.value.id,
+        source_assignment_revision: openAssignment.value.revision,
+        department_id: departmentId.value,
+        position_id: positionId.value,
+        effective_on: effectiveOn.value,
+        basis_reference: basisReference.value.trim(),
+        notes: notes.value.trim() || null,
+      })
+    } else if (operation.value === 'termination' && openAssignment.value) {
+      await terminateEmployee(props.companyId, employeeId, {
+        source_assignment_id: openAssignment.value.id,
+        source_assignment_revision: openAssignment.value.revision,
+        effective_on: effectiveOn.value,
+        basis_reference: basisReference.value.trim(),
+        notes: notes.value.trim() || null,
+      })
     }
-    if(operation.value==='hire'){
-      await hireEmployee(props.companyId,selectedEmployee.value.id,{
-        department_id:departmentId.value,
-        position_id:positionId.value,
-        effective_on:effectiveOn.value,
-        basis_reference:basisReference.value.trim(),
-        notes:notes.value.trim()||null,
-      })
-    }else if(operation.value==='transfer'&&openAssignment.value){
-      await transferEmployee(props.companyId,selectedEmployee.value.id,{
-        source_assignment_id:openAssignment.value.id,
-        source_assignment_revision:openAssignment.value.revision,
-        department_id:departmentId.value,
-        position_id:positionId.value,
-        effective_on:effectiveOn.value,
-        basis_reference:basisReference.value.trim(),
-        notes:notes.value.trim()||null,
-      })
-    }else if(operation.value==='termination'&&openAssignment.value){
-      await terminateEmployee(props.companyId,selectedEmployee.value.id,{
-        source_assignment_id:openAssignment.value.id,
-        source_assignment_revision:openAssignment.value.revision,
-        effective_on:effectiveOn.value,
-        basis_reference:basisReference.value.trim(),
-        notes:notes.value.trim()||null,
-      })
-    }
+    confirmOpen.value = false
     emit('saved')
-  }catch(cause){
-    error.value=cause instanceof Error?cause.message:'Не удалось провести кадровое действие'
-  }finally{saving.value=false}
+  } catch (cause) {
+    error.value = cause instanceof Error ? cause.message : 'Не удалось провести кадровое действие'
+  } finally {
+    saving.value = false
+  }
 }
 
 watch(selectedEmployeeId,loadSelectedEmployee)
@@ -186,7 +203,7 @@ loadDirectories()
 </script>
 
 <template>
-  <form class="action-form" @submit.prevent="submit">
+  <form class="action-form" @submit.prevent="prepare">
     <BaseNotice v-if="error" tone="error" role="alert">{{ error }}</BaseNotice>
 
     <div class="employee-search">
@@ -258,9 +275,33 @@ loadDirectories()
     <div class="actions">
       <BaseButton type="button" variant="secondary" :disabled="saving" @click="emit('cancelled')">Отмена</BaseButton>
       <BaseButton type="submit" :disabled="saving||detailBusy||!selectedEmployee">
-        {{ saving?'Проведение…':'Провести: '+operationLabel }}
+        {{ saving?'Проведение…':'Продолжить: '+operationLabel }}
       </BaseButton>
     </div>
+
+    <BaseDialog :open="confirmOpen" title="Подтверждение кадрового действия" @close="closeConfirmation">
+      <div class="action-confirmation">
+        <BaseNotice tone="warning">
+          После подтверждения данные назначений будут изменены в системе. Эта операция не является созданием или электронной подписью приказа.
+        </BaseNotice>
+        <dl>
+          <div><dt>Действие</dt><dd>{{ operationLabel }}</dd></div>
+          <div><dt>Сотрудник</dt><dd>{{ selectedEmployee?.last_name }} {{ selectedEmployee?.first_name }} · {{ selectedEmployee?.personnel_number }}</dd></div>
+          <div><dt>Дата</dt><dd>{{ effectiveOn }}</dd></div>
+          <div><dt>Текущее назначение</dt><dd>{{ currentAssignmentSummary }}</dd></div>
+          <div v-if="operation!=='termination'"><dt>Новое подразделение</dt><dd>{{ targetDepartment }}</dd></div>
+          <div v-if="operation!=='termination'"><dt>Новая должность</dt><dd>{{ targetPosition }}</dd></div>
+          <div><dt>Основание</dt><dd>{{ basisReference }}</dd></div>
+        </dl>
+        <BaseNotice v-if="error" tone="error" role="alert">{{ error }}</BaseNotice>
+      </div>
+      <template #footer>
+        <BaseButton type="button" variant="secondary" :disabled="saving" @click="closeConfirmation">Вернуться</BaseButton>
+        <BaseButton type="button" :disabled="saving" @click="execute">
+          {{ saving ? 'Проведение…' : 'Подтвердить и провести' }}
+        </BaseButton>
+      </template>
+    </BaseDialog>
   </form>
 </template>
 
@@ -273,6 +314,11 @@ loadDirectories()
 .form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--space-4)}
 .form-grid>*:last-child{grid-column:1/-1}
 .actions{display:flex;justify-content:flex-end;gap:var(--space-2)}
+.action-confirmation{display:grid;gap:var(--space-3)}
+.action-confirmation dl{display:grid;gap:var(--space-2);margin:0}
+.action-confirmation dl>div{display:grid;gap:var(--space-1);padding:var(--space-2) 0;border-bottom:1px solid var(--color-stroke)}
+.action-confirmation dt{font-size:var(--font-caption-size);color:var(--color-muted)}
+.action-confirmation dd{margin:0;font-size:var(--font-label-size);font-weight:600;overflow-wrap:anywhere}
 @media(max-width:640px){
   .employee-search,.form-grid{grid-template-columns:1fr}
   .employee-search :deep(button){width:100%}

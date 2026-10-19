@@ -23,6 +23,8 @@ const ru = {
   success: 'Операция записана в журнал.', yearClosed: 'После переноса прошлый год закрывается для корректировок и новых утверждений.',
   carryAvailable: 'Подтверждённый остаток прошлого года', transferMissing: 'Для переноса сначала настройте предыдущий год и следующий год, закройте ожидающие заявки.',
   invalid: 'Укажите целое число дней и основание решения не короче пяти символов.',
+  closingSnapshot: 'Остаток при закрытии', carriedOut: 'Перенесено из этого года',
+  closedExplanation: 'Год закрыт: новые отпуска из этого фонда недоступны. Исторический остаток сохраняется для сверки; неперенесённые дни не списываются автоматически.',
   yearLabel: 'Учётный год', noAccess: 'Доступ к настройкам только у администратора компании.',
 }
 type BalanceKey = keyof typeof ru
@@ -48,6 +50,8 @@ const kk: Record<BalanceKey, string> = {
   success: 'Әрекет журналға жазылды.', yearClosed: 'Ауыстырудан кейін алдыңғы жыл түзетулер мен жаңа бекітулер үшін жабылады.',
   carryAvailable: 'Өткен жылдың расталған қалдығы', transferMissing: 'Алдымен алдыңғы және келесі жылдарды баптап, күткен өтінімдерді жабыңыз.',
   invalid: 'Бүтін күн санын және кемінде бес таңбалы негізді енгізіңіз.',
+  closingSnapshot: 'Жыл жабылғандағы қалдық', carriedOut: 'Осы жылдан ауыстырылды',
+  closedExplanation: 'Жыл жабылды: бұл қордан жаңа демалыс бекітілмейді. Тарихи қалдық тексеру үшін сақталады; ауыстырылмаған күндер автоматты түрде есептен шығарылмайды.',
   yearLabel: 'Есептік жыл', noAccess: 'Баптауға тек компания әкімшісінің рұқсаты бар.',
 }
 const en: Record<BalanceKey, string> = {
@@ -72,6 +76,8 @@ const en: Record<BalanceKey, string> = {
   success: 'The transaction was recorded in the audit journal.', yearClosed: 'Carrying forward closes the previous year for further adjustments and new approvals.',
   carryAvailable: 'Verified available days from last year', transferMissing: 'Configure both years and resolve pending requests before a carryover.',
   invalid: 'Enter whole days and a rationale of at least five characters.',
+  closingSnapshot: 'Balance at closure', carriedOut: 'Transferred out of this year',
+  closedExplanation: 'This year is closed: no more leave can be booked against it. The historical closing balance is retained for reconciliation; untransferred days are not automatically written off.',
   yearLabel: 'Entitlement year', noAccess: 'Only company administrators can change entitlements.',
 }
 const ka: Record<BalanceKey, string> = {
@@ -96,6 +102,8 @@ const ka: Record<BalanceKey, string> = {
   success: 'ოპერაცია აღირიცხა ჟურნალში.', yearClosed: 'გადატანის შემდეგ წინა წელი იკეტება ცვლილებებისა და ახალი დამტკიცებებისთვის.',
   carryAvailable: 'წინა წლის დადასტურებული ნაშთი', transferMissing: 'ჯერ დააკონფიგურირეთ ორივე წელი და დაასრულეთ მომლოდინე მოთხოვნები.',
   invalid: 'მიუთითეთ დღეების მთელი რაოდენობა და მინიმუმ ხუთსიმბოლოიანი საფუძველი.',
+  closingSnapshot: 'ნაშთი დახურვისას', carriedOut: 'ამ წლიდან გადატანილი',
+  closedExplanation: 'წელი დახურულია: ახალი შვებულების დამტკიცება ამ ფონდიდან შეუძლებელია. დახურვის ნაშთი ინახება შესადარებლად; არგადატანილი დღეები ავტომატურად არ იწერება.',
   yearLabel: 'საანგარიშო წელი', noAccess: 'ნაშთის შეცვლა შეუძლია მხოლოდ კომპანიის ადმინისტრატორს.',
 }
 const copies = { ru, kk, en, ka }

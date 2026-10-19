@@ -17,7 +17,23 @@ test('home uses prototype hierarchy and loads all curated SVG assets at four wid
       await page.goto('/')
       await page.getByRole('heading',{name:'Реестр сотрудников'}).waitFor()
       await page.getByRole('heading',{name:'Вакантные позиции'}).last().waitFor()
-      assert.equal(await page.locator('.overview-metrics .metric-card').count(),4)
+      assert.equal(await page.locator('.overview-metrics .metric-card').count(),3,
+        'Reference design uses three headline KPI cards, not four repeated blocks')
+      const companySummary=page.getByRole('complementary',{name:'Сводка компании'})
+      await companySummary.getByText('Сотрудников в штате').waitFor()
+      await companySummary.getByRole('link',{name:'Открыть реестр'}).waitFor()
+      assert.equal(await companySummary.getByText('Демо-активность', {exact:true}).count(),0,
+        'The aside must not invent a mock activity feed')
+      const hero=await page.locator('.overview-hero').evaluate(node=>{
+        const kpi=node.querySelector('.overview-metrics')?.getBoundingClientRect()
+        const aside=node.querySelector('.overview-summary')?.getBoundingClientRect()
+        return {left:kpi?.left??0,right:kpi?.right??0,top:kpi?.top??0,
+          asideLeft:aside?.left??0,asideTop:aside?.top??0}
+      })
+      if(width===1440)assert.ok(hero.asideLeft>=hero.right-1,
+        'The company activity panel belongs beside the three KPI cards on desktop')
+      else assert.ok(hero.asideTop>=hero.top,
+        'Narrower viewports must keep the company summary in the main reading flow')
       await page.getByRole('table',{name:'Реестр сотрудников на главной'}).waitFor({timeout:15000})
       await page.getByRole('table',{name:'Вакантные штатные позиции на главной'}).waitFor({timeout:15000})
       assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth+1),false)

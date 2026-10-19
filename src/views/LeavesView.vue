@@ -6,7 +6,9 @@ import { CalendarDays, Clock3, TriangleAlert, UsersRound } from 'lucide-vue-next
 import BaseCard from '../components/ui/BaseCard.vue'
 import BaseButton from '../components/ui/BaseButton.vue'
 import LeaveManagementPanel from '../components/LeaveManagementPanel.vue'
+import LeaveBalancePanel from '../components/LeaveBalancePanel.vue'
 import { useLeaveWorkflowI18n } from '../i18n/leaveWorkflow'
+import { useLeaveBalanceCopy } from '../i18n/leaveBalances'
 import BaseDataTable from '../components/ui/BaseDataTable.vue'
 import BaseStatusPill from '../components/ui/BaseStatusPill.vue'
 import BaseLoadingState from '../components/ui/BaseLoadingState.vue'
@@ -30,7 +32,9 @@ type LeaveTab = 'schedule' | 'months' | 'types'
 
 const demoMode = import.meta.env.VITE_DEMO_MODE === 'true'
 const { t: leaveT } = useLeaveWorkflowI18n()
+const { balanceT } = useLeaveBalanceCopy()
 const managementOpen = ref(false)
+const balancesOpen = ref(false)
 const companies = ref<CompanyRecord[]>([])
 const company = ref('')
 const { preferCompany } = useActiveCompanySelection(company)
@@ -210,6 +214,7 @@ async function loadWorkspace() {
 
 watch(company, () => {
   managementOpen.value = false
+  balancesOpen.value = false
   void loadWorkspace()
 })
 watch(year, () => {
@@ -239,6 +244,7 @@ onMounted(loadCompanies)
           <BaseSelectField v-model="company" label="Компания" :options="companies" />
           <BaseSelectField v-model="year" label="Год" :options="yearOptions" />
           <BaseButton v-if="canManageLeaves" variant="secondary" @click="managementOpen = !managementOpen">{{ leaveT('title') }}</BaseButton>
+          <BaseButton v-if="canManageLeaves" variant="secondary" @click="balancesOpen = !balancesOpen">{{ balanceT('title') }}</BaseButton>
         </div>
       </div>
 
@@ -249,6 +255,7 @@ onMounted(loadCompanies)
       <BaseViewTabs :model-value="activeTab" :options="tabs" label="Разделы графика отпусков"
         @update:model-value="setTab" />
       <LeaveManagementPanel v-if="canManageLeaves && managementOpen" :company-id="company" @published="loadWorkspace" />
+      <LeaveBalancePanel v-if="canManageLeaves && balancesOpen" :company-id="company" />
 
       <div class="leaves-summary" aria-label="Сводка графика отпусков">
         <BaseCard class="summary-card">

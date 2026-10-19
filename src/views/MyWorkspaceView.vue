@@ -6,6 +6,7 @@ import BaseFormField from '../components/ui/BaseFormField.vue'
 import BaseSelectField from '../components/ui/BaseSelectField.vue'
 import BaseNotice from '../components/ui/BaseNotice.vue'
 import BaseDrawer from '../components/ui/BaseDrawer.vue'
+import ProtectedLeaveEvidencePanel from '../components/ProtectedLeaveEvidencePanel.vue'
 import { useCompanyAccessStore } from '../stores/companyAccess'
 import { useUiPreferencesStore } from '../stores/uiPreferences'
 import { useLeaveWorkflowI18n } from '../i18n/leaveWorkflow'
@@ -213,8 +214,12 @@ function status(request: OwnRequest) {
           <article v-for="request in workspace.data.requests" :key="request.id">
             <strong>{{ request.leave_type_name }}</strong><p>{{ request.planned_started_on }} — {{ request.planned_ended_on }} · {{ request.planned_days }} · {{ status(request) }}</p>
             <p v-if="request.note">{{ request.note }}</p><p v-if="request.decision_comment">{{ t('decisionComment') }}: {{ request.decision_comment }}</p>
+            <ProtectedLeaveEvidencePanel v-if="request.category && request.category !== 'ordinary'"
+              :company-id="access.activeCompanyId" :request="request"
+              :can-upload="!!workspace.meta.protected_evidence_uploads_enabled && workspace.meta.can_request"
+              :can-review="false" :required="!!workspace.meta.protected_evidence_required" @changed="load" />
             <div v-if="workspace.meta.can_request" class="actions">
-              <BaseButton v-if="request.status === 'draft'" variant="secondary" :disabled="busy" @click="edit(request)">{{ t('edit') }}</BaseButton>
+              <BaseButton v-if="request.status === 'draft' && !request.evidence_status" variant="secondary" :disabled="busy" @click="edit(request)">{{ t('edit') }}</BaseButton>
               <BaseButton v-if="request.status === 'draft'" :disabled="busy" @click="perform(() => transitionOwnLeave(access.activeCompanyId, request, 'submit'))">{{ t('submit') }}</BaseButton>
               <BaseButton v-if="['draft', 'submitted'].includes(request.status)" variant="secondary" :disabled="busy" @click="perform(() => transitionOwnLeave(access.activeCompanyId, request, 'cancel'))">{{ t('cancel') }}</BaseButton>
             </div>

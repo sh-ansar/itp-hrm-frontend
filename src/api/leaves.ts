@@ -109,6 +109,9 @@ export interface LeaveRequestRecord {
   decision_comment: string | null
   published_leave_id: string | null
   created_by_user_id: number
+  category?: LeaveCategory
+  evidence_status?: 'pending' | 'verified' | 'rejected' | null
+  evidence_revision?: number | null
 }
 export interface LeaveRequestsResponse {
   data: LeaveRequestRecord[]
@@ -117,6 +120,8 @@ export interface LeaveRequestsResponse {
     last_page: number
     total: number
     can_approve_leave_requests: boolean
+    protected_evidence_uploads_enabled?: boolean
+    protected_evidence_required?: boolean
   }
 }
 export interface LeavePlanInput {

@@ -79,27 +79,28 @@ test('employee uploads private protected PDF, HR verifies, approval requires evi
     await panel.locator('input[type="file"]').setInputFiles({
       name: 'private-e2e.pdf', mimeType: 'application/pdf', buffer: pdf,
     })
-    const [uploadResponse] = await Promise.all([
-      staff.page.waitForResponse(r => r.url().endsWith('/evidence/file') && r.request().method() === 'POST'),
-      panel.getByRole('button', { name: 'Прикрепить PDF', exact: true }).click(),
-    ])
-    console.log('E2E_EVIDENCE_UPLOAD_HTTP', uploadResponse.status())
-    try {
-      await panel.getByText('Ожидает проверки HR', { exact: true }).waitFor({ timeout: 5500 })
-    } catch (cause) {
-      const [ui, row, status] = await Promise.all([
-        panel.innerText(),
-        api(staff.page, base + '/me/workspace'),
-        uploadResponse.text(),
-      ])
-      const latest = row.body?.data?.requests?.find(r => r.id === request.id)
-      console.log('E2E_EVIDENCE_DIAGNOSTIC', JSON.stringify({
-        statusCode: uploadResponse.status(),
-        response: status.slice(0, 850),
-        panel: ui.slice(0, 650),
-        evidenceStatus: latest?.evidence_status, evidenceRevision: latest?.evidence_revision,
+    const observed = []
+    staff.page.on('request', req => {
+      if (req.url().endsWith('/evidence/file') && req.method() === 'POST') observed.push(req.url())
+    })
+    const selectedInfo = await panel.locator('input[type="file"]').evaluate(input => ({
+      type: input.files?.[0]?.type, size: input.files?.[0]?.size,
+      csrfPresent: document.cookie.split('; ').some(pair => pair.startsWith('XSRF-TOKEN=')),
+    }))
+    await panel.getByRole('button', { name: 'Прикрепить PDF', exact: true }).click()
+    await staff.page.waitForTimeout(550)
+    const uiState = await panel.innerText()
+    console.log('E2E_PROTECTED_UPLOAD_STAGE', JSON.stringify({
+      selectedInfo, requestsSent: observed.length,
+      text: uiState.slice(0, 450),
+    }))
+    if (!uiState.includes('Ожидает проверки HR')) {
+      const latest = await api(staff.page, base + '/me/workspace')
+      const item = latest.body.data.requests.find(row => row.id === request.id)
+      throw new Error('Evidence did not reach pending: ' + JSON.stringify({
+        selectedInfo, postCount: observed.length,
+        evidenceStatus: item?.evidence_status, ui: uiState.slice(0, 450),
       }))
-      throw cause
     }
     const afterUpload = await api(staff.page, base + '/me/workspace')
     assert.equal(afterUpload.body.data.requests[0].evidence_status, 'pending')

@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { chromium } from 'playwright'
-const baseURL = 'http://127.0.0.1:5173'
+const baseURL = process.env.HRM_E2E_BASE_URL || 'http://127.0.0.1:5173'
 const company = '11111111-1111-4111-8111-111111111111'
 const employee = '77777777-7777-4777-8777-777777777777'
 const restricted = '99999999-9999-4999-8999-999999999999'
@@ -39,12 +39,15 @@ async function api(page, path, method = 'GET', body) {
 }
 
 test('four real user roles have distinct navigation, inputs, outputs and server authorization', async () => {
-  const browser = await chromium.launch({ headless: true })
+  const browser = await chromium.launch({ headless: true, ...(process.env.HRM_CHROME_PATH ? { executablePath: process.env.HRM_CHROME_PATH } : {}) })
   try {
     for (const [actor, width] of [['admin', 1440], ['hr', 768], ['manager', 1440], ['employee', 375]]) {
       const { context, page } = await login(browser, actor, width)
       try {
         if (actor === 'employee') {
+          await page.waitForURL('**/my')
+          await page.getByText('Учётная запись не связана с сотрудником. Обратитесь к администратору компании.', { exact: true }).waitFor()
+          await page.getByRole('link', { name: 'Настройки', exact: true }).click()
           await page.waitForURL('**/settings')
           const timeZone = page.getByRole('combobox', { name: 'Часовой пояс', exact: true })
           assert.equal(await timeZone.inputValue(), 'Asia/Qostanay')
@@ -63,7 +66,7 @@ test('four real user roles have distinct navigation, inputs, outputs and server 
           await page.goto('/employees')
           await page.getByRole('heading', { name: 'Доступ ограничен' }).waitFor()
           await page.goto('/')
-          await page.waitForURL('**/settings')
+          await page.waitForURL('**/my')
           await page.reload()
           assert.equal(await page.locator('.sidebar').count(), 0)
         } else {
@@ -113,7 +116,7 @@ test('four real user roles have distinct navigation, inputs, outputs and server 
 })
 
 test('admin assigns manager scope through UI, reloads it and target sees only that department', async () => {
-  const browser = await chromium.launch({ headless: true })
+  const browser = await chromium.launch({ headless: true, ...(process.env.HRM_CHROME_PATH ? { executablePath: process.env.HRM_CHROME_PATH } : {}) })
   try {
     const { context, page } = await login(browser, 'admin')
     await page.goto('/roles')

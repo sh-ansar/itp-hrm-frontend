@@ -81,7 +81,7 @@ async function submit() {
     await access.refresh()
     if (typeof requested !== 'string') {
       const capability = routeCapability(router.resolve(destination).path)
-      if (capability && !access.can(capability)) destination = access.can('overview.view') ? '/' : '/settings'
+      if (capability && !access.can(capability)) destination = access.can('overview.view') ? '/' : access.can('self_service.view') ? '/my' : '/settings'
     }
     await router.replace(destination)
   } catch (cause) {

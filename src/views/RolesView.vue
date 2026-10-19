@@ -7,6 +7,7 @@ import BaseButton from '../components/ui/BaseButton.vue'
 import BaseCard from '../components/ui/BaseCard.vue'
 import BaseDataTable from '../components/ui/BaseDataTable.vue'
 import BaseDrawer from '../components/ui/BaseDrawer.vue'
+import EmployeeAccountLink from '../components/EmployeeAccountLink.vue'
 import BaseFilterSummary from '../components/ui/BaseFilterSummary.vue'
 import BaseKpiGrid from '../components/ui/BaseKpiGrid.vue'
 import BaseLoadingState from '../components/ui/BaseLoadingState.vue'
@@ -85,6 +86,7 @@ const roleFilter = ref('all')
 const statusFilter = ref('all')
 const selectedRoleForMatrix = ref<SystemRoleCode>('company_admin')
 const editorOpen = ref(false)
+const linkUser = ref<MembershipRecord | null>(null)
 const editingUser = ref<MembershipRecord | null>(null)
 const roleDraft = ref<Exclude<SystemRoleCode, 'company_admin'>>('employee')
 const departmentDraft = ref<string[]>([])
@@ -269,19 +271,22 @@ async function revoke(row: MembershipRecord) {
 }
 
 function actions(row: MembershipRecord) {
-  if (row.role_code === 'company_admin') return [{ id: 'locked', label: 'Роль администратора защищена', disabled: true }]
+  if (row.role_code === 'company_admin') return [{ id: 'link', label: 'Кабинет сотрудника' }, { id: 'locked', label: 'Роль администратора защищена', disabled: true }]
   return [
+    { id: 'link', label: 'Кабинет сотрудника' },
     { id: 'edit', label: 'Изменить роль' },
     { id: 'revoke', label: 'Отозвать роль' },
   ]
 }
 
 function onAction(id: string, row: MembershipRecord) {
+  if (id === 'link') linkUser.value = row
   if (id === 'edit') void openEditor(row)
   if (id === 'revoke') void revoke(row)
 }
 
 watch(company, () => {
+  linkUser.value = null
   departments.value = []
   void loadMemberships()
 })
@@ -428,6 +433,9 @@ onMounted(async () => {
           {{ saving ? 'Сохранение…' : 'Сохранить роль' }}
         </BaseButton>
       </template>
+    </BaseDrawer>
+    <BaseDrawer :open="!!linkUser" title="Кабинет сотрудника" :description="linkUser ? linkUser.name + ' · ' + linkUser.email : ''" @close="linkUser = null">
+      <EmployeeAccountLink v-if="linkUser" :key="company + ':' + linkUser.user_id" :company="company" :user="linkUser.user_id" />
     </BaseDrawer>
   </section>
 </template>

@@ -5,6 +5,7 @@ import { apiRequest } from './client'
  * authenticated Laravel session. NEVER send these values as authorization.
  */
 export type CapabilityKey =
+  | 'self_service.view'
   | 'overview.view' | 'employees.view' | 'employees.extended_view'
   | 'organization.view' | 'staffing.view' | 'personnel_actions.view'
   | 'worktime.view' | 'leaves.view' | 'documents.view' | 'directories.view'

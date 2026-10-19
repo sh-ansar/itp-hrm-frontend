@@ -79,8 +79,28 @@ test('employee uploads private protected PDF, HR verifies, approval requires evi
     await panel.locator('input[type="file"]').setInputFiles({
       name: 'private-e2e.pdf', mimeType: 'application/pdf', buffer: pdf,
     })
-    await panel.getByRole('button', { name: 'Прикрепить PDF', exact: true }).click()
-    await panel.getByText('Ожидает проверки HR', { exact: true }).waitFor()
+    const [uploadResponse] = await Promise.all([
+      staff.page.waitForResponse(r => r.url().endsWith('/evidence/file') && r.request().method() === 'POST'),
+      panel.getByRole('button', { name: 'Прикрепить PDF', exact: true }).click(),
+    ])
+    console.log('E2E_EVIDENCE_UPLOAD_HTTP', uploadResponse.status())
+    try {
+      await panel.getByText('Ожидает проверки HR', { exact: true }).waitFor({ timeout: 5500 })
+    } catch (cause) {
+      const [ui, row, status] = await Promise.all([
+        panel.innerText(),
+        api(staff.page, base + '/me/workspace'),
+        uploadResponse.text(),
+      ])
+      const latest = row.body?.data?.requests?.find(r => r.id === request.id)
+      console.log('E2E_EVIDENCE_DIAGNOSTIC', JSON.stringify({
+        statusCode: uploadResponse.status(),
+        response: status.slice(0, 850),
+        panel: ui.slice(0, 650),
+        evidenceStatus: latest?.evidence_status, evidenceRevision: latest?.evidence_revision,
+      }))
+      throw cause
+    }
     const afterUpload = await api(staff.page, base + '/me/workspace')
     assert.equal(afterUpload.body.data.requests[0].evidence_status, 'pending')
     assert.equal(afterUpload.body.data.requests[0].evidence_revision, 1)

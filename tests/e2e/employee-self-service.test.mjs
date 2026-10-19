@@ -43,6 +43,13 @@ test('admin links an account; employee saves, reloads, submits; admin approves; 
     await admin.page.getByText('Связь учётной записи сохранена.', { exact: true }).waitFor()
     const typeResult = await api(admin.page, base + '/leave-types', 'POST', { code: 'self_annual', name: 'Synthetic self-service leave', annual_days: 24, balance_method: 'calendar_days', category: 'ordinary' })
     assert.equal(typeResult.status, 201)
+    // Entitlement is an explicit HR/admin decision, not the leave type's annual_days default.
+    const grant = await api(admin.page, base + '/leave-balances/periods', 'POST', {
+      employee_id: employee, leave_type_id: typeResult.body.data.id,
+      year: 2026, granted_days: 8, reason: 'Reviewed employee 2026 annual entitlement',
+    })
+    assert.equal(grant.status, 201)
+    assert.equal(grant.body.data.granted_days, 8)
     // Record one attendance day through the authorized HRM worktime API before employee reload.
     const recorded = await api(admin.page, base + `/worktime/timesheet/${employee}`, 'PUT', {
       month: '2026-10', days: [{
@@ -55,6 +62,11 @@ test('admin links an account; employee saves, reloads, submits; admin approves; 
     await page.getByRole('heading', { name: 'Synthetic Employee', exact: true }).waitFor()
     assert.equal(await page.locator('.sidebar').count(), 0)
     // The employee can read own hours, not change an administrative timesheet.
+    await page.getByRole('heading', { name: 'Мои остатки отпусков', exact: true }).waitFor()
+    const preBalance = await api(page, base + '/me/leave-balances?year=2026')
+    assert.equal(preBalance.status, 200)
+    assert.equal(preBalance.body.data.find(row => row.leave_type_id === typeResult.body.data.id).available_days, 8)
+    assert.equal((await api(page, base + '/me/leave-balances?year=2026&employee_id=' + employee)).status, 422)
     await page.getByRole('heading', { name: 'Мой табель', exact: true }).waitFor()
     await page.getByLabel('Месяц', { exact: true }).fill('2026-10')
     const recordedDay = page.locator('.own-timesheet__table tbody tr').filter({ hasText: '2026-10-15' })
@@ -101,6 +113,10 @@ test('admin links an account; employee saves, reloads, submits; admin approves; 
     const result = await api(page, base + '/me/workspace')
     assert.equal(result.body.data.requests[0].status, 'approved')
     assert.equal(result.body.data.leaves.length, 1)
+    const afterBalance = await api(page, base + '/me/leave-balances?year=2026')
+    assert.equal(afterBalance.status, 200)
+    assert.equal(afterBalance.body.data.find(row => row.leave_type_id === typeResult.body.data.id).booked_days, 6)
+    assert.equal(afterBalance.body.data.find(row => row.leave_type_id === typeResult.body.data.id).available_days, 2)
     for (const width of [1440, 768, 375]) {
       await page.setViewportSize({ width, height: 1000 })
       assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1))

@@ -2,7 +2,7 @@ import { apiRequest, ApiError } from './client'
 import { readXsrfCookie } from './csrf'
 import type { LeaveCategory, LeaveRequestStatus } from './leaves'
 
-const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 const base = (import.meta.env.VITE_API_BASE_URL || '/api/v1').replace(/\/$/, '')
 const validate = (value: string, label: 'company' | 'request') => {
   if (typeof value !== 'string' || !uuid.test(value)) {

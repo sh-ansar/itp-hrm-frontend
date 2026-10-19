@@ -41,3 +41,19 @@ export function saveEmployeeLink(company: string, user: number, data: EmployeeLi
     method: 'PUT', body: JSON.stringify(data),
   })
 }
+/** The current user's own recorded hours only; null means no daily entry. */
+export interface OwnTimesheetDay {
+  date: string
+  day_type: string
+  label: string | null
+  planned_minutes: number
+  worked_minutes: number | null
+  absence_minutes: number | null
+  overtime_minutes: number | null
+  revision: number | null
+}
+export function getOwnTimesheet(company: string, month: string) {
+  return apiRequest<{ data: OwnTimesheetDay[]; meta: { month: string; can_edit: false } }>(
+    `${base(company)}/timesheet?month=${encodeURIComponent(month)}`, { cache: 'no-store' },
+  )
+}

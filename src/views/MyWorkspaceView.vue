@@ -9,7 +9,7 @@ import BaseDrawer from '../components/ui/BaseDrawer.vue'
 import { useCompanyAccessStore } from '../stores/companyAccess'
 import { useUiPreferencesStore } from '../stores/uiPreferences'
 import { useLeaveWorkflowI18n } from '../i18n/leaveWorkflow'
-import { getOwnWorkspace, saveOwnLeave, transitionOwnLeave, type OwnWorkspace, type OwnRequest } from '../api/selfService'
+import { getOwnWorkspace, getOwnTimesheet, saveOwnLeave, transitionOwnLeave, type OwnTimesheetDay, type OwnWorkspace, type OwnRequest } from '../api/selfService'
 
 const access = useCompanyAccessStore()
 const ui = useUiPreferencesStore()
@@ -25,6 +25,58 @@ const loading = ref(false), busy = ref(false), error = ref(''), success = ref(''
 const open = ref(false), editing = ref<OwnRequest>()
 const type = ref(''), start = ref(''), end = ref(''), note = ref('')
 const requestsPage = ref(1), leavesPage = ref(1)
+const ownTimesheetCopy = computed(() => ({
+  ru: { title: 'Мой табель', month: 'Месяц', recorded: 'Дней с внесёнными часами', worked: 'Отработано', absence: 'Отсутствие', overtime: 'Сверхурочно', planned: 'План', date: 'Дата', type: 'Тип дня', noCalendar: 'Производственный календарь за этот месяц пока не заполнен.', partial: 'Календарь заполнен частично. Показаны только доступные даты.', noEntries: 'Фактические часы пока не внесены.', workday: 'Рабочий', weekend: 'Выходной', holiday: 'Праздничный', loading: 'Загружаем табель', hours: 'ч' },
+  kk: { title: 'Менің табелім', month: 'Ай', recorded: 'Сағаты енгізілген күндер', worked: 'Жұмыс істелді', absence: 'Қатыспау', overtime: 'Үстеме жұмыс', planned: 'Жоспар', date: 'Күн', type: 'Күн түрі', noCalendar: 'Бұл айдың өндірістік күнтізбесі толтырылмаған.', partial: 'Күнтізбе толық емес. Тек қолжетімді күндер көрсетілді.', noEntries: 'Нақты сағаттар әлі енгізілмеген.', workday: 'Жұмыс күні', weekend: 'Демалыс', holiday: 'Мереке', loading: 'Табель жүктелуде', hours: 'сағ' },
+  en: { title: 'My timesheet', month: 'Month', recorded: 'Days with recorded hours', worked: 'Worked', absence: 'Absence', overtime: 'Overtime', planned: 'Planned', date: 'Date', type: 'Day type', noCalendar: 'The production calendar is not yet filled for this month.', partial: 'The calendar is incomplete. Only available dates are shown.', noEntries: 'No actual hours have been recorded yet.', workday: 'Workday', weekend: 'Day off', holiday: 'Holiday', loading: 'Loading timesheet', hours: 'h' },
+  ka: { title: 'ჩემი ტაბელი', month: 'თვე', recorded: 'დღეები აღრიცხული საათებით', worked: 'ნამუშევარი', absence: 'გაცდენა', overtime: 'ზეგანაკვეთური', planned: 'გეგმა', date: 'თარიღი', type: 'დღის ტიპი', noCalendar: 'ამ თვის სამუშაო კალენდარი ჯერ არ არის შევსებული.', partial: 'კალენდარი არასრულია. ნაჩვენებია არსებული თარიღები.', noEntries: 'ფაქტობრივი საათები ჯერ არ არის შეტანილი.', workday: 'სამუშაო', weekend: 'დასვენება', holiday: 'დღესასწაული', loading: 'ტაბელი იტვირთება', hours: 'სთ' },
+}[ui.locale]))
+const monthToday = new Date()
+const timesheetMonth = ref(`${monthToday.getFullYear()}-${String(monthToday.getMonth() + 1).padStart(2, '0')}`)
+const timesheetDays = ref<OwnTimesheetDay[]>([])
+const timesheetLoading = ref(false)
+const timesheetError = ref('')
+let timesheetRequestGeneration = 0
+const recordedTimesheetDays = computed(() => timesheetDays.value.filter(day =>
+  day.worked_minutes !== null || day.absence_minutes !== null || day.overtime_minutes !== null))
+const timesheetTotals = computed(() => recordedTimesheetDays.value.reduce((sum, day) => ({
+  worked: sum.worked + (day.worked_minutes ?? 0),
+  absence: sum.absence + (day.absence_minutes ?? 0),
+  overtime: sum.overtime + (day.overtime_minutes ?? 0),
+}), { worked: 0, absence: 0, overtime: 0 }))
+const expectedDays = computed(() => {
+  const [year, month] = timesheetMonth.value.split('-').map(Number)
+  return year && month >= 1 && month <= 12 ? new Date(year, month, 0).getDate() : 0
+})
+function hours(minutes: number | null): string {
+  if (minutes === null) return '—'
+  const value = Math.round((minutes / 60) * 100) / 100
+  const locale = ui.locale === 'en' ? 'en-US' : ui.locale === 'ka' ? 'ka-GE' : 'ru-RU'
+  return `${value.toLocaleString(locale, { maximumFractionDigits: 2 })} ${ownTimesheetCopy.value.hours}`
+}
+function timesheetDayLabel(dayType: string): string {
+  if (dayType === 'holiday') return ownTimesheetCopy.value.holiday
+  if (dayType === 'weekend' || dayType === 'day_off') return ownTimesheetCopy.value.weekend
+  if (dayType === 'workday') return ownTimesheetCopy.value.workday
+  return dayType
+}
+async function loadOwnTimesheet() {
+  const current = ++timesheetRequestGeneration
+  timesheetDays.value = []
+  timesheetError.value = ''
+  if (!workspace.value?.data.employee || !access.activeCompanyId) { timesheetLoading.value = false; return }
+  if (!/^\\d{4}-(0[1-9]|1[0-2])$/.test(timesheetMonth.value)) return
+  timesheetLoading.value = true
+  try {
+    const response = await getOwnTimesheet(access.activeCompanyId, timesheetMonth.value)
+    if (current === timesheetRequestGeneration) timesheetDays.value = response.data
+  } catch (cause) {
+    if (current === timesheetRequestGeneration) timesheetError.value = cause instanceof Error ? cause.message : t('failed')
+  } finally {
+    if (current === timesheetRequestGeneration) timesheetLoading.value = false
+  }
+}
+
 let generation = 0
 async function load() {
   const current = ++generation
@@ -37,6 +89,7 @@ async function load() {
 }
 watch(() => access.activeCompanyId, () => { open.value = false; requestsPage.value = 1; leavesPage.value = 1; void load() }, { immediate: true })
 watch([requestsPage, leavesPage], () => void load())
+watch([() => workspace.value?.data.employee?.id, () => access.activeCompanyId, timesheetMonth], () => void loadOwnTimesheet(), { immediate: true })
 function edit(request?: OwnRequest) {
   editing.value = request; type.value = request?.leave_type_id ?? ''
   start.value = request?.planned_started_on ?? ''; end.value = request?.planned_ended_on ?? ''; note.value = request?.note ?? ''
@@ -95,6 +148,49 @@ function status(request: OwnRequest) {
           <div class="actions"><BaseButton :disabled="loading || leavesPage === 1" variant="secondary" @click="leavesPage--">{{ copy[8] }}</BaseButton>
             <span>{{ leavesPage }} / {{ workspace.meta.leaves_last_page }}</span><BaseButton :disabled="loading || leavesPage >= workspace.meta.leaves_last_page" variant="secondary" @click="leavesPage++">{{ copy[9] }}</BaseButton></div>
         </BaseCard>
+        <BaseCard class="own-timesheet">
+          <header class="own-timesheet__header">
+            <h2>{{ ownTimesheetCopy.title }}</h2>
+            <BaseFormField v-model="timesheetMonth" type="month" :label="ownTimesheetCopy.month" />
+          </header>
+          <BaseNotice v-if="timesheetError" tone="error">{{ timesheetError }}</BaseNotice>
+          <p v-if="timesheetLoading" role="status">{{ ownTimesheetCopy.loading }}</p>
+          <template v-else-if="!timesheetError">
+            <p v-if="!timesheetDays.length">{{ ownTimesheetCopy.noCalendar }}</p>
+            <template v-else>
+              <BaseNotice v-if="timesheetDays.length < expectedDays" tone="info">{{ ownTimesheetCopy.partial }}</BaseNotice>
+              <p v-if="!recordedTimesheetDays.length">{{ ownTimesheetCopy.noEntries }}</p>
+              <p v-else class="own-timesheet__summary">
+                {{ ownTimesheetCopy.recorded }}: {{ recordedTimesheetDays.length }} ·
+                {{ ownTimesheetCopy.worked }}: {{ hours(timesheetTotals.worked) }} ·
+                {{ ownTimesheetCopy.absence }}: {{ hours(timesheetTotals.absence) }} ·
+                {{ ownTimesheetCopy.overtime }}: {{ hours(timesheetTotals.overtime) }}
+              </p>
+              <div class="own-timesheet__scroll" tabindex="0" :aria-label="ownTimesheetCopy.title">
+                <table class="own-timesheet__table">
+                  <thead><tr>
+                    <th scope="col">{{ ownTimesheetCopy.date }}</th>
+                    <th scope="col">{{ ownTimesheetCopy.type }}</th>
+                    <th scope="col">{{ ownTimesheetCopy.planned }}</th>
+                    <th scope="col">{{ ownTimesheetCopy.worked }}</th>
+                    <th scope="col">{{ ownTimesheetCopy.absence }}</th>
+                    <th scope="col">{{ ownTimesheetCopy.overtime }}</th>
+                  </tr></thead>
+                  <tbody>
+                    <tr v-for="day in timesheetDays" :key="day.date">
+                      <td>{{ day.date }}</td>
+                      <td>{{ timesheetDayLabel(day.day_type) }}<span v-if="day.label"> · {{ day.label }}</span></td>
+                      <td>{{ hours(day.planned_minutes) }}</td>
+                      <td>{{ hours(day.worked_minutes) }}</td>
+                      <td>{{ hours(day.absence_minutes) }}</td>
+                      <td>{{ hours(day.overtime_minutes) }}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </template>
+          </template>
+        </BaseCard>
       </template>
     </template>
     <BaseDrawer :open="open" :title="copy[3] ?? ''" @close="!busy && (open = false)">
@@ -117,4 +213,13 @@ header,.actions{display:flex;align-items:center;justify-content:space-between;ga
 h1,h2,p{overflow-wrap:anywhere}h2{font-size:var(--font-body-size)}
 article{padding:var(--space-4) 0;border-top:1px solid var(--color-stroke)}
 .actions{justify-content:flex-start}a{color:var(--color-primary)}
+.own-timesheet__header{align-items:flex-end}
+.own-timesheet__header .field{min-width:145px}
+.own-timesheet__summary{font-weight:500}
+.own-timesheet__scroll{max-width:100%;overflow-x:auto}
+.own-timesheet__table{width:100%;min-width:620px;border-collapse:collapse;font-size:var(--font-caption-size)}
+.own-timesheet__table th,.own-timesheet__table td{padding:var(--space-3);border:1px solid var(--color-stroke);text-align:left;vertical-align:top}
+.own-timesheet__table th{font-weight:600;background:var(--color-surface-raised)}
+.own-timesheet__table td:not(:nth-child(2)){white-space:nowrap}
+
 </style>

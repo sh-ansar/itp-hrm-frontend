@@ -172,6 +172,7 @@ async function save(): Promise<void> {
         </p>
         <BaseNotice v-if="row.state === 'unconfigured'" tone="info">{{ t('missingMessage') }}</BaseNotice>
         <BaseNotice v-if="row.state === 'calendar_incomplete'" tone="info">{{ t('incompleteMessage') }}</BaseNotice>
+        <BaseNotice v-if="row.state === 'closed'" tone="info">{{ t('closedExplanation') }}</BaseNotice>
         <dl class="leave-balances__figures">
           <div><dt>{{ t('grant') }}</dt><dd>{{ readable(row.granted_days) }}</dd></div>
           <div><dt>{{ t('carry') }}</dt><dd>{{ readable(row.carried_days) }}</dd></div>
@@ -180,6 +181,12 @@ async function save(): Promise<void> {
           <div><dt>{{ t('pending') }}</dt><dd>{{ readable(row.pending_days) }}</dd></div>
           <div class="leave-balances__available">
             <dt>{{ t('available') }}</dt><dd>{{ readable(row.available_days) }}</dd>
+          </div>
+          <div v-if="row.state === 'closed'">
+            <dt>{{ t('closingSnapshot') }}</dt><dd>{{ readable(row.closing_available_days) }}</dd>
+          </div>
+          <div v-if="row.state === 'closed'">
+            <dt>{{ t('carriedOut') }}</dt><dd>{{ readable(row.carried_out_days) }}</dd>
           </div>
         </dl>
         <div v-if="canManage" class="leave-balances__actions">

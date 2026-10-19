@@ -249,6 +249,7 @@ function status(request: OwnRequest) {
               </p>
               <BaseNotice v-if="row.state === 'unconfigured'" tone="info">{{ balanceT('missingMessage') }}</BaseNotice>
               <BaseNotice v-else-if="row.state === 'calendar_incomplete'" tone="info">{{ balanceT('incompleteMessage') }}</BaseNotice>
+              <BaseNotice v-else-if="row.state === 'closed'" tone="info">{{ balanceT('closedExplanation') }}</BaseNotice>
               <dl class="own-balances__figures">
                 <div><dt>{{ balanceT('grant') }}</dt><dd>{{ readableBalance(row.granted_days) }}</dd></div>
                 <div><dt>{{ balanceT('carry') }}</dt><dd>{{ readableBalance(row.carried_days) }}</dd></div>
@@ -257,6 +258,12 @@ function status(request: OwnRequest) {
                 <div><dt>{{ balanceT('pending') }}</dt><dd>{{ readableBalance(row.pending_days) }}</dd></div>
                 <div class="own-balances__available">
                   <dt>{{ balanceT('available') }}</dt><dd>{{ readableBalance(row.available_days) }}</dd>
+                </div>
+                <div v-if="row.state === 'closed'">
+                  <dt>{{ balanceT('closingSnapshot') }}</dt><dd>{{ readableBalance(row.closing_available_days) }}</dd>
+                </div>
+                <div v-if="row.state === 'closed'">
+                  <dt>{{ balanceT('carriedOut') }}</dt><dd>{{ readableBalance(row.carried_out_days) }}</dd>
                 </div>
               </dl>
             </article>

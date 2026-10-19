@@ -22,6 +22,8 @@ export interface LeaveBalanceRow {
   booked_days: number | null
   pending_days: number | null
   available_days: number | null
+  closing_available_days: number | null
+  carried_out_days: number | null
   state: LeaveBalanceState
   revision: number | null
   carry_from_period_id: string | null

@@ -9,12 +9,15 @@ import BaseDrawer from '../components/ui/BaseDrawer.vue'
 import { useCompanyAccessStore } from '../stores/companyAccess'
 import { useUiPreferencesStore } from '../stores/uiPreferences'
 import { useLeaveWorkflowI18n } from '../i18n/leaveWorkflow'
+import { useLeaveBalanceCopy } from '../i18n/leaveBalances'
+import { getOwnLeaveBalances, type LeaveBalanceRow } from '../api/leaveBalances'
 import { useUiFormatters } from '../composables/useUiFormatters'
 import { getOwnWorkspace, getOwnTimesheet, getOwnDocuments, ownDocumentFileUrl, saveOwnLeave, transitionOwnLeave, type OwnDocument, type OwnTimesheetDay, type OwnWorkspace, type OwnRequest } from '../api/selfService'
 
 const access = useCompanyAccessStore()
 const ui = useUiPreferencesStore()
 const { t } = useLeaveWorkflowI18n()
+const { balanceT } = useLeaveBalanceCopy()
 const fmt = useUiFormatters()
 const connectedDocuments = import.meta.env.VITE_ENABLE_BROWSER_LOGIN === 'true' && import.meta.env.VITE_DEMO_MODE !== 'true'
 const copy = computed(() => ({
@@ -81,6 +84,38 @@ async function loadOwnTimesheet() {
 }
 
 
+
+const balanceYear = ref(String(new Date().getFullYear()))
+const balanceYearOptions = Array.from({ length: 9 }, (_, index) => {
+  const value = String(new Date().getFullYear() - 5 + index)
+  return { id: value, name: value }
+})
+const ownBalances = ref<LeaveBalanceRow[]>([])
+const balanceLoading = ref(false)
+const balanceError = ref('')
+let balanceGeneration = 0
+async function loadOwnBalances(): Promise<void> {
+  const current = ++balanceGeneration
+  ownBalances.value = []
+  balanceError.value = ''
+  if (!connectedDocuments || !access.activeCompanyId || !workspace.value?.data.employee) {
+    balanceLoading.value = false
+    return
+  }
+  balanceLoading.value = true
+  try {
+    const result = await getOwnLeaveBalances(access.activeCompanyId, Number(balanceYear.value))
+    if (current === balanceGeneration) ownBalances.value = result.data
+  } catch (cause) {
+    if (current === balanceGeneration) balanceError.value = cause instanceof Error ? cause.message : balanceT('failed')
+  } finally {
+    if (current === balanceGeneration) balanceLoading.value = false
+  }
+}
+function readableBalance(value: number | null): string {
+  return value === null ? balanceT('unknown') : `${value} ${balanceT('dayUnit')}`
+}
+
 const documentsCopy = computed(() => ({
   ru: { title: 'Мои документы', loading: 'Загружаем документы…', none: 'Документы пока не опубликованы для вас.', date: 'Дата', order: 'Приказ', contract: 'Трудовой договор', download: 'Скачать PDF', previous: 'Предыдущая', next: 'Следующая', page: 'Страница', refresh: 'Повторить' },
   kk: { title: 'Менің құжаттарым', loading: 'Құжаттар жүктелуде…', none: 'Сізге арналған құжаттар әзірге жарияланбаған.', date: 'Күні', order: 'Бұйрық', contract: 'Еңбек шарты', download: 'PDF жүктеу', previous: 'Алдыңғы', next: 'Келесі', page: 'Бет', refresh: 'Қайталау' },
@@ -133,6 +168,8 @@ watch([() => workspace.value?.data.employee?.id, () => access.activeCompanyId], 
   void loadOwnDocuments()
 }, { immediate: true })
 watch(ownDocumentsPage, () => void loadOwnDocuments())
+watch([() => workspace.value?.data.employee?.id, () => access.activeCompanyId, balanceYear],
+  () => void loadOwnBalances(), { immediate: true })
 
 function edit(request?: OwnRequest) {
   editing.value = request; type.value = request?.leave_type_id ?? ''
@@ -193,6 +230,38 @@ function status(request: OwnRequest) {
             <span>{{ leavesPage }} / {{ workspace.meta.leaves_last_page }}</span><BaseButton :disabled="loading || leavesPage >= workspace.meta.leaves_last_page" variant="secondary" @click="leavesPage++">{{ copy[9] }}</BaseButton></div>
         </BaseCard>
 
+
+        <BaseCard v-if="connectedDocuments" class="own-balances">
+          <header class="own-balances__header">
+            <h2>{{ balanceT('mine') }}</h2>
+            <BaseSelectField v-model="balanceYear" :label="balanceT('year')" :options="balanceYearOptions" />
+          </header>
+          <BaseNotice tone="info">{{ balanceT('noAuto') }}</BaseNotice>
+          <BaseNotice v-if="balanceError" tone="error">{{ balanceError }}</BaseNotice>
+          <BaseButton v-if="balanceError" variant="secondary" @click="loadOwnBalances">{{ balanceT('retry') }}</BaseButton>
+          <p v-if="balanceLoading" role="status">{{ balanceT('loading') }}</p>
+          <p v-else-if="!balanceError && !ownBalances.length">{{ balanceT('noTypes') }}</p>
+          <div v-else-if="!balanceError" class="own-balances__types">
+            <article v-for="row in ownBalances" :key="row.leave_type_id" class="own-balances__type">
+              <header><strong>{{ row.leave_type_name }}</strong><span>{{ balanceT(row.state) }}</span></header>
+              <p v-if="row.reference_annual_days !== null" class="own-balances__reference">
+                {{ balanceT('reference') }}: {{ readableBalance(row.reference_annual_days) }}
+              </p>
+              <BaseNotice v-if="row.state === 'unconfigured'" tone="info">{{ balanceT('missingMessage') }}</BaseNotice>
+              <BaseNotice v-else-if="row.state === 'calendar_incomplete'" tone="info">{{ balanceT('incompleteMessage') }}</BaseNotice>
+              <dl class="own-balances__figures">
+                <div><dt>{{ balanceT('grant') }}</dt><dd>{{ readableBalance(row.granted_days) }}</dd></div>
+                <div><dt>{{ balanceT('carry') }}</dt><dd>{{ readableBalance(row.carried_days) }}</dd></div>
+                <div><dt>{{ balanceT('adjust') }}</dt><dd>{{ readableBalance(row.adjustment_days) }}</dd></div>
+                <div><dt>{{ balanceT('booked') }}</dt><dd>{{ readableBalance(row.booked_days) }}</dd></div>
+                <div><dt>{{ balanceT('pending') }}</dt><dd>{{ readableBalance(row.pending_days) }}</dd></div>
+                <div class="own-balances__available">
+                  <dt>{{ balanceT('available') }}</dt><dd>{{ readableBalance(row.available_days) }}</dd>
+                </div>
+              </dl>
+            </article>
+          </div>
+        </BaseCard>
         <BaseCard v-if="connectedDocuments" class="personal-documents">
           <header><h2>{{ documentsCopy.title }}</h2></header>
           <BaseNotice v-if="ownDocumentsError" tone="error">{{ ownDocumentsError }}</BaseNotice>
@@ -285,6 +354,20 @@ header,.actions{display:flex;align-items:center;justify-content:space-between;ga
 h1,h2,p{overflow-wrap:anywhere}h2{font-size:var(--font-body-size)}
 article{padding:var(--space-4) 0;border-top:1px solid var(--color-stroke)}
 .actions{justify-content:flex-start}a{color:var(--color-primary)}
+
+.own-balances__header{display:flex;align-items:end;justify-content:space-between;gap:var(--space-3);flex-wrap:wrap}
+.own-balances__header h2{margin:0}
+.own-balances__header :deep(.base-select-field){width:165px}
+.own-balances__types{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:var(--space-3)}
+.own-balances__type{display:grid;align-content:start;gap:var(--space-3);min-width:0;padding:var(--space-4);border:1px solid var(--color-stroke);border-radius:var(--radius-md)}
+.own-balances__type>header{display:flex;align-items:center;justify-content:space-between;gap:var(--space-2);flex-wrap:wrap}
+.own-balances__type>header span,.own-balances__reference{font-size:var(--font-caption-size);color:var(--color-muted)}
+.own-balances__figures{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--space-3);margin:0}
+.own-balances__figures div{display:grid;gap:var(--space-1);min-width:0;padding:var(--space-3);background:var(--color-soft);border-radius:var(--radius-sm)}
+.own-balances__figures dt{font-size:var(--font-caption-size);color:var(--color-muted)}
+.own-balances__figures dd{margin:0;font-weight:650;overflow-wrap:anywhere}
+.own-balances__available{border:1px solid var(--color-stroke)}
+@media(max-width:580px){.own-balances__header :deep(.base-select-field){width:100%}}
 .personal-documents__row{display:flex;align-items:center;justify-content:space-between;gap:var(--space-4);flex-wrap:wrap;border-top:1px solid var(--color-stroke);padding:var(--space-4) 0}
 .personal-documents__details{display:grid;gap:var(--space-1);min-width:0;overflow-wrap:anywhere}
 .personal-documents__details span{font-size:var(--font-caption-size);color:var(--color-muted)}

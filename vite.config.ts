@@ -30,18 +30,21 @@ export default defineConfig(({ mode }) => {
     plugins: [vue()],
     server: {
       port: 5173,
-      proxy: {
-        '/api': { target: backend, changeOrigin: false },
-        '/auth': { target: backend, changeOrigin: false },
-        '/sanctum': { target: backend, changeOrigin: false },
-        // Local parity with Apache ProxyPass /hrm-api -> dedicated Laravel root.
-        ...(gateway ? {
-          [gateway]: {
-            target: backend, changeOrigin: false,
-            rewrite: (path: string) => path.slice(gateway.length),
+      proxy: gateway
+        ? {
+            // Production parity: when /hrm-api is enabled, do NOT silently
+            // expose the existing platform's unprefixed /api, /auth, /sanctum.
+            [gateway]: {
+              target: backend,
+              changeOrigin: false,
+              rewrite: (path: string) => path.slice(gateway.length),
+            },
+          }
+        : {
+            '/api': { target: backend, changeOrigin: false },
+            '/auth': { target: backend, changeOrigin: false },
+            '/sanctum': { target: backend, changeOrigin: false },
           },
-        } : {}),
-      },
     },
   }
 })

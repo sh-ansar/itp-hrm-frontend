@@ -5,7 +5,7 @@ import { chromium } from 'playwright'
 const baseURL = process.env.HRM_E2E_BASE_URL || 'http://127.0.0.1:5173'
 const company = '11111111-1111-4111-8111-111111111111'
 const employee = '77777777-7777-4777-8777-777777777777'
-const base = '/api/v1/companies/' + company
+const base = (process.env.HRM_E2E_API_PREFIX || '') + '/api/v1/companies/' + company
 const pdf = Buffer.from('%PDF-1.4\n1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n'
   + '2 0 obj\n<< /Type /Pages /Kids [] /Count 0 >>\nendobj\ntrailer\n<< /Root 1 0 R >>\n%%EOF\n')
 
@@ -25,8 +25,9 @@ async function login(browser, actor, width = 1440) {
   return { page, context }
 }
 async function api(page, path, method = 'GET', payload) {
-  return page.evaluate(async ({ path, method, payload }) => {
-    const token = document.cookie.split('; ').find(c => c.startsWith('XSRF-TOKEN='))?.slice(11)
+  return page.evaluate(async ({ path, method, payload, csrfCookie }) => {
+    const pair = document.cookie.split('; ').find(c => c.startsWith(csrfCookie + '='))
+    const token = pair?.slice(csrfCookie.length + 1)
     const response = await fetch(path, {
       method, credentials: 'same-origin', headers: {
         Accept: 'application/json', 'Content-Type': 'application/json',
@@ -36,7 +37,7 @@ async function api(page, path, method = 'GET', payload) {
     })
     return { status: response.status, body: response.status === 204 ? null
       : (response.headers.get('content-type')?.includes('json') ? await response.json() : null) }
-  }, { path, method, payload })
+  }, { path, method, payload, csrfCookie: process.env.HRM_E2E_XSRF_COOKIE_NAME || 'XSRF-TOKEN' })
 }
 async function createOrderViaHR(page, title, number) {
   await page.goto('/documents')

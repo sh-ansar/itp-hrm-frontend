@@ -51,7 +51,13 @@ export async function uploadProtectedEvidence(company: string, request: string,
         headers: { Accept: 'application/json', 'X-XSRF-TOKEN': csrf },
         body: data, signal: controller.signal,
       })
-    } catch {
+    } catch (cause) {
+      // This diagnostic reports only the error class/text, never file contents,
+      // names, document UUIDs or medical information.
+      console.warn('HRM_PROTECTED_FETCH_DIAGNOSTIC', {
+        kind: cause instanceof Error ? cause.name : 'unknown',
+        detail: cause instanceof Error ? cause.message : 'unknown',
+      })
       throw new ApiError(controller.signal.aborted ? 'timeout' : 'network', null,
         controller.signal.aborted ? 'Private PDF upload timed out' : 'Could not upload private PDF')
     }

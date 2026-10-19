@@ -156,6 +156,11 @@ jobs:
             if ! node --test --test-concurrency=1 "$test_file"; then
               echo "::error file=$test_file::Browser test failed"
               failed=1
+              # The new privacy-critical upload test runs first: return its
+              # diagnostics immediately instead of masking it behind 25+ tests.
+              if [ "$test_file" = "tests/e2e/protected-leave-evidence.test.mjs" ]; then
+                exit 1
+              fi
             fi
             echo "::endgroup::"
           done

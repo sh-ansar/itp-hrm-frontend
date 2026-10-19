@@ -33,6 +33,8 @@ export interface DocumentRow extends Record<string, unknown> {
   first_name: string
   last_name: string
   has_file: boolean
+  employee_visible: boolean
+  employee_shared_at: string | null
 }
 export interface DocumentListResponse {
   data: DocumentRow[]
@@ -160,4 +162,20 @@ export async function uploadDocumentPdf(
   } finally {
     clearTimeout(timer)
   }
+}
+
+/** Explicit HR/admin access approval only; backend revalidates company, employee, type and file. */
+export function setEmployeeDocumentVisibility(
+  companyId: string,
+  documentId: string,
+  revision: number,
+  employeeVisible: boolean,
+): Promise<{ data: { id: string; employee_visible: boolean; employee_shared_at: string | null; revision: number } }> {
+  validateId(companyId)
+  validateId(documentId)
+  if (!Number.isSafeInteger(revision) || revision < 1) throw new Error('Обновите реестр документов')
+  return apiRequest(`/companies/${companyId}/documents/${documentId}/employee-access`, {
+    method: 'PUT',
+    body: JSON.stringify({ revision, employee_visible: employeeVisible }),
+  })
 }

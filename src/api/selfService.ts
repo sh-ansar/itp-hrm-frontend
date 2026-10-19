@@ -57,3 +57,27 @@ export function getOwnTimesheet(company: string, month: string) {
     `${base(company)}/timesheet?month=${encodeURIComponent(month)}`, { cache: 'no-store' },
   )
 }
+
+/** Only explicitly shared PDFs scoped by the backend to this session's employee link. */
+export interface OwnDocument {
+  id: string
+  document_type: 'order' | 'contract'
+  title: string
+  issued_on: string | null
+  employee_shared_at: string | null
+}
+export interface OwnDocumentsResponse {
+  data: OwnDocument[]
+  meta: { current_page: number; last_page: number; total: number }
+}
+export function getOwnDocuments(company: string, page = 1): Promise<OwnDocumentsResponse> {
+  if (!Number.isSafeInteger(page) || page < 1) throw new Error('Некорректная страница')
+  return apiRequest<OwnDocumentsResponse>(`${base(company)}/documents?page=${page}`, { cache: 'no-store' })
+}
+export function ownDocumentFileUrl(company: string, document: string): string {
+  const id = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+  if (!id.test(company) || !id.test(document)) throw new Error('Некорректный идентификатор')
+  const apiBase = (import.meta.env.VITE_API_BASE_URL || '/api/v1').replace(/\/$/, '')
+  if (!apiBase.startsWith('/') || apiBase.startsWith('//')) throw new Error('Некорректный API URL')
+  return `${apiBase}${base(company)}/documents/${document}/file`
+}

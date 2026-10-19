@@ -7,8 +7,10 @@ import BaseStatusPill from './ui/BaseStatusPill.vue'
 import type { DocumentRow } from '../api/documents'
 import { documentFileUrl, documentTypeLabel } from '../api/documents'
 import { getDemoDocumentUrl } from '../mocks/demoDocumentFiles'
+import { useDocumentSharingCopy } from '../i18n/documentSharing'
 
 const { tr } = useWorkspaceI18n()
+const { sharing } = useDocumentSharingCopy()
 const fmt = useUiFormatters()
 
 const props = defineProps<{
@@ -17,7 +19,7 @@ const props = defineProps<{
   writesEnabled: boolean
   loading?: boolean
 }>()
-const emit = defineEmits<{ upload: [row: DocumentRow] }>()
+const emit = defineEmits<{ upload: [row: DocumentRow]; share: [row: DocumentRow] }>()
 const demoMode = import.meta.env.VITE_DEMO_MODE === 'true'
 
 function employeeName(row: DocumentRow): string {
@@ -65,6 +67,14 @@ function displayDate(value: string | null): string {
       </dl>
 
       <footer>
+        <BaseStatusPill :tone="row.employee_visible ? 'success' : 'info'">
+          {{ row.employee_visible ? sharing.available : sharing.private }}
+        </BaseStatusPill>
+        <BaseButton v-if="!demoMode && writesEnabled && row.has_file &&
+            (row.employee_visible || ['order','contract'].includes(row.document_type))"
+          variant="secondary" @click="emit('share', row)">
+          {{ row.employee_visible ? sharing.revoke : sharing.share }}
+        </BaseButton>
         <a v-if="row.has_file && demoMode && getDemoDocumentUrl(row.id)"
           class="download-link" :href="documentFileUrl(companyId, row.id)" target="_blank" rel="noopener">
           <FileCheck2 :size="15" /> {{ tr('Открыть PDF') }}</a>
@@ -100,7 +110,7 @@ function displayDate(value: string | null): string {
 .document-mobile-card dd a{color:var(--color-text);font-weight:600}
 .document-mobile-card dd a:hover{color:var(--color-primary)}
 .document-mobile-card dd span{color:var(--color-muted);font-size:10px}
-.document-mobile-card footer{display:flex;align-items:center;justify-content:flex-end;padding-top:10px;border-top:1px solid var(--color-stroke)}
+ .document-mobile-card footer{display:flex;align-items:center;justify-content:flex-end;gap:8px;flex-wrap:wrap;padding-top:10px;border-top:1px solid var(--color-stroke)}
 .file-ready,.download-link,.file-missing{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:600}
 .file-ready,.download-link{color:var(--color-primary)}
 .file-missing{color:var(--color-muted)}

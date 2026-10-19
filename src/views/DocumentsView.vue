@@ -3,6 +3,7 @@ import { publicAsset } from '../utils/publicAsset'
 import { useActiveCompanySelection } from '../composables/useActiveCompanySelection'
 import { useWorkspaceI18n } from '../composables/useWorkspaceI18n'
 import { useUiFormatters } from '../composables/useUiFormatters'
+import { useDocumentSharingCopy } from '../i18n/documentSharing'
 import { computed, onMounted, ref, watch } from 'vue'
 import { FileCheck2, FilePlus2, FileText, Paperclip } from 'lucide-vue-next'
 import BaseButton from '../components/ui/BaseButton.vue'
@@ -26,11 +27,13 @@ import {
   documentTypeLabel,
   documentTypes,
   listDocuments,
+  setEmployeeDocumentVisibility,
   type DocumentRow,
   type DocumentType,
 } from '../api/documents'
 
 const { tr } = useWorkspaceI18n()
+const { sharing } = useDocumentSharingCopy()
 const fmt = useUiFormatters()
 
 const companies = ref<CompanyRecord[]>([])
@@ -49,6 +52,9 @@ const typeFilter = ref('all')
 const employeeFilter = ref('')
 const createOpen = ref(false)
 const uploadTarget = ref<DocumentRow | null>(null)
+const shareTarget = ref<DocumentRow | null>(null)
+const shareBusy = ref(false)
+const shareError = ref('')
 const demoMode = import.meta.env.VITE_DEMO_MODE === 'true'
 let generation = 0
 
@@ -60,7 +66,7 @@ const typeTabs = [
 const pagePdfCount = computed(() => rows.value.filter(row => row.has_file).length)
 const pageDraftCount = computed(() => rows.value.filter(row => row.status === 'draft').length)
 
-const columns = [
+const columns = computed(() => [
   { key: 'issued_on', label: 'Дата' },
   { key: 'document_type', label: 'Вид' },
   { key: 'title', label: 'Документ' },
@@ -68,7 +74,8 @@ const columns = [
   { key: 'relation', label: 'Связь' },
   { key: 'status', label: 'Статус' },
   { key: 'file', label: 'PDF' },
-]
+  { key: 'employee_access', label: sharing.value.access },
+])
 
 function employeeName(row: DocumentRow): string {
   return [row.last_name, row.first_name].filter(Boolean).join(' ')
@@ -149,12 +156,52 @@ async function fileSaved() {
   await loadDocuments()
 }
 
+
+function canShare(row: DocumentRow): boolean {
+  return !demoMode && writesEnabled.value && row.has_file && ['order', 'contract'].includes(row.document_type)
+}
+function showShareDialog(row: DocumentRow): void {
+  if (!canShare(row) && !row.employee_visible) return
+  shareTarget.value = row
+  shareError.value = ''
+}
+function closeShareDialog(): void {
+  if (shareBusy.value) return
+  shareTarget.value = null
+  shareError.value = ''
+}
+async function confirmShare(): Promise<void> {
+  const target = shareTarget.value
+  if (!target || shareBusy.value || demoMode || !company.value) return
+  const currentCompany = company.value
+  shareBusy.value = true
+  shareError.value = ''
+  error.value = ''
+  success.value = ''
+  try {
+    await setEmployeeDocumentVisibility(currentCompany, target.id, target.revision, !target.employee_visible)
+    if (company.value === currentCompany) {
+      shareTarget.value = null
+      success.value = target.employee_visible
+        ? sharing.value.revokeMessage
+        : sharing.value.sharedMessage
+      await loadDocuments()
+    }
+  } catch (cause) {
+    shareError.value = cause instanceof Error ? cause.message : 'Не удалось изменить доступ. Обновите реестр.'
+  } finally {
+    shareBusy.value = false
+  }
+}
+
 watch(company, () => {
   page.value = 1
   typeFilter.value = 'all'
   employeeFilter.value = ''
   createOpen.value = false
   uploadTarget.value = null
+  shareTarget.value = null
+  shareError.value = ''
   success.value = ''
 })
 watch([company, page, typeFilter, employeeFilter], loadDocuments)
@@ -265,12 +312,24 @@ onMounted(loadCompanies)
                 @click="uploadTarget = row">{{ tr('Прикрепить PDF') }}</BaseButton>
               <span v-else class="muted">{{ tr('Не прикреплён') }}</span>
             </template>
+
+            <template #cell-employee_access="{ row }">
+              <div class="document-access">
+                <BaseStatusPill :tone="row.employee_visible ? 'success' : 'info'">
+                  {{ row.employee_visible ? sharing.available : sharing.private }}
+                </BaseStatusPill>
+                <BaseButton v-if="!demoMode && writesEnabled && (canShare(row) || row.employee_visible)"
+                  variant="secondary" @click="showShareDialog(row)">
+                  {{ row.employee_visible ? sharing.revoke : sharing.share }}
+                </BaseButton>
+              </div>
+            </template>
           </BaseDataTable>
         </div>
 
         <div class="documents-mobile">
           <DocumentMobileList :rows="rows" :company-id="company" :writes-enabled="writesEnabled"
-            :loading="documentsBusy" @upload="uploadTarget = $event" />
+            :loading="documentsBusy" @upload="uploadTarget = $event" @share="showShareDialog" />
         </div>
 
         <BasePagination :page="page" :last-page="lastPage" :loading="documentsBusy"
@@ -291,6 +350,28 @@ onMounted(loadCompanies)
     <BaseDialog :open="uploadTarget !== null" :title="tr('Прикрепить PDF')" @close="uploadTarget = null">
       <DocumentUploadForm v-if="uploadTarget" :key="uploadTarget.id + ':' + uploadTarget.revision"
         :company-id="company" :document="uploadTarget" @saved="fileSaved" @cancelled="uploadTarget = null" />
+    </BaseDialog>
+
+    <BaseDialog :open="shareTarget !== null" :title="sharing.title" @close="closeShareDialog">
+      <div v-if="shareTarget" class="sharing-confirmation">
+        <strong>{{ shareTarget.title }}</strong>
+        <BaseNotice v-if="shareError" tone="error">{{ shareError }}</BaseNotice>
+        <p v-if="shareTarget.employee_visible">
+          {{ sharing.revokeQuestion }}
+        </p>
+        <p v-else>
+          {{ sharing.shareQuestion }}
+        </p>
+        <BaseNotice tone="info">
+          {{ sharing.notice }}
+        </BaseNotice>
+      </div>
+      <template #footer>
+        <BaseButton variant="secondary" :disabled="shareBusy" @click="closeShareDialog">{{ sharing.cancel }}</BaseButton>
+        <BaseButton :disabled="shareBusy" @click="confirmShare">
+          {{ shareTarget?.employee_visible ? sharing.revoke : sharing.share }}
+        </BaseButton>
+      </template>
     </BaseDialog>
   </section>
 </template>
@@ -328,6 +409,11 @@ onMounted(loadCompanies)
 .download-link{text-decoration:underline;text-underline-offset:3px}
 .download-link:focus-visible{outline:3px solid var(--color-focus)}
 .muted{color:var(--color-muted);font-size:11px}
+.document-access{display:flex;align-items:center;gap:8px;flex-wrap:wrap;min-width:0}
+.document-access :deep(.base-button){font-size:11px}
+.sharing-confirmation{display:grid;gap:12px;overflow-wrap:anywhere}
+.sharing-confirmation p{margin:0;line-height:1.55}
+
 .documents-mobile{display:none}
 .documents-register :deep(.base-pagination){margin-top:14px}
 @media(max-width:900px){.summary-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}

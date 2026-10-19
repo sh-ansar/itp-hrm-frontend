@@ -10,6 +10,7 @@ import BaseKpiGrid from '../components/ui/BaseKpiGrid.vue'
 import DashboardSectionHeading from '../components/ui/DashboardSectionHeading.vue'
 import DashboardTableToolbar from '../components/ui/DashboardTableToolbar.vue'
 import HomeOnboardingWizard from '../components/HomeOnboardingWizard.vue'
+import OverviewCompanySummary from '../components/OverviewCompanySummary.vue'
 import { listCompanies } from '../api/organization'
 import { listEmployees, type EmployeeRecord, type EmploymentFilter } from '../api/personnel'
 import { listPersonnelActions, type PersonnelActionRow } from '../api/personnelActions'
@@ -38,6 +39,7 @@ const staffing=ref<StaffingPlanLine[]>([])
 const personnelTotal=ref<number|null>(null)
 const documentsTotal=ref<number|null>(null)
 const documentExpiryAvailable=ref(false)
+const journalAvailable=ref(false)
 const hiresThisMonth=ref<number|null>(null)
 const employeeQuery=ref('')
 const employeeStatus=ref('active')
@@ -86,6 +88,9 @@ const actionRows=computed<ActionRow[]>(()=>actions.value.slice(0,5).map(a=>({
   ...a,
   full_name:[a.last_name,a.first_name,a.middle_name].filter(Boolean).join(' '),
   action_label:({hire:'Приём',transfer:'Перевод',termination:'Увольнение'} as Record<string,string>)[a.action_type]??a.action_type,
+})))
+const overviewRecentEvents=computed(()=>actionRows.value.slice(0,1).map(row=>({
+  id:row.id,fullName:row.full_name,kind:row.action_type,effectiveOn:formatDate(row.effective_on),
 })))
 const vacancyRows=computed(()=>staffing.value.filter(row=>Number(row.vacant_units)>0))
 const vacancyDepartments=computed(()=>[
@@ -216,6 +221,7 @@ async function load(){
     }else staffError.value='Не удалось получить реестр сотрудников'
     if(allPeopleResult.status==='fulfilled')allEmployeeCount.value=allPeopleResult.value.meta.total
     if(actionsResult.status==='fulfilled'){
+      journalAvailable.value=true
       actions.value=actionsResult.value.data
       const {data,meta}=actionsResult.value
       // A count from an incomplete page would be misleading.
@@ -259,7 +265,8 @@ onMounted(()=>{
       :position-name="onboardingEmployee?.current_position_name||''"
       @completed="completeOnboarding" />
     <template v-else>
-    <BaseKpiGrid class="overview-metrics" label="Основные показатели компании">
+    <div class="overview-hero">
+      <BaseKpiGrid class="overview-metrics" :columns="3" label="Основные показатели компании">
       <DashboardMetricCard title="Вакантные позиции" color="amber"
         :value="staffingError?'—':formatUnits(vacantUnits)" :percent="staffingError?null:vacancyShare"
         :detail="'ставок из '+(plannedUnits?formatUnits(plannedUnits):'—')"
@@ -272,11 +279,15 @@ onMounted(()=>{
         :value="documentsTotal" :percent="null"
         detail="документов в реестре" :footnote="documentExpiryAvailable?'Сроки документов рассчитаны':'Сроки действия пока не учитываются'"
         to="/documents" />
-      <DashboardMetricCard title="Сотрудники в штате" color="blue"
-        :value="staffCount" :percent="activeShare"
-        :detail="'работают из '+(allEmployeeCount??'—')+' записей'"
-        footnote="По реестру персонала" to="/employees" />
-    </BaseKpiGrid>
+      </BaseKpiGrid>
+      <OverviewCompanySummary
+        :company-name="companyName"
+        :active-count="staffCount"
+        :total-count="allEmployeeCount"
+        :active-share="activeShare"
+        :journal-available="journalAvailable"
+        :recent-events="overviewRecentEvents" />
+    </div>
 
     <section class="overview-section" aria-label="Реестр сотрудников на главной">
       <DashboardSectionHeading title="Реестр сотрудников" to="/employees" action-label="Полный реестр">
@@ -362,6 +373,12 @@ onMounted(()=>{
 
 <style scoped>
 .overview-page{display:grid;grid-template-columns:minmax(0,1fr);gap:25px;min-width:0;max-width:100%;padding-top:1px}
+.overview-hero{
+  display:grid;grid-template-columns:minmax(0,3fr) minmax(245px,1fr);
+  align-items:stretch;gap:16px;min-width:0;
+}
+.overview-hero>.overview-metrics{min-width:0}
+@media(max-width:1390px){.overview-hero{grid-template-columns:minmax(0,1fr)}}
 .overview-sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap;border:0}
 .overview-section{min-width:0;display:grid;gap:0}
 .primary-cell{display:grid;gap:3px;min-width:165px;max-width:290px}

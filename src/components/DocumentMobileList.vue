@@ -3,6 +3,8 @@ import { useWorkspaceI18n } from '../composables/useWorkspaceI18n'
 import { useUiFormatters } from '../composables/useUiFormatters'
 import { FileCheck2, Paperclip } from 'lucide-vue-next'
 import BaseButton from './ui/BaseButton.vue'
+import OrderReviewControls from './OrderReviewControls.vue'
+import { useOrderReviewCopy } from '../i18n/orderReview'
 import BaseStatusPill from './ui/BaseStatusPill.vue'
 import type { DocumentRow } from '../api/documents'
 import { documentFileUrl, documentTypeLabel } from '../api/documents'
@@ -11,21 +13,25 @@ import { useDocumentSharingCopy } from '../i18n/documentSharing'
 
 const { tr } = useWorkspaceI18n()
 const { sharing } = useDocumentSharingCopy()
+const { orderCopy } = useOrderReviewCopy()
 const fmt = useUiFormatters()
 
 const props = defineProps<{
   rows: DocumentRow[]
   companyId: string
   writesEnabled: boolean
+  orderApprovalsEnabled?: boolean
+  canReviewOrders?: boolean
   loading?: boolean
 }>()
-const emit = defineEmits<{ upload: [row: DocumentRow]; share: [row: DocumentRow] }>()
+const emit = defineEmits<{ upload: [row: DocumentRow]; share: [row: DocumentRow]; orderChanged: [status: string] }>()
 const demoMode = import.meta.env.VITE_DEMO_MODE === 'true'
 
 function employeeName(row: DocumentRow): string {
   return [row.last_name, row.first_name].filter(Boolean).join(' ')
 }
 function statusLabel(status: string): string {
+  if (status === 'submitted' || status === 'approved' || status === 'rejected') return orderCopy.value[status]
   return tr(status === 'draft' ? 'Черновик' : 'Документ')
 }
 function displayDate(value: string | null): string {
@@ -45,7 +51,7 @@ function displayDate(value: string | null): string {
           <strong>{{ row.title }}</strong>
           <small>№ {{ row.document_number || tr('без номера') }}</small>
         </div>
-        <BaseStatusPill :tone="row.status === 'draft' ? 'info' : 'success'">
+        <BaseStatusPill :tone="row.status === 'draft' ? 'info' : row.status === 'submitted' ? 'warning' : row.status === 'rejected' ? 'danger' : 'success'">
           {{ statusLabel(row.status) }}
         </BaseStatusPill>
       </header>
@@ -71,7 +77,8 @@ function displayDate(value: string | null): string {
           {{ row.employee_visible ? sharing.available : sharing.private }}
         </BaseStatusPill>
         <BaseButton v-if="!demoMode && writesEnabled && row.has_file &&
-            (row.employee_visible || ['order','contract'].includes(row.document_type))"
+            (row.employee_visible || ['order','contract'].includes(row.document_type)) &&
+            (row.employee_visible || row.document_type !== 'order' || !orderApprovalsEnabled || row.status === 'approved')"
           variant="secondary" @click="emit('share', row)">
           {{ row.employee_visible ? sharing.revoke : sharing.share }}
         </BaseButton>
@@ -85,6 +92,9 @@ function displayDate(value: string | null): string {
         <BaseButton v-else-if="writesEnabled && row.status === 'draft'" variant="secondary" @click="emit('upload',row)">
           <Paperclip :size="15" /> {{ tr('Прикрепить PDF') }}</BaseButton>
         <span v-else class="file-missing">{{ tr('PDF не прикреплён') }}</span>
+        <OrderReviewControls v-if="!demoMode && orderApprovalsEnabled && row.document_type === 'order'"
+          :company-id="companyId" :row="row" :enabled="!!orderApprovalsEnabled"
+          :review-enabled="!!canReviewOrders" @changed="emit('orderChanged', $event)" />
       </footer>
     </article>
   </div>

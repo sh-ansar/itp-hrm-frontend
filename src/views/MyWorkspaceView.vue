@@ -65,7 +65,7 @@ async function loadOwnTimesheet() {
   timesheetDays.value = []
   timesheetError.value = ''
   if (!workspace.value?.data.employee || !access.activeCompanyId) { timesheetLoading.value = false; return }
-  if (!/^\\d{4}-(0[1-9]|1[0-2])$/.test(timesheetMonth.value)) return
+  if (!/^[0-9]{4}-(0[1-9]|1[0-2])$/.test(timesheetMonth.value)) return
   timesheetLoading.value = true
   try {
     const response = await getOwnTimesheet(access.activeCompanyId, timesheetMonth.value)

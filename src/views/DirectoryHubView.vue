@@ -382,6 +382,45 @@ onMounted(async()=>{try{await loadCompanies();if(company.value)await loadRecords
 .tariff-expand{display:grid;place-items:center;flex:none;width:23px;height:23px;border:0;background:transparent;color:var(--color-muted);cursor:pointer}
 .tariff-leaf-icon{color:var(--color-muted);flex:none}
 .tariff-tree-row :deep(.base-button){font-weight:500;font-size:11px;min-height:27px;height:27px;padding:4px 8px}
+/* Primary ZIP reference: compact two-column accordion cards, not a sidebar. */
+.directory-card-columns{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;min-width:0;align-items:start}
+.directory-card-column{display:grid;align-content:start;gap:9px;min-width:0}
+.directory-accordion-card{min-width:0;border-radius:9px;border:1px solid var(--color-stroke);background:var(--color-surface);box-shadow:var(--shadow-card);overflow:hidden}
+.directory-accordion-trigger{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;height:auto;min-height:72px;padding:18px 20px;background:transparent;border:0;border-radius:0;box-shadow:none;text-align:start;white-space:normal;backdrop-filter:none}
+.directory-accordion-trigger.secondary:hover:not(:disabled){background:var(--color-hover);border-color:transparent}
+.directory-accordion-copy{display:grid;gap:4px;min-width:0;flex:1}
+.directory-accordion-copy strong{font-size:15px;line-height:1.35;font-weight:600;color:var(--color-text);overflow-wrap:anywhere}
+.directory-accordion-copy small{font-size:12px;line-height:1.35;font-weight:400;color:var(--color-muted);white-space:normal;overflow-wrap:anywhere}
+.directory-accordion-chevron{display:grid;place-items:center;flex:none;width:30px;height:30px;border:1px solid var(--color-stroke);border-radius:8px;background:var(--color-surface-raised);color:var(--color-primary)}
+.directory-accordion-chevron svg{transform:rotate(-90deg);transition:transform .15s ease}
+.directory-accordion-chevron svg.rotated{transform:rotate(180deg)}
+.directory-accordion-content{display:grid;gap:10px;padding:0 17px 15px;min-width:0}
+.directory-card-toolbar{display:flex;align-items:center;gap:7px;min-width:0}
+.directory-card-toolbar .directory-search{flex:1;min-width:0;height:34px}
+.directory-card-toolbar .directory-search input{font-size:12px}
+.directory-card-toolbar :deep(.base-button){height:30px;min-height:30px;width:30px;min-width:30px;padding:0}
+.directory-card-toolbar :deep(.base-select-field){width:120px;flex:0 0 120px}
+.directory-tariff-tree--cards{border:0;border-radius:0;overflow-x:auto}
+.directory-tariff-tree--cards .tariff-tree-row{min-width:0;min-height:29px;gap:5px;padding-block:3px;padding-inline-end:2px;border:0;font-size:12px}
+.directory-tariff-tree--cards .tariff-expand{width:20px;min-width:20px;height:22px;min-height:22px;flex:0 0 20px;box-shadow:none;background:transparent;border:0;padding:0}
+.directory-tariff-tree--cards .tariff-leaf-icon{flex:0 0 15px}
+.directory-tariff-tree--cards .tariff-name{flex:1;min-width:0;overflow-wrap:anywhere}
+.directory-tariff-tree--cards .tariff-code,.directory-tariff-tree--cards .tariff-status{display:none}
+.directory-tariff-tree--cards .tariff-tree-action{width:22px;min-width:22px;height:22px;min-height:22px;padding:0;box-shadow:none;border:0;background:transparent;color:var(--color-muted)}
+.directory-tariff-tree--cards .tariff-tree-action :deep(svg){width:15px;height:15px}
+.directory-card-list{display:grid;min-width:0}
+.directory-card-list-row{display:flex;gap:8px;align-items:center;min-width:0;padding:9px 2px;border-bottom:1px solid var(--color-stroke);font-size:12px}
+.directory-card-list-row:last-child{border:0}
+.directory-card-list-row>span{flex:1;min-width:0;overflow-wrap:anywhere}
+.directory-card-list-row small{color:var(--color-muted)}
+.directory-card-empty,.directory-card-readonly{margin:0;font-size:11px;line-height:1.45;color:var(--color-muted)}
+.directory-card-readonly{border-top:1px solid var(--color-stroke);padding-top:8px}
+.directory-layout-switch{display:flex;gap:6px;align-items:center;min-width:0}
+.directory-layout-switch :deep(.base-button){height:32px;min-height:32px;font-size:12px;font-weight:500}
+.directory-layout-switch :deep(.layout-active){color:var(--color-primary);border-color:var(--color-primary-stroke);background:var(--color-accent-soft)}
+@media(max-width:920px){.directory-card-columns{grid-template-columns:minmax(0,1fr)}}
+@media(max-width:560px){.directory-accordion-trigger{min-height:65px;padding:14px}.directory-accordion-content{padding:0 11px 11px}
+ .directory-card-toolbar{flex-wrap:wrap}.directory-card-toolbar :deep(.base-select-field){flex:1 1 100%;width:100%}}
 .directory-sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap;border:0}
 .directory-breadcrumb{display:flex;align-items:center;gap:9px;min-height:22px;color:var(--color-muted);font-size:12px}
 .directory-breadcrumb img{width:15px;height:15px}.directory-breadcrumb strong{color:var(--color-text);font-weight:500}

@@ -620,10 +620,46 @@ onMounted(load)
             <div class="personnel-id"><span>{{ tr('Табельный №') }}</span><strong>{{ profile.data.personnel_number }}</strong></div>
           </div>
           <div class="identity-name-fields">
-            <div class="read-field"><span>{{ tr('Фамилия') }}</span><strong>{{ profile.data.last_name }}</strong></div>
-            <div class="read-field"><span>{{ tr('Имя') }}</span><strong>{{ profile.data.first_name }}</strong></div>
-            <div class="read-field"><span>{{ tr('Отчество') }}</span><strong>{{ profile.data.middle_name ?? '—' }}</strong></div>
-            <div class="read-field"><span>{{ tr('Дата рождения') }}</span><strong>{{ profile.meta.extended_sections_visible ? (formatDate(profile.data.birth_date)) : '—' }}</strong></div>
+            <div class="read-field" :data-field-state="profile.meta.employee_writes_enabled ? 'editable' : 'informative'">
+              <span>{{ tr('Фамилия') }}</span>
+              <div class="read-field-value" :class="{ 'read-field-value--editable': profile.meta.employee_writes_enabled }">
+                <strong>{{ profile.data.last_name }}</strong>
+                <BaseButton v-if="profile.meta.employee_writes_enabled" icon-only variant="secondary" class="identity-field-edit"
+                  :aria-label="tr('Изменить поле:') + ' ' + tr('Фамилия')" @click="openFieldEditor('employee')">
+                  <Pencil :size="14" aria-hidden="true"/>
+                </BaseButton>
+              </div>
+            </div>
+            <div class="read-field" :data-field-state="profile.meta.employee_writes_enabled ? 'editable' : 'informative'">
+              <span>{{ tr('Имя') }}</span>
+              <div class="read-field-value" :class="{ 'read-field-value--editable': profile.meta.employee_writes_enabled }">
+                <strong>{{ profile.data.first_name }}</strong>
+                <BaseButton v-if="profile.meta.employee_writes_enabled" icon-only variant="secondary" class="identity-field-edit"
+                  :aria-label="tr('Изменить поле:') + ' ' + tr('Имя')" @click="openFieldEditor('employee')">
+                  <Pencil :size="14" aria-hidden="true"/>
+                </BaseButton>
+              </div>
+            </div>
+            <div class="read-field" :data-field-state="profile.meta.employee_writes_enabled ? 'editable' : 'informative'">
+              <span>{{ tr('Отчество') }}</span>
+              <div class="read-field-value" :class="{ 'read-field-value--editable': profile.meta.employee_writes_enabled }">
+                <strong>{{ profile.data.middle_name ?? '—' }}</strong>
+                <BaseButton v-if="profile.meta.employee_writes_enabled" icon-only variant="secondary" class="identity-field-edit"
+                  :aria-label="tr('Изменить поле:') + ' ' + tr('Отчество')" @click="openFieldEditor('employee')">
+                  <Pencil :size="14" aria-hidden="true"/>
+                </BaseButton>
+              </div>
+            </div>
+            <div class="read-field" :data-field-state="profile.meta.employee_writes_enabled ? 'editable' : 'informative'">
+              <span>{{ tr('Дата рождения') }}</span>
+              <div class="read-field-value" :class="{ 'read-field-value--editable': profile.meta.employee_writes_enabled }">
+                <strong>{{ profile.meta.extended_sections_visible ? formatDate(profile.data.birth_date) : '—' }}</strong>
+                <BaseButton v-if="profile.meta.employee_writes_enabled" icon-only variant="secondary" class="identity-field-edit"
+                  :aria-label="tr('Изменить поле:') + ' ' + tr('Дата рождения')" @click="openFieldEditor('employee')">
+                  <Pencil :size="14" aria-hidden="true"/>
+                </BaseButton>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -1066,12 +1102,14 @@ onMounted(load)
   display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px 16px;
 }
 .read-field{display:grid;align-content:start;gap:5px;min-width:0}
-.read-field span{color:var(--color-text);font-size:12px;line-height:17px;font-weight:600}
-.read-field strong{
-  min-height:29px;display:flex;align-items:center;padding:4px 0;
-  border:0;background:transparent;box-shadow:none;
-  color:var(--color-text);font-size:13px;line-height:19px;font-weight:500;overflow-wrap:anywhere;
-}
+.read-field>span{color:var(--color-muted);font-size:12px;line-height:17px;font-weight:500}
+.read-field-value{display:flex;align-items:center;gap:4px;min-height:34px;min-width:0;padding:3px 0}
+.read-field-value>strong{flex:1;min-width:0;color:var(--color-text);font-size:13px;line-height:19px;font-weight:500;overflow-wrap:anywhere}
+.read-field-value--editable{padding:2px 3px 2px 10px;background:var(--color-surface-raised);border:1px solid var(--color-stroke);border-radius:var(--radius-sm)}
+.read-field-value--editable>strong{font-weight:400}
+.identity-field-edit{width:28px;min-width:28px;height:28px;min-height:28px;padding:0;background:transparent;border-color:transparent;box-shadow:none;color:var(--color-muted)}
+.identity-field-edit :deep(svg){width:14px;height:14px}
+.identity-field-edit:hover:not(:disabled){background:var(--color-accent-soft);color:var(--color-primary)}
 .employee-field-legend{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin:-5px 0 1px;font-size:11px;line-height:17px;color:var(--color-muted)}
 .employee-field-legend>span{display:inline-flex;align-items:center;gap:5px}
 .employee-field-legend svg{flex:none;color:var(--color-muted)}

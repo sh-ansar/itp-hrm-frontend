@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
-import { ChevronDown, ChevronRight, FolderTree, Plus, Search } from 'lucide-vue-next'
+import { ChevronDown, ChevronRight, FolderTree, LayoutGrid, ListTree, Pencil, Plus, Search, Trash2 } from 'lucide-vue-next'
 import { publicAsset } from '../utils/publicAsset'
 import BaseActionDropdown from '../components/ui/BaseActionDropdown.vue'
 import BaseButton from '../components/ui/BaseButton.vue'
@@ -84,9 +84,19 @@ const editorOpen=ref(false)
 const editing=ref<DirectoryEntry|null>(null)
 const draft=ref({code:'',name:'',parent_id:null as string|null,category:'',unit:'',value:'',status:'active' as DirectoryStatus})
 const expandedCategories=ref<string[]>([])
+const directoryMode=ref<'cards'|'register'>('cards')
 
 const currentGroups=computed(()=>groups[activeSection.value]??[])
 const currentGroup=computed(()=>currentGroups.value.find(x=>x.id===activeGroup.value)??null)
+const directoryColumns=computed(()=>{
+  const available=currentGroups.value
+  if(activeSection.value==='tariffs'){
+    const left=new Set(['tariff-types','tariff-methods','tariffs','cargo-types'])
+    return [available.filter(item=>left.has(item.id)),available.filter(item=>!left.has(item.id))]
+  }
+  const split=Math.ceil(available.length/2)
+  return [available.slice(0,split),available.slice(split)]
+})
 const statusOptions=[{id:'all',name:'Все статусы'},{id:'active',name:'Активные'},{id:'draft',name:'Черновики'},{id:'inactive',name:'Неактивные'}]
 const visibleRows=computed(()=>records.value.filter(row=>{
   const q=search.value.trim().toLowerCase()
@@ -94,10 +104,10 @@ const visibleRows=computed(()=>records.value.filter(row=>{
     &&(!q||[row.code,row.name,row.category??'',row.unit??'',row.value??''].join(' ').toLowerCase().includes(q))
 }))
 const hierarchyRows=computed(()=>{
-  const lookup=new Map(records.value.map(row=>[row.id,row]))
+  const visibleIds=new Set(visibleRows.value.map(row=>row.id))
   const groups=new Map<string,DirectoryEntry[]>()
   for(const item of visibleRows.value){
-    const parent=item.parent_id && lookup.has(item.parent_id)?item.parent_id:''
+    const parent=item.parent_id && visibleIds.has(item.parent_id)?item.parent_id:''
     const bucket=groups.get(parent)??[]
     bucket.push(item);groups.set(parent,bucket)
   }
@@ -113,12 +123,26 @@ const hierarchyRows=computed(()=>{
     }
   }
   walk('',0)
-  // Search results whose parents are hidden must remain accessible.
-  if(search.value.trim())for(const row of visibleRows.value)if(!seen.has(row.id))results.push({row,level:0,children:false})
+  // Even filtered-out parents and invalid legacy chains must not hide visible entries.
+  for(const row of visibleRows.value)if(!seen.has(row.id))results.push({row,level:0,children:false})
   return results
 })
-const tariffTreeColumns=[{key:'name',label:'Наименование'},{key:'code',label:'Код'},{key:'unit',label:'Единица'},{key:'value',label:'Значение'},{key:'status',label:'Статус'},{key:'actions',label:'Действия'}]
-const parentOptions=computed(()=>[{id:'',name:'Без родительской группы'},...records.value.filter(row=>row.id!==editing.value?.id).map(row=>({id:row.id,name:row.name}))])
+const parentOptions=computed(()=>{
+  const forbidden=new Set<string>()
+  if(editing.value){
+    forbidden.add(editing.value.id)
+    let changed=true
+    while(changed){
+      changed=false
+      for(const row of records.value){
+        if(row.parent_id && forbidden.has(row.parent_id) && !forbidden.has(row.id)){
+          forbidden.add(row.id);changed=true
+        }
+      }
+    }
+  }
+  return [{id:'',name:'Без родительской группы'},...records.value.filter(row=>!forbidden.has(row.id)).map(row=>({id:row.id,name:row.name}))]
+})
 function toggleCategory(id:string){expandedCategories.value=expandedCategories.value.includes(id)?expandedCategories.value.filter(x=>x!==id):[...expandedCategories.value,id]}
 const filterChips=computed(()=>[
   ...(search.value?[{id:'search',label:'Поиск: '+search.value}]:[]),
@@ -156,10 +180,10 @@ function selectSection(id:string){
   if(!groups[id])return
   activeSection.value=id;activeGroup.value=groups[id]?.[0]?.id??'';search.value='';statusFilter.value='all'
 }
-function toggleGroup(id:string){if(activeGroup.value===id)return;activeGroup.value=id;search.value='';statusFilter.value='all'}
+function toggleGroup(id:string){activeGroup.value=activeGroup.value===id?'':id;search.value='';statusFilter.value='all'}
 function clearFilter(id:string){if(id==='search')search.value='';if(id==='status')statusFilter.value='all'}
 function clearFilters(){search.value='';statusFilter.value='all'}
-function recordCount(groupId:string){return groupId===activeGroup.value?records.value.length:(groupCounts.value[groupId]??0)}
+function recordCount(groupId:string){return groupId===activeGroup.value?records.value.length:(groupCounts.value[groupId]??null)}
 function openCreate(parentId:string|null=null){editing.value=null;draft.value={code:'',name:'',parent_id:parentId,category:currentGroup.value?.label??'',unit:'',value:'',status:'active'};editorOpen.value=true;success.value=''}
 function openEdit(row:DirectoryEntry){editing.value=row;draft.value={code:row.code,name:row.name,parent_id:row.parent_id??null,category:row.category??'',unit:row.unit??'',value:row.value??'',status:row.status};editorOpen.value=true;success.value=''}
 async function saveRecord(){
@@ -198,14 +222,19 @@ onMounted(async()=>{try{await loadCompanies();if(company.value)await loadRecords
     <BaseNotice v-if="success" tone="success">{{ success }}</BaseNotice>
 
     <div class="directory-context">
-      <div><strong>{{ tabs.find(tab=>tab.id===activeSection)?.label }}</strong><span>{{ currentGroups.length }} справочников в группе</span></div>
+      <div class="directory-layout-switch" role="group" aria-label="Представление справочников">
+        <BaseButton variant="secondary" :class="{ 'layout-active': directoryMode==='cards' }"
+          :aria-pressed="directoryMode==='cards'" @click="directoryMode='cards'"><LayoutGrid :size="16" /> Карточки</BaseButton>
+        <BaseButton variant="secondary" :class="{ 'layout-active': directoryMode==='register' }"
+          :aria-pressed="directoryMode==='register'" @click="directoryMode='register'"><ListTree :size="16" /> Реестр</BaseButton>
+      </div>
       <div class="directory-context-actions">
         <BaseSelectField v-if="companies.length>1" v-model="company" label="Компания" :options="companies" />
         <RouterLink class="positions-link" to="/directories/positions">Справочник должностей</RouterLink>
       </div>
     </div>
 
-    <div class="directory-workspace">
+    <div v-if="directoryMode==='register'" class="directory-workspace">
       <nav class="directory-index" aria-label="Справочники группы">
         <div class="directory-index-heading"><strong>Разделы</strong><small>{{ currentGroups.length }} справочников</small></div>
         <BaseButton v-for="group in currentGroups" :key="group.id" type="button" variant="secondary"

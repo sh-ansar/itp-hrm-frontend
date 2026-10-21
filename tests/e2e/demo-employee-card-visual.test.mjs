@@ -19,6 +19,19 @@ test('employee card uses compact reference typography in each tab and dark mode'
     try {
       await page.goto(url)
       await page.getByRole('navigation',{name:'Разделы карточки сотрудника'}).waitFor()
+      const sections = await page.locator('.employee-profile-section .section-heading h2').allTextContents()
+      assert.deepEqual(sections.slice(0, 5), [
+        'Контакты и адреса', 'Документы, удостоверяющие личность',
+        'Место рождения', 'Семейные данные', 'Воинский учёт',
+      ], 'Personal sections must follow the ZIP reference order')
+      const contact = page.locator('.employee-profile-section')
+        .filter({ has: page.getByRole('heading', { name: 'Контакты и адреса', exact: true }) })
+      const labels = await contact.locator('.employee-data-label').allTextContents()
+      assert.deepEqual(labels.slice(0, 3), ['Логин', 'Email', 'Телефон'])
+      const identityLegacy = page.locator('.identity-legacy-record')
+      await identityLegacy.waitFor()
+      assert.equal(await identityLegacy.locator('.employee-data-field[data-field-state="editable"]').count(), 0,
+        'Legacy document projections must never advertise writing to an unrelated record')
       const result=await page.evaluate(()=>{
         const get=selector=>{
           const node=document.querySelector(selector)

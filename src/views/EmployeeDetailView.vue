@@ -10,6 +10,7 @@ import EmployeePrivateRecordsManager from '../components/EmployeePrivateRecordsM
 import EmployeePhoto from '../components/EmployeePhoto.vue'
 import EmployeeDocumentsPanel from '../components/EmployeeDocumentsPanel.vue'
 import EmployeeDataGrid from '../components/EmployeeDataGrid.vue'
+import EmployeeMonthWorktime from '../components/EmployeeMonthWorktime.vue'
 import EmployeeAddressBook from '../components/EmployeeAddressBook.vue'
 import EmployeeFamilyList from '../components/EmployeeFamilyList.vue'
 import type { EmployeeFieldEditGroup } from '../types/employeeFields'
@@ -464,15 +465,6 @@ const leaveLimitColumns = [
   { key: 'used_days', label: 'Использовано' },
   { key: 'balance_days', label: 'Остаток' },
   { key: 'basis', label: 'Основание' },
-]
-const attendanceColumns = [
-  { key: 'event_type', label: 'Событие' },
-  { key: 'reason', label: 'Причина' },
-  { key: 'period', label: 'Период' },
-  { key: 'days', label: 'Дни' },
-  { key: 'hours', label: 'Часы' },
-  { key: 'source', label: 'Источник' },
-  { key: 'status', label: 'Статус' },
 ]
 const timesheetHistoryColumns = [
   { key: 'period', label: 'Период' },
@@ -939,11 +931,11 @@ onMounted(load)
         </template>
 
         <template v-if="activeSection === 'schedule'">
-          <EmployeeProfileSection :title="tr('График работы')">
+          <EmployeeProfileSection v-if="reference?.schedule" :title="tr('График работы')">
             <EmployeeDataGrid :fields="scheduleFields" :editable-groups="editableFieldGroups" @edit="openFieldEditor" />
           </EmployeeProfileSection>
 
-          <EmployeeProfileSection :title="tr('Отпуска и лимиты отсутствий')">
+          <EmployeeProfileSection v-if="reference?.leave_summary || reference?.leave_limits?.length" :title="tr('Отпуска и лимиты отсутствий')">
             <EmployeeDataGrid :fields="leaveSummaryFields" :editable-groups="editableFieldGroups" @edit="openFieldEditor" />
             <h3 class="assignment-history-title">{{ tr('Лимиты и остатки') }}</h3>
             <BaseDataTable density="compact" :rows="reference?.leave_limits ?? []"
@@ -954,20 +946,15 @@ onMounted(load)
             </BaseDataTable>
           </EmployeeProfileSection>
 
-          <EmployeeProfileSection :title="tr('Табель за период')">
+          <EmployeeProfileSection v-if="reference?.schedule" :title="tr('Табель за период')">
             <EmployeeDataGrid :fields="currentTimesheetFields" :editable-groups="editableFieldGroups" @edit="openFieldEditor" />
           </EmployeeProfileSection>
 
           <EmployeeProfileSection :title="tr('Явки, неявки и отсутствия')">
-            <BaseDataTable density="compact" :rows="reference?.attendance_events ?? []"
-              :columns="attendanceColumns" row-key="id"
-              :caption="tr('События посещаемости и рабочего времени')"
-              :empty-title="tr('Событий нет')"
-              :empty-description="tr('Для выбранного сотрудника события рабочего времени не зарегистрированы.')">
-            </BaseDataTable>
+            <EmployeeMonthWorktime :company-id="String(route.params.company)" :employee-id="profile.data.id" />
           </EmployeeProfileSection>
 
-          <EmployeeProfileSection :title="tr('История табелей')">
+          <EmployeeProfileSection v-if="reference?.timesheet_history?.length" :title="tr('История табелей')">
             <BaseDataTable density="compact" :rows="reference?.timesheet_history ?? []"
               :columns="timesheetHistoryColumns" row-key="id"
               :caption="tr('История табелей сотрудника')"

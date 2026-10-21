@@ -16,6 +16,49 @@ function assertDate(value: string) {
 
 export type WorktimeStatus = 'missing' | 'complete' | 'attention'
 
+/** Read-only monthly projection of a single employee's recorded timesheet.
+ * Independently authorized by EmployeeVisibility on the backend. */
+export interface EmployeeWorktimeMonthDay extends Record<string, unknown> {
+  date: string
+  planned_minutes: number | null
+  worked_minutes: number | null
+  absence_minutes: number | null
+  overtime_minutes: number | null
+}
+export interface EmployeeWorktimeMonthResponse {
+  data: {
+    employee_id: string
+    month: string
+    summary: {
+      days_recorded: number
+      present_days: number | null
+      planned_minutes: number | null
+      worked_minutes: number | null
+      absence_minutes: number | null
+      overtime_minutes: number | null
+      lateness_minutes: null
+    }
+    days: EmployeeWorktimeMonthDay[]
+  }
+  meta: {
+    source: 'worktime_entries'
+    read_only: true
+    recorded_days: number
+    calendar_days: number
+  }
+}
+export function getEmployeeWorktimeMonth(
+  companyId: string, employeeId: string, month: string,
+): Promise<EmployeeWorktimeMonthResponse> {
+  assertCompany(companyId)
+  if (!uuid.test(employeeId)) throw new Error('Некорректный идентификатор сотрудника')
+  assertMonth(month)
+  const params = new URLSearchParams({ month })
+  return apiRequest<EmployeeWorktimeMonthResponse>(
+    `/companies/${companyId}/worktime/employees/${employeeId}/monthly-summary?${params.toString()}`,
+  )
+}
+
 export interface WorktimeTimesheetRow extends Record<string, unknown> {
   employee_id: string
   personnel_number: string

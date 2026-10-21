@@ -267,3 +267,56 @@ test('the existing staffing date filter updates mobile occupancy and vacancy cou
     await context.close()
   }
 })
+
+
+test('staffing, vacancies and audit history support scoped checkbox exports without bulk writes', async () => {
+  const context = await browser.newContext({ baseURL, viewport: { width: 1440, height: 900 }, acceptDownloads: true })
+  const page = await context.newPage()
+  const errors = []
+  page.on('pageerror', error => errors.push(error.message))
+  try {
+    const tabs = page.getByRole('navigation', { name: 'Разделы оргструктуры и штатного расписания' })
+    await page.goto('/staffing')
+    const lines = page.getByRole('region', { name: 'Строки штатного расписания' })
+    await lines.waitFor()
+    await lines.locator('tbody input[type="checkbox"]').first().check()
+    await page.getByRole('button', { name: 'Снять выделение' }).waitFor()
+    const selectedDownload = page.waitForEvent('download')
+    await page.getByRole('button', { name: 'Экспорт CSV' }).click()
+    assert.equal((await selectedDownload).suggestedFilename(), 'staffing-selected.csv')
+
+    await tabs.getByRole('button', { name: 'Вакантные позиции' }).click()
+    await page.getByRole('heading', { name: 'Вакантные позиции', level: 1 }).waitFor()
+    await lines.locator('tbody input[type="checkbox"]').first().waitFor()
+    assert.equal(await lines.locator('tbody input[type="checkbox"]:checked').count(), 0,
+      'Moving to vacancies must clear the previous view selection')
+    await lines.locator('tbody input[type="checkbox"]').first().check()
+    const vacancyDownload = page.waitForEvent('download')
+    await page.getByRole('button', { name: 'Экспорт CSV' }).click()
+    assert.equal((await vacancyDownload).suggestedFilename(), 'vacancies-selected.csv')
+    await page.getByRole('button', { name: 'Снять выделение' }).click()
+    assert.equal(await lines.locator('tbody input[type="checkbox"]:checked').count(), 0)
+
+    await tabs.getByRole('button', { name: 'Штатное расписание', exact: true }).click()
+    await page.getByRole('button', { name: 'Новая версия' }).click()
+    const form = page.getByRole('dialog', { name: 'Новая версия штатного расписания' })
+    await form.getByLabel('Название версии').fill('QA staffing selection 2049')
+    await form.getByLabel('Действует с').fill('2049-01-01')
+    await form.getByLabel('Действует по').fill('2049-12-31')
+    await form.getByRole('button', { name: 'Создать версию' }).click()
+    await page.getByRole('heading', { name: 'QA staffing selection 2049' }).waitFor()
+    await tabs.getByRole('button', { name: 'Изменения штатного расписания' }).click()
+    const history = page.getByRole('region', { name: 'История изменений штатного расписания' })
+    await history.waitFor()
+    await history.locator('tbody input[type="checkbox"]').first().check()
+    const historyDownload = page.waitForEvent('download')
+    await page.getByRole('button', { name: 'Экспорт CSV' }).click()
+    assert.equal((await historyDownload).suggestedFilename(), 'staffing-history-selected.csv')
+    await page.getByRole('button', { name: 'Снять выделение' }).click()
+    assert.equal(await history.locator('tbody input[type="checkbox"]:checked').count(), 0)
+    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1), false)
+    assert.deepEqual(errors, [])
+  } finally {
+    await context.close()
+  }
+})

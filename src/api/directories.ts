@@ -4,6 +4,7 @@ export type DirectoryStatus = 'active' | 'inactive' | 'draft'
 export type DirectoryEntry = {
   id: string
   group: string
+  parent_id: string | null
   code: string
   name: string
   category: string | null
@@ -17,6 +18,7 @@ export type DirectoryListResponse = {
   meta: { group: string; writes_enabled: boolean }
 }
 export type DirectoryPayload = {
+  parent_id: string | null
   code: string
   name: string
   category: string | null

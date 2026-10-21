@@ -44,11 +44,17 @@ test('HR saves personal and military data in Laravel from a mobile employee prof
     await military.getByLabel('Статус воинского учёта').fill('liable')
     await military.getByLabel('Категория воинского учёта').fill('reserve')
     await military.getByLabel('Реквизиты военного документа').fill('SYNTHETIC-REF')
+    const comment = military.getByRole('textbox', { name: 'Общий комментарий' })
+    assert.equal(await comment.evaluate(element => element.tagName), 'TEXTAREA',
+      'Military comment should be multiline, unlike informative display fields')
+    await comment.fill('Synthetic military note\nSecond line')
+    assert.match(await military.locator('.base-textarea-counter').innerText(), /\\d+ \\/ 2000/)
     await military.getByRole('button', { name: 'Сохранить изменения' }).click()
     await military.waitFor({ state: 'hidden' })
     await page.reload()
     await page.getByRole('heading', { name: 'Воинский учёт' }).waitFor()
     assert.equal(await page.getByText('SYNTHETIC-REF', { exact: true }).count(), 1)
+    await page.getByText('Synthetic military note', { exact: false }).waitFor()
     assert.deepEqual(errors, [])
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1), false)
   } finally {

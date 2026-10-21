@@ -31,7 +31,7 @@ test('employee card distinguishes actionable fields from non-editable projection
         forms: dialog.querySelectorAll('form').length,
         content: dialog.textContent?.slice(0,500),
       }))
-      assert.ok(identityDom.inputs >= 4 && identityDom.labels.some(label => label === 'Фамилия'),
+      assert.ok(identityDom.open && identityDom.forms === 1 && identityDom.inputs >= 4 && identityDom.labels.some(label => /^Фамилия(?:\s*\*)?$/.test(label || '')),
         'An editable name must open a populated employee form: ' + JSON.stringify(identityDom))
       await identityEditor.getByRole('button', { name: 'Отмена', exact: true }).click()
       await identityEditor.waitFor({ state: 'hidden' })

@@ -69,9 +69,22 @@ test('HR persists relatives and encrypted identity documents through the real AP
     assert.equal(await docs.getByLabel('Основной документ').isChecked(), true)
     await docs.getByRole('button', { name: 'Добавить запись' }).click()
     await docs.waitFor({ state: 'hidden' })
-    await page.getByText('SYNTHETIC-DOC-0001', { exact: true }).waitFor()
+    const identity = section(page, 'Документы, удостоверяющие личность')
+    const identityRow = identity.locator('.employee-identity-record').filter({ hasText: 'passport' })
+    await identityRow.waitFor()
+    assert.ok((await identityRow.innerText()).includes('••••0001'), 'Stored number is masked in view mode')
+    assert.equal(await identityRow.getByText('SYNTHETIC-DOC-0001', { exact: true }).count(), 0)
+    assert.equal(await identityRow.locator('[data-field-state="editable"]').count(), 0)
+    await identityRow.getByRole('button', { name: 'Изменить документ: passport' }).click()
+    await docs.waitFor()
+    assert.equal(await docs.getByLabel('Номер документа').inputValue(), 'SYNTHETIC-DOC-0001',
+      'Only the authorized editor shows the complete identifier')
+    await docs.getByRole('button', { name: 'К списку' }).click()
+    await docs.getByText('Закрыть', { exact: true }).click()
+    await docs.waitFor({ state: 'hidden' })
     await page.reload()
-    await page.getByText('SYNTHETIC-DOC-0001', { exact: true }).waitFor()
+    await identityRow.waitFor()
+    assert.ok((await identityRow.innerText()).includes('••••0001'))
 
     const response = await page.evaluate(async ({company,employee}) => {
       const res = await fetch('/api/v1/companies/' + company + '/employees/' + employee, {

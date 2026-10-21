@@ -11,6 +11,7 @@ import EmployeePhoto from '../components/EmployeePhoto.vue'
 import EmployeeDocumentsPanel from '../components/EmployeeDocumentsPanel.vue'
 import EmployeeDataGrid from '../components/EmployeeDataGrid.vue'
 import EmployeeAddressBook from '../components/EmployeeAddressBook.vue'
+import EmployeeFamilyList from '../components/EmployeeFamilyList.vue'
 import type { EmployeeFieldEditGroup } from '../types/employeeFields'
 import BaseButton from '../components/ui/BaseButton.vue'
 import BaseDataTable from '../components/ui/BaseDataTable.vue'
@@ -41,6 +42,19 @@ const assignmentTransitioning = ref<EmployeeAssignment | null>(null)
 const identityEditOpen = ref(false)
 const privateEditorSection = ref<EmployeePrivateSection | null>(null)
 const privateRecordsSection = ref<EmployeePrivateRecordSection | null>(null)
+const privateRecordFocus = ref<string | null>(null)
+const privateRecordCreate = ref(false)
+function openPrivateFamilyEditor(recordId: string | null = null, create = false) {
+  if (!profile.value?.meta.private_profile_writes_enabled) return
+  privateRecordFocus.value = recordId
+  privateRecordCreate.value = create
+  privateRecordsSection.value = 'family'
+}
+function closePrivateRecords() {
+  privateRecordsSection.value = null
+  privateRecordFocus.value = null
+  privateRecordCreate.value = false
+}
 const assignmentCreateOpen = ref(false)
 const profileCreateOpen = ref(false)
 const contracts = ref<EmployeeContract[]>([])
@@ -229,13 +243,6 @@ const militaryFields = computed<EmployeeDisplayField[]>(() => [
   { label: 'Военный билет', value: reference.value?.military?.document_reference, wide: true, editGroup: 'private-military' },
   { label: 'Общий комментарий', value: reference.value?.military?.comment, wide: true, editGroup: 'private-military' },
 ])
-const familyColumns = [
-  { key: 'relationship', label: 'Степень родства' },
-  { key: 'full_name', label: 'ФИО' },
-  { key: 'birth_date', label: 'Дата рождения' },
-  { key: 'document_reference', label: 'Документ' },
-]
-
 const organizationPositionFields = computed<EmployeeDisplayField[]>(() => [
   { label: 'Компания', value: reference.value?.organization?.company_name },
   { label: 'Подразделение', value: currentAssignment.value?.department_name ?? plannedAssignment.value?.department_name },

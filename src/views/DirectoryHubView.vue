@@ -225,9 +225,9 @@ onMounted(async()=>{try{await loadCompanies();if(company.value)await loadRecords
           <div v-for="item in hierarchyRows" :key="item.row.id" class="tariff-tree-row" role="treeitem"
             :aria-level="item.level+1" :aria-expanded="item.children?expandedCategories.includes(item.row.id):undefined"
             :style="{paddingInlineStart:(12+item.level*22)+'px'}">
-            <button v-if="item.children" class="tariff-expand" type="button" :aria-label="'Раскрыть: '+item.row.name" @click="toggleCategory(item.row.id)">
+            <BaseButton v-if="item.children" icon-only variant="secondary" class="tariff-expand" :aria-label="'Раскрыть: '+item.row.name" @click="toggleCategory(item.row.id)">
               <ChevronDown v-if="expandedCategories.includes(item.row.id)" :size="16"/><ChevronRight v-else :size="16"/>
-            </button>
+            </BaseButton>
             <FolderTree v-else :size="15" class="tariff-leaf-icon"/>
             <span class="tariff-name">{{ item.row.name }}</span>
             <span class="tariff-code">{{ item.row.code }}</span>

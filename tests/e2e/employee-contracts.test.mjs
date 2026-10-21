@@ -108,7 +108,7 @@ test('HR creates and edits an employment contract and registry expiry KPI become
     await currentFields.getByRole('button', { name: 'Изменить поле: Действует до' }).click()
     const fromField = page.getByRole('dialog', { name: 'Редактировать трудовой договор' })
     await fromField.waitFor()
-    assert.equal(await fromField.getByLabel(/^Действует до(?: \\*)?$/).inputValue(), expiresOn)
+    assert.equal(await fromField.getByLabel('Действует до', { exact: false }).inputValue(), expiresOn)
     await fromField.getByRole('button', { name: 'Отмена', exact: true }).click()
     await fromField.waitFor({ state: 'hidden' })
 

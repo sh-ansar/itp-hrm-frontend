@@ -39,6 +39,9 @@ const props = defineProps<{
   identities: EmployeeIdentityDocument[]
   education: EmployeeEducationRecord[]
   truncated?: boolean
+  /** Optionally focus a family record from the ZIP card's per-row edit pencil. */
+  initialRecordId?: string | null
+  createOnOpen?: boolean
 }>()
 const emit = defineEmits<{ close: []; saved: []; refresh: [] }>()
 const { t } = usePrivateRecordsI18n()
@@ -149,7 +152,16 @@ function reset() {
   primary.value = false
   form.value = {}
 }
-watch(() => [props.open, props.companyId, props.employeeId, props.section], reset, { immediate: true })
+watch(() => [props.open, props.companyId, props.employeeId, props.section, props.initialRecordId, props.createOnOpen], () => {
+  reset()
+  if (!props.open || props.section !== 'family') return
+  if (props.initialRecordId) {
+    const target = props.family.find(row => row.id === props.initialRecordId)
+    if (target) beginEdit(target)
+  } else if (props.createOnOpen) {
+    beginCreate()
+  }
+}, { immediate: true })
 
 function fail(cause: unknown) {
   error.value = cause instanceof ApiError && cause.status === 409 ? t('stale')

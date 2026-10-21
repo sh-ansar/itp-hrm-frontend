@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { MapPin, Pencil, Plus, Trash2 } from 'lucide-vue-next'
 import BaseButton from './ui/BaseButton.vue'
 import BaseDialog from './ui/BaseDialog.vue'
@@ -25,11 +25,11 @@ const props = withDefaults(defineProps<{
 const emit = defineEmits<{ changed: [] }>()
 const { tr } = useWorkspaceI18n()
 
-const kinds = [
-  { id: 'residence', name: 'Адрес проживания' },
-  { id: 'registration', name: 'Адрес регистрации' },
-  { id: 'other', name: 'Другой адрес' },
-]
+const kinds = computed(() => [
+  { id: 'residence', name: tr('Адрес проживания') },
+  { id: 'registration', name: tr('Адрес регистрации') },
+  { id: 'other', name: tr('Другой адрес') },
+])
 const editing = ref<EmployeePrivateAddress | null>(null)
 const dialogOpen = ref(false)
 const busy = ref(false)
@@ -42,7 +42,7 @@ const apartment = ref('')
 const primary = ref(false)
 
 function typeName(value: EmployeePrivateAddress['kind']): string {
-  return tr(kinds.find(option => option.id === value)?.name ?? 'Другой адрес')
+  return kinds.value.find(option => option.id === value)?.name ?? tr('Другой адрес')
 }
 function openEditor(address?: EmployeePrivateAddress) {
   if (!props.writable || busy.value) return
@@ -119,7 +119,7 @@ async function archive(row: EmployeePrivateAddress) {
 </script>
 
 <template>
-  <div class="employee-address-book" aria-label="Адреса сотрудника">
+  <div class="employee-address-book" :aria-label="tr('Адреса сотрудника')">
     <div class="employee-address-toolbar">
       <span class="employee-address-title">{{ tr('Адреса сотрудника') }}</span>
       <BaseButton v-if="writable" variant="secondary" class="employee-address-add"

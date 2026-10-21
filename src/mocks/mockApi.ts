@@ -455,6 +455,31 @@ export async function mockApiRequest<T>(path:string,options:RequestInit={}):Prom
   if(p==='/companies') return page([{id:companyId,name:'ITP HRM Demo',role_code:'company_admin',department_scopes:[]}],1,100,{role_management_enabled:true}) as T
   const scopedCompany=p.match(/^\/companies\/([^/]+)(?:\/|$)/)
   if(scopedCompany&&scopedCompany[1]!==companyId)throw new Error('Компания недоступна')
+  // Explicit demo-only projection for the ZIP's monthly attendance card.
+  // These synthetic minutes never cross into the connected Laravel environment.
+  const employeeMonthMatch=p.match(/^\/companies\/[^/]+\/worktime\/employees\/([^/]+)\/monthly-summary$/)
+  if(employeeMonthMatch&&method==='GET'){
+    const employeeId=employeeMonthMatch[1],month=u.searchParams.get('month')
+    if(!employees.some(e=>e.id===employeeId))throw new Error('Сотрудник не найден')
+    if(!month||!/^\d{4}-(0[1-9]|1[0-2])$/.test(month))throw new Error('Некорректный период')
+    const sample=employeeId===employees[0].id
+      ? [[1,480,480,0,0],[2,480,420,60,30],[6,480,480,0,0],[7,480,0,480,0],[9,480,480,0,90]]
+      : []
+    const days=sample.map(([day,planned,worked,absence,overtime])=>({
+      date:month+'-'+String(day).padStart(2,'0'),planned_minutes:planned,worked_minutes:worked,
+      absence_minutes:absence,overtime_minutes:overtime,
+    }))
+    const sum=(key:string)=>days.length?days.reduce((total,row)=>total+Number((row as any)[key]),0):null
+    return {data:{
+      employee_id:employeeId,month,
+      summary:{
+        days_recorded:days.length,present_days:days.length?days.filter(d=>d.worked_minutes>0).length:null,
+        planned_minutes:sum('planned_minutes'),worked_minutes:sum('worked_minutes'),
+        absence_minutes:sum('absence_minutes'),overtime_minutes:sum('overtime_minutes'),
+        lateness_minutes:null,
+      },days,
+    },meta:{source:'worktime_entries',read_only:true,partial_period:true}} as T
+  }
   const demoRoleResult=tryDemoRoleApi(p,method,u.searchParams,options.body,{departments:deps.map(d=>({id:d.id,name:String(d.name??'')})),employees})
   if(demoRoleResult.handled)return demoRoleResult.response as T
   let m=p.match(/^\/companies\/[^/]+\/directories\/([^/]+)(?:\/([^/]+))?$/)

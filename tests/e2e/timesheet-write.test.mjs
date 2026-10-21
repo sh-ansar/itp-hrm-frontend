@@ -89,6 +89,38 @@ test('HR specialist edits a daily timesheet through the real UI and data survive
     assert.equal(api.body.data[0].absence_minutes, 120)
     assert.equal(api.body.data[0].overtime_minutes, 60)
     assert.equal(api.body.data[0].status, 'attention')
+
+    // The employee card must read the same recorded facts, not its old
+    // demo-only reference_profile and not a fake editable timesheet.
+    const employeeMonth = await page.evaluate(async () => {
+      const response = await fetch(
+        '/api/v1/companies/11111111-1111-4111-8111-111111111111/worktime/employees/77777777-7777-4777-8777-777777777777/monthly-summary?month=2026-10',
+        { credentials: 'same-origin', headers: { Accept: 'application/json' } },
+      )
+      return { status: response.status, body: await response.json() }
+    })
+    assert.equal(employeeMonth.status, 200)
+    assert.equal(employeeMonth.body.data.summary.worked_minutes, 10440)
+    assert.equal(employeeMonth.body.data.summary.absence_minutes, 120)
+    assert.equal(employeeMonth.body.data.summary.overtime_minutes, 60)
+    assert.equal(employeeMonth.body.data.summary.lateness_minutes, null)
+
+    await page.goto('/employees/11111111-1111-4111-8111-111111111111/77777777-7777-4777-8777-777777777777?tab=schedule')
+    const navigation = page.getByRole('navigation', { name: 'Разделы карточки сотрудника' })
+    await navigation.waitFor()
+    await navigation.getByRole('button', { name: 'График и табель' }).click()
+    const summary = page.locator('.employee-month-worktime')
+    await summary.waitFor()
+    await summary.getByLabel('Период').fill('2026-10')
+    await summary.getByRole('table', { name: 'Фактически записанные дни табеля' }).waitFor()
+    assert.ok((await summary.locator('[data-metric="overtime"]').innerText()).includes('1'),
+      'The employee card must display the recorded one hour of overtime')
+    assert.ok((await summary.locator('[data-metric="absent"]').innerText()).includes('2'),
+      'The employee card must display the two recorded absence hours')
+    assert.ok((await summary.locator('[data-metric="late"]').innerText()).includes('—'),
+      'Unrecorded lateness must stay unavailable')
+    assert.equal(await summary.locator('button[aria-label*="Изменить"]').count(), 0,
+      'Read-only employee summary must not pretend to edit timesheet data')
   } finally {
     await context.close()
   }

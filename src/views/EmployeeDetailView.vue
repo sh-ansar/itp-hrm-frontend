@@ -2,14 +2,14 @@
 import { publicAsset } from '../utils/publicAsset'
 import { useWorkspaceI18n } from '../composables/useWorkspaceI18n'
 import { computed, onMounted, ref, watch } from 'vue'
-import { Plus } from 'lucide-vue-next'
+import { LockKeyhole, Pencil, Plus } from 'lucide-vue-next'
 import { useRoute } from 'vue-router'
 import EmployeeProfileSection from '../components/EmployeeProfileSection.vue'
 import EmployeePrivateProfileEditor from '../components/EmployeePrivateProfileEditor.vue'
 import EmployeePrivateRecordsManager from '../components/EmployeePrivateRecordsManager.vue'
 import EmployeePhoto from '../components/EmployeePhoto.vue'
 import EmployeeDocumentsPanel from '../components/EmployeeDocumentsPanel.vue'
-import EmployeeDataGrid from '../components/EmployeeDataGrid.vue'
+import EmployeeDataGrid, { type EmployeeFieldEditGroup } from '../components/EmployeeDataGrid.vue'
 import BaseButton from '../components/ui/BaseButton.vue'
 import BaseDataTable from '../components/ui/BaseDataTable.vue'
 import BaseNotice from '../components/ui/BaseNotice.vue'
@@ -26,7 +26,7 @@ import { useUiFormatters } from '../composables/useUiFormatters'
 
 const { tr } = useWorkspaceI18n()
 
-type EmployeeDisplayField = { label: string; value: string | number | null | undefined; wide?: boolean; muted?: boolean }
+type EmployeeDisplayField = { label: string; value: string | number | null | undefined; wide?: boolean; muted?: boolean; editGroup?: EmployeeFieldEditGroup }
 
 const route = useRoute()
 const fmt = useUiFormatters()
@@ -153,6 +153,23 @@ const reference = computed<EmployeeReferenceProfile | undefined>(() => {
   }
 })
 const genderLabel = computed(() => profile.value?.data.gender === 'male' ? 'Мужчина' : profile.value?.data.gender === 'female' ? 'Женщина' : '—')
+
+/** Only expose edit actions backed by an authorized write endpoint. Projections
+ * such as age, salary, staffing position and status remain informative. */
+const editableFieldGroups = computed<EmployeeFieldEditGroup[]>(() => [
+  ...(profile.value?.meta.employee_writes_enabled ? ['employee' as const] : []),
+  ...(profile.value?.meta.private_profile_writes_enabled
+    ? ['private-personal' as const, 'private-military' as const, 'identity' as const] : []),
+  ...(contractWritesEnabled.value ? ['contract' as const] : []),
+])
+function openFieldEditor(group: EmployeeFieldEditGroup) {
+  if (!editableFieldGroups.value.includes(group)) return
+  if (group === 'employee') identityEditOpen.value = true
+  else if (group === 'private-personal') privateEditorSection.value = 'personal'
+  else if (group === 'private-military') privateEditorSection.value = 'military'
+  else if (group === 'identity') privateRecordsSection.value = 'identity'
+  else if (group === 'contract') openContractEditor(currentContract.value)
+}
 function money(value: number | null | undefined, currency = 'KZT'): string {
   return value == null ? '—' : `${fmt.number(Number(value), 0)} ${currency}`
 }
@@ -167,48 +184,48 @@ function ageFromBirthDate(value: string | null | undefined): string {
 }
 
 const personalFields = computed<EmployeeDisplayField[]>(() => [
-  { label: 'ИИН', value: reference.value?.personal.iin },
-  { label: 'Логин', value: reference.value?.personal.login },
-  { label: 'Дата рождения', value: formatDate(profile.value?.data.birth_date) },
+  { label: 'ИИН', value: reference.value?.personal.iin, editGroup: 'private-personal' },
+  { label: 'Логин', value: reference.value?.personal.login, editGroup: 'private-personal' },
+  { label: 'Дата рождения', value: formatDate(profile.value?.data.birth_date), editGroup: 'employee' },
   { label: 'Возраст', value: ageFromBirthDate(profile.value?.data.birth_date) },
-  { label: 'Пол', value: genderLabel.value },
-  { label: 'Национальность', value: reference.value?.personal.nationality },
-  { label: 'Гражданство', value: reference.value?.personal.citizenship },
-  { label: 'Семейное положение', value: reference.value?.personal.marital_status },
-  { label: 'Табельный номер', value: profile.value?.data.personnel_number },
+  { label: 'Пол', value: genderLabel.value, editGroup: 'employee' },
+  { label: 'Национальность', value: reference.value?.personal.nationality, editGroup: 'private-personal' },
+  { label: 'Гражданство', value: reference.value?.personal.citizenship, editGroup: 'private-personal' },
+  { label: 'Семейное положение', value: reference.value?.personal.marital_status, editGroup: 'private-personal' },
+  { label: 'Табельный номер', value: profile.value?.data.personnel_number, editGroup: 'employee' },
 ])
 const contactFields = computed<EmployeeDisplayField[]>(() => [
-  { label: 'Email', value: profile.value?.data.email },
-  { label: 'Телефон', value: profile.value?.data.phone },
-  { label: 'Адрес проживания', value: reference.value?.personal.residence_address ?? profile.value?.data.address, wide: true },
-  { label: 'Адрес регистрации', value: reference.value?.personal.registration_address, wide: true },
-  { label: 'Подъезд', value: reference.value?.personal.address_entrance },
-  { label: 'Этаж', value: reference.value?.personal.address_floor },
-  { label: 'Квартира', value: reference.value?.personal.address_apartment },
-  { label: 'Контактное лицо', value: reference.value?.personal.emergency_contact_name },
-  { label: 'Телефон контактного лица', value: reference.value?.personal.emergency_contact_phone },
+  { label: 'Email', value: profile.value?.data.email, editGroup: 'employee' },
+  { label: 'Телефон', value: profile.value?.data.phone, editGroup: 'employee' },
+  { label: 'Адрес проживания', value: reference.value?.personal.residence_address ?? profile.value?.data.address, wide: true, editGroup: reference.value?.personal.residence_address ? 'private-personal' : 'employee' },
+  { label: 'Адрес регистрации', value: reference.value?.personal.registration_address, wide: true, editGroup: 'private-personal' },
+  { label: 'Подъезд', value: reference.value?.personal.address_entrance, editGroup: 'private-personal' },
+  { label: 'Этаж', value: reference.value?.personal.address_floor, editGroup: 'private-personal' },
+  { label: 'Квартира', value: reference.value?.personal.address_apartment, editGroup: 'private-personal' },
+  { label: 'Контактное лицо', value: reference.value?.personal.emergency_contact_name, editGroup: 'private-personal' },
+  { label: 'Телефон контактного лица', value: reference.value?.personal.emergency_contact_phone, editGroup: 'private-personal' },
 ])
 const documentFields = computed<EmployeeDisplayField[]>(() => [
-  { label: 'Национальность', value: reference.value?.personal.nationality },
-  { label: 'Персональный номер', value: reference.value?.identity_document.personal_number },
-  { label: 'Страна выдачи', value: reference.value?.identity_document.country_of_issue },
-  { label: 'Гражданство', value: reference.value?.personal.citizenship },
-  { label: 'Тип документа', value: reference.value?.identity_document.type },
-  { label: 'Номер документа', value: reference.value?.identity_document.number },
-  { label: 'Кем выдан', value: reference.value?.identity_document.issued_by, wide: true },
-  { label: 'Дата выдачи', value: formatDate(reference.value?.identity_document.issued_on) },
-  { label: 'Действителен до', value: formatDate(reference.value?.identity_document.expires_on) },
+  { label: 'Национальность', value: reference.value?.personal.nationality, editGroup: 'private-personal' },
+  { label: 'Персональный номер', value: reference.value?.identity_document.personal_number, editGroup: 'identity' },
+  { label: 'Страна выдачи', value: reference.value?.identity_document.country_of_issue, editGroup: 'identity' },
+  { label: 'Гражданство', value: reference.value?.personal.citizenship, editGroup: 'private-personal' },
+  { label: 'Тип документа', value: reference.value?.identity_document.type, editGroup: 'identity' },
+  { label: 'Номер документа', value: reference.value?.identity_document.number, editGroup: 'identity' },
+  { label: 'Кем выдан', value: reference.value?.identity_document.issued_by, wide: true, editGroup: 'identity' },
+  { label: 'Дата выдачи', value: formatDate(reference.value?.identity_document.issued_on), editGroup: 'identity' },
+  { label: 'Действителен до', value: formatDate(reference.value?.identity_document.expires_on), editGroup: 'identity' },
   { label: 'Файл документа', value: reference.value?.identity_document.attachment_name, wide: true },
 ])
 const birthPlaceFields = computed<EmployeeDisplayField[]>(() => [
-  { label: 'Место рождения', value: reference.value?.personal.place_of_birth, wide: true },
+  { label: 'Место рождения', value: reference.value?.personal.place_of_birth, wide: true, editGroup: 'private-personal' },
   { label: 'Свидетельство о рождении', value: reference.value?.personal.birth_certificate_attachment, wide: true },
 ])
 const militaryFields = computed<EmployeeDisplayField[]>(() => [
-  { label: 'Статус воинского учёта', value: reference.value?.military?.status },
-  { label: 'Категория учёта', value: reference.value?.military?.category },
-  { label: 'Военный билет', value: reference.value?.military?.document_reference, wide: true },
-  { label: 'Общий комментарий', value: reference.value?.military?.comment, wide: true },
+  { label: 'Статус воинского учёта', value: reference.value?.military?.status, editGroup: 'private-military' },
+  { label: 'Категория учёта', value: reference.value?.military?.category, editGroup: 'private-military' },
+  { label: 'Военный билет', value: reference.value?.military?.document_reference, wide: true, editGroup: 'private-military' },
+  { label: 'Общий комментарий', value: reference.value?.military?.comment, wide: true, editGroup: 'private-military' },
 ])
 const familyColumns = [
   { key: 'relationship', label: 'Степень родства' },
@@ -227,8 +244,8 @@ const organizationPositionFields = computed<EmployeeDisplayField[]>(() => [
   { label: 'Основное место работы', value: reference.value?.organization?.primary_workplace },
 ])
 const workplaceFields = computed<EmployeeDisplayField[]>(() => [
-  { label: 'Объект', value: profile.value?.data.work_site },
-  { label: 'Рабочая зона', value: profile.value?.data.work_zone },
+  { label: 'Объект', value: profile.value?.data.work_site, editGroup: 'employee' },
+  { label: 'Рабочая зона', value: profile.value?.data.work_zone, editGroup: 'employee' },
   { label: 'Участок / площадка', value: reference.value?.organization?.site_area },
   { label: 'Местоположение', value: reference.value?.organization?.location, wide: true },
   { label: 'Статус доступа', value: reference.value?.organization?.access_status },
@@ -236,10 +253,10 @@ const workplaceFields = computed<EmployeeDisplayField[]>(() => [
   { label: 'Дата выдачи пропуска', value: formatDate(reference.value?.organization?.pass_issued_on) },
 ])
 const teamFields = computed<EmployeeDisplayField[]>(() => [
-  { label: 'Бригада / команда', value: reference.value?.organization?.brigade ?? profile.value?.data.work_team },
+  { label: 'Бригада / команда', value: reference.value?.organization?.brigade ?? profile.value?.data.work_team, editGroup: reference.value?.organization?.brigade ? undefined : 'employee' },
   { label: 'Бригадир', value: reference.value?.organization?.brigadier },
   { label: 'Руководитель подразделения', value: reference.value?.organization?.department_manager },
-  { label: 'Непосредственный руководитель', value: profile.value?.data.supervisor_name, wide: true },
+  { label: 'Непосредственный руководитель', value: profile.value?.data.supervisor_name, wide: true, editGroup: 'employee' },
   { label: 'Статус закрепления', value: reference.value?.organization?.assignment_status },
   { label: 'Дата закрепления', value: formatDate(reference.value?.organization?.assignment_date) },
 ])
@@ -255,9 +272,9 @@ const staffingStatusFields = computed<EmployeeDisplayField[]>(() => [
 ])
 
 const contractFields = computed<EmployeeDisplayField[]>(() => [
-  { label: 'Номер договора', value: currentContract.value?.contract_number ?? reference.value?.employment.contract_number },
-  { label: 'Тип договора', value: currentContract.value ? contractTypeLabel(currentContract.value.contract_type) : reference.value?.employment.contract_type },
-  { label: 'Дата подписания', value: formatDate(currentContract.value?.signed_on ?? reference.value?.employment.contract_date) },
+  { label: 'Номер договора', value: currentContract.value?.contract_number ?? reference.value?.employment.contract_number, editGroup: 'contract' },
+  { label: 'Тип договора', value: currentContract.value ? contractTypeLabel(currentContract.value.contract_type) : reference.value?.employment.contract_type, editGroup: 'contract' },
+  { label: 'Дата подписания', value: formatDate(currentContract.value?.signed_on ?? reference.value?.employment.contract_date), editGroup: 'contract' },
   { label: 'Действует с', value: formatDate(currentContract.value?.valid_from ?? reference.value?.employment.valid_from) },
   { label: 'Действует до', value: currentContract.value?.valid_to === null ? tr('Бессрочно') : formatDate(currentContract.value?.valid_to ?? reference.value?.employment.valid_to) },
   { label: 'Испытание до', value: formatDate(currentContract.value?.probation_until ?? reference.value?.employment.probation_until) },

@@ -699,12 +699,6 @@ onMounted(load)
         <span><LockKeyhole :size="13" aria-hidden="true" /> {{ tr('Информационные поля — только просмотр') }}</span>
       </div>
       <template v-if="activeSection === 'personal' && profile.meta.extended_sections_visible">
-        <EmployeeProfileSection :title="tr('Основные личные данные')">
-          <template v-if="profile.meta.private_profile_writes_enabled" #actions>
-            <BaseButton variant="secondary" @click="privateEditorSection = 'personal'">{{ tr('Изменить') }}</BaseButton>
-          </template>
-          <EmployeeDataGrid :fields="personalFields" :editable-groups="editableFieldGroups" @edit="openFieldEditor" />
-        </EmployeeProfileSection>
         <EmployeeProfileSection :title="tr('Контакты и адреса')">
           <EmployeeDataGrid :fields="contactFields" :editable-groups="editableFieldGroups" @edit="openFieldEditor" />
           <EmployeeAddressBook v-if="profile.private_profile?.addresses?.length || profile.meta.private_address_writes_enabled"
@@ -716,9 +710,29 @@ onMounted(load)
         </EmployeeProfileSection>
         <EmployeeProfileSection :title="tr('Документы, удостоверяющие личность')">
           <template v-if="profile.meta.private_profile_writes_enabled" #actions>
-            <BaseButton variant="secondary" @click="privateRecordsSection = 'identity'">{{ tr('Изменить') }}</BaseButton>
+            <BaseButton variant="secondary" @click="manageIdentityDocument()">{{ tr('Управлять документами') }}</BaseButton>
           </template>
-          <EmployeeDataGrid :fields="documentFields" :editable-groups="editableFieldGroups" @edit="openFieldEditor" />
+          <EmployeeDataGrid :fields="documentPersonFields" :editable-groups="editableFieldGroups" @edit="openFieldEditor" />
+          <div v-if="identityDocuments.length" class="identity-documents-list" role="list" :aria-label="tr('Документы, удостоверяющие личность')">
+            <article v-for="document in identityDocuments" :key="document.id" class="identity-document-record" role="listitem">
+              <header class="identity-document-top">
+                <span class="identity-document-type">{{ document.type }}</span>
+                <span v-if="document.is_primary" class="identity-document-primary">{{ tr('Основной') }}</span>
+                <BaseButton v-if="profile.meta.private_profile_writes_enabled" icon-only variant="secondary"
+                  :aria-label="tr('Изменить документ') + ': ' + document.type"
+                  :title="tr('Изменить документ')" @click="manageIdentityDocument(document.id)">
+                  <Pencil :size="15" aria-hidden="true" />
+                </BaseButton>
+              </header>
+              <EmployeeDataGrid :fields="identityDocumentFields(document)" />
+            </article>
+          </div>
+          <div v-else class="identity-legacy-record" data-document-state="informative">
+            <EmployeeDataGrid :fields="legacyDocumentFields" />
+          </div>
+          <p v-if="profile.meta.private_identities_truncated" class="identity-document-warning">
+            {{ tr('Список документов неполный. Обратитесь в отдел кадров.') }}
+          </p>
         </EmployeeProfileSection>
         <EmployeeProfileSection :title="tr('Место рождения')">
           <EmployeeDataGrid :fields="birthPlaceFields" :editable-groups="editableFieldGroups" @edit="openFieldEditor" />
@@ -739,6 +753,12 @@ onMounted(load)
           </template>
           <EmployeeDataGrid :fields="militaryFields" :editable-groups="editableFieldGroups" @edit="openFieldEditor" />
         </EmployeeProfileSection>
+        <EmployeeProfileSection :title="tr('Основные личные данные')">
+          <template v-if="profile.meta.private_profile_writes_enabled" #actions>
+            <BaseButton variant="secondary" @click="privateEditorSection = 'personal'">{{ tr('Изменить') }}</BaseButton>
+          </template>
+          <EmployeeDataGrid :fields="personalFields" :editable-groups="editableFieldGroups" @edit="openFieldEditor" />
+        </EmployeeProfileSection> 
       </template>
 
       <template v-if="activeSection === 'organization' && profile.meta.extended_sections_visible">
@@ -1035,16 +1055,29 @@ onMounted(load)
       :open="true" :company-id="String(route.params.company)" :employee-id="profile.data.id"
       :section="privateRecordsSection" :family="profile.private_profile?.family ?? []"
       :identities="profile.private_profile?.identity_documents ?? []"
+      :initial-record-id="selectedIdentityDocumentId"
       :education="profile.private_profile?.education ?? []"
       :truncated="privateRecordsSection === 'family' ? profile.meta.private_family_truncated
         : privateRecordsSection === 'education' ? profile.meta.private_education_truncated
         : profile.meta.private_identities_truncated"
-      @close="privateRecordsSection = null" @saved="privateRecordsSection = null; load()"
-      @refresh="privateRecordsSection = null; load()" />
+      @close="privateRecordsSection = null; selectedIdentityDocumentId = null"
+      @saved="privateRecordsSection = null; selectedIdentityDocumentId = null; load()"
+      @refresh="privateRecordsSection = null; selectedIdentityDocumentId = null; load()" />
   </section>
 </template>
 
 <style scoped>
+/* ZIP personal tab: normalized documents are compact, independently managed records. */
+.identity-documents-list{display:grid;gap:10px;min-width:0;margin-top:12px}
+.identity-document-record{display:grid;gap:10px;min-width:0;padding:12px;border:1px solid var(--color-stroke);border-radius:var(--radius-sm);background:var(--color-surface-raised)}
+.identity-document-top{display:flex;align-items:center;gap:8px;min-width:0}
+.identity-document-type{flex:1;min-width:0;font-size:12px;line-height:18px;font-weight:600;overflow-wrap:anywhere;color:var(--color-text)}
+.identity-document-primary{flex:none;padding:3px 7px;border-radius:4px;background:var(--color-success-surface);color:var(--color-success);font-size:11px;font-weight:500}
+.identity-document-top :deep(.base-button){height:28px;min-height:28px;min-width:28px;width:28px;padding:0;color:var(--color-muted);background:transparent;border-color:transparent;box-shadow:none}
+.identity-document-top :deep(.base-button:hover){color:var(--color-primary);background:var(--color-accent-soft)}
+.identity-document-record :deep(.employee-data-grid){row-gap:10px}
+.identity-legacy-record{min-width:0;margin-top:12px}
+.identity-document-warning{font-size:11px;line-height:17px;color:var(--color-muted);margin:6px 0 0}
 .employee-profile{
   display:grid;grid-template-columns:minmax(0,1fr);gap:12px;
   max-width:100%;min-width:0;scroll-behavior:smooth;

@@ -59,6 +59,7 @@ const deleteCandidate = ref<DepartmentRecord | null>(null)
 const deleting = ref(false)
 const viewMode = ref('diagram')
 const searchQuery = ref('')
+const selectedDepartmentIds = ref<string[]>([])
 const chartZoom = ref(100)
 const viewModes = [{ id: 'table', label: 'Таблица' }, { id: 'diagram', label: 'Схема' }]
 const diagramEmployees = ref<EmployeeRecord[]>([])
@@ -156,6 +157,8 @@ const filteredHierarchyRows = computed(() => {
     (row.name + ' ' + row.parentLabel).toLocaleLowerCase(fmt.localeTag()).includes(query),
   )
 })
+// Selection is intentionally page-scoped; no implicit bulk mutation of departments.
+const selectedDepartmentRows = computed(() => filteredHierarchyRows.value.filter(row => selectedDepartmentIds.value.includes(row.id)))
 
 const extraColumns = [
   { key: 'parentLabel', label: 'Входит в' },
@@ -306,7 +309,10 @@ async function loadDiagram() {
 }
 
 function exportDepartments() {
-  downloadCsv('orgstructure.csv', ['Подразделение', 'Родитель'], filteredHierarchyRows.value.map(row => [row.name, row.parentLabel]))
+  const selected = selectedDepartmentRows.value
+  const rows = selected.length ? selected : filteredHierarchyRows.value
+  downloadCsv(selected.length ? 'orgstructure-selected.csv' : 'orgstructure.csv',
+    ['Подразделение', 'Родитель'], rows.map(row => [row.name, row.parentLabel]))
 }
 
 function createDepartmentRecord() {
@@ -352,7 +358,7 @@ async function confirmDelete() {
 }
 
 watch(selectedCompany, () => { page.value = 1; void loadOrgMetrics() })
-watch([selectedCompany, page], loadDepartments)
+watch([selectedCompany, page], () => { selectedDepartmentIds.value = []; void loadDepartments() })
 watch([selectedCompany, viewMode], loadDiagram)
 onMounted(loadCompanies)
 </script>
@@ -453,7 +459,13 @@ onMounted(loadCompanies)
           </article>
         </div>
         <div class="org-desktop-table">
+          <div v-if="selectedDepartmentRows.length" class="org-selection-toolbar" role="status">
+            <span>{{ tr('Выбрано на странице:') }} {{ fmt.number(selectedDepartmentRows.length, 0) }}</span>
+            <BaseButton variant="secondary" @click="selectedDepartmentIds = []">{{ tr('Сбросить выбор') }}</BaseButton>
+          </div>
           <BaseDataTable
+        v-model:selected-keys="selectedDepartmentIds"
+        selectable
         row-key="id"
 
         :caption="tr('Подразделения компании')"
@@ -536,6 +548,8 @@ onMounted(loadCompanies)
 .org-content{min-width:0;display:grid;gap:18px}
 .org-metrics{min-width:0}
 .org-mobile-list,.org-mobile-only{display:none}
+.org-selection-toolbar{display:flex;align-items:center;justify-content:flex-start;gap:12px;margin-bottom:10px;color:var(--color-muted);font-size:12px}
+.org-selection-toolbar :deep(.base-button){height:30px;min-height:30px;font-weight:500}
 
 .section-title{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:end;gap:16px;margin-bottom:0}
 .section-title h1{font-size:24px;line-height:1.2;margin:0}

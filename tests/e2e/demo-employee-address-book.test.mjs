@@ -54,6 +54,10 @@ test('ZIP contacts: add, edit, select primary and archive actual address rows wi
       page.once('dialog', dialog => dialog.accept())
       await added.getByRole('button', { name: 'Архивировать адрес' }).click()
       await added.waitFor({ state: 'hidden' })
+      // After an archive the parent card reloads from the API; the old row is
+      // unmounted before the refreshed address book appears. Wait for the
+      // refreshed remaining row rather than asserting during that empty gap.
+      await book.locator('.employee-address-row').first().waitFor()
       assert.equal(await book.locator('.employee-address-row').count(), 1)
       assert.equal(await book.locator('.employee-address-primary').count(), 0,
         'Archiving a primary never silently selects another one')

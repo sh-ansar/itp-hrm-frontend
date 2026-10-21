@@ -29,7 +29,7 @@ test('HR creates, edits and archives real formal education independently of trai
 
     const section = page.locator('.employee-profile-section')
       .filter({ has: page.getByRole('heading', { name: 'Образование и квалификация', exact: true }) })
-    await section.getByRole('button', { name: 'Изменить' }).click()
+    await section.getByRole('button', { name: 'Изменить', exact: true }).click()
     const drawer = page.getByRole('dialog', { name: 'Образование и квалификация' })
     await drawer.waitFor()
     await drawer.getByRole('button', { name: 'Добавить образование' }).click()
@@ -47,7 +47,7 @@ test('HR creates, edits and archives real formal education independently of trai
 
     await page.reload()
     await page.getByRole('cell', { name: 'Synthetic University' }).waitFor()
-    await section.getByRole('button', { name: 'Изменить' }).click()
+    await section.getByRole('button', { name: 'Изменить', exact: true }).click()
     await drawer.waitFor()
     await drawer.getByRole('button', { name: 'Изменить' }).click()
     await drawer.getByLabel('Учебное заведение').fill('Synthetic University Updated')
@@ -68,7 +68,7 @@ test('HR creates, edits and archives real formal education independently of trai
     assert.equal(result.value.private_profile.education[0].revision, 2)
     assert.equal(await training.getByRole('row').count(), beforeTraining)
 
-    await section.getByRole('button', { name: 'Изменить' }).click()
+    await section.getByRole('button', { name: 'Изменить', exact: true }).click()
     await drawer.waitFor()
     page.once('dialog', dialog => dialog.accept())
     await drawer.getByRole('button', { name: 'В архив' }).click()

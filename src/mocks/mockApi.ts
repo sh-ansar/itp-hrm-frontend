@@ -52,6 +52,20 @@ function addressesFor(employeeId:string):any[]{
   return (demoAddresses.get(employeeId)??[]).filter(row=>!row.archived)
     .sort((a,b)=>Number(b.is_primary)-Number(a.is_primary))
 }
+// Synthetic normalized identity records intentionally differ from the legacy
+// reference projection. Browser tests enforce that the normalized source wins.
+const demoIdentityDocuments = new Map<string, any[]>([[
+  id(1000), [
+    {id:id(9741),type:'Тестовый документ A',number:'QA-DOC-PRIMARY-001',
+      personal_number:'QA-PERSON-001',country_of_issue:'Тестовая страна',
+      issued_by:'Демо-организация',issued_on:'2026-01-15',expires_on:'2036-01-15',
+      is_primary:true,revision:1},
+    {id:id(9742),type:'Тестовый документ B',number:'QA-DOC-SECONDARY-002',
+      personal_number:'QA-PERSON-002',country_of_issue:'Тестовая страна',
+      issued_by:'Демо-организация',issued_on:'2025-05-20',expires_on:'2035-05-20',
+      is_primary:false,revision:1},
+  ],
+]])
 const plan:any={id:id(500),name:'Штатное расписание 2026',valid_from:'2026-01-01',valid_to:'2026-12-31',status:'approved',revision:3}
 const staffing=seededDepartments.slice(1).flatMap((d,di)=>Array.from({length:di%3===0?3:2},(_,ri)=>{const p=seededPositions[(di*2+ri+4)%seededPositions.length],planned=ri?2:4,occupied=Math.max(0,planned-((di+ri)%3===0?1:0));return{id:id(600+di*4+ri),department_id:d.id,position_id:p.id,department_name:d.name,position_name:p.name,planned_units:planned,occupied_units:occupied,vacant_units:planned-occupied,overstaffed_units:0,base_salary:420000+di*25000+ri*60000,currency:'KZT',notes:null,revision:1}}))
 const draftPlan:any={...plan,id:id(501),name:'Проект штатного расписания 2027',valid_from:'2027-01-01',valid_to:null,status:'draft',revision:1}
@@ -713,7 +727,8 @@ export async function mockApiRequest<T>(path:string,options:RequestInit={}):Prom
       reserve:employeeReserve(e,ei),
       training:employeeTraining(e,ei),
       reference_profile:referenceProfileFor(e,ei),
-      private_profile:{addresses:structuredClone(addressesFor(e.id))},
+      private_profile:{addresses:structuredClone(addressesFor(e.id)),
+        identity_documents:structuredClone(demoIdentityDocuments.get(e.id)??[])},
       meta:{assignments_limit:50,assignments_truncated:false,extended_sections_visible:true,
         profile_writes_enabled:true,assignment_writes_enabled:true,employee_writes_enabled:true,
         private_address_writes_enabled:true,private_addresses_truncated:false},

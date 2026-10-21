@@ -56,7 +56,7 @@ test('HR persists relatives and encrypted identity documents through the real AP
     await page.getByRole('cell', { name: 'Synthetic Relative Updated' }).waitFor()
 
     await section(page, 'Документы, удостоверяющие личность')
-      .getByRole('button', { name: 'Изменить', exact: true }).click()
+      .getByRole('button', { name: 'Управлять документами', exact: true }).click()
     const docs = page.getByRole('dialog', { name: 'Удостоверения личности' })
     await docs.waitFor()
     await docs.getByRole('button', { name: 'Добавить документ' }).click()

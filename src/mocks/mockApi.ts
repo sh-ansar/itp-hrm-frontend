@@ -478,7 +478,7 @@ export async function mockApiRequest<T>(path:string,options:RequestInit={}):Prom
         absence_minutes:sum('absence_minutes'),overtime_minutes:sum('overtime_minutes'),
         lateness_minutes:null,
       },days,
-    },meta:{source:'worktime_entries',read_only:true,partial_period:true}} as T
+    },meta:{source:'worktime_entries',read_only:true,recorded_days:days.length,calendar_days:new Date(Number(month.slice(0,4)), Number(month.slice(5,7)), 0).getDate()}} as T
   }
   const demoRoleResult=tryDemoRoleApi(p,method,u.searchParams,options.body,{departments:deps.map(d=>({id:d.id,name:String(d.name??'')})),employees})
   if(demoRoleResult.handled)return demoRoleResult.response as T

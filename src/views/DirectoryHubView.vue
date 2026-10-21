@@ -293,6 +293,64 @@ onMounted(async()=>{try{await loadCompanies();if(company.value)await loadRecords
       </BaseCard>
     </div>
 
+
+    <div v-if="directoryMode==='cards'" class="directory-card-columns" aria-label="Справочники по группам">
+      <div v-for="(column,index) in directoryColumns" :key="index" class="directory-card-column">
+        <article v-for="group in column" :key="group.id" class="directory-accordion-card"
+          :class="{ 'directory-accordion-card--expanded': activeGroup===group.id }">
+          <BaseButton variant="secondary" class="directory-accordion-trigger" :aria-expanded="activeGroup===group.id"
+            :aria-controls="'directory-card-panel-'+group.id" @click="toggleGroup(group.id)">
+            <span class="directory-accordion-copy"><strong>{{ group.label }}</strong><small>{{ group.description }}</small></span>
+            <span class="directory-accordion-chevron"><ChevronDown :size="17" :class="{ rotated: activeGroup===group.id }" /></span>
+          </BaseButton>
+          <div v-if="activeGroup===group.id" :id="'directory-card-panel-'+group.id" class="directory-accordion-content">
+            <div class="directory-card-toolbar">
+              <label class="directory-search"><Search :size="16" aria-hidden="true" />
+                <input v-model="search" type="search" placeholder="Поиск" :aria-label="'Поиск: '+group.label" />
+              </label>
+              <BaseButton v-if="writesEnabled" icon-only variant="secondary" aria-label="Добавить запись"
+                title="Добавить запись" @click="openCreate()"><Plus :size="17" /></BaseButton>
+              <BaseSelectField v-model="statusFilter" label="Статус" :options="statusOptions" />
+            </div>
+            <BaseFilterSummary :items="filterChips" label="Активные фильтры" @remove="clearFilter" @clear="clearFilters" />
+            <BaseLoadingState v-if="loading" label="Загрузка справочника" />
+            <template v-else-if="!error">
+              <div v-if="group.id==='tariff-types' && hierarchyRows.length" class="directory-tariff-tree directory-tariff-tree--cards"
+                role="tree" aria-label="Иерархия тарифов">
+                <div v-for="item in hierarchyRows" :key="item.row.id" class="tariff-tree-row" role="treeitem"
+                  :aria-level="item.level+1" :aria-expanded="item.children?expandedCategories.includes(item.row.id):undefined"
+                  :style="{paddingInlineStart:(6+item.level*17)+'px'}">
+                  <BaseButton v-if="item.children" icon-only variant="secondary" class="tariff-expand"
+                    :aria-label="(expandedCategories.includes(item.row.id)?'Свернуть: ':'Раскрыть: ')+item.row.name"
+                    @click="toggleCategory(item.row.id)">
+                    <ChevronDown v-if="expandedCategories.includes(item.row.id)" :size="15"/><ChevronRight v-else :size="15"/>
+                  </BaseButton>
+                  <FolderTree v-else :size="14" class="tariff-leaf-icon" aria-hidden="true" />
+                  <span class="tariff-name" :title="item.row.name">{{ item.row.name }}</span>
+                  <BaseButton v-if="writesEnabled" icon-only variant="secondary" class="tariff-tree-action"
+                    :aria-label="'Добавить под: '+item.row.name" @click="openCreate(item.row.id)"><Plus :size="15"/></BaseButton>
+                  <BaseButton v-if="writesEnabled" icon-only variant="secondary" class="tariff-tree-action"
+                    :aria-label="'Изменить: '+item.row.name" @click="openEdit(item.row)"><Pencil :size="15"/></BaseButton>
+                  <BaseButton v-if="writesEnabled" icon-only variant="secondary" class="tariff-tree-action"
+                    :aria-label="'Удалить: '+item.row.name" @click="removeRecord(item.row)"><Trash2 :size="15"/></BaseButton>
+                </div>
+              </div>
+              <div v-else-if="group.id!=='tariff-types' && visibleRows.length" class="directory-card-list">
+                <div v-for="entry in visibleRows" :key="entry.id" class="directory-card-list-row">
+                  <span>{{ entry.name }}</span><small>{{ entry.code }}</small>
+                  <BaseActionDropdown v-if="writesEnabled" variant="icon" :label="'Действия: '+entry.name"
+                    :options="[{id:'edit',label:'Редактировать'},{id:'delete',label:'Удалить'}]"
+                    @select="rowAction($event,entry)"/>
+                </div>
+              </div>
+              <p v-else class="directory-card-empty">{{ records.length ? 'Поиск не дал результатов.' : 'Записей пока нет.' }}</p>
+            </template>
+            <p v-if="!writesEnabled && !loading && !error" class="directory-card-readonly">Просмотр справочника · редактирование недоступно</p>
+          </div>
+        </article>
+      </div>
+    </div>
+
     <BaseDrawer :open="editorOpen" :title="editing?'Редактировать запись':'Новая запись — '+(currentGroup?.label??'')" :description="currentGroup?.description??''" @close="editorOpen=false">
       <form class="directory-create-form" @submit.prevent="saveRecord">
         <BaseFormField v-model="draft.code" label="Код" required />

@@ -22,7 +22,7 @@ import EmployeeRecordForm from '../components/EmployeeRecordForm.vue'
 import EmployeeContractEditor from '../components/EmployeeContractEditor.vue'
 import BaseDialog from '../components/ui/BaseDialog.vue'
 import BaseViewTabs from '../components/ui/BaseViewTabs.vue'
-import { getEmployee, listEmployeeContracts, type EmployeeAssignment, type EmployeeContract, type EmployeeDetail, type EmployeeReferenceProfile, type EmployeePrivateSection, type EmployeePrivateRecordSection, type ProfileEditRow, type ProfileSection } from '../api/personnel'
+import { getEmployee, listEmployeeContracts, type EmployeeAssignment, type EmployeeContract, type EmployeeDetail, type EmployeeIdentityDocument, type EmployeeReferenceProfile, type EmployeePrivateSection, type EmployeePrivateRecordSection, type ProfileEditRow, type ProfileSection } from '../api/personnel'
 import { localTodayISO } from '../utils/localDate'
 import { useUiFormatters } from '../composables/useUiFormatters'
 
@@ -41,6 +41,7 @@ const assignmentTransitioning = ref<EmployeeAssignment | null>(null)
 const identityEditOpen = ref(false)
 const privateEditorSection = ref<EmployeePrivateSection | null>(null)
 const privateRecordsSection = ref<EmployeePrivateRecordSection | null>(null)
+const selectedIdentityDocumentId = ref<string | null>(null)
 const assignmentCreateOpen = ref(false)
 const profileCreateOpen = ref(false)
 const contracts = ref<EmployeeContract[]>([])
@@ -187,7 +188,6 @@ function ageFromBirthDate(value: string | null | undefined): string {
 
 const personalFields = computed<EmployeeDisplayField[]>(() => [
   { label: 'ИИН', value: reference.value?.personal.iin, editGroup: 'private-personal' },
-  { label: 'Логин', value: reference.value?.personal.login, editGroup: 'private-personal' },
   { label: 'Дата рождения', value: formatDate(profile.value?.data.birth_date), editGroup: 'employee' },
   { label: 'Возраст', value: ageFromBirthDate(profile.value?.data.birth_date) },
   { label: 'Пол', value: genderLabel.value, editGroup: 'employee' },
@@ -197,6 +197,7 @@ const personalFields = computed<EmployeeDisplayField[]>(() => [
   { label: 'Табельный номер', value: profile.value?.data.personnel_number, editGroup: 'employee' },
 ])
 const contactFields = computed<EmployeeDisplayField[]>(() => [
+  { label: 'Логин', value: reference.value?.personal.login, editGroup: 'private-personal' },
   { label: 'Email', value: profile.value?.data.email, editGroup: 'employee' },
   { label: 'Телефон', value: profile.value?.data.phone, editGroup: 'employee' },
   { label: 'Адрес проживания', value: reference.value?.personal.residence_address ?? profile.value?.data.address, wide: true, editGroup: reference.value?.personal.residence_address ? 'private-personal' : 'employee' },
@@ -207,18 +208,45 @@ const contactFields = computed<EmployeeDisplayField[]>(() => [
   { label: 'Контактное лицо', value: reference.value?.personal.emergency_contact_name, editGroup: 'private-personal' },
   { label: 'Телефон контактного лица', value: reference.value?.personal.emergency_contact_phone, editGroup: 'private-personal' },
 ])
-const documentFields = computed<EmployeeDisplayField[]>(() => [
+// Citizenship/nationality belong to the private personal profile, not to an identity-document record.
+const documentPersonFields = computed<EmployeeDisplayField[]>(() => [
   { label: 'Национальность', value: reference.value?.personal.nationality, editGroup: 'private-personal' },
-  { label: 'Персональный номер', value: reference.value?.identity_document.personal_number, editGroup: 'identity' },
-  { label: 'Страна выдачи', value: reference.value?.identity_document.country_of_issue, editGroup: 'identity' },
   { label: 'Гражданство', value: reference.value?.personal.citizenship, editGroup: 'private-personal' },
-  { label: 'Тип документа', value: reference.value?.identity_document.type, editGroup: 'identity' },
-  { label: 'Номер документа', value: reference.value?.identity_document.number, editGroup: 'identity' },
-  { label: 'Кем выдан', value: reference.value?.identity_document.issued_by, wide: true, editGroup: 'identity' },
-  { label: 'Дата выдачи', value: formatDate(reference.value?.identity_document.issued_on), editGroup: 'identity' },
-  { label: 'Действителен до', value: formatDate(reference.value?.identity_document.expires_on), editGroup: 'identity' },
+])
+// The legacy projection cannot be modified through the normalized identity-record editor.
+// Treat it as informative until a record really exists in private_profile.identity_documents.
+const legacyDocumentFields = computed<EmployeeDisplayField[]>(() => [
+  { label: 'Персональный номер', value: maskedIdentifier(reference.value?.identity_document.personal_number) },
+  { label: 'Страна выдачи', value: reference.value?.identity_document.country_of_issue },
+  { label: 'Тип документа', value: reference.value?.identity_document.type },
+  { label: 'Номер документа', value: maskedIdentifier(reference.value?.identity_document.number) },
+  { label: 'Кем выдан', value: reference.value?.identity_document.issued_by, wide: true },
+  { label: 'Дата выдачи', value: formatDate(reference.value?.identity_document.issued_on) },
+  { label: 'Действителен до', value: formatDate(reference.value?.identity_document.expires_on) },
   { label: 'Файл документа', value: reference.value?.identity_document.attachment_name, wide: true },
 ])
+const identityDocuments = computed(() =>
+  [...(profile.value?.private_profile?.identity_documents ?? [])]
+    .sort((a,b) => Number(b.is_primary) - Number(a.is_primary)))
+function maskedIdentifier(value: string | null | undefined): string {
+  return value ? '••••' + value.slice(-4) : '—'
+}
+function identityDocumentFields(document: EmployeeIdentityDocument): EmployeeDisplayField[] {
+  return [
+    { label: 'Тип документа', value: document.type },
+    { label: 'Номер документа', value: maskedIdentifier(document.number) },
+    { label: 'Персональный номер', value: maskedIdentifier(document.personal_number) },
+    { label: 'Страна выдачи', value: document.country_of_issue },
+    { label: 'Кем выдан', value: document.issued_by, wide: true },
+    { label: 'Дата выдачи', value: formatDate(document.issued_on) },
+    { label: 'Действителен до', value: formatDate(document.expires_on) },
+  ]
+}
+function manageIdentityDocument(recordId: string | null = null): void {
+  if (!profile.value?.meta.private_profile_writes_enabled) return
+  selectedIdentityDocumentId.value = recordId
+  privateRecordsSection.value = 'identity'
+}
 const birthPlaceFields = computed<EmployeeDisplayField[]>(() => [
   { label: 'Место рождения', value: reference.value?.personal.place_of_birth, wide: true, editGroup: 'private-personal' },
   { label: 'Свидетельство о рождении', value: reference.value?.personal.birth_certificate_attachment, wide: true },

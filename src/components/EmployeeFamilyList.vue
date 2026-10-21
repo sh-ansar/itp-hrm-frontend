@@ -6,8 +6,14 @@ import { useWorkspaceI18n } from '../composables/useWorkspaceI18n'
 import { useUiFormatters } from '../composables/useUiFormatters'
 import type { EmployeeFamilyMember } from '../api/personnel'
 
+// The visual-only ZIP/demo projection has no revision; only the existing
+// Laravel CRUD drawer consumes revisioned EmployeeFamilyMember records.
+type FamilyDisplayMember = Pick<EmployeeFamilyMember, 'id' | 'relationship' | 'full_name'> & {
+  birth_date?: string | null
+  document_reference?: string | null
+}
 withDefaults(defineProps<{
-  members: EmployeeFamilyMember[]
+  members: FamilyDisplayMember[]
   writable?: boolean
   truncated?: boolean
 }>(), { writable: false, truncated: false })
@@ -55,7 +61,7 @@ function birthDisplay(value: string | null): string {
         </div>
         <div class="family-info-field family-birth">
           <span class="family-label">{{ tr('Дата рождения / Возраст') }}</span>
-          <strong>{{ birthDisplay(member.birth_date) }}</strong>
+          <strong>{{ birthDisplay(member.birth_date ?? null) }}</strong>
         </div>
         <BaseButton v-if="writable && !truncated" variant="secondary" icon-only class="family-edit"
           :title="tr('Изменить родственника')" :aria-label="tr('Изменить родственника') + ': ' + member.full_name"

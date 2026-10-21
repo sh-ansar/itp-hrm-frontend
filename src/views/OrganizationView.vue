@@ -423,8 +423,8 @@ onMounted(loadCompanies)
               <strong>{{ currentCompany?.name ?? tr('Компания') }}</strong>
             </div>
             <div v-if="orgMetrics.planned !== null || orgMetrics.vacant !== null" class="chart-company-metrics">
-              <span v-if="orgMetrics.planned !== null"><UsersRound :size="15" aria-hidden="true" /> {{ fmt.number(orgMetrics.planned, 0) }} {{ tr('штатных единиц') }}</span>
-              <span v-if="orgMetrics.vacant !== null" class="chart-company-vacant"><UserPlus :size="15" aria-hidden="true" /> {{ fmt.number(orgMetrics.vacant, 0) }} {{ tr('Вакантные позиции').toLocaleLowerCase(fmt.localeTag()) }}</span>
+              <span v-if="orgMetrics.planned !== null"><UsersRound :size="15" aria-hidden="true" /> {{ tr('Штатные единицы') }}: {{ fmt.number(orgMetrics.planned, 0) }}</span>
+              <span v-if="orgMetrics.vacant !== null" class="chart-company-vacant"><UserPlus :size="15" aria-hidden="true" /> {{ tr('Вакантные позиции') }}: {{ fmt.number(orgMetrics.vacant, 0) }}</span>
             </div>
             <span v-else class="chart-company-unavailable">{{ tr('Нет утверждённого штатного среза') }}</span>
           </div>

@@ -123,8 +123,8 @@ const hierarchyRows=computed(()=>{
     }
   }
   walk('',0)
-  // Even filtered-out parents and invalid legacy chains must not hide visible entries.
-  for(const row of visibleRows.value)if(!seen.has(row.id))results.push({row,level:0,children:false})
+  // Filtered-out parents are already treated as roots above. Do not append
+  // intentionally collapsed children: that would make collapse ineffective.
   return results
 })
 const parentOptions=computed(()=>{

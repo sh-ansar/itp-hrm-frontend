@@ -11,6 +11,7 @@ import EmployeePhoto from '../components/EmployeePhoto.vue'
 import EmployeeDocumentsPanel from '../components/EmployeeDocumentsPanel.vue'
 import EmployeeDataGrid from '../components/EmployeeDataGrid.vue'
 import EmployeeAddressBook from '../components/EmployeeAddressBook.vue'
+import EmployeeFamilyList from '../components/EmployeeFamilyList.vue'
 import type { EmployeeFieldEditGroup } from '../types/employeeFields'
 import BaseButton from '../components/ui/BaseButton.vue'
 import BaseDataTable from '../components/ui/BaseDataTable.vue'
@@ -263,12 +264,9 @@ const militaryFields = computed<EmployeeDisplayField[]>(() => [
   { label: 'Военный билет', value: reference.value?.military?.document_reference, wide: true, editGroup: 'private-military' },
   { label: 'Общий комментарий', value: reference.value?.military?.comment, wide: true, editGroup: 'private-military' },
 ])
-const familyColumns = [
-  { key: 'relationship', label: 'Степень родства' },
-  { key: 'full_name', label: 'ФИО' },
-  { key: 'birth_date', label: 'Дата рождения' },
-  { key: 'document_reference', label: 'Документ' },
-]
+// Normalized family records must take precedence over synthetic/legacy
+// projections after an HR user creates or archives a relative.
+const familyMembers = computed(() => profile.value?.private_profile?.family ?? reference.value?.family ?? [])
 
 const organizationPositionFields = computed<EmployeeDisplayField[]>(() => [
   { label: 'Компания', value: reference.value?.organization?.company_name },
@@ -763,11 +761,10 @@ onMounted(load)
           <template v-if="profile.meta.private_profile_writes_enabled" #actions>
             <BaseButton variant="secondary" @click="privateRecordsSection = 'family'">{{ tr('Изменить') }}</BaseButton>
           </template>
-          <BaseDataTable density="compact" :rows="reference?.family ?? []" :columns="familyColumns" row-key="id"
-            :caption="tr('Сведения о родственниках сотрудника')" :empty-title="tr('Семейные данные не внесены')"
-            :empty-description="tr('Для сотрудника пока нет доступных сведений о родственниках.')">
-            <template #cell-birth_date="{ value }">{{ formatDate(typeof value === 'string' ? value : null) }}</template>
-          </BaseDataTable>
+          <EmployeeFamilyList :members="familyMembers" />
+          <BaseNotice v-if="profile.meta.private_family_truncated" tone="warning">
+            {{ tr('Показаны не все родственники. Для полной истории откройте управление записями.') }}
+          </BaseNotice>
         </EmployeeProfileSection>
         <EmployeeProfileSection :title="tr('Воинский учёт')">
           <template v-if="profile.meta.private_profile_writes_enabled" #actions>

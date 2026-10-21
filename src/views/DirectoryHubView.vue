@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
-import { ChevronDown, Plus, Search } from 'lucide-vue-next'
+import { ChevronDown, ChevronRight, FolderTree, LayoutGrid, ListTree, Pencil, Plus, Search, Trash2 } from 'lucide-vue-next'
 import { publicAsset } from '../utils/publicAsset'
 import BaseActionDropdown from '../components/ui/BaseActionDropdown.vue'
 import BaseButton from '../components/ui/BaseButton.vue'
@@ -82,16 +82,68 @@ const search=ref('')
 const statusFilter=ref('all')
 const editorOpen=ref(false)
 const editing=ref<DirectoryEntry|null>(null)
-const draft=ref({code:'',name:'',category:'',unit:'',value:'',status:'active' as DirectoryStatus})
+const draft=ref({code:'',name:'',parent_id:null as string|null,category:'',unit:'',value:'',status:'active' as DirectoryStatus})
+const expandedCategories=ref<string[]>([])
+const directoryMode=ref<'cards'|'register'>('cards')
 
 const currentGroups=computed(()=>groups[activeSection.value]??[])
 const currentGroup=computed(()=>currentGroups.value.find(x=>x.id===activeGroup.value)??null)
+const directoryColumns=computed(()=>{
+  const available=currentGroups.value
+  if(activeSection.value==='tariffs'){
+    const left=new Set(['tariff-types','tariff-methods','tariffs','cargo-types'])
+    return [available.filter(item=>left.has(item.id)),available.filter(item=>!left.has(item.id))]
+  }
+  const split=Math.ceil(available.length/2)
+  return [available.slice(0,split),available.slice(split)]
+})
 const statusOptions=[{id:'all',name:'Все статусы'},{id:'active',name:'Активные'},{id:'draft',name:'Черновики'},{id:'inactive',name:'Неактивные'}]
 const visibleRows=computed(()=>records.value.filter(row=>{
   const q=search.value.trim().toLowerCase()
   return (statusFilter.value==='all'||row.status===statusFilter.value)
     &&(!q||[row.code,row.name,row.category??'',row.unit??'',row.value??''].join(' ').toLowerCase().includes(q))
 }))
+const hierarchyRows=computed(()=>{
+  const visibleIds=new Set(visibleRows.value.map(row=>row.id))
+  const groups=new Map<string,DirectoryEntry[]>()
+  for(const item of visibleRows.value){
+    const parent=item.parent_id && visibleIds.has(item.parent_id)?item.parent_id:''
+    const bucket=groups.get(parent)??[]
+    bucket.push(item);groups.set(parent,bucket)
+  }
+  const results:Array<{row:DirectoryEntry;level:number;children:boolean}>=[]
+  const seen=new Set<string>()
+  function walk(parent:string,depth:number){
+    for(const row of groups.get(parent)??[]){
+      if(seen.has(row.id))continue
+      seen.add(row.id)
+      const children=records.value.some(child=>child.parent_id===row.id)
+      results.push({row,level:depth,children})
+      if(expandedCategories.value.includes(row.id)||search.value.trim())walk(row.id,depth+1)
+    }
+  }
+  walk('',0)
+  // Filtered-out parents are already treated as roots above. Do not append
+  // intentionally collapsed children: that would make collapse ineffective.
+  return results
+})
+const parentOptions=computed(()=>{
+  const forbidden=new Set<string>()
+  if(editing.value){
+    forbidden.add(editing.value.id)
+    let changed=true
+    while(changed){
+      changed=false
+      for(const row of records.value){
+        if(row.parent_id && forbidden.has(row.parent_id) && !forbidden.has(row.id)){
+          forbidden.add(row.id);changed=true
+        }
+      }
+    }
+  }
+  return [{id:'',name:'Без родительской группы'},...records.value.filter(row=>!forbidden.has(row.id)).map(row=>({id:row.id,name:row.name}))]
+})
+function toggleCategory(id:string){expandedCategories.value=expandedCategories.value.includes(id)?expandedCategories.value.filter(x=>x!==id):[...expandedCategories.value,id]}
 const filterChips=computed(()=>[
   ...(search.value?[{id:'search',label:'Поиск: '+search.value}]:[]),
   ...(statusFilter.value!=='all'?[{id:'status',label:'Статус: '+(statusOptions.find(x=>x.id===statusFilter.value)?.name??statusFilter.value)}]:[]),
@@ -105,30 +157,55 @@ async function loadCompanies(){
   const response=await listCompanies();companies.value=response.data
   if(!companies.value.some(x=>x.id===company.value))company.value=companies.value[0]?.id??''
 }
+let directoryRequest=0
 async function loadRecords(){
-  if(!company.value||!activeGroup.value)return
+  const request=++directoryRequest
+  const companyId=company.value
+  const groupId=activeGroup.value
+  records.value=[]
+  writesEnabled.value=false
+  if(!companyId||!groupId){loading.value=false;return}
   loading.value=true;error.value=''
   try{
-    const response=await listDirectoryEntries(company.value,activeGroup.value)
+    const response=await listDirectoryEntries(companyId,groupId)
+    if(request!==directoryRequest||companyId!==company.value||groupId!==activeGroup.value)return
     records.value=response.data;writesEnabled.value=response.meta.writes_enabled
-    groupCounts.value={...groupCounts.value,[activeGroup.value]:response.data.length}
-  }catch(cause){records.value=[];error.value=cause instanceof Error?cause.message:'Не удалось загрузить справочник'}
-  finally{loading.value=false}
+    // The ZIP's first two meaningful hierarchy levels are initially expanded.
+    // Only data returned by the selected company/group can determine the nodes.
+    if(groupId==='tariff-types' && !expandedCategories.value.length){
+      const root=response.data.find(row=>!row.parent_id && response.data.some(child=>child.parent_id===row.id))
+      const nested=root ? response.data.find(row=>row.parent_id===root.id
+        && response.data.some(child=>child.parent_id===row.id)) : undefined
+      expandedCategories.value=[root?.id,nested?.id].filter((id):id is string=>Boolean(id))
+    }
+    groupCounts.value={...groupCounts.value,[groupId]:response.data.length}
+  }catch(cause){
+    if(request!==directoryRequest)return
+    records.value=[];error.value=cause instanceof Error?cause.message:'Не удалось загрузить справочник'
+  }finally{if(request===directoryRequest)loading.value=false}
 }
 function selectSection(id:string){
   if(!groups[id])return
   activeSection.value=id;activeGroup.value=groups[id]?.[0]?.id??'';search.value='';statusFilter.value='all'
 }
-function toggleGroup(id:string){if(activeGroup.value===id)return;activeGroup.value=id;search.value='';statusFilter.value='all'}
+function toggleGroup(id:string){
+  if(directoryMode.value==='register' && activeGroup.value===id)return
+  activeGroup.value=activeGroup.value===id?'':id
+  search.value='';statusFilter.value='all'
+}
+function selectDirectoryMode(mode:'cards'|'register'){
+  directoryMode.value=mode
+  if(mode==='register' && !activeGroup.value)activeGroup.value=currentGroups.value[0]?.id??''
+}
 function clearFilter(id:string){if(id==='search')search.value='';if(id==='status')statusFilter.value='all'}
 function clearFilters(){search.value='';statusFilter.value='all'}
-function recordCount(groupId:string){return groupId===activeGroup.value?records.value.length:(groupCounts.value[groupId]??0)}
-function openCreate(){editing.value=null;draft.value={code:'',name:'',category:currentGroup.value?.label??'',unit:'',value:'',status:'active'};editorOpen.value=true;success.value=''}
-function openEdit(row:DirectoryEntry){editing.value=row;draft.value={code:row.code,name:row.name,category:row.category??'',unit:row.unit??'',value:row.value??'',status:row.status};editorOpen.value=true;success.value=''}
+function recordCount(groupId:string){return groupId===activeGroup.value?records.value.length:(groupCounts.value[groupId]??null)}
+function openCreate(parentId:string|null=null){editing.value=null;draft.value={code:'',name:'',parent_id:parentId,category:currentGroup.value?.label??'',unit:'',value:'',status:'active'};editorOpen.value=true;success.value=''}
+function openEdit(row:DirectoryEntry){editing.value=row;draft.value={code:row.code,name:row.name,parent_id:row.parent_id??null,category:row.category??'',unit:row.unit??'',value:row.value??'',status:row.status};editorOpen.value=true;success.value=''}
 async function saveRecord(){
   if(!company.value||!currentGroup.value||saving.value)return
   saving.value=true;error.value='';success.value=''
-  const payload={code:draft.value.code.trim(),name:draft.value.name.trim(),category:draft.value.category.trim()||null,unit:draft.value.unit.trim()||null,value:draft.value.value.trim()||null,status:draft.value.status}
+  const payload={parent_id:draft.value.parent_id||null,code:draft.value.code.trim(),name:draft.value.name.trim(),category:draft.value.category.trim()||null,unit:draft.value.unit.trim()||null,value:draft.value.value.trim()||null,status:draft.value.status}
   try{
     if(editing.value)await updateDirectoryEntry(company.value,currentGroup.value.id,editing.value.id,editing.value.revision,payload)
     else await createDirectoryEntry(company.value,currentGroup.value.id,payload)
@@ -143,7 +220,7 @@ async function removeRecord(row:DirectoryEntry){
   catch(cause){error.value=cause instanceof Error?cause.message:'Не удалось удалить запись'}
 }
 function rowAction(id:string,row:DirectoryEntry){if(id==='edit')openEdit(row);if(id==='delete')void removeRecord(row)}
-watch([company,activeGroup],()=>void loadRecords())
+watch([company,activeGroup],()=>{expandedCategories.value=[];editorOpen.value=false;success.value='';void loadRecords()})
 onMounted(async()=>{try{await loadCompanies();if(company.value)await loadRecords()}catch(cause){error.value=cause instanceof Error?cause.message:'Не удалось загрузить справочники'}})
 </script>
 
@@ -161,14 +238,19 @@ onMounted(async()=>{try{await loadCompanies();if(company.value)await loadRecords
     <BaseNotice v-if="success" tone="success">{{ success }}</BaseNotice>
 
     <div class="directory-context">
-      <div><strong>{{ tabs.find(tab=>tab.id===activeSection)?.label }}</strong><span>{{ currentGroups.length }} справочников в группе</span></div>
+      <div class="directory-layout-switch" role="group" aria-label="Представление справочников">
+        <BaseButton variant="secondary" :class="{ 'layout-active': directoryMode==='cards' }"
+          :aria-pressed="directoryMode==='cards'" @click="selectDirectoryMode('cards')"><LayoutGrid :size="16" /> Карточки</BaseButton>
+        <BaseButton variant="secondary" :class="{ 'layout-active': directoryMode==='register' }"
+          :aria-pressed="directoryMode==='register'" @click="selectDirectoryMode('register')"><ListTree :size="16" /> Реестр</BaseButton>
+      </div>
       <div class="directory-context-actions">
         <BaseSelectField v-if="companies.length>1" v-model="company" label="Компания" :options="companies" />
         <RouterLink class="positions-link" to="/directories/positions">Справочник должностей</RouterLink>
       </div>
     </div>
 
-    <div class="directory-workspace">
+    <div v-if="directoryMode==='register'" class="directory-workspace">
       <nav class="directory-index" aria-label="Справочники группы">
         <div class="directory-index-heading"><strong>Разделы</strong><small>{{ currentGroups.length }} справочников</small></div>
         <BaseButton v-for="group in currentGroups" :key="group.id" type="button" variant="secondary"
@@ -189,11 +271,27 @@ onMounted(async()=>{try{await loadCompanies();if(company.value)await loadRecords
         <div class="directory-toolbar">
           <label class="directory-search"><Search :size="16" aria-hidden="true" /><input v-model="search" type="search" placeholder="Поиск по названию или коду" aria-label="Поиск по справочнику" /></label>
           <BaseSelectField v-model="statusFilter" label="Статус" :options="statusOptions" />
-          <BaseButton :disabled="!writesEnabled" @click="openCreate"><Plus :size="16" /> Добавить запись</BaseButton>
+          <BaseButton :disabled="!writesEnabled" @click="openCreate()"><Plus :size="16" /> Добавить запись</BaseButton>
         </div>
         <BaseFilterSummary :items="filterChips" label="Активные фильтры" @remove="clearFilter" @clear="clearFilters" />
         <BaseLoadingState v-if="loading" label="Загрузка справочника" />
-        <div class="directory-table-scroll">
+        <BaseNotice v-if="activeGroup==='tariff-types' && !loading && !visibleRows.length" tone="info">{{ records.length ? 'По заданным фильтрам тарифы не найдены.' : 'Тарифных групп пока нет. Добавьте первую запись, если у вас есть право редактирования.' }}</BaseNotice>
+        <div v-if="activeGroup==='tariff-types' && !loading && visibleRows.length" class="directory-tariff-tree" role="tree" aria-label="Иерархия тарифов">
+          <div v-for="item in hierarchyRows" :key="item.row.id" class="tariff-tree-row" role="treeitem"
+            :aria-level="item.level+1" :aria-expanded="item.children?expandedCategories.includes(item.row.id):undefined"
+            :style="{paddingInlineStart:(12+item.level*22)+'px'}">
+            <BaseButton v-if="item.children" icon-only variant="secondary" class="tariff-expand" :aria-label="'Раскрыть: '+item.row.name" @click="toggleCategory(item.row.id)">
+              <ChevronDown v-if="expandedCategories.includes(item.row.id)" :size="16"/><ChevronRight v-else :size="16"/>
+            </BaseButton>
+            <FolderTree v-else :size="15" class="tariff-leaf-icon"/>
+            <span class="tariff-name">{{ item.row.name }}</span>
+            <span class="tariff-code">{{ item.row.code }}</span>
+            <span class="tariff-status">{{ item.row.status==='active'?'Активно':item.row.status==='draft'?'Черновик':'Неактивно' }}</span>
+            <BaseButton v-if="writesEnabled" variant="secondary" @click="openEdit(item.row)">Изменить</BaseButton>
+            <BaseButton v-if="writesEnabled" variant="secondary" @click="openCreate(item.row.id)"><Plus :size="14"/> Добавить</BaseButton>
+          </div>
+        </div>
+        <div v-if="activeGroup!=='tariff-types'" class="directory-table-scroll">
           <BaseDataTable :rows="visibleRows" :columns="columns" row-key="id" density="compact" :caption="currentGroup.label"
             empty-title="Записей нет" empty-description="Добавьте первую запись или измените условия поиска.">
             <template #cell-value="{value}">{{ value || '—' }}</template>
@@ -211,10 +309,70 @@ onMounted(async()=>{try{await loadCompanies();if(company.value)await loadRecords
       </BaseCard>
     </div>
 
+
+    <div v-if="directoryMode==='cards'" class="directory-card-columns" aria-label="Справочники по группам">
+      <div v-for="(column,index) in directoryColumns" :key="index" class="directory-card-column">
+        <article v-for="group in column" :key="group.id" class="directory-accordion-card"
+          :class="{ 'directory-accordion-card--expanded': activeGroup===group.id }">
+          <BaseButton variant="secondary" class="directory-accordion-trigger" :aria-expanded="activeGroup===group.id"
+            :aria-controls="'directory-card-panel-'+group.id" @click="toggleGroup(group.id)">
+            <span class="directory-accordion-copy"><strong>{{ group.label }}</strong><small>{{ group.description }}</small></span>
+            <span class="directory-accordion-chevron"><ChevronDown :size="17" :class="{ rotated: activeGroup===group.id }" /></span>
+          </BaseButton>
+          <div v-if="activeGroup===group.id" :id="'directory-card-panel-'+group.id" class="directory-accordion-content">
+            <div class="directory-card-toolbar">
+              <label class="directory-search"><Search :size="16" aria-hidden="true" />
+                <input v-model="search" type="search" placeholder="Поиск" :aria-label="'Поиск: '+group.label" />
+              </label>
+              <BaseButton v-if="writesEnabled" icon-only variant="secondary" aria-label="Добавить запись"
+                title="Добавить запись" @click="openCreate()"><Plus :size="17" /></BaseButton>
+              <BaseSelectField v-model="statusFilter" label="Статус" :options="statusOptions" />
+            </div>
+            <BaseFilterSummary :items="filterChips" label="Активные фильтры" @remove="clearFilter" @clear="clearFilters" />
+            <BaseLoadingState v-if="loading" label="Загрузка справочника" />
+            <template v-else-if="!error">
+              <div v-if="group.id==='tariff-types' && hierarchyRows.length" class="directory-tariff-tree directory-tariff-tree--cards"
+                role="tree" aria-label="Иерархия тарифов">
+                <div v-for="item in hierarchyRows" :key="item.row.id" class="tariff-tree-row" role="treeitem"
+                  :aria-level="item.level+1" :aria-expanded="item.children?expandedCategories.includes(item.row.id):undefined"
+                  :style="{paddingInlineStart:(6+item.level*17)+'px'}">
+                  <BaseButton v-if="item.children" icon-only variant="secondary" class="tariff-expand"
+                    :aria-label="(expandedCategories.includes(item.row.id)?'Свернуть: ':'Раскрыть: ')+item.row.name"
+                    @click="toggleCategory(item.row.id)">
+                    <ChevronDown v-if="expandedCategories.includes(item.row.id)" :size="15"/><ChevronRight v-else :size="15"/>
+                  </BaseButton>
+                  <FolderTree v-else :size="14" class="tariff-leaf-icon" aria-hidden="true" />
+                  <span class="tariff-name" :title="item.row.name">{{ item.row.name }}</span>
+                  <BaseButton v-if="writesEnabled" icon-only variant="secondary" class="tariff-tree-action"
+                    :aria-label="'Добавить под: '+item.row.name" @click="openCreate(item.row.id)"><Plus :size="15"/></BaseButton>
+                  <BaseButton v-if="writesEnabled" icon-only variant="secondary" class="tariff-tree-action"
+                    :aria-label="'Изменить: '+item.row.name" @click="openEdit(item.row)"><Pencil :size="15"/></BaseButton>
+                  <BaseButton v-if="writesEnabled" icon-only variant="secondary" class="tariff-tree-action"
+                    :aria-label="'Удалить: '+item.row.name" @click="removeRecord(item.row)"><Trash2 :size="15"/></BaseButton>
+                </div>
+              </div>
+              <div v-else-if="group.id!=='tariff-types' && visibleRows.length" class="directory-card-list">
+                <div v-for="entry in visibleRows" :key="entry.id" class="directory-card-list-row">
+                  <span>{{ entry.name }}</span><small>{{ entry.code }}</small>
+                  <BaseActionDropdown v-if="writesEnabled" variant="icon" :label="'Действия: '+entry.name"
+                    :options="[{id:'edit',label:'Редактировать'},{id:'delete',label:'Удалить'}]"
+                    @select="rowAction($event,entry)"/>
+                </div>
+              </div>
+              <p v-else class="directory-card-empty">{{ records.length ? 'Поиск не дал результатов.' : 'Записей пока нет.' }}</p>
+            </template>
+            <p v-if="!writesEnabled && !loading && !error" class="directory-card-readonly">Просмотр справочника · редактирование недоступно</p>
+          </div>
+        </article>
+      </div>
+    </div>
+
     <BaseDrawer :open="editorOpen" :title="editing?'Редактировать запись':'Новая запись — '+(currentGroup?.label??'')" :description="currentGroup?.description??''" @close="editorOpen=false">
       <form class="directory-create-form" @submit.prevent="saveRecord">
         <BaseFormField v-model="draft.code" label="Код" required />
         <BaseFormField v-model="draft.name" label="Наименование" required />
+        <BaseSelectField v-if="activeGroup==='tariff-types'" :model-value="draft.parent_id??''" @update:model-value="draft.parent_id=$event||null"
+          label="Родительская группа" :options="parentOptions" />
         <BaseFormField v-model="draft.category" label="Категория" />
         <BaseFormField v-model="draft.unit" label="Единица" />
         <BaseFormField v-model="draft.value" label="Значение" />
@@ -230,6 +388,55 @@ onMounted(async()=>{try{await loadCompanies();if(company.value)await loadRecords
 
 <style scoped>
 .directory-hub{display:grid;grid-template-columns:minmax(0,1fr);gap:14px;min-width:0;max-width:100%}
+.directory-tariff-tree{width:100%;min-width:0;border:1px solid var(--color-stroke);border-radius:8px;overflow-x:auto}
+.tariff-tree-row{display:flex;align-items:center;gap:10px;min-width:650px;min-height:43px;padding:6px 12px;border-bottom:1px solid var(--color-stroke);font-size:12px}
+.tariff-tree-row:last-child{border-bottom:0}
+.tariff-tree-row:hover{background:var(--color-hover)}
+.tariff-name{flex:1;min-width:140px;color:var(--color-text)}
+.tariff-code{width:110px;flex:none;color:var(--color-muted)}
+.tariff-status{width:80px;flex:none;color:var(--color-muted)}
+.tariff-expand{display:grid;place-items:center;flex:none;width:23px;height:23px;border:0;background:transparent;color:var(--color-muted);cursor:pointer}
+.tariff-leaf-icon{color:var(--color-muted);flex:none}
+.tariff-tree-row :deep(.base-button){font-weight:500;font-size:11px;min-height:27px;height:27px;padding:4px 8px}
+/* Primary ZIP reference: compact two-column accordion cards, not a sidebar. */
+.directory-card-columns{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;min-width:0;align-items:start}
+.directory-card-column{display:grid;align-content:start;gap:9px;min-width:0}
+.directory-accordion-card{min-width:0;border-radius:9px;border:1px solid var(--color-stroke);background:var(--color-surface);box-shadow:var(--shadow-card);overflow:hidden}
+.directory-accordion-trigger{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;height:auto;min-height:72px;padding:18px 20px;background:transparent;border:0;border-radius:0;box-shadow:none;text-align:start;white-space:normal;backdrop-filter:none}
+.directory-accordion-trigger.secondary:hover:not(:disabled){background:var(--color-hover);border-color:transparent}
+.directory-accordion-copy{display:grid;gap:4px;min-width:0;flex:1}
+.directory-accordion-copy strong{font-size:15px;line-height:1.35;font-weight:600;color:var(--color-text);overflow-wrap:anywhere}
+.directory-accordion-copy small{font-size:12px;line-height:1.35;font-weight:400;color:var(--color-muted);white-space:normal;overflow-wrap:anywhere}
+.directory-accordion-chevron{display:grid;place-items:center;flex:none;width:30px;height:30px;border:1px solid var(--color-stroke);border-radius:8px;background:var(--color-surface-raised);color:var(--color-primary)}
+.directory-accordion-chevron svg{transform:rotate(-90deg);transition:transform .15s ease}
+.directory-accordion-chevron svg.rotated{transform:rotate(180deg)}
+.directory-accordion-content{display:grid;gap:10px;padding:0 17px 15px;min-width:0}
+.directory-card-toolbar{display:flex;align-items:center;gap:7px;min-width:0}
+.directory-card-toolbar .directory-search{flex:1;min-width:0;height:34px}
+.directory-card-toolbar .directory-search input{font-size:12px}
+.directory-card-toolbar :deep(.base-button){height:30px;min-height:30px;width:30px;min-width:30px;padding:0}
+.directory-card-toolbar :deep(.base-select-field){width:120px;flex:0 0 120px}
+.directory-tariff-tree--cards{border:0;border-radius:0;overflow-x:auto}
+.directory-tariff-tree--cards .tariff-tree-row{min-width:0;min-height:29px;gap:5px;padding-block:3px;padding-inline-end:2px;border:0;font-size:12px}
+.directory-tariff-tree--cards .tariff-expand{width:20px;min-width:20px;height:22px;min-height:22px;flex:0 0 20px;box-shadow:none;background:transparent;border:0;padding:0}
+.directory-tariff-tree--cards .tariff-leaf-icon{flex:0 0 15px}
+.directory-tariff-tree--cards .tariff-name{flex:1;min-width:0;overflow-wrap:anywhere}
+.directory-tariff-tree--cards .tariff-code,.directory-tariff-tree--cards .tariff-status{display:none}
+.directory-tariff-tree--cards .tariff-tree-action{width:22px;min-width:22px;height:22px;min-height:22px;padding:0;box-shadow:none;border:0;background:transparent;color:var(--color-muted)}
+.directory-tariff-tree--cards .tariff-tree-action :deep(svg){width:15px;height:15px}
+.directory-card-list{display:grid;min-width:0}
+.directory-card-list-row{display:flex;gap:8px;align-items:center;min-width:0;padding:9px 2px;border-bottom:1px solid var(--color-stroke);font-size:12px}
+.directory-card-list-row:last-child{border:0}
+.directory-card-list-row>span{flex:1;min-width:0;overflow-wrap:anywhere}
+.directory-card-list-row small{color:var(--color-muted)}
+.directory-card-empty,.directory-card-readonly{margin:0;font-size:11px;line-height:1.45;color:var(--color-muted)}
+.directory-card-readonly{border-top:1px solid var(--color-stroke);padding-top:8px}
+.directory-layout-switch{display:flex;gap:6px;align-items:center;min-width:0}
+.directory-layout-switch :deep(.base-button){height:32px;min-height:32px;font-size:12px;font-weight:500}
+.directory-layout-switch :deep(.layout-active){color:var(--color-primary);border-color:var(--color-primary-stroke);background:var(--color-accent-soft)}
+@media(max-width:920px){.directory-card-columns{grid-template-columns:minmax(0,1fr)}}
+@media(max-width:560px){.directory-accordion-trigger{min-height:65px;padding:14px}.directory-accordion-content{padding:0 11px 11px}
+ .directory-card-toolbar{flex-wrap:wrap}.directory-card-toolbar :deep(.base-select-field){flex:1 1 100%;width:100%}}
 .directory-sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap;border:0}
 .directory-breadcrumb{display:flex;align-items:center;gap:9px;min-height:22px;color:var(--color-muted);font-size:12px}
 .directory-breadcrumb img{width:15px;height:15px}.directory-breadcrumb strong{color:var(--color-text);font-weight:500}

@@ -5,14 +5,18 @@ import type { EmployeeFamilyMember } from '../api/personnel'
 import { useWorkspaceI18n } from '../composables/useWorkspaceI18n'
 import { useUiFormatters } from '../composables/useUiFormatters'
 
-const props = defineProps<{ members: EmployeeFamilyMember[] }>()
+// Projection only: legacy reference families may lack revisions and optional
+// dates; only normalized HR records are eligible for write API operations.
+type FamilyDisplayRow = Pick<EmployeeFamilyMember, 'id' | 'relationship' | 'full_name'>
+  & Partial<Pick<EmployeeFamilyMember, 'birth_date' | 'document_reference'>>
+const props = defineProps<{ members: FamilyDisplayRow[] }>()
 const { tr } = useWorkspaceI18n()
 const fmt = useUiFormatters()
 
 // Records are private and authoritative only in HR-scoped responses.
 // A document_reference is free-form metadata, never a claimed downloadable file.
 const ordered = computed(() => props.members)
-function age(iso: string | null): string | null {
+function age(iso: string | null | undefined): string | null {
   if (!iso || !/^\d{4}-\d{2}-\d{2}$/.test(iso)) return null
   const born = new Date(iso + 'T12:00:00')
   if (Number.isNaN(born.getTime())) return null

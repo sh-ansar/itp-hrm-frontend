@@ -42,6 +42,7 @@ const props = defineProps<{
   /** Open a selected family row directly, without bypassing existing CRUD guards. */
   initialFamilyId?: string | null
   createFamilyOnOpen?: boolean
+  initialIdentityId?: string | null
 }>()
 const emit = defineEmits<{ close: []; saved: []; refresh: [] }>()
 const { t } = usePrivateRecordsI18n()
@@ -152,14 +153,17 @@ function reset() {
   primary.value = false
   form.value = {}
 }
-watch(() => [props.open, props.companyId, props.employeeId, props.section, props.initialFamilyId, props.createFamilyOnOpen], () => {
+watch(() => [props.open, props.companyId, props.employeeId, props.section, props.initialFamilyId, props.createFamilyOnOpen, props.initialIdentityId], () => {
   reset()
-  if (!props.open || props.section !== 'family') return
-  if (props.initialFamilyId) {
-    const target = props.family.find(row => row.id === props.initialFamilyId)
+  if (!props.open) return
+  if (props.section === 'family') {
+    if (props.initialFamilyId) {
+      const target = props.family.find(row => row.id === props.initialFamilyId)
+      if (target) beginEdit(target)
+    } else if (props.createFamilyOnOpen) beginCreate()
+  } else if (props.section === 'identity' && props.initialIdentityId) {
+    const target = props.identities.find(row => row.id === props.initialIdentityId)
     if (target) beginEdit(target)
-  } else if (props.createFamilyOnOpen) {
-    beginCreate()
   }
 }, { immediate: true })
 

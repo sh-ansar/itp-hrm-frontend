@@ -170,7 +170,7 @@ export interface EmployeeMilitaryRecord {
   comment: string | null
 }
 /** B72: repeatable HR-only family and identity records. */
-export type EmployeePrivateRecordSection = 'family' | 'identity' | 'education'
+export type EmployeePrivateRecordSection = 'family' | 'identity' | 'education' | 'address'
 export interface EmployeeFamilyMember {
   id: string
   relationship: string
@@ -209,16 +209,31 @@ export interface EmployeeEducationRecord {
 export type EducationRecordPayload = Pick<EmployeeEducationRecord,
   'education_type' | 'organization' | 'started_on' | 'ended_on' |
   'specialization' | 'document_reference'>
-export type PrivateRecordPayload = FamilyMemberPayload | IdentityDocumentPayload | EducationRecordPayload
+/** Repeatable address from the ZIP contact tab. Kept separate from the legacy private-profile address strings. */
+export interface EmployeePrivateAddress {
+  id: string
+  kind: 'residence' | 'registration' | 'other'
+  address_line: string
+  entrance: string | null
+  floor: string | null
+  apartment: string | null
+  is_primary: boolean
+  revision: number
+}
+export type EmployeeAddressPayload = Pick<EmployeePrivateAddress,
+  'kind' | 'address_line' | 'entrance' | 'floor' | 'apartment' | 'is_primary'>
+export type PrivateRecordPayload = FamilyMemberPayload | IdentityDocumentPayload | EducationRecordPayload | EmployeeAddressPayload
 export interface EmployeePrivateProfile {
   personal: EmployeePrivatePersonal
   military: EmployeeMilitaryRecord
   family?: EmployeeFamilyMember[]
   identity_documents?: EmployeeIdentityDocument[]
+  addresses?: EmployeePrivateAddress[]
   education?: EmployeeEducationRecord[]
   education_truncated?: boolean
   family_truncated?: boolean
   identity_documents_truncated?: boolean
+  addresses_truncated?: boolean
 }
 export type EmployeePrivateWritePayload = {
   revision: number | null
@@ -505,6 +520,8 @@ export interface EmployeeDetail {
     extended_sections_visible: boolean
     profile_writes_enabled: boolean
     private_profile_writes_enabled?: boolean
+    private_address_writes_enabled?: boolean
+    private_addresses_truncated?: boolean
     private_family_truncated?: boolean
     private_identities_truncated?: boolean
     private_education_truncated?: boolean
@@ -684,7 +701,7 @@ function privateRecordUrl(
   if (!uuid.test(companyId) || !uuid.test(employeeId) || (recordId && !uuid.test(recordId))) {
     throw new Error('Некорректный идентификатор записи')
   }
-  if (section !== 'family' && section !== 'identity' && section !== 'education') throw new Error('Неизвестный раздел')
+  if (section !== 'family' && section !== 'identity' && section !== 'education' && section !== 'address') throw new Error('Неизвестный раздел')
   const base = '/companies/' + companyId + '/employees/' + employeeId
     + (section === 'education' ? '/education' : '/private-records/' + section)
   return recordId ? base + '/' + recordId : base

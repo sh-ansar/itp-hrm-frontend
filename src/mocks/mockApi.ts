@@ -42,6 +42,16 @@ const seededDepartments=fixtureDepartments.map(original=>deps.find(dep=>dep.id==
 const seededPositions=fixturePositions.map(original=>positions.find(pos=>pos.id===original.id)??original)
 const names=[['Садыков','Арман','Ерланович'],['Ибраева','Алия','Сериковна'],['Ким','Даниил','Алексеевич'],['Ахметова','Мадина','Руслановна'],['Нуртаев','Асет','Маратович'],['Смирнова','Елена','Викторовна'],['Омаров','Тимур','Кайратович'],['Сейтова','Аружан','Нурлановна'],['Ли','Максим','Олегович'],['Жумабаева','Динара','Аскаровна'],['Касымов','Ринат','Булатович'],['Волкова','Анна','Игоревна'],['Тлеубаев','Адиль','Ермекович'],['Соколова','Мария','Андреевна'],['Беков','Нурсултан','Дауренович'],['Романова','Екатерина','Павловна'],['Абдрахманов','Ержан','Серикович'],['Кузнецова','Ольга','Дмитриевна'],['Мусин','Алихан','Талгатович'],['Морозова','Дарья','Сергеевна'],['Исаев','Руслан','Айдарович'],['Петрова','Виктория','Олеговна'],['Жанибеков','Данияр','Арманович'],['Орлова','Полина','Романовна'],['Сулейменов','Мирас','Канатович'],['Федорова','София','Ильинична'],['Калиев','Ерасыл','Бауыржанович'],['Новикова','Алина','Максимовна'],['Токтаров','Санжар','Ерланович'],['Попова','Ксения','Алексеевна'],['Ермеков','Айдос','Тимурович'],['Васильева','Наталья','Денисовна'],['Баймуханов','Алан','Рашидович'],['Захарова','Вероника','Олеговна'],['Серикбаев','Мади','Ерболович'],['Белова','Юлия','Антоновна'],['Кенжебек','Амир','Даулетович'],['Мельникова','Анастасия','Игоревна'],['Таиров','Ильяс','Муратович'],['Григорьева','Елизавета','Сергеевна']]
 const employees=names.map(([last_name,first_name,middle_name],i)=>{const d=seededDepartments[5+i%(seededDepartments.length-5)],p=seededPositions[5+i%(seededPositions.length-5)],arch=i>=37,planned=i>=34&&i<37,unassigned=i===33;return{id:id(1000+i),personnel_number:`EMP-${String(i+1).padStart(4,'0')}`,last_name,first_name,middle_name,revision:1,birth_date:`${1987+i%12}-0${i%9+1}-${String(i%20+5).padStart(2,'0')}`,gender:i%2?'female':'male',email:`employee${i+1}@demo.local`,phone:`+7 700 100 ${String(10+i).padStart(2,'0')} ${String(20+i).padStart(2,'0')}`,address:i%2?'г. Астана':'г. Алматы',work_site:i%2?'Астана, головной офис':'Алматы, офис',work_zone:i%3?'Гибрид':'Офис',work_team:`Команда ${String.fromCharCode(65+i%4)}`,supervisor_name:'Садыков Арман Ерланович',employee_category:i%4===0?'Руководители':i%4===1?'Специалисты':i%4===2?'Рабочие':'Административный персонал',personnel_type:i%3===0?'Производственный':i%3===1?'Офисный':'ИТ-персонал',contract_type:i%4===0?'Срочный':'Бессрочный',current_department_name:unassigned||arch?null:d.name,current_position_name:unassigned||arch?null:p.name,current_department_id:unassigned||arch?null:d.id,current_position_id:unassigned||arch?null:p.id,current_assignment_valid_from:unassigned||arch?null:`202${2+i%4}-0${i%8+1}-01`,employment_status:arch?'archived':planned?'planned':unassigned?'unassigned':'active'}})
+// Isolated Vercel demo data only; never interpreted as historical HR records.
+const demoAddresses=new Map<string,any[]>([[
+  id(1000),
+  [{id:id(9700),kind:'residence',address_line:'Демо-адрес: г. Астана, ул. Тестовая, дом 1',
+    entrance:'1',floor:'2',apartment:'5',is_primary:true,revision:1,archived:false}],
+]])
+function addressesFor(employeeId:string):any[]{
+  return (demoAddresses.get(employeeId)??[]).filter(row=>!row.archived)
+    .sort((a,b)=>Number(b.is_primary)-Number(a.is_primary))
+}
 const plan:any={id:id(500),name:'Штатное расписание 2026',valid_from:'2026-01-01',valid_to:'2026-12-31',status:'approved',revision:3}
 const staffing=seededDepartments.slice(1).flatMap((d,di)=>Array.from({length:di%3===0?3:2},(_,ri)=>{const p=seededPositions[(di*2+ri+4)%seededPositions.length],planned=ri?2:4,occupied=Math.max(0,planned-((di+ri)%3===0?1:0));return{id:id(600+di*4+ri),department_id:d.id,position_id:p.id,department_name:d.name,position_name:p.name,planned_units:planned,occupied_units:occupied,vacant_units:planned-occupied,overstaffed_units:0,base_salary:420000+di*25000+ri*60000,currency:'KZT',notes:null,revision:1}}))
 const draftPlan:any={...plan,id:id(501),name:'Проект штатного расписания 2027',valid_from:'2027-01-01',valid_to:null,status:'draft',revision:1}
@@ -631,6 +641,46 @@ export async function mockApiRequest<T>(path:string,options:RequestInit={}):Prom
     return {data:{id:document.id,has_file:true,revision:document.revision}} as T
   }
 
+  m=p.match(/^\/companies\/[^/]+\/employees\/([^/]+)\/private-records\/address(?:\/([^/]+))?$/)
+  if(m){
+    const employeeId=m[1],recordId=m[2]
+    if(!employees.some(e=>e.id===employeeId))throw new Error('Сотрудник не найден')
+    const body=options.body?JSON.parse(String(options.body)):{}
+    const rows=demoAddresses.get(employeeId)??[]
+    const existing=recordId?rows.find(row=>row.id===recordId&&!row.archived):null
+    if(method==='POST'||method==='PUT'){
+      if((method==='POST'&&recordId)||(method==='PUT'&&!existing))
+        throw new Error('Адрес недоступен')
+      const allowed=new Set(['kind','address_line','entrance','floor','apartment','is_primary',...(method==='PUT'?['revision']:[])])
+      if(Object.keys(body).some(key=>!allowed.has(key))
+        ||!['residence','registration','other'].includes(body.kind)
+        ||typeof body.address_line!=='string'||!body.address_line.trim()
+        ||body.address_line.length>500||typeof body.is_primary!=='boolean'
+        ||['entrance','floor','apartment'].some(key=>body[key]!==null&&
+          (typeof body[key]!=='string'||body[key].length>(key==='floor'?20:40))))
+        throw new Error('Некорректные данные адреса')
+      if(method==='PUT'&&Number(existing.revision)!==Number(body.revision))
+        throw new Error('Адрес изменён другим пользователем')
+      if(body.is_primary)for(const row of rows)if(!row.archived&&row.is_primary&&row.id!==recordId){
+        row.is_primary=false;row.revision++
+      }
+      const result=existing??{id:crypto.randomUUID(),revision:0,archived:false}
+      Object.assign(result,{kind:body.kind,address_line:body.address_line.trim(),
+        entrance:body.entrance,floor:body.floor,apartment:body.apartment,
+        is_primary:body.is_primary,revision:result.revision+1})
+      if(!existing){rows.push(result);demoAddresses.set(employeeId,rows)}
+      recordEmployeeChange(employeeId,'personnel.private_record_'+(method==='POST'?'created':'updated'))
+      return {data:{id:result.id,revision:result.revision}} as T
+    }
+    if(method==='DELETE'&&existing){
+      if(Number(body.revision)!==Number(existing.revision))throw new Error('Адрес изменён')
+      existing.archived=true;existing.revision++
+      recordEmployeeChange(employeeId,'personnel.private_record_archived')
+      return {data:{id:existing.id,revision:existing.revision,archived:true}} as T
+    }
+    throw new Error('Адрес недоступен')
+  }
+
   m=p.match(/^\/companies\/[^/]+\/employees\/([^/]+)\/photo$/)
   if (m && ['POST', 'DELETE'].includes(method)) {
     const employee:any=employees.find(x=>x.id===m![1])
@@ -663,8 +713,10 @@ export async function mockApiRequest<T>(path:string,options:RequestInit={}):Prom
       reserve:employeeReserve(e,ei),
       training:employeeTraining(e,ei),
       reference_profile:referenceProfileFor(e,ei),
+      private_profile:{addresses:structuredClone(addressesFor(e.id))},
       meta:{assignments_limit:50,assignments_truncated:false,extended_sections_visible:true,
-        profile_writes_enabled:true,assignment_writes_enabled:true,employee_writes_enabled:true},
+        profile_writes_enabled:true,assignment_writes_enabled:true,employee_writes_enabled:true,
+        private_address_writes_enabled:true,private_addresses_truncated:false},
     }) as T
   }
   // The same employee-card forms used against Laravel must actually mutate demo

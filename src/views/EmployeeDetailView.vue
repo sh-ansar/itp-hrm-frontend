@@ -10,6 +10,7 @@ import EmployeePrivateRecordsManager from '../components/EmployeePrivateRecordsM
 import EmployeePhoto from '../components/EmployeePhoto.vue'
 import EmployeeDocumentsPanel from '../components/EmployeeDocumentsPanel.vue'
 import EmployeeDataGrid from '../components/EmployeeDataGrid.vue'
+import EmployeeAddressBook from '../components/EmployeeAddressBook.vue'
 import type { EmployeeFieldEditGroup } from '../types/employeeFields'
 import BaseButton from '../components/ui/BaseButton.vue'
 import BaseDataTable from '../components/ui/BaseDataTable.vue'
@@ -678,6 +679,12 @@ onMounted(load)
         </EmployeeProfileSection>
         <EmployeeProfileSection :title="tr('Контакты и адреса')">
           <EmployeeDataGrid :fields="contactFields" :editable-groups="editableFieldGroups" @edit="openFieldEditor" />
+          <EmployeeAddressBook v-if="profile.private_profile?.addresses?.length || profile.meta.private_address_writes_enabled"
+            :company-id="String(route.params.company)" :employee-id="profile.data.id"
+            :addresses="profile.private_profile?.addresses ?? []"
+            :writable="Boolean(profile.meta.private_address_writes_enabled)"
+            :truncated="Boolean(profile.meta.private_addresses_truncated)"
+            @changed="load" />
         </EmployeeProfileSection>
         <EmployeeProfileSection :title="tr('Документы, удостоверяющие личность')">
           <template v-if="profile.meta.private_profile_writes_enabled" #actions>

@@ -17,6 +17,14 @@ test('ZIP family section displays native informative records without misleading 
     try {
       await page.goto(url)
       await page.getByRole('navigation', { name: 'Разделы карточки сотрудника' }).waitFor()
+      const familySection = page.locator('.employee-profile-section')
+        .filter({ has: page.getByRole('heading', { name: 'Семейные данные', exact: true }) })
+      const marital = familySection.locator('.employee-data-field')
+        .filter({ has: page.locator('.employee-data-label').getByText('Семейное положение', { exact: true }) })
+      await marital.waitFor()
+      assert.equal(await marital.getAttribute('data-field-state'), 'informative',
+        'Read-only users may view marital status without editing it')
+      assert.equal(await marital.locator('button,input,select').count(), 0)
       const list = page.locator('.employee-family-list')
       await list.waitFor()
       assert.equal(await list.locator('.employee-family-entry').count(), 2)

@@ -42,6 +42,12 @@ const assignmentTransitioning = ref<EmployeeAssignment | null>(null)
 const identityEditOpen = ref(false)
 const privateEditorSection = ref<EmployeePrivateSection | null>(null)
 const privateRecordsSection = ref<EmployeePrivateRecordSection | null>(null)
+const focusedIdentityId = ref<string | null>(null)
+function openIdentityRecord(recordId: string | null = null) {
+  if (!profile.value?.meta.private_profile_writes_enabled || profile.value.meta.private_identities_truncated) return
+  focusedIdentityId.value = recordId
+  privateRecordsSection.value = 'identity'
+}
 const focusedFamilyId = ref<string | null>(null)
 const createFamilyOnOpen = ref(false)
 function openFamilyEditor(recordId: string | null = null, create = false) {
@@ -53,6 +59,7 @@ function openFamilyEditor(recordId: string | null = null, create = false) {
 function closePrivateRecords() {
   privateRecordsSection.value = null
   focusedFamilyId.value = null
+  focusedIdentityId.value = null
   createFamilyOnOpen.value = false
 }
 const assignmentCreateOpen = ref(false)
@@ -243,27 +250,31 @@ const identityPersonFields = computed<EmployeeDisplayField[]>(() => [
   { label: 'Национальность', value: reference.value?.personal.nationality, editGroup: 'private-personal' },
   { label: 'Гражданство', value: reference.value?.personal.citizenship, editGroup: 'private-personal' },
 ])
+/** Private identifiers are masked in ordinary profile viewing, even for HR.
+ * The selected protected record is only opened in the authorized editor. */
+function maskedIdentity(value: string | null | undefined): string {
+  return value ? '••••' + value.slice(-4) : '—'
+}
 function normalizedIdentityFields(identity: EmployeeIdentityDocument): EmployeeDisplayField[] {
   return [
-    { label: 'Персональный номер', value: identity.personal_number, editGroup: 'identity' },
-    { label: 'Страна выдачи', value: identity.country_of_issue, editGroup: 'identity' },
-    { label: 'Тип документа', value: identity.type, editGroup: 'identity' },
-    { label: 'Номер документа', value: identity.number, editGroup: 'identity' },
-    { label: 'Кем выдан', value: identity.issued_by, wide: true, editGroup: 'identity' },
-    { label: 'Дата выдачи', value: formatDate(identity.issued_on), editGroup: 'identity' },
-    { label: 'Действителен до', value: formatDate(identity.expires_on), editGroup: 'identity' },
+    { label: 'Персональный номер', value: maskedIdentity(identity.personal_number) },
+    { label: 'Страна выдачи', value: identity.country_of_issue },
+    { label: 'Тип документа', value: identity.type },
+    { label: 'Номер документа', value: maskedIdentity(identity.number) },
+    { label: 'Кем выдан', value: identity.issued_by, wide: true },
+    { label: 'Дата выдачи', value: formatDate(identity.issued_on) },
+    { label: 'Действителен до', value: formatDate(identity.expires_on) },
   ]
 }
-// Flat reference data is shown only for older backends without a normalized
-// document collection. Attachments are informative until a real file endpoint exists.
+// Legacy flat projections have no persisted record revision: do not imply edit.
 const legacyDocumentFields = computed<EmployeeDisplayField[]>(() => [
-  { label: 'Персональный номер', value: reference.value?.identity_document.personal_number, editGroup: 'identity' },
-  { label: 'Страна выдачи', value: reference.value?.identity_document.country_of_issue, editGroup: 'identity' },
-  { label: 'Тип документа', value: reference.value?.identity_document.type, editGroup: 'identity' },
-  { label: 'Номер документа', value: reference.value?.identity_document.number, editGroup: 'identity' },
-  { label: 'Кем выдан', value: reference.value?.identity_document.issued_by, wide: true, editGroup: 'identity' },
-  { label: 'Дата выдачи', value: formatDate(reference.value?.identity_document.issued_on), editGroup: 'identity' },
-  { label: 'Действителен до', value: formatDate(reference.value?.identity_document.expires_on), editGroup: 'identity' },
+  { label: 'Персональный номер', value: maskedIdentity(reference.value?.identity_document.personal_number) },
+  { label: 'Страна выдачи', value: reference.value?.identity_document.country_of_issue },
+  { label: 'Тип документа', value: reference.value?.identity_document.type },
+  { label: 'Номер документа', value: maskedIdentity(reference.value?.identity_document.number) },
+  { label: 'Кем выдан', value: reference.value?.identity_document.issued_by, wide: true },
+  { label: 'Дата выдачи', value: formatDate(reference.value?.identity_document.issued_on) },
+  { label: 'Действителен до', value: formatDate(reference.value?.identity_document.expires_on) },
   { label: 'Файл документа', value: reference.value?.identity_document.attachment_name, wide: true },
 ])
 const birthPlaceFields = computed<EmployeeDisplayField[]>(() => [
@@ -745,7 +756,7 @@ onMounted(load)
         </EmployeeProfileSection>
         <EmployeeProfileSection :title="tr('Документы, удостоверяющие личность')">
           <template v-if="profile.meta.private_profile_writes_enabled" #actions>
-            <BaseButton variant="secondary" @click="privateRecordsSection = 'identity'">{{ tr('Управлять документами') }}</BaseButton>
+            <BaseButton variant="secondary" @click="openIdentityRecord()">{{ tr('Управлять документами') }}</BaseButton>
           </template>
           <EmployeeDataGrid :fields="identityPersonFields" :editable-groups="editableFieldGroups" @edit="openFieldEditor" />
           <div v-if="hasNormalizedIdentityStore" class="employee-identity-records">
@@ -753,15 +764,21 @@ onMounted(load)
               <div class="employee-identity-record-heading">
                 <span>{{ tr('Документ') }}<template v-if="normalizedIdentities.length > 1"> {{ index + 1 }}</template></span>
                 <span v-if="document.is_primary" class="employee-identity-primary">{{ tr('Основной') }}</span>
+                <BaseButton v-if="profile.meta.private_profile_writes_enabled && !profile.meta.private_identities_truncated"
+                  icon-only variant="secondary" class="identity-row-edit"
+                  :aria-label="tr('Изменить документ') + ': ' + document.type"
+                  :title="tr('Изменить документ')"
+                  @click="openIdentityRecord(document.id)">
+                  <Pencil :size="15" aria-hidden="true" />
+                </BaseButton>
               </div>
-              <EmployeeDataGrid :fields="normalizedIdentityFields(document)"
-                :editable-groups="editableFieldGroups" @edit="openFieldEditor" />
+              <EmployeeDataGrid :fields="normalizedIdentityFields(document)" />
             </div>
             <p v-if="!normalizedIdentities.length" class="employee-identity-empty">
               {{ tr('Документы, удостоверяющие личность, не внесены') }}
             </p>
           </div>
-          <EmployeeDataGrid v-else :fields="legacyDocumentFields" :editable-groups="editableFieldGroups" @edit="openFieldEditor" />
+          <EmployeeDataGrid v-else :fields="legacyDocumentFields" />
           <BaseNotice v-if="profile.meta.private_identities_truncated" tone="warning">
             {{ tr('Показаны не все документы. Для полной истории откройте управление документами.') }}
           </BaseNotice>
@@ -1083,6 +1100,7 @@ onMounted(load)
       :identities="profile.private_profile?.identity_documents ?? []"
       :education="profile.private_profile?.education ?? []"
       :initial-family-id="focusedFamilyId" :create-family-on-open="createFamilyOnOpen"
+      :initial-identity-id="focusedIdentityId"
       :truncated="privateRecordsSection === 'family' ? profile.meta.private_family_truncated
         : privateRecordsSection === 'education' ? profile.meta.private_education_truncated
         : profile.meta.private_identities_truncated"
@@ -1200,6 +1218,9 @@ onMounted(load)
 .employee-identity-records{display:grid;gap:12px;min-width:0;margin-top:13px}
 .employee-identity-record{display:grid;gap:12px;min-width:0;padding-top:12px;border-top:1px solid var(--color-stroke)}
 .employee-identity-record-heading{display:flex;align-items:center;gap:9px;flex-wrap:wrap;color:var(--color-muted);font-size:12px;font-weight:600}
+.identity-row-edit{flex:none;width:28px;min-width:28px;height:28px;min-height:28px;padding:0;border-color:transparent;box-shadow:none;background:transparent;color:var(--color-muted)}
+.identity-row-edit:hover:not(:disabled){background:var(--color-accent-soft);color:var(--color-primary)}
+.identity-row-edit :deep(svg){width:15px;height:15px}
 .employee-identity-primary{padding:2px 7px;border-radius:4px;background:var(--color-success-surface);color:var(--color-success);font-size:11px;font-weight:500}
 .employee-identity-empty{font-size:12px;color:var(--color-muted);line-height:1.5;margin:0}
 .employee-field-legend{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin:-5px 0 1px;font-size:11px;line-height:17px;color:var(--color-muted)}

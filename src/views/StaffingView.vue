@@ -93,6 +93,8 @@ const initialView = ['all', 'vacant', 'changes'].includes(String(route.query.vie
 const activeView = ref(initialView)
 const searchLines = ref('')
 const grouped = ref(false)
+const selectedLineIds = ref<string[]>([])
+const selectedHistoryIds = ref<string[]>([])
 
 const selectedPlan = computed(() => detail.value?.data ?? plans.value.find(item => item.id === selectedPlanId.value) ?? null)
 const canEdit = computed(() => !!detail.value?.meta.staffing_writes_enabled && selectedPlan.value?.status === 'draft')
@@ -114,6 +116,12 @@ const filteredLines = computed(() => {
     return (line.department_name + ' ' + line.position_name).toLocaleLowerCase('ru').includes(term)
   })
 })
+const selectedLineRows = computed(() => filteredLines.value.filter(line => selectedLineIds.value.includes(line.id)))
+const selectedHistoryRows = computed(() => historyRows.value.filter(event => selectedHistoryIds.value.includes(String(event.id))))
+function clearSelectedRows() {
+  selectedLineIds.value = []
+  selectedHistoryIds.value = []
+}
 const mobileLines = computed(() => grouped.value
   ? [...filteredLines.value].sort((a, b) => a.department_name.localeCompare(b.department_name, 'ru') || a.position_name.localeCompare(b.position_name, 'ru'))
   : filteredLines.value)
@@ -255,10 +263,19 @@ async function planCreated(plan: StaffingPlanRecord) {
 
 function exportCurrentRows() {
   if (activeView.value === 'changes') {
-    downloadCsv('staffing-history.csv', ['№', 'Тип', 'Версия', 'Ревизия', 'Дата'], historyRows.value.map(event => [event.id, historyActions[event.action] ?? event.action, event.staffing_plan_id, event.revision, event.created_at]))
+    const selected = selectedHistoryRows.value
+    const rows = selected.length ? selected : historyRows.value
+    downloadCsv(selected.length ? 'staffing-history-selected.csv' : 'staffing-history.csv',
+      ['№', 'Тип', 'Версия', 'Ревизия', 'Дата'],
+      rows.map(event => [event.id, historyActions[event.action] ?? event.action, event.staffing_plan_id, event.revision, event.created_at]))
     return
   }
-  downloadCsv(activeView.value === 'vacant' ? 'vacancies.csv' : 'staffing.csv', ['Подразделение', 'Должность', 'Ставок', 'Занято', 'Вакантно', 'Оклад', 'Валюта'], filteredLines.value.map(line => [line.department_name, line.position_name, line.planned_units, line.occupied_units, line.vacant_units, line.base_salary, line.currency]))
+  const selected = selectedLineRows.value
+  const rows = selected.length ? selected : filteredLines.value
+  const filename = activeView.value === 'vacant' ? 'vacancies' : 'staffing'
+  downloadCsv(filename + (selected.length ? '-selected' : '') + '.csv',
+    ['Подразделение', 'Должность', 'Ставок', 'Занято', 'Вакантно', 'Оклад', 'Валюта'],
+    rows.map(line => [line.department_name, line.position_name, line.planned_units, line.occupied_units, line.vacant_units, line.base_salary, line.currency]))
 }
 
 function createLine() {
@@ -304,6 +321,8 @@ watch(activeView, value => {
 })
 
 watch([company, activeView, historyPage], () => { loadHistory() })
+// Do not carry selection into another company, plan, date, page or tab.
+watch([company, activeView, historyPage, selectedPlanId, asOf], clearSelectedRows)
 
 watch(company, async () => {
   historyPage.value = 1
@@ -357,8 +376,14 @@ onMounted(refreshCompanies)
         <span class="muted">{{ fmt.number(historyTotal, 0) }} {{ tr('событий') }}</span>
       </div>
       <BaseNotice v-if="historyError" tone="error">{{ historyError }}</BaseNotice>
+      <div v-if="selectedHistoryRows.length" class="staffing-selection-toolbar" role="status">
+        <span>{{ tr('Выбрано на странице:') }} {{ fmt.number(selectedHistoryRows.length, 0) }}</span>
+        <BaseButton variant="secondary" @click="clearSelectedRows">{{ tr('Снять выделение') }}</BaseButton>
+      </div>
       <div class="staffing-history-desktop">
         <BaseDataTable
+        v-model:selected-keys="selectedHistoryIds"
+        selectable
         :rows="historyRows"
         :columns="changeColumns"
         :loading="historyBusy"
@@ -461,9 +486,15 @@ onMounted(refreshCompanies)
           <BaseColumnPicker v-model="shownColumns" :columns="optionalLineColumns" />
         </div>
         <p v-if="grouped" class="line-hint">{{ tr('Группировка по подразделениям выбранной версии штатного расписания.') }}</p>
+        <div v-if="selectedLineRows.length" class="staffing-selection-toolbar" role="status">
+          <span>{{ tr('Выбрано на странице:') }} {{ fmt.number(selectedLineRows.length, 0) }}</span>
+          <BaseButton variant="secondary" @click="clearSelectedRows">{{ tr('Снять выделение') }}</BaseButton>
+        </div>
 
         <div class="staffing-desktop-table">
           <BaseDataTable
+          v-model:selected-keys="selectedLineIds"
+          selectable
           :rows="filteredLines"
           :columns="visibleLineColumns"
           :group-by="grouped ? groupLines : undefined"
@@ -531,6 +562,8 @@ onMounted(refreshCompanies)
 <style scoped>
 .staffing-page{display:grid;grid-template-columns:minmax(0,1fr);gap:var(--space-4)}
 .staffing-mobile-only,.staffing-history-mobile{display:none}
+.staffing-selection-toolbar{display:flex;align-items:center;gap:12px;margin:0 0 12px;color:var(--color-muted);font-size:12px}
+.staffing-selection-toolbar :deep(.base-button){height:30px;min-height:30px;font-weight:500}
 .staffing-history-card{min-width:0;padding:14px;border:1px solid var(--color-stroke);border-radius:var(--radius-md);background:var(--color-surface);box-shadow:var(--shadow-card)}
 .staffing-history-card-heading{display:flex;align-items:start;justify-content:space-between;gap:12px}
 .staffing-history-card-heading strong{font-size:14px;line-height:1.4}

@@ -170,6 +170,14 @@ async function loadRecords(){
     const response=await listDirectoryEntries(companyId,groupId)
     if(request!==directoryRequest||companyId!==company.value||groupId!==activeGroup.value)return
     records.value=response.data;writesEnabled.value=response.meta.writes_enabled
+    // The ZIP's first two meaningful hierarchy levels are initially expanded.
+    // Only data returned by the selected company/group can determine the nodes.
+    if(groupId==='tariff-types' && !expandedCategories.value.length){
+      const root=response.data.find(row=>!row.parent_id && response.data.some(child=>child.parent_id===row.id))
+      const nested=root ? response.data.find(row=>row.parent_id===root.id
+        && response.data.some(child=>child.parent_id===row.id)) : undefined
+      expandedCategories.value=[root?.id,nested?.id].filter((id):id is string=>Boolean(id))
+    }
     groupCounts.value={...groupCounts.value,[groupId]:response.data.length}
   }catch(cause){
     if(request!==directoryRequest)return
@@ -180,7 +188,15 @@ function selectSection(id:string){
   if(!groups[id])return
   activeSection.value=id;activeGroup.value=groups[id]?.[0]?.id??'';search.value='';statusFilter.value='all'
 }
-function toggleGroup(id:string){activeGroup.value=activeGroup.value===id?'':id;search.value='';statusFilter.value='all'}
+function toggleGroup(id:string){
+  if(directoryMode.value==='register' && activeGroup.value===id)return
+  activeGroup.value=activeGroup.value===id?'':id
+  search.value='';statusFilter.value='all'
+}
+function selectDirectoryMode(mode:'cards'|'register'){
+  directoryMode.value=mode
+  if(mode==='register' && !activeGroup.value)activeGroup.value=currentGroups.value[0]?.id??''
+}
 function clearFilter(id:string){if(id==='search')search.value='';if(id==='status')statusFilter.value='all'}
 function clearFilters(){search.value='';statusFilter.value='all'}
 function recordCount(groupId:string){return groupId===activeGroup.value?records.value.length:(groupCounts.value[groupId]??null)}
@@ -224,9 +240,9 @@ onMounted(async()=>{try{await loadCompanies();if(company.value)await loadRecords
     <div class="directory-context">
       <div class="directory-layout-switch" role="group" aria-label="Представление справочников">
         <BaseButton variant="secondary" :class="{ 'layout-active': directoryMode==='cards' }"
-          :aria-pressed="directoryMode==='cards'" @click="directoryMode='cards'"><LayoutGrid :size="16" /> Карточки</BaseButton>
+          :aria-pressed="directoryMode==='cards'" @click="selectDirectoryMode('cards')"><LayoutGrid :size="16" /> Карточки</BaseButton>
         <BaseButton variant="secondary" :class="{ 'layout-active': directoryMode==='register' }"
-          :aria-pressed="directoryMode==='register'" @click="directoryMode='register'"><ListTree :size="16" /> Реестр</BaseButton>
+          :aria-pressed="directoryMode==='register'" @click="selectDirectoryMode('register')"><ListTree :size="16" /> Реестр</BaseButton>
       </div>
       <div class="directory-context-actions">
         <BaseSelectField v-if="companies.length>1" v-model="company" label="Компания" :options="companies" />

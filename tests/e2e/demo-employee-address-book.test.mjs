@@ -27,7 +27,7 @@ test('ZIP contacts: add, edit, select primary and archive actual address rows wi
       let editor = page.getByRole('dialog', { name: 'Добавить адрес' })
       await editor.waitFor()
       await editor.getByLabel('Тип адреса').selectOption('registration')
-      await editor.getByLabel('Адрес', { exact: true }).fill('QA synthetic registration address, building 22')
+      await editor.getByLabel(/^Адрес/).fill('QA synthetic registration address, building 22')
       await editor.getByLabel('Подъезд').fill('C')
       await editor.getByLabel('Этаж').fill('3')
       await editor.getByLabel('Квартира').fill('44')
@@ -44,7 +44,7 @@ test('ZIP contacts: add, edit, select primary and archive actual address rows wi
       await added.getByRole('button', { name: 'Изменить адрес' }).click()
       editor = page.getByRole('dialog', { name: 'Изменить адрес' })
       await editor.waitFor()
-      assert.equal(await editor.getByLabel('Адрес', { exact: true }).inputValue(),
+      assert.equal(await editor.getByLabel(/^Адрес/).inputValue(),
         'QA synthetic registration address, building 22')
       await editor.getByLabel('Квартира').fill('55')
       await editor.getByRole('button', { name: 'Сохранить', exact: true }).click()

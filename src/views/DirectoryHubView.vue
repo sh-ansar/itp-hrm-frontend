@@ -221,6 +221,7 @@ onMounted(async()=>{try{await loadCompanies();if(company.value)await loadRecords
         </div>
         <BaseFilterSummary :items="filterChips" label="Активные фильтры" @remove="clearFilter" @clear="clearFilters" />
         <BaseLoadingState v-if="loading" label="Загрузка справочника" />
+        <BaseNotice v-if="activeGroup==='tariff-types' && !loading && !visibleRows.length" tone="info">{{ records.length ? 'По заданным фильтрам тарифы не найдены.' : 'Тарифных групп пока нет. Добавьте первую запись, если у вас есть право редактирования.' }}</BaseNotice>
         <div v-if="activeGroup==='tariff-types' && !loading && visibleRows.length" class="directory-tariff-tree" role="tree" aria-label="Иерархия тарифов">
           <div v-for="item in hierarchyRows" :key="item.row.id" class="tariff-tree-row" role="treeitem"
             :aria-level="item.level+1" :aria-expanded="item.children?expandedCategories.includes(item.row.id):undefined"

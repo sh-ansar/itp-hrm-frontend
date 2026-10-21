@@ -892,7 +892,7 @@ onMounted(load)
       </template>
       <template v-if="profile.meta.extended_sections_visible">
         <EmployeeProfileSection v-if="activeSection === 'documents'" :title="tr('Документы сотрудника')">
-          <EmployeeDocumentsPanel :documents="reference?.documents ?? []" />
+          <EmployeeDocumentsPanel :company-id="String(route.params.company)" :employee-id="profile.data.id" :documents="reference?.documents ?? []" />
         </EmployeeProfileSection>
 
         <template v-if="activeSection === 'payroll'">

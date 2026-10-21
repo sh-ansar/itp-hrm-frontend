@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useWorkspaceI18n } from '../composables/useWorkspaceI18n'
-import { computed, ref } from 'vue'
+import { computed, ref, watch, onBeforeUnmount } from 'vue'
 import { Maximize2, Minimize2, Search } from 'lucide-vue-next'
 import BaseActionDropdown from './ui/BaseActionDropdown.vue'
 import BaseButton from './ui/BaseButton.vue'
@@ -11,6 +11,7 @@ import BaseSelectField from './ui/BaseSelectField.vue'
 import BaseStatusPill from './ui/BaseStatusPill.vue'
 import BaseTableBulkActions from './ui/BaseTableBulkActions.vue'
 import { downloadCsv } from '../utils/exportCsv'
+import { listDocuments, documentFileUrl, type DocumentRow as StoredDocument } from '../api/documents'
 import { useUiFormatters } from '../composables/useUiFormatters'
 
 const { tr } = useWorkspaceI18n()
@@ -23,11 +24,44 @@ type EmployeeDocument = {
   status: string
   document_type?: string | null
   file_name?: string | null
+  has_file?: boolean
+  stored_id?: string
 }
 type DocumentRow = EmployeeDocument & { folder: string }
 type GroupMode = 'folder' | 'type' | 'none'
 
-const props = defineProps<{ documents: EmployeeDocument[] }>()
+const props = defineProps<{ documents: EmployeeDocument[]; companyId?: string; employeeId?: string }>()
+const connected = import.meta.env.VITE_DEMO_MODE !== 'true'
+const stored = ref<StoredDocument[]>([])
+const loading = ref(false)
+const loadError = ref('')
+const serverPage = ref(1)
+const serverPages = ref(1)
+const serverTotal = ref(0)
+let requestGeneration = 0
+async function reload() {
+  if (!connected || !props.companyId || !props.employeeId) return
+  const generation = ++requestGeneration
+  loading.value = true
+  loadError.value = ''
+  try {
+    const response = await listDocuments(props.companyId, serverPage.value, '', props.employeeId)
+    if (generation !== requestGeneration) return
+    stored.value = response.data.filter(row => row.employee_id === props.employeeId)
+    serverPages.value = response.meta.last_page
+    serverTotal.value = response.meta.total
+    selectedIds.value = []
+  } catch {
+    if (generation !== requestGeneration) return
+    stored.value = []
+    loadError.value = tr('Не удалось загрузить документы сотрудника')
+  } finally {
+    if (generation === requestGeneration) loading.value = false
+  }
+}
+watch([() => props.companyId, () => props.employeeId], () => {serverPage.value=1;void reload()}, { immediate:true })
+watch(serverPage, () => {void reload()})
+onBeforeUnmount(()=>{requestGeneration++})
 const fmt = useUiFormatters()
 
 const search = ref('')
@@ -66,10 +100,15 @@ function folderFor(document: EmployeeDocument): string {
 function displayDate(value: string | null): string {
   return value ? fmt.date(value) : '—'
 }
-const rows = computed<DocumentRow[]>(() => props.documents.map(document => ({
-  ...document,
-  folder: folderFor(document),
-})))
+const rows = computed<DocumentRow[]>(() => {
+  const source:EmployeeDocument[] = connected ? stored.value.map(row => ({
+    id:row.id,stored_id:row.id,title:row.title,number:row.document_number ?? '',
+    issued_on:row.issued_on,status:row.status,
+    document_type:row.document_type,file_name:row.has_file ? 'PDF' : null,
+    has_file:row.has_file,
+  })) : props.documents
+  return source.map(document => ({...document,folder:folderFor(document)}))
+})
 const typeOptions = computed(() => [
   { id: 'all', name: 'Все типы' },
   ...[...new Set(rows.value.map(row => row.document_type).filter((value): value is string => Boolean(value)))]
@@ -153,6 +192,11 @@ function statusTone(status: string): 'success' | 'warning' | 'danger' | 'info' {
 
 <template>
   <div class="employee-documents-panel" :class="{ 'is-fullscreen': fullscreen }">
+    <div v-if="connected && (!companyId || !employeeId)" class="document-warning" role="status">{{ tr('Не указан сотрудник или компания') }}</div>
+    <div v-if="connected && loading" class="document-warning" role="status">{{ tr('Загрузка документов') }}</div>
+    <div v-if="connected && loadError" class="document-warning" role="alert">
+      {{ loadError }} <BaseButton variant="secondary" @click="reload">{{ tr('Повторить') }}</BaseButton>
+    </div>
     <div class="documents-actions">
       <BaseActionDropdown :label="tr('Экспорт')" :options="exportOptions" @select="doExport" />
       <RouterLink class="documents-link-button documents-link-button--primary" to="/documents">{{ tr('Действия') }}</RouterLink>
@@ -195,7 +239,10 @@ function statusTone(status: string): 'success' | 'warning' | 'danger' | 'info' {
           <span>{{ tr(row.folder) }}</span>
         </div>
       </template>
-      <template #cell-file_name="{ value }"><span class="document-file">{{ value || '—' }}</span></template>
+      <template #cell-file_name="{ row, value }">
+        <a v-if="connected && row.has_file && companyId && row.stored_id" class="document-file" :href="documentFileUrl(companyId, row.stored_id)">{{ tr('Скачать PDF') }}</a>
+        <span v-else class="document-file">{{ value || '—' }}</span>
+      </template>
       <template #cell-number="{ value }">{{ value || '—' }}</template>
       <template #cell-document_type="{ value }">{{ value || '—' }}</template>
       <template #cell-issued_on="{ value }">{{ displayDate(typeof value === 'string' ? value : null) }}</template>
@@ -204,12 +251,19 @@ function statusTone(status: string): 'success' | 'warning' | 'danger' | 'info' {
       </template>
     </BaseDataTable>
 
+    <div v-if="connected && serverPages > 1" class="document-pager">
+      <span>{{ tr('Страница') }} {{ serverPage }} / {{ serverPages }} · {{ serverTotal }}</span>
+      <BaseButton variant="secondary" :disabled="loading || serverPage <= 1" @click="serverPage--">{{ tr('Назад') }}</BaseButton>
+      <BaseButton variant="secondary" :disabled="loading || serverPage >= serverPages" @click="serverPage++">{{ tr('Далее') }}</BaseButton>
+    </div>
     <RouterLink class="related-module-link" to="/documents">{{ tr('Открыть общий реестр документов') }}</RouterLink>
   </div>
 </template>
 
 <style scoped>
 .employee-documents-panel{display:grid;gap:10px;min-width:0}
+.document-pager{display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:12px;color:var(--color-muted)}
+.document-warning{font-size:12px;color:var(--color-muted)}
 .documents-actions{display:flex;align-items:center;justify-content:flex-end;gap:8px;flex-wrap:wrap}
 .documents-toolbar{display:flex;align-items:end;gap:8px;flex-wrap:wrap;min-width:0}
 .documents-toolbar :deep(.base-select-field){width:190px;max-width:220px}

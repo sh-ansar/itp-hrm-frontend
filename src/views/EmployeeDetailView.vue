@@ -2,7 +2,7 @@
 import { publicAsset } from '../utils/publicAsset'
 import { useWorkspaceI18n } from '../composables/useWorkspaceI18n'
 import { computed, onMounted, ref, watch } from 'vue'
-import { Plus } from 'lucide-vue-next'
+import { LockKeyhole, Pencil, Plus } from 'lucide-vue-next'
 import { useRoute } from 'vue-router'
 import EmployeeProfileSection from '../components/EmployeeProfileSection.vue'
 import EmployeePrivateProfileEditor from '../components/EmployeePrivateProfileEditor.vue'
@@ -10,6 +10,7 @@ import EmployeePrivateRecordsManager from '../components/EmployeePrivateRecordsM
 import EmployeePhoto from '../components/EmployeePhoto.vue'
 import EmployeeDocumentsPanel from '../components/EmployeeDocumentsPanel.vue'
 import EmployeeDataGrid from '../components/EmployeeDataGrid.vue'
+import type { EmployeeFieldEditGroup } from '../types/employeeFields'
 import BaseButton from '../components/ui/BaseButton.vue'
 import BaseDataTable from '../components/ui/BaseDataTable.vue'
 import BaseNotice from '../components/ui/BaseNotice.vue'
@@ -26,7 +27,7 @@ import { useUiFormatters } from '../composables/useUiFormatters'
 
 const { tr } = useWorkspaceI18n()
 
-type EmployeeDisplayField = { label: string; value: string | number | null | undefined; wide?: boolean; muted?: boolean }
+type EmployeeDisplayField = { label: string; value: string | number | null | undefined; wide?: boolean; muted?: boolean; editGroup?: EmployeeFieldEditGroup }
 
 const route = useRoute()
 const fmt = useUiFormatters()
@@ -153,6 +154,23 @@ const reference = computed<EmployeeReferenceProfile | undefined>(() => {
   }
 })
 const genderLabel = computed(() => profile.value?.data.gender === 'male' ? 'Мужчина' : profile.value?.data.gender === 'female' ? 'Женщина' : '—')
+
+/** Only expose edit actions backed by an authorized write endpoint. Projections
+ * such as age, salary, staffing position and status remain informative. */
+const editableFieldGroups = computed<EmployeeFieldEditGroup[]>(() => [
+  ...(profile.value?.meta.employee_writes_enabled ? ['employee' as const] : []),
+  ...(profile.value?.meta.private_profile_writes_enabled
+    ? ['private-personal' as const, 'private-military' as const, 'identity' as const] : []),
+  ...(contractWritesEnabled.value && currentContract.value ? ['contract' as const] : []),
+])
+function openFieldEditor(group: EmployeeFieldEditGroup) {
+  if (!editableFieldGroups.value.includes(group)) return
+  if (group === 'employee') identityEditOpen.value = true
+  else if (group === 'private-personal') privateEditorSection.value = 'personal'
+  else if (group === 'private-military') privateEditorSection.value = 'military'
+  else if (group === 'identity') privateRecordsSection.value = 'identity'
+  else if (group === 'contract') openContractEditor(currentContract.value)
+}
 function money(value: number | null | undefined, currency = 'KZT'): string {
   return value == null ? '—' : `${fmt.number(Number(value), 0)} ${currency}`
 }
@@ -167,48 +185,48 @@ function ageFromBirthDate(value: string | null | undefined): string {
 }
 
 const personalFields = computed<EmployeeDisplayField[]>(() => [
-  { label: 'ИИН', value: reference.value?.personal.iin },
-  { label: 'Логин', value: reference.value?.personal.login },
-  { label: 'Дата рождения', value: formatDate(profile.value?.data.birth_date) },
+  { label: 'ИИН', value: reference.value?.personal.iin, editGroup: 'private-personal' },
+  { label: 'Логин', value: reference.value?.personal.login, editGroup: 'private-personal' },
+  { label: 'Дата рождения', value: formatDate(profile.value?.data.birth_date), editGroup: 'employee' },
   { label: 'Возраст', value: ageFromBirthDate(profile.value?.data.birth_date) },
-  { label: 'Пол', value: genderLabel.value },
-  { label: 'Национальность', value: reference.value?.personal.nationality },
-  { label: 'Гражданство', value: reference.value?.personal.citizenship },
-  { label: 'Семейное положение', value: reference.value?.personal.marital_status },
-  { label: 'Табельный номер', value: profile.value?.data.personnel_number },
+  { label: 'Пол', value: genderLabel.value, editGroup: 'employee' },
+  { label: 'Национальность', value: reference.value?.personal.nationality, editGroup: 'private-personal' },
+  { label: 'Гражданство', value: reference.value?.personal.citizenship, editGroup: 'private-personal' },
+  { label: 'Семейное положение', value: reference.value?.personal.marital_status, editGroup: 'private-personal' },
+  { label: 'Табельный номер', value: profile.value?.data.personnel_number, editGroup: 'employee' },
 ])
 const contactFields = computed<EmployeeDisplayField[]>(() => [
-  { label: 'Email', value: profile.value?.data.email },
-  { label: 'Телефон', value: profile.value?.data.phone },
-  { label: 'Адрес проживания', value: reference.value?.personal.residence_address ?? profile.value?.data.address, wide: true },
-  { label: 'Адрес регистрации', value: reference.value?.personal.registration_address, wide: true },
-  { label: 'Подъезд', value: reference.value?.personal.address_entrance },
-  { label: 'Этаж', value: reference.value?.personal.address_floor },
-  { label: 'Квартира', value: reference.value?.personal.address_apartment },
-  { label: 'Контактное лицо', value: reference.value?.personal.emergency_contact_name },
-  { label: 'Телефон контактного лица', value: reference.value?.personal.emergency_contact_phone },
+  { label: 'Email', value: profile.value?.data.email, editGroup: 'employee' },
+  { label: 'Телефон', value: profile.value?.data.phone, editGroup: 'employee' },
+  { label: 'Адрес проживания', value: reference.value?.personal.residence_address ?? profile.value?.data.address, wide: true, editGroup: reference.value?.personal.residence_address ? 'private-personal' : 'employee' },
+  { label: 'Адрес регистрации', value: reference.value?.personal.registration_address, wide: true, editGroup: 'private-personal' },
+  { label: 'Подъезд', value: reference.value?.personal.address_entrance, editGroup: 'private-personal' },
+  { label: 'Этаж', value: reference.value?.personal.address_floor, editGroup: 'private-personal' },
+  { label: 'Квартира', value: reference.value?.personal.address_apartment, editGroup: 'private-personal' },
+  { label: 'Контактное лицо', value: reference.value?.personal.emergency_contact_name, editGroup: 'private-personal' },
+  { label: 'Телефон контактного лица', value: reference.value?.personal.emergency_contact_phone, editGroup: 'private-personal' },
 ])
 const documentFields = computed<EmployeeDisplayField[]>(() => [
-  { label: 'Национальность', value: reference.value?.personal.nationality },
-  { label: 'Персональный номер', value: reference.value?.identity_document.personal_number },
-  { label: 'Страна выдачи', value: reference.value?.identity_document.country_of_issue },
-  { label: 'Гражданство', value: reference.value?.personal.citizenship },
-  { label: 'Тип документа', value: reference.value?.identity_document.type },
-  { label: 'Номер документа', value: reference.value?.identity_document.number },
-  { label: 'Кем выдан', value: reference.value?.identity_document.issued_by, wide: true },
-  { label: 'Дата выдачи', value: formatDate(reference.value?.identity_document.issued_on) },
-  { label: 'Действителен до', value: formatDate(reference.value?.identity_document.expires_on) },
+  { label: 'Национальность', value: reference.value?.personal.nationality, editGroup: 'private-personal' },
+  { label: 'Персональный номер', value: reference.value?.identity_document.personal_number, editGroup: 'identity' },
+  { label: 'Страна выдачи', value: reference.value?.identity_document.country_of_issue, editGroup: 'identity' },
+  { label: 'Гражданство', value: reference.value?.personal.citizenship, editGroup: 'private-personal' },
+  { label: 'Тип документа', value: reference.value?.identity_document.type, editGroup: 'identity' },
+  { label: 'Номер документа', value: reference.value?.identity_document.number, editGroup: 'identity' },
+  { label: 'Кем выдан', value: reference.value?.identity_document.issued_by, wide: true, editGroup: 'identity' },
+  { label: 'Дата выдачи', value: formatDate(reference.value?.identity_document.issued_on), editGroup: 'identity' },
+  { label: 'Действителен до', value: formatDate(reference.value?.identity_document.expires_on), editGroup: 'identity' },
   { label: 'Файл документа', value: reference.value?.identity_document.attachment_name, wide: true },
 ])
 const birthPlaceFields = computed<EmployeeDisplayField[]>(() => [
-  { label: 'Место рождения', value: reference.value?.personal.place_of_birth, wide: true },
+  { label: 'Место рождения', value: reference.value?.personal.place_of_birth, wide: true, editGroup: 'private-personal' },
   { label: 'Свидетельство о рождении', value: reference.value?.personal.birth_certificate_attachment, wide: true },
 ])
 const militaryFields = computed<EmployeeDisplayField[]>(() => [
-  { label: 'Статус воинского учёта', value: reference.value?.military?.status },
-  { label: 'Категория учёта', value: reference.value?.military?.category },
-  { label: 'Военный билет', value: reference.value?.military?.document_reference, wide: true },
-  { label: 'Общий комментарий', value: reference.value?.military?.comment, wide: true },
+  { label: 'Статус воинского учёта', value: reference.value?.military?.status, editGroup: 'private-military' },
+  { label: 'Категория учёта', value: reference.value?.military?.category, editGroup: 'private-military' },
+  { label: 'Военный билет', value: reference.value?.military?.document_reference, wide: true, editGroup: 'private-military' },
+  { label: 'Общий комментарий', value: reference.value?.military?.comment, wide: true, editGroup: 'private-military' },
 ])
 const familyColumns = [
   { key: 'relationship', label: 'Степень родства' },
@@ -227,8 +245,8 @@ const organizationPositionFields = computed<EmployeeDisplayField[]>(() => [
   { label: 'Основное место работы', value: reference.value?.organization?.primary_workplace },
 ])
 const workplaceFields = computed<EmployeeDisplayField[]>(() => [
-  { label: 'Объект', value: profile.value?.data.work_site },
-  { label: 'Рабочая зона', value: profile.value?.data.work_zone },
+  { label: 'Объект', value: profile.value?.data.work_site, editGroup: 'employee' },
+  { label: 'Рабочая зона', value: profile.value?.data.work_zone, editGroup: 'employee' },
   { label: 'Участок / площадка', value: reference.value?.organization?.site_area },
   { label: 'Местоположение', value: reference.value?.organization?.location, wide: true },
   { label: 'Статус доступа', value: reference.value?.organization?.access_status },
@@ -236,10 +254,10 @@ const workplaceFields = computed<EmployeeDisplayField[]>(() => [
   { label: 'Дата выдачи пропуска', value: formatDate(reference.value?.organization?.pass_issued_on) },
 ])
 const teamFields = computed<EmployeeDisplayField[]>(() => [
-  { label: 'Бригада / команда', value: reference.value?.organization?.brigade ?? profile.value?.data.work_team },
+  { label: 'Бригада / команда', value: reference.value?.organization?.brigade ?? profile.value?.data.work_team, editGroup: reference.value?.organization?.brigade ? undefined : 'employee' },
   { label: 'Бригадир', value: reference.value?.organization?.brigadier },
   { label: 'Руководитель подразделения', value: reference.value?.organization?.department_manager },
-  { label: 'Непосредственный руководитель', value: profile.value?.data.supervisor_name, wide: true },
+  { label: 'Непосредственный руководитель', value: profile.value?.data.supervisor_name, wide: true, editGroup: 'employee' },
   { label: 'Статус закрепления', value: reference.value?.organization?.assignment_status },
   { label: 'Дата закрепления', value: formatDate(reference.value?.organization?.assignment_date) },
 ])
@@ -255,9 +273,9 @@ const staffingStatusFields = computed<EmployeeDisplayField[]>(() => [
 ])
 
 const contractFields = computed<EmployeeDisplayField[]>(() => [
-  { label: 'Номер договора', value: currentContract.value?.contract_number ?? reference.value?.employment.contract_number },
-  { label: 'Тип договора', value: currentContract.value ? contractTypeLabel(currentContract.value.contract_type) : reference.value?.employment.contract_type },
-  { label: 'Дата подписания', value: formatDate(currentContract.value?.signed_on ?? reference.value?.employment.contract_date) },
+  { label: 'Номер договора', value: currentContract.value?.contract_number ?? reference.value?.employment.contract_number, editGroup: 'contract' },
+  { label: 'Тип договора', value: currentContract.value ? contractTypeLabel(currentContract.value.contract_type) : reference.value?.employment.contract_type, editGroup: 'contract' },
+  { label: 'Дата подписания', value: formatDate(currentContract.value?.signed_on ?? reference.value?.employment.contract_date), editGroup: 'contract' },
   { label: 'Действует с', value: formatDate(currentContract.value?.valid_from ?? reference.value?.employment.valid_from) },
   { label: 'Действует до', value: currentContract.value?.valid_to === null ? tr('Бессрочно') : formatDate(currentContract.value?.valid_to ?? reference.value?.employment.valid_to) },
   { label: 'Испытание до', value: formatDate(currentContract.value?.probation_until ?? reference.value?.employment.probation_until) },
@@ -473,7 +491,7 @@ function beginEdit(section: ProfileSection, record: ProfileEditRow) {
 }
 
 let generation = 0
-const contractColumns = [
+const contractColumns = computed(() => [
   { key: 'contract_number', label: 'Номер договора' },
   { key: 'contract_type', label: 'Тип договора' },
   { key: 'employment_type', label: 'Вид занятости' },
@@ -481,8 +499,8 @@ const contractColumns = [
   { key: 'valid_to', label: 'Действует до' },
   { key: 'probation_until', label: 'Испытание до' },
   { key: 'basis_reference', label: 'Основание' },
-  { key: 'edit', label: 'Действия' },
-]
+  ...(contractWritesEnabled.value ? [{ key: 'edit', label: 'Действия' }] : []),
+])
 const columns = computed(() => [
   { key: 'department_name', label: 'Подразделение' },
   { key: 'position_name', label: 'Должность' },
@@ -598,37 +616,77 @@ onMounted(load)
         </div>
         <div class="identity-fields">
           <div class="identity-fields-top">
-            <span class="status-toggle" :class="{ 'status-toggle--inactive': !currentAssignment }"><span class="status-toggle-dot"></span>{{ currentAssignment ? tr('Карточка активна') : employmentStatus }}</span>
+            <span class="status-toggle" role="status" :class="{ 'status-toggle--inactive': !currentAssignment }"><span class="status-toggle-dot"></span>{{ currentAssignment ? tr('Карточка активна') : employmentStatus }}</span>
             <div class="personnel-id"><span>{{ tr('Табельный №') }}</span><strong>{{ profile.data.personnel_number }}</strong></div>
           </div>
           <div class="identity-name-fields">
-            <div class="read-field"><span>{{ tr('Фамилия') }}</span><strong>{{ profile.data.last_name }}</strong></div>
-            <div class="read-field"><span>{{ tr('Имя') }}</span><strong>{{ profile.data.first_name }}</strong></div>
-            <div class="read-field"><span>{{ tr('Отчество') }}</span><strong>{{ profile.data.middle_name ?? '—' }}</strong></div>
-            <div class="read-field"><span>{{ tr('Дата рождения') }}</span><strong>{{ profile.meta.extended_sections_visible ? (formatDate(profile.data.birth_date)) : '—' }}</strong></div>
+            <div class="read-field" :data-field-state="profile.meta.employee_writes_enabled ? 'editable' : 'informative'">
+              <span>{{ tr('Фамилия') }}</span>
+              <div class="read-field-value" :class="{ 'read-field-value--editable': profile.meta.employee_writes_enabled }">
+                <strong>{{ profile.data.last_name }}</strong>
+                <BaseButton v-if="profile.meta.employee_writes_enabled" icon-only variant="secondary" class="identity-field-edit"
+                  :aria-label="tr('Изменить поле:') + ' ' + tr('Фамилия')" @click="openFieldEditor('employee')">
+                  <Pencil :size="14" aria-hidden="true"/>
+                </BaseButton>
+              </div>
+            </div>
+            <div class="read-field" :data-field-state="profile.meta.employee_writes_enabled ? 'editable' : 'informative'">
+              <span>{{ tr('Имя') }}</span>
+              <div class="read-field-value" :class="{ 'read-field-value--editable': profile.meta.employee_writes_enabled }">
+                <strong>{{ profile.data.first_name }}</strong>
+                <BaseButton v-if="profile.meta.employee_writes_enabled" icon-only variant="secondary" class="identity-field-edit"
+                  :aria-label="tr('Изменить поле:') + ' ' + tr('Имя')" @click="openFieldEditor('employee')">
+                  <Pencil :size="14" aria-hidden="true"/>
+                </BaseButton>
+              </div>
+            </div>
+            <div class="read-field" :data-field-state="profile.meta.employee_writes_enabled ? 'editable' : 'informative'">
+              <span>{{ tr('Отчество') }}</span>
+              <div class="read-field-value" :class="{ 'read-field-value--editable': profile.meta.employee_writes_enabled }">
+                <strong>{{ profile.data.middle_name ?? '—' }}</strong>
+                <BaseButton v-if="profile.meta.employee_writes_enabled" icon-only variant="secondary" class="identity-field-edit"
+                  :aria-label="tr('Изменить поле:') + ' ' + tr('Отчество')" @click="openFieldEditor('employee')">
+                  <Pencil :size="14" aria-hidden="true"/>
+                </BaseButton>
+              </div>
+            </div>
+            <div class="read-field" :data-field-state="profile.meta.employee_writes_enabled ? 'editable' : 'informative'">
+              <span>{{ tr('Дата рождения') }}</span>
+              <div class="read-field-value" :class="{ 'read-field-value--editable': profile.meta.employee_writes_enabled }">
+                <strong>{{ profile.meta.extended_sections_visible ? formatDate(profile.data.birth_date) : '—' }}</strong>
+                <BaseButton v-if="profile.meta.employee_writes_enabled" icon-only variant="secondary" class="identity-field-edit"
+                  :aria-label="tr('Изменить поле:') + ' ' + tr('Дата рождения')" @click="openFieldEditor('employee')">
+                  <Pencil :size="14" aria-hidden="true"/>
+                </BaseButton>
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
       <BaseViewTabs v-model="activeSection" :options="sectionTabs" :label="tr('Разделы карточки сотрудника')" />
+      <div class="employee-field-legend" role="note">
+        <span v-if="editableFieldGroups.length"><Pencil :size="13" aria-hidden="true" /> {{ tr('Поле можно изменить') }}</span>
+        <span><LockKeyhole :size="13" aria-hidden="true" /> {{ tr('Информационные поля — только просмотр') }}</span>
+      </div>
       <template v-if="activeSection === 'personal' && profile.meta.extended_sections_visible">
         <EmployeeProfileSection :title="tr('Основные личные данные')">
           <template v-if="profile.meta.private_profile_writes_enabled" #actions>
             <BaseButton variant="secondary" @click="privateEditorSection = 'personal'">{{ tr('Изменить') }}</BaseButton>
           </template>
-          <EmployeeDataGrid :fields="personalFields" />
+          <EmployeeDataGrid :fields="personalFields" :editable-groups="editableFieldGroups" @edit="openFieldEditor" />
         </EmployeeProfileSection>
         <EmployeeProfileSection :title="tr('Контакты и адреса')">
-          <EmployeeDataGrid :fields="contactFields" />
+          <EmployeeDataGrid :fields="contactFields" :editable-groups="editableFieldGroups" @edit="openFieldEditor" />
         </EmployeeProfileSection>
         <EmployeeProfileSection :title="tr('Документы, удостоверяющие личность')">
           <template v-if="profile.meta.private_profile_writes_enabled" #actions>
             <BaseButton variant="secondary" @click="privateRecordsSection = 'identity'">{{ tr('Изменить') }}</BaseButton>
           </template>
-          <EmployeeDataGrid :fields="documentFields" />
+          <EmployeeDataGrid :fields="documentFields" :editable-groups="editableFieldGroups" @edit="openFieldEditor" />
         </EmployeeProfileSection>
         <EmployeeProfileSection :title="tr('Место рождения')">
-          <EmployeeDataGrid :fields="birthPlaceFields" />
+          <EmployeeDataGrid :fields="birthPlaceFields" :editable-groups="editableFieldGroups" @edit="openFieldEditor" />
         </EmployeeProfileSection>
         <EmployeeProfileSection :title="tr('Семейные данные')">
           <template v-if="profile.meta.private_profile_writes_enabled" #actions>
@@ -644,22 +702,22 @@ onMounted(load)
           <template v-if="profile.meta.private_profile_writes_enabled" #actions>
             <BaseButton variant="secondary" @click="privateEditorSection = 'military'">{{ tr('Изменить') }}</BaseButton>
           </template>
-          <EmployeeDataGrid :fields="militaryFields" />
+          <EmployeeDataGrid :fields="militaryFields" :editable-groups="editableFieldGroups" @edit="openFieldEditor" />
         </EmployeeProfileSection>
       </template>
 
       <template v-if="activeSection === 'organization' && profile.meta.extended_sections_visible">
         <EmployeeProfileSection :title="tr('Подразделение и должность')">
-          <EmployeeDataGrid :fields="organizationPositionFields" />
+          <EmployeeDataGrid :fields="organizationPositionFields" :editable-groups="editableFieldGroups" @edit="openFieldEditor" />
         </EmployeeProfileSection>
         <EmployeeProfileSection :title="tr('Объект и место работы')">
-          <EmployeeDataGrid :fields="workplaceFields" />
+          <EmployeeDataGrid :fields="workplaceFields" :editable-groups="editableFieldGroups" @edit="openFieldEditor" />
         </EmployeeProfileSection>
         <EmployeeProfileSection :title="tr('Бригада и руководитель')">
-          <EmployeeDataGrid :fields="teamFields" />
+          <EmployeeDataGrid :fields="teamFields" :editable-groups="editableFieldGroups" @edit="openFieldEditor" />
         </EmployeeProfileSection>
         <EmployeeProfileSection :title="tr('Статус и штатная позиция')">
-          <EmployeeDataGrid :fields="staffingStatusFields" />
+          <EmployeeDataGrid :fields="staffingStatusFields" :editable-groups="editableFieldGroups" @edit="openFieldEditor" />
         </EmployeeProfileSection>
       </template>
       <div v-if="profile.meta.profile_writes_enabled && activeSection === 'development'" class="profile-toolbar">
@@ -678,7 +736,7 @@ onMounted(load)
               </BaseButton>
             </div>
           </template>
-          <EmployeeDataGrid :fields="contractFields" />
+          <EmployeeDataGrid :fields="contractFields" :editable-groups="editableFieldGroups" @edit="openFieldEditor" />
 
           <template v-if="profile.meta.extended_sections_visible">
             <h3 class="assignment-history-title">{{ tr('История трудовых договоров') }}</h3>
@@ -701,7 +759,7 @@ onMounted(load)
         </EmployeeProfileSection>
 
         <EmployeeProfileSection :title="tr('Стаж и трудовой опыт')">
-          <EmployeeDataGrid :fields="seniorityFields" />
+          <EmployeeDataGrid :fields="seniorityFields" :editable-groups="editableFieldGroups" @edit="openFieldEditor" />
           <h3 class="assignment-history-title">{{ tr('История назначений') }}</h3>
           <BaseDataTable density="compact" :columns="columns" :rows="profile.assignments" row-key="id"
             :caption="tr('Доступная история назначений')" :empty-title="tr('Назначений не найдено')"
@@ -728,15 +786,15 @@ onMounted(load)
         </EmployeeProfileSection>
 
         <EmployeeProfileSection :title="tr('Условия труда и персонифицированный учёт')">
-          <EmployeeDataGrid :fields="workingConditionFields" />
+          <EmployeeDataGrid :fields="workingConditionFields" :editable-groups="editableFieldGroups" @edit="openFieldEditor" />
         </EmployeeProfileSection>
 
         <EmployeeProfileSection :title="tr('Совмещение и дополнительные обязанности')">
-          <EmployeeDataGrid :fields="combinationFields" />
+          <EmployeeDataGrid :fields="combinationFields" :editable-groups="editableFieldGroups" @edit="openFieldEditor" />
         </EmployeeProfileSection>
 
         <EmployeeProfileSection :title="tr('Прекращение договора')">
-          <EmployeeDataGrid :fields="terminationFields" />
+          <EmployeeDataGrid :fields="terminationFields" :editable-groups="editableFieldGroups" @edit="openFieldEditor" />
         </EmployeeProfileSection>
       </template>
       <template v-if="profile.meta.extended_sections_visible">
@@ -746,7 +804,7 @@ onMounted(load)
 
         <template v-if="activeSection === 'payroll'">
           <EmployeeProfileSection :title="tr('Условия оплаты')">
-            <EmployeeDataGrid :fields="payConditionFields" />
+            <EmployeeDataGrid :fields="payConditionFields" :editable-groups="editableFieldGroups" @edit="openFieldEditor" />
           </EmployeeProfileSection>
 
           <EmployeeProfileSection :title="tr('Надбавки, компенсации и удержания')">
@@ -760,7 +818,7 @@ onMounted(load)
           </EmployeeProfileSection>
 
           <EmployeeProfileSection :title="tr('Расчётный лист')">
-            <EmployeeDataGrid :fields="payrollSummaryFields" />
+            <EmployeeDataGrid :fields="payrollSummaryFields" :editable-groups="editableFieldGroups" @edit="openFieldEditor" />
           </EmployeeProfileSection>
 
           <EmployeeProfileSection :title="tr('Динамика выплат и отработанных часов')">
@@ -776,17 +834,17 @@ onMounted(load)
           </EmployeeProfileSection>
 
           <EmployeeProfileSection :title="tr('Банковские и налоговые данные')">
-            <EmployeeDataGrid :fields="bankTaxFields" />
+            <EmployeeDataGrid :fields="bankTaxFields" :editable-groups="editableFieldGroups" @edit="openFieldEditor" />
           </EmployeeProfileSection>
         </template>
 
         <template v-if="activeSection === 'schedule'">
           <EmployeeProfileSection :title="tr('График работы')">
-            <EmployeeDataGrid :fields="scheduleFields" />
+            <EmployeeDataGrid :fields="scheduleFields" :editable-groups="editableFieldGroups" @edit="openFieldEditor" />
           </EmployeeProfileSection>
 
           <EmployeeProfileSection :title="tr('Отпуска и лимиты отсутствий')">
-            <EmployeeDataGrid :fields="leaveSummaryFields" />
+            <EmployeeDataGrid :fields="leaveSummaryFields" :editable-groups="editableFieldGroups" @edit="openFieldEditor" />
             <h3 class="assignment-history-title">{{ tr('Лимиты и остатки') }}</h3>
             <BaseDataTable density="compact" :rows="reference?.leave_limits ?? []"
               :columns="leaveLimitColumns" row-key="id"
@@ -797,7 +855,7 @@ onMounted(load)
           </EmployeeProfileSection>
 
           <EmployeeProfileSection :title="tr('Табель за период')">
-            <EmployeeDataGrid :fields="currentTimesheetFields" />
+            <EmployeeDataGrid :fields="currentTimesheetFields" :editable-groups="editableFieldGroups" @edit="openFieldEditor" />
           </EmployeeProfileSection>
 
           <EmployeeProfileSection :title="tr('Явки, неявки и отсутствия')">
@@ -821,9 +879,9 @@ onMounted(load)
 
         <template v-if="activeSection === 'development'">
           <EmployeeProfileSection :title="tr('Кадровый резерв')">
-            <EmployeeDataGrid :fields="reserveSummaryFields" />
+            <EmployeeDataGrid :fields="reserveSummaryFields" :editable-groups="editableFieldGroups" @edit="openFieldEditor" />
             <h3 class="assignment-history-title">{{ tr('Параметры резерва') }}</h3>
-            <EmployeeDataGrid :fields="reserveDetailFields" />
+            <EmployeeDataGrid :fields="reserveDetailFields" :editable-groups="editableFieldGroups" @edit="openFieldEditor" />
             <h3 class="assignment-history-title">{{ tr('История кадрового резерва') }}</h3>
             <BaseDataTable density="compact" :rows="profile.reserve" row-key="id" :caption="tr('Кадровый резерв сотрудника')"
               :columns="[{key:'target_position',label:tr('Резервируемая должность')},{key:'reserve_level',label:tr('Уровень')},{key:'reserve_type',label:tr('Вид')},{key:'joined_year',label:tr('Год зачисления')},{key:'left_year',label:tr('Год исключения')}, ...(profile.meta.profile_writes_enabled ? [{key:'edit',label:tr('Действия')}] : [])]"
@@ -918,7 +976,7 @@ onMounted(load)
 
     <BaseDialog :open="identityEditOpen" :title="tr('Основные данные сотрудника')" @close="identityEditOpen = false">
       <EmployeeRecordForm
-        v-if="profile"
+        v-if="identityEditOpen && profile?.meta.employee_writes_enabled"
         :key="profile.data.id + ':' + profile.data.revision"
         :company-id="String(route.params.company)"
         :edit="profile.data"
@@ -1027,16 +1085,8 @@ onMounted(load)
   display:inline-flex;align-items:center;gap:7px;
   color:var(--color-text);font-size:11px;font-weight:600;
 }
-.status-toggle-dot{
-  position:relative;flex:0 0 28px;width:28px;height:16px;
-  border-radius:12px;background:var(--color-primary);
-}
-.status-toggle-dot::after{
-  content:'';position:absolute;right:3px;top:3px;width:10px;height:10px;
-  border-radius:50%;background:var(--color-on-primary);
-}
-.status-toggle--inactive .status-toggle-dot{background:var(--color-stroke-strong)}
-.status-toggle--inactive .status-toggle-dot::after{right:auto;left:3px}
+.status-toggle-dot{flex:0 0 8px;width:8px;height:8px;border-radius:50%;background:var(--color-primary)}
+.status-toggle--inactive .status-toggle-dot{background:var(--color-muted)}
 .personnel-id{
   display:flex;align-items:stretch;border:1px solid var(--color-stroke);
   border-radius:var(--radius-sm);overflow:hidden;font-size:11px;
@@ -1052,13 +1102,17 @@ onMounted(load)
   display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px 16px;
 }
 .read-field{display:grid;align-content:start;gap:5px;min-width:0}
-.read-field span{color:var(--color-text);font-size:12px;line-height:17px;font-weight:600}
-.read-field strong{
-  min-height:35px;display:flex;align-items:center;padding:7px 10px;
-  border:1px solid var(--color-stroke);border-radius:var(--radius-sm);
-  background:var(--color-surface);box-shadow:var(--shadow-control);
-  color:var(--color-text);font-size:13px;line-height:19px;font-weight:400;overflow-wrap:anywhere;
-}
+.read-field>span{color:var(--color-muted);font-size:12px;line-height:17px;font-weight:500}
+.read-field-value{display:flex;align-items:center;gap:4px;min-height:34px;min-width:0;padding:3px 0}
+.read-field-value>strong{flex:1;min-width:0;color:var(--color-text);font-size:13px;line-height:19px;font-weight:500;overflow-wrap:anywhere}
+.read-field-value--editable{padding:2px 3px 2px 10px;background:var(--color-surface-raised);border:1px solid var(--color-stroke);border-radius:var(--radius-sm)}
+.read-field-value--editable>strong{font-weight:400}
+.identity-field-edit{width:28px;min-width:28px;height:28px;min-height:28px;padding:0;background:transparent;border-color:transparent;box-shadow:none;color:var(--color-muted)}
+.identity-field-edit :deep(svg){width:14px;height:14px}
+.identity-field-edit:hover:not(:disabled){background:var(--color-accent-soft);color:var(--color-primary)}
+.employee-field-legend{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin:-5px 0 1px;font-size:11px;line-height:17px;color:var(--color-muted)}
+.employee-field-legend>span{display:inline-flex;align-items:center;gap:5px}
+.employee-field-legend svg{flex:none;color:var(--color-muted)}
 .profile-toolbar{display:flex;justify-content:flex-end}
 .profile-toolbar :deep(.base-button){min-height:34px;font-size:12px}
 .row-actions{display:flex;gap:8px;flex-wrap:wrap}

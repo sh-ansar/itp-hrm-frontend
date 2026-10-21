@@ -34,7 +34,7 @@ test('HR persists relatives and encrypted identity documents through the real AP
     await page.goto(profileUrl)
     await page.getByRole('heading', { name: 'Семейные данные', exact: true }).waitFor()
 
-    await section(page, 'Семейные данные').getByRole('button', { name: 'Изменить' }).click()
+    await section(page, 'Семейные данные').getByRole('button', { name: 'Изменить', exact: true }).click()
     const family = page.getByRole('dialog', { name: 'Родственники сотрудника' })
     await family.waitFor()
     await family.getByRole('button', { name: 'Добавить родственника' }).click()
@@ -47,7 +47,7 @@ test('HR persists relatives and encrypted identity documents through the real AP
     await page.getByRole('cell', { name: 'Synthetic Relative' }).waitFor()
     await page.reload()
     await page.getByRole('cell', { name: 'Synthetic Relative' }).waitFor()
-    await section(page, 'Семейные данные').getByRole('button', { name: 'Изменить' }).click()
+    await section(page, 'Семейные данные').getByRole('button', { name: 'Изменить', exact: true }).click()
     await family.waitFor()
     await family.getByRole('button', { name: 'Изменить' }).click()
     await family.getByLabel('ФИО родственника').fill('Synthetic Relative Updated')
@@ -56,7 +56,7 @@ test('HR persists relatives and encrypted identity documents through the real AP
     await page.getByRole('cell', { name: 'Synthetic Relative Updated' }).waitFor()
 
     await section(page, 'Документы, удостоверяющие личность')
-      .getByRole('button', { name: 'Изменить' }).click()
+      .getByRole('button', { name: 'Изменить', exact: true }).click()
     const docs = page.getByRole('dialog', { name: 'Удостоверения личности' })
     await docs.waitFor()
     await docs.getByRole('button', { name: 'Добавить документ' }).click()
@@ -88,7 +88,7 @@ test('HR persists relatives and encrypted identity documents through the real AP
     assert.equal(response.body.private_profile.identity_documents[0].is_primary, true)
     assert.equal(response.body.private_profile.identity_documents[0].number, 'SYNTHETIC-DOC-0001')
 
-    await section(page, 'Семейные данные').getByRole('button', { name: 'Изменить' }).click()
+    await section(page, 'Семейные данные').getByRole('button', { name: 'Изменить', exact: true }).click()
     await family.waitFor()
     page.once('dialog', dialog => dialog.accept())
     await family.getByRole('button', { name: 'В архив' }).click()

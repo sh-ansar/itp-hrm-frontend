@@ -8,9 +8,11 @@ defineOptions({ name: 'DepartmentTreeNode' })
 const { tr } = useWorkspaceI18n()
 
 const props = withDefaults(defineProps<{ node: DepartmentTreeItem; depth?: number; companyId: string; expandAll?: boolean; tone?: number }>(), { depth: 0, expandAll: true, tone: 0 })
-const expanded = ref(props.expandAll)
+// Keep the first department tier visible beneath the company anchor.
+// The expand-all control only opens deeper branches.
+const expanded = ref(props.depth === 0 || props.expandAll)
 const allMembers = ref(false)
-watch(() => props.expandAll, value => { expanded.value = value })
+watch(() => props.expandAll, value => { expanded.value = props.depth === 0 || value })
 const members = computed(() => props.node.members ?? [])
 const visibleMembers = computed(() => allMembers.value ? members.value : members.value.slice(0, 3))
 function initials(name: string) { return name.split(' ').slice(0,2).map(word=>word[0] ?? '').join('') }
@@ -24,7 +26,7 @@ function initials(name: string) { return name.split(' ').slice(0,2).map(word=>wo
           <RouterLink class="root-person" :to="{ name:'employee-detail',params:{company:companyId,employee:members[0]!.id} }"><span class="person-avatar">{{ initials(members[0]!.name) }}</span>{{ members[0]!.name }}</RouterLink>
         </template>
         <span v-if="node.hiddenParent">{{ tr('Родитель вне доступного списка') }}</span>
-        <span v-else class="department-count"><Users :size="15" /> {{ members.length }} сотрудников<span v-if="node.children.length"> · {{ node.children.length }} подразделений</span></span>
+        <span v-else class="department-count"><Users :size="15" /> {{ members.length }} {{ tr("сотрудников") }}<span v-if="node.children.length"> · {{ node.children.length }} {{ tr("подразделений") }}</span></span>
       </div>
       <BaseButton v-if="node.children.length || members.length" icon-only variant="secondary"
         :aria-label="expanded ? tr('Свернуть ') + node.name : tr('Развернуть ') + node.name" :aria-expanded="expanded" @click="expanded = !expanded">

@@ -713,18 +713,48 @@ onMounted(load)
         </EmployeeProfileSection>
         <EmployeeProfileSection :title="tr('Контакты и адреса')">
           <EmployeeDataGrid :fields="contactFields" :editable-groups="editableFieldGroups" @edit="openFieldEditor" />
-          <EmployeeAddressBook v-if="profile.private_profile?.addresses?.length || profile.meta.private_address_writes_enabled"
+          <EmployeeAddressBook v-if="hasNormalizedAddressStore"
             :company-id="String(route.params.company)" :employee-id="profile.data.id"
             :addresses="profile.private_profile?.addresses ?? []"
             :writable="Boolean(profile.meta.private_address_writes_enabled)"
             :truncated="Boolean(profile.meta.private_addresses_truncated)"
             @changed="load" />
+          <div v-if="hasLegacyContactValues" class="employee-legacy-contact-section">
+            <BaseButton v-if="hasNormalizedAddressStore" variant="secondary"
+              class="employee-legacy-contact-trigger" :aria-expanded="legacyContactsOpen"
+              aria-controls="employee-legacy-contact-values"
+              @click="legacyContactsOpen = !legacyContactsOpen">
+              <ChevronDown :size="15" aria-hidden="true" :class="{ 'legacy-chevron-open': legacyContactsOpen }" />
+              {{ tr('Дополнительные контакты и прежние адреса') }}
+            </BaseButton>
+            <div v-if="!hasNormalizedAddressStore || legacyContactsOpen" id="employee-legacy-contact-values"
+              class="employee-legacy-contact-values">
+              <EmployeeDataGrid :fields="legacyContactFields" :editable-groups="editableFieldGroups" @edit="openFieldEditor" />
+            </div>
+          </div>
         </EmployeeProfileSection>
         <EmployeeProfileSection :title="tr('Документы, удостоверяющие личность')">
           <template v-if="profile.meta.private_profile_writes_enabled" #actions>
-            <BaseButton variant="secondary" @click="privateRecordsSection = 'identity'">{{ tr('Изменить') }}</BaseButton>
+            <BaseButton variant="secondary" @click="privateRecordsSection = 'identity'">{{ tr('Управлять документами') }}</BaseButton>
           </template>
-          <EmployeeDataGrid :fields="documentFields" :editable-groups="editableFieldGroups" @edit="openFieldEditor" />
+          <EmployeeDataGrid :fields="identityPersonFields" :editable-groups="editableFieldGroups" @edit="openFieldEditor" />
+          <div v-if="hasNormalizedIdentityStore" class="employee-identity-records">
+            <div v-for="(document,index) in normalizedIdentities" :key="document.id" class="employee-identity-record">
+              <div class="employee-identity-record-heading">
+                <span>{{ tr('Документ') }}<template v-if="normalizedIdentities.length > 1"> {{ index + 1 }}</template></span>
+                <span v-if="document.is_primary" class="employee-identity-primary">{{ tr('Основной') }}</span>
+              </div>
+              <EmployeeDataGrid :fields="normalizedIdentityFields(document)"
+                :editable-groups="editableFieldGroups" @edit="openFieldEditor" />
+            </div>
+            <p v-if="!normalizedIdentities.length" class="employee-identity-empty">
+              {{ tr('Документы, удостоверяющие личность, не внесены') }}
+            </p>
+          </div>
+          <EmployeeDataGrid v-else :fields="legacyDocumentFields" :editable-groups="editableFieldGroups" @edit="openFieldEditor" />
+          <BaseNotice v-if="profile.meta.private_identities_truncated" tone="warning">
+            {{ tr('Показаны не все документы. Для полной истории откройте управление документами.') }}
+          </BaseNotice>
         </EmployeeProfileSection>
         <EmployeeProfileSection :title="tr('Место рождения')">
           <EmployeeDataGrid :fields="birthPlaceFields" :editable-groups="editableFieldGroups" @edit="openFieldEditor" />
@@ -1151,6 +1181,16 @@ onMounted(load)
 .identity-field-edit{width:28px;min-width:28px;height:28px;min-height:28px;padding:0;background:transparent;border-color:transparent;box-shadow:none;color:var(--color-muted)}
 .identity-field-edit :deep(svg){width:14px;height:14px}
 .identity-field-edit:hover:not(:disabled){background:var(--color-accent-soft);color:var(--color-primary)}
+.employee-legacy-contact-section{display:grid;gap:10px;min-width:0;margin-top:10px}
+.employee-legacy-contact-trigger{justify-self:start;min-height:30px;height:auto;gap:7px;font-size:12px;font-weight:500;white-space:normal;text-align:start}
+.employee-legacy-contact-trigger :deep(svg){flex:none;transition:transform .15s ease}
+.employee-legacy-contact-trigger .legacy-chevron-open{transform:rotate(180deg)}
+.employee-legacy-contact-values{border-top:1px solid var(--color-stroke);padding-top:12px;min-width:0}
+.employee-identity-records{display:grid;gap:12px;min-width:0;margin-top:13px}
+.employee-identity-record{display:grid;gap:12px;min-width:0;padding-top:12px;border-top:1px solid var(--color-stroke)}
+.employee-identity-record-heading{display:flex;align-items:center;gap:9px;flex-wrap:wrap;color:var(--color-muted);font-size:12px;font-weight:600}
+.employee-identity-primary{padding:2px 7px;border-radius:4px;background:var(--color-success-surface);color:var(--color-success);font-size:11px;font-weight:500}
+.employee-identity-empty{font-size:12px;color:var(--color-muted);line-height:1.5;margin:0}
 .employee-field-legend{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin:-5px 0 1px;font-size:11px;line-height:17px;color:var(--color-muted)}
 .employee-field-legend>span{display:inline-flex;align-items:center;gap:5px}
 .employee-field-legend svg{flex:none;color:var(--color-muted)}

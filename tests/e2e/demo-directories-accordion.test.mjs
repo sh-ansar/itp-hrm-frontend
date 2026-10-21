@@ -36,6 +36,11 @@ test('directories use the five-tab prototype split workspace responsively',async
       const tariffTree=page.getByRole('tree',{name:'Иерархия тарифов'})
       await tariffTree.waitFor()
       assert.ok(await tariffTree.getByRole('treeitem').count()>0)
+      assert.equal(await tariffTree.getByRole('treeitem').count(),1,'initially show the root tariff only')
+      await tariffTree.getByRole('button',{name:/Раскрыть: По грузам/}).click()
+      assert.equal(await tariffTree.getByRole('treeitem').count(),2,'the real parent relation reveals the second tier')
+      await tariffTree.getByRole('button',{name:/Раскрыть: По грузам/}).click()
+      assert.equal(await tariffTree.getByRole('treeitem').count(),1)
       assert.equal(await page.locator('.directory-detail').count(),1)
       assert.equal(await page.locator('.directory-index').count(),1)
 

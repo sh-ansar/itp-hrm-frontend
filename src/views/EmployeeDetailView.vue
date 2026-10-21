@@ -276,11 +276,11 @@ const contractFields = computed<EmployeeDisplayField[]>(() => [
   { label: 'Номер договора', value: currentContract.value?.contract_number ?? reference.value?.employment.contract_number, editGroup: 'contract' },
   { label: 'Тип договора', value: currentContract.value ? contractTypeLabel(currentContract.value.contract_type) : reference.value?.employment.contract_type, editGroup: 'contract' },
   { label: 'Дата подписания', value: formatDate(currentContract.value?.signed_on ?? reference.value?.employment.contract_date), editGroup: 'contract' },
-  { label: 'Действует с', value: formatDate(currentContract.value?.valid_from ?? reference.value?.employment.valid_from) },
-  { label: 'Действует до', value: currentContract.value?.valid_to === null ? tr('Бессрочно') : formatDate(currentContract.value?.valid_to ?? reference.value?.employment.valid_to) },
-  { label: 'Испытание до', value: formatDate(currentContract.value?.probation_until ?? reference.value?.employment.probation_until) },
-  { label: 'Основание', value: currentContract.value?.basis_reference ?? reference.value?.employment.hire_basis ?? currentAssignment.value?.basis_reference ?? plannedAssignment.value?.basis_reference, wide: true },
-  { label: 'Вид занятости', value: currentContract.value ? employmentTypeLabel(currentContract.value.employment_type) : reference.value?.employment.employment_type },
+  { label: 'Действует с', value: formatDate(currentContract.value?.valid_from ?? reference.value?.employment.valid_from), editGroup: 'contract' },
+  { label: 'Действует до', value: currentContract.value?.valid_to === null ? tr('Бессрочно') : formatDate(currentContract.value?.valid_to ?? reference.value?.employment.valid_to), editGroup: 'contract' },
+  { label: 'Испытание до', value: formatDate(currentContract.value?.probation_until ?? reference.value?.employment.probation_until), editGroup: 'contract' },
+  { label: 'Основание', value: currentContract.value?.basis_reference ?? reference.value?.employment.hire_basis ?? currentAssignment.value?.basis_reference ?? plannedAssignment.value?.basis_reference, wide: true, editGroup: 'contract' },
+  { label: 'Вид занятости', value: currentContract.value ? employmentTypeLabel(currentContract.value.employment_type) : reference.value?.employment.employment_type, editGroup: 'contract' },
 ])
 const seniorityFields = computed<EmployeeDisplayField[]>(() => [
   { label: 'Общий стаж', value: reference.value?.employment.total_seniority },

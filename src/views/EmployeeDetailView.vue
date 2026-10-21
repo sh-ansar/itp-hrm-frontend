@@ -1011,7 +1011,7 @@ onMounted(load)
         </template>
 
         <EmployeeProfileSection v-if="activeSection === 'history'" :title="tr('История изменений')">
-          <BaseDataTable density="compact" :rows="profile.history ?? reference?.history ?? []" :columns="historyColumns" row-key="id"
+          <BaseDataTable density="compact" :rows="import.meta.env.VITE_DEMO_MODE === 'true' ? (profile.history ?? reference?.history ?? []) : (profile.history ?? [])" :columns="historyColumns" row-key="id"
             :caption="tr('История изменений карточки сотрудника')"
             :empty-title="tr('История изменений пуста')"
             :empty-description="tr('Для карточки ещё нет доступных событий.')">

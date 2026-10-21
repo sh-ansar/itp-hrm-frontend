@@ -70,9 +70,19 @@ test('HR persists relatives and encrypted identity documents through the real AP
     assert.equal(await docs.getByLabel('Основной документ').isChecked(), true)
     await docs.getByRole('button', { name: 'Добавить запись' }).click()
     await docs.waitFor({ state: 'hidden' })
-    await page.getByText('••••0001', { exact: true }).waitFor()
+    const identity = section(page, 'Документы, удостоверяющие личность')
+    const identityRow = identity.locator('.identity-document-record')
+      .filter({ hasText: '••••0001' })
+    await identityRow.waitFor()
+    assert.equal(await identityRow.locator('.identity-document-primary').count(), 1)
+    await identityRow.getByRole('button', { name: 'Изменить документ: passport' }).click()
+    await docs.waitFor()
+    assert.equal(await docs.getByLabel('Номер документа').inputValue(), 'SYNTHETIC-DOC-0001')
+    await docs.getByRole('button', { name: 'К списку' }).click()
+    await docs.getByRole('button', { name: 'Закрыть' }).click()
+    await docs.waitFor({ state: 'hidden' })
     await page.reload()
-    await page.getByText('••••0001', { exact: true }).waitFor()
+    await identityRow.waitFor()
 
     const response = await page.evaluate(async ({company,employee}) => {
       const res = await fetch('/api/v1/companies/' + company + '/employees/' + employee, {

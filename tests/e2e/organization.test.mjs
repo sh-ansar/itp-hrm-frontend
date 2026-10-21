@@ -18,7 +18,7 @@ test('organization page displays authorized company and department only', async 
     await page.goto('/organization')
     await page.getByRole('heading', { name: 'Организационная структура' }).waitFor()
     await page.getByRole('navigation', { name: 'Представление организационной структуры' }).getByRole('button', { name: 'Таблица' }).click()
-    const select = page.getByLabel('Компания')
+    const select = page.getByLabel('Компания', { exact: true })
     await select.waitFor()
     assert.match(await select.textContent(), /Test Company Visible/)
     assert.doesNotMatch(await select.textContent(), /Test Company Hidden/)
@@ -59,11 +59,11 @@ test('organization and employee registries remain usable at mobile tablet deskto
       for (const [route, heading] of [['/organization', 'Организационная структура'], ['/employees', 'Реестр сотрудников']]) {
         await page.goto(route)
         await page.getByRole('heading', { name: heading }).waitFor()
-        await page.getByLabel('Компания').waitFor()
+        await page.getByLabel('Компания', { exact: true }).waitFor()
         const horizontalOverflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1)
         const overflows = horizontalOverflow ? await page.evaluate(() => ({ size: [window.innerWidth, document.documentElement.scrollWidth], layout: ['.app-shell','.sidebar','.sidebar nav','.main','.topbar','.content','.organization-page'].map(sel => { const el = document.querySelector(sel); const r = el?.getBoundingClientRect(); return [sel,r?.x,r?.width,getComputedStyle(el ?? document.body).display,getComputedStyle(el ?? document.body).overflowX] }), nodes: Array.from(document.querySelectorAll('*')).filter(el => el.getBoundingClientRect().right > window.innerWidth + 1).slice(0, 8).map(el => ({ tag: el.tagName, className: typeof el.className === 'string' ? el.className : '', right: Math.round(el.getBoundingClientRect().right) })) })) : []
         assert.equal(horizontalOverflow, false, `${route} width ${width} should not overflow document; ${JSON.stringify(overflows)}`)
-        const select = page.getByLabel('Компания')
+        const select = page.getByLabel('Компания', { exact: true })
         const bounds = await select.boundingBox()
         assert.ok(bounds && bounds.width > 80 && bounds.x >= 0 && bounds.x + bounds.width <= width + 1,
           `${route} selector must fit viewport ${width}`)

@@ -33,8 +33,9 @@ test('directories use the five-tab prototype split workspace responsively',async
       const tariffTrigger=page.getByRole('button',{name:/Виды тарифов/})
       await tariffTrigger.waitFor()
       assert.equal(await tariffTrigger.getAttribute('aria-expanded'),'true')
-      await page.getByRole('table',{name:'Виды тарифов'}).waitFor()
-      assert.equal(await page.getByRole('table',{name:'Виды тарифов'}).count(),1)
+      const tariffTree=page.getByRole('tree',{name:'Иерархия тарифов'})
+      await tariffTree.waitFor()
+      assert.ok(await tariffTree.getByRole('treeitem').count()>0)
       assert.equal(await page.locator('.directory-detail').count(),1)
       assert.equal(await page.locator('.directory-index').count(),1)
 

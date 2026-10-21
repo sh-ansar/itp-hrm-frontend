@@ -675,6 +675,7 @@ const workspaceCopy: Record<string, { kk: string; en: string }> = {
   "по папкам": { kk: "бумалар бойынша", en: "by folder" },
   "по типу": { kk: "түрі бойынша", en: "by type" },
   "Выбрано на странице:": { kk: "Бетте таңдалған:", en: "Selected on page:" },
+  "Сбросить выбор": { kk: "Таңдауды тазалау", en: "Clear selection" },
   "Схема слишком велика: показаны первые": { kk: "Сызба тым үлкен: алғашқы", en: "Diagram too large: showing the first" },
   "подразделений из доступных": { kk: "қолжетімді бөлімшелердің ішінен", en: "departments out of" },
   "записей": { kk: "жазба", en: "records" },

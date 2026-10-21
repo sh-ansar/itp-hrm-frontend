@@ -415,6 +415,7 @@ const workspaceCopy: Record<string, { kk: string; en: string }> = {
   "Национальность": { kk: "Ұлты", en: "Nationality" },
   "Гражданство": { kk: "Азаматтығы", en: "Citizenship" },
   "Семейное положение": { kk: "Отбасылық жағдайы", en: "Marital status" },
+  "Изменить документ": { kk: "Құжатты өзгерту", en: "Edit document" },
   "Управлять документами": { kk: "Құжаттарды басқару", en: "Manage documents" },
   "Дополнительные контакты и прежние адреса": { kk: "Қосымша байланыстар және бұрынғы мекенжайлар", en: "Additional contacts and previous addresses" },
   "Документы, удостоверяющие личность, не внесены": { kk: "Жеке басын куәландыратын құжаттар енгізілмеген", en: "No identity documents added" },

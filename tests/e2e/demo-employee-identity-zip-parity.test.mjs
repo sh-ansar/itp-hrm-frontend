@@ -44,10 +44,12 @@ test('ZIP personal tab: contact order, accessible legacy addresses and normalize
       const cards = documentSection.locator('.employee-identity-record')
       assert.equal(await cards.count(), 2)
       assert.equal(await cards.locator('.employee-identity-primary').count(), 1)
-      assert.ok((await cards.first().innerText()).includes('QA-DOC-PRIMARY-001'))
-      assert.ok((await cards.nth(1).innerText()).includes('QA-DOC-SECONDARY-002'))
+      assert.ok((await cards.first().innerText()).includes('••••-001'), 'Primary document number is masked')
+      assert.ok((await cards.nth(1).innerText()).includes('••••-002'), 'Secondary document number is masked')
       assert.equal(await documentSection.getByText('ID450000', { exact: true }).count(), 0,
         'Never project stale legacy document numbers when normalized data is available')
+      assert.equal(await cards.getByText('QA-DOC-PRIMARY-001', { exact: true }).count(), 0)
+      assert.equal(await cards.getByText('QA-DOC-SECONDARY-002', { exact: true }).count(), 0)
       assert.equal(await cards.locator('[data-field-state="editable"]').count(), 0,
         'Demo without private-profile write permission may only display sensitive documents')
       assert.equal(await cards.locator('button').count(), 0)

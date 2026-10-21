@@ -2,7 +2,7 @@
 import { publicAsset } from '../utils/publicAsset'
 import { useWorkspaceI18n } from '../composables/useWorkspaceI18n'
 import { computed, onMounted, ref, watch } from 'vue'
-import { LockKeyhole, Pencil, Plus } from 'lucide-vue-next'
+import { ChevronDown, LockKeyhole, Pencil, Plus } from 'lucide-vue-next'
 import { useRoute } from 'vue-router'
 import EmployeeProfileSection from '../components/EmployeeProfileSection.vue'
 import EmployeePrivateProfileEditor from '../components/EmployeePrivateProfileEditor.vue'
@@ -22,7 +22,7 @@ import EmployeeRecordForm from '../components/EmployeeRecordForm.vue'
 import EmployeeContractEditor from '../components/EmployeeContractEditor.vue'
 import BaseDialog from '../components/ui/BaseDialog.vue'
 import BaseViewTabs from '../components/ui/BaseViewTabs.vue'
-import { getEmployee, listEmployeeContracts, type EmployeeAssignment, type EmployeeContract, type EmployeeDetail, type EmployeeReferenceProfile, type EmployeePrivateSection, type EmployeePrivateRecordSection, type ProfileEditRow, type ProfileSection } from '../api/personnel'
+import { getEmployee, listEmployeeContracts, type EmployeeAssignment, type EmployeeContract, type EmployeeDetail, type EmployeeIdentityDocument, type EmployeeReferenceProfile, type EmployeePrivateSection, type EmployeePrivateRecordSection, type ProfileEditRow, type ProfileSection } from '../api/personnel'
 import { localTodayISO } from '../utils/localDate'
 import { useUiFormatters } from '../composables/useUiFormatters'
 
@@ -48,6 +48,7 @@ const contractWritesEnabled = ref(false)
 const contractEditorOpen = ref(false)
 const editingContract = ref<EmployeeContract | null>(null)
 const activeSection = ref('personal')
+const legacyContactsOpen = ref(false)
 const sectionTabs = computed(() => [
   ...(profile.value?.meta.extended_sections_visible ? [
     { id: 'personal', label: 'Личные данные' },
@@ -187,7 +188,6 @@ function ageFromBirthDate(value: string | null | undefined): string {
 
 const personalFields = computed<EmployeeDisplayField[]>(() => [
   { label: 'ИИН', value: reference.value?.personal.iin, editGroup: 'private-personal' },
-  { label: 'Логин', value: reference.value?.personal.login, editGroup: 'private-personal' },
   { label: 'Дата рождения', value: formatDate(profile.value?.data.birth_date), editGroup: 'employee' },
   { label: 'Возраст', value: ageFromBirthDate(profile.value?.data.birth_date) },
   { label: 'Пол', value: genderLabel.value, editGroup: 'employee' },
@@ -196,10 +196,17 @@ const personalFields = computed<EmployeeDisplayField[]>(() => [
   { label: 'Семейное положение', value: reference.value?.personal.marital_status, editGroup: 'private-personal' },
   { label: 'Табельный номер', value: profile.value?.data.personnel_number, editGroup: 'employee' },
 ])
+// The ZIP puts login, email and telephone on one row, followed by repeatable addresses.
 const contactFields = computed<EmployeeDisplayField[]>(() => [
+  { label: 'Логин', value: reference.value?.personal.login, editGroup: 'private-personal' },
   { label: 'Email', value: profile.value?.data.email, editGroup: 'employee' },
   { label: 'Телефон', value: profile.value?.data.phone, editGroup: 'employee' },
-  { label: 'Адрес проживания', value: reference.value?.personal.residence_address ?? profile.value?.data.address, wide: true, editGroup: reference.value?.personal.residence_address ? 'private-personal' : 'employee' },
+])
+// Old address strings remain available, but must not masquerade as entries in
+// the newer, revision-checked address collection.
+const legacyContactFields = computed<EmployeeDisplayField[]>(() => [
+  { label: 'Адрес проживания', value: reference.value?.personal.residence_address ?? profile.value?.data.address, wide: true,
+    editGroup: reference.value?.personal.residence_address ? 'private-personal' : 'employee' },
   { label: 'Адрес регистрации', value: reference.value?.personal.registration_address, wide: true, editGroup: 'private-personal' },
   { label: 'Подъезд', value: reference.value?.personal.address_entrance, editGroup: 'private-personal' },
   { label: 'Этаж', value: reference.value?.personal.address_floor, editGroup: 'private-personal' },
@@ -207,11 +214,38 @@ const contactFields = computed<EmployeeDisplayField[]>(() => [
   { label: 'Контактное лицо', value: reference.value?.personal.emergency_contact_name, editGroup: 'private-personal' },
   { label: 'Телефон контактного лица', value: reference.value?.personal.emergency_contact_phone, editGroup: 'private-personal' },
 ])
-const documentFields = computed<EmployeeDisplayField[]>(() => [
+const hasLegacyContactValues = computed(() => legacyContactFields.value.some(field =>
+  field.value !== null && field.value !== undefined && field.value !== '' && field.value !== '—'))
+const hasNormalizedAddressStore = computed(() =>
+  Array.isArray(profile.value?.private_profile?.addresses)
+  || profile.value?.meta.private_address_writes_enabled === true)
+
+// Existing normalized documents take precedence over old flat reference fields;
+// edited/archived records must never appear to "revert" to stale legacy data.
+const hasNormalizedIdentityStore = computed(() =>
+  Array.isArray(profile.value?.private_profile?.identity_documents))
+const normalizedIdentities = computed(() => [...(profile.value?.private_profile?.identity_documents ?? [])]
+  .sort((left,right) => Number(right.is_primary) - Number(left.is_primary)))
+const identityPersonFields = computed<EmployeeDisplayField[]>(() => [
   { label: 'Национальность', value: reference.value?.personal.nationality, editGroup: 'private-personal' },
+  { label: 'Гражданство', value: reference.value?.personal.citizenship, editGroup: 'private-personal' },
+])
+function normalizedIdentityFields(identity: EmployeeIdentityDocument): EmployeeDisplayField[] {
+  return [
+    { label: 'Персональный номер', value: identity.personal_number, editGroup: 'identity' },
+    { label: 'Страна выдачи', value: identity.country_of_issue, editGroup: 'identity' },
+    { label: 'Тип документа', value: identity.type, editGroup: 'identity' },
+    { label: 'Номер документа', value: identity.number, editGroup: 'identity' },
+    { label: 'Кем выдан', value: identity.issued_by, wide: true, editGroup: 'identity' },
+    { label: 'Дата выдачи', value: formatDate(identity.issued_on), editGroup: 'identity' },
+    { label: 'Действителен до', value: formatDate(identity.expires_on), editGroup: 'identity' },
+  ]
+}
+// Flat reference data is shown only for older backends without a normalized
+// document collection. Attachments are informative until a real file endpoint exists.
+const legacyDocumentFields = computed<EmployeeDisplayField[]>(() => [
   { label: 'Персональный номер', value: reference.value?.identity_document.personal_number, editGroup: 'identity' },
   { label: 'Страна выдачи', value: reference.value?.identity_document.country_of_issue, editGroup: 'identity' },
-  { label: 'Гражданство', value: reference.value?.personal.citizenship, editGroup: 'private-personal' },
   { label: 'Тип документа', value: reference.value?.identity_document.type, editGroup: 'identity' },
   { label: 'Номер документа', value: reference.value?.identity_document.number, editGroup: 'identity' },
   { label: 'Кем выдан', value: reference.value?.identity_document.issued_by, wide: true, editGroup: 'identity' },

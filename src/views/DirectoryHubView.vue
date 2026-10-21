@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
-import { ChevronDown, Plus, Search } from 'lucide-vue-next'
+import { ChevronDown, ChevronRight, FolderTree, Plus, Search } from 'lucide-vue-next'
 import { publicAsset } from '../utils/publicAsset'
 import BaseActionDropdown from '../components/ui/BaseActionDropdown.vue'
 import BaseButton from '../components/ui/BaseButton.vue'
@@ -82,7 +82,8 @@ const search=ref('')
 const statusFilter=ref('all')
 const editorOpen=ref(false)
 const editing=ref<DirectoryEntry|null>(null)
-const draft=ref({code:'',name:'',category:'',unit:'',value:'',status:'active' as DirectoryStatus})
+const draft=ref({code:'',name:'',parent_id:null as string|null,category:'',unit:'',value:'',status:'active' as DirectoryStatus})
+const expandedCategories=ref<string[]>([])
 
 const currentGroups=computed(()=>groups[activeSection.value]??[])
 const currentGroup=computed(()=>currentGroups.value.find(x=>x.id===activeGroup.value)??null)
@@ -92,6 +93,33 @@ const visibleRows=computed(()=>records.value.filter(row=>{
   return (statusFilter.value==='all'||row.status===statusFilter.value)
     &&(!q||[row.code,row.name,row.category??'',row.unit??'',row.value??''].join(' ').toLowerCase().includes(q))
 }))
+const hierarchyRows=computed(()=>{
+  const lookup=new Map(records.value.map(row=>[row.id,row]))
+  const groups=new Map<string,DirectoryEntry[]>()
+  for(const item of visibleRows.value){
+    const parent=item.parent_id && lookup.has(item.parent_id)?item.parent_id:''
+    const bucket=groups.get(parent)??[]
+    bucket.push(item);groups.set(parent,bucket)
+  }
+  const results:Array<{row:DirectoryEntry;level:number;children:boolean}>=[]
+  const seen=new Set<string>()
+  function walk(parent:string,depth:number){
+    for(const row of groups.get(parent)??[]){
+      if(seen.has(row.id))continue
+      seen.add(row.id)
+      const children=records.value.some(child=>child.parent_id===row.id)
+      results.push({row,level:depth,children})
+      if(expandedCategories.value.includes(row.id)||search.value.trim())walk(row.id,depth+1)
+    }
+  }
+  walk('',0)
+  // Search results whose parents are hidden must remain accessible.
+  if(search.value.trim())for(const row of visibleRows.value)if(!seen.has(row.id))results.push({row,level:0,children:false})
+  return results
+})
+const tariffTreeColumns=[{key:'name',label:'Наименование'},{key:'code',label:'Код'},{key:'unit',label:'Единица'},{key:'value',label:'Значение'},{key:'status',label:'Статус'},{key:'actions',label:'Действия'}]
+const parentOptions=computed(()=>[{id:'',name:'Без родительской группы'},...records.value.filter(row=>row.id!==editing.value?.id).map(row=>({id:row.id,name:row.name}))])
+function toggleCategory(id:string){expandedCategories.value=expandedCategories.value.includes(id)?expandedCategories.value.filter(x=>x!==id):[...expandedCategories.value,id]}
 const filterChips=computed(()=>[
   ...(search.value?[{id:'search',label:'Поиск: '+search.value}]:[]),
   ...(statusFilter.value!=='all'?[{id:'status',label:'Статус: '+(statusOptions.find(x=>x.id===statusFilter.value)?.name??statusFilter.value)}]:[]),
@@ -123,12 +151,12 @@ function toggleGroup(id:string){if(activeGroup.value===id)return;activeGroup.val
 function clearFilter(id:string){if(id==='search')search.value='';if(id==='status')statusFilter.value='all'}
 function clearFilters(){search.value='';statusFilter.value='all'}
 function recordCount(groupId:string){return groupId===activeGroup.value?records.value.length:(groupCounts.value[groupId]??0)}
-function openCreate(){editing.value=null;draft.value={code:'',name:'',category:currentGroup.value?.label??'',unit:'',value:'',status:'active'};editorOpen.value=true;success.value=''}
-function openEdit(row:DirectoryEntry){editing.value=row;draft.value={code:row.code,name:row.name,category:row.category??'',unit:row.unit??'',value:row.value??'',status:row.status};editorOpen.value=true;success.value=''}
+function openCreate(parentId:string|null=null){editing.value=null;draft.value={code:'',name:'',parent_id:parentId,category:currentGroup.value?.label??'',unit:'',value:'',status:'active'};editorOpen.value=true;success.value=''}
+function openEdit(row:DirectoryEntry){editing.value=row;draft.value={code:row.code,name:row.name,parent_id:row.parent_id??null,category:row.category??'',unit:row.unit??'',value:row.value??'',status:row.status};editorOpen.value=true;success.value=''}
 async function saveRecord(){
   if(!company.value||!currentGroup.value||saving.value)return
   saving.value=true;error.value='';success.value=''
-  const payload={code:draft.value.code.trim(),name:draft.value.name.trim(),category:draft.value.category.trim()||null,unit:draft.value.unit.trim()||null,value:draft.value.value.trim()||null,status:draft.value.status}
+  const payload={parent_id:draft.value.parent_id||null,code:draft.value.code.trim(),name:draft.value.name.trim(),category:draft.value.category.trim()||null,unit:draft.value.unit.trim()||null,value:draft.value.value.trim()||null,status:draft.value.status}
   try{
     if(editing.value)await updateDirectoryEntry(company.value,currentGroup.value.id,editing.value.id,editing.value.revision,payload)
     else await createDirectoryEntry(company.value,currentGroup.value.id,payload)
@@ -143,7 +171,7 @@ async function removeRecord(row:DirectoryEntry){
   catch(cause){error.value=cause instanceof Error?cause.message:'Не удалось удалить запись'}
 }
 function rowAction(id:string,row:DirectoryEntry){if(id==='edit')openEdit(row);if(id==='delete')void removeRecord(row)}
-watch([company,activeGroup],()=>void loadRecords())
+watch([company,activeGroup],()=>{expandedCategories.value=[];void loadRecords()})
 onMounted(async()=>{try{await loadCompanies();if(company.value)await loadRecords()}catch(cause){error.value=cause instanceof Error?cause.message:'Не удалось загрузить справочники'}})
 </script>
 
@@ -189,11 +217,26 @@ onMounted(async()=>{try{await loadCompanies();if(company.value)await loadRecords
         <div class="directory-toolbar">
           <label class="directory-search"><Search :size="16" aria-hidden="true" /><input v-model="search" type="search" placeholder="Поиск по названию или коду" aria-label="Поиск по справочнику" /></label>
           <BaseSelectField v-model="statusFilter" label="Статус" :options="statusOptions" />
-          <BaseButton :disabled="!writesEnabled" @click="openCreate"><Plus :size="16" /> Добавить запись</BaseButton>
+          <BaseButton :disabled="!writesEnabled" @click="openCreate()"><Plus :size="16" /> Добавить запись</BaseButton>
         </div>
         <BaseFilterSummary :items="filterChips" label="Активные фильтры" @remove="clearFilter" @clear="clearFilters" />
         <BaseLoadingState v-if="loading" label="Загрузка справочника" />
-        <div class="directory-table-scroll">
+        <div v-if="activeGroup==='tariff-types' && !loading && visibleRows.length" class="directory-tariff-tree" role="tree" aria-label="Иерархия тарифов">
+          <div v-for="item in hierarchyRows" :key="item.row.id" class="tariff-tree-row" role="treeitem"
+            :aria-level="item.level+1" :aria-expanded="item.children?expandedCategories.includes(item.row.id):undefined"
+            :style="{paddingInlineStart:(12+item.level*22)+'px'}">
+            <button v-if="item.children" class="tariff-expand" type="button" :aria-label="'Раскрыть: '+item.row.name" @click="toggleCategory(item.row.id)">
+              <ChevronDown v-if="expandedCategories.includes(item.row.id)" :size="16"/><ChevronRight v-else :size="16"/>
+            </button>
+            <FolderTree v-else :size="15" class="tariff-leaf-icon"/>
+            <span class="tariff-name">{{ item.row.name }}</span>
+            <span class="tariff-code">{{ item.row.code }}</span>
+            <span class="tariff-status">{{ item.row.status==='active'?'Активно':item.row.status==='draft'?'Черновик':'Неактивно' }}</span>
+            <BaseButton v-if="writesEnabled" variant="secondary" @click="openEdit(item.row)">Изменить</BaseButton>
+            <BaseButton v-if="writesEnabled" variant="secondary" @click="openCreate(item.row.id)"><Plus :size="14"/> Добавить</BaseButton>
+          </div>
+        </div>
+        <div v-if="activeGroup!=='tariff-types'" class="directory-table-scroll">
           <BaseDataTable :rows="visibleRows" :columns="columns" row-key="id" density="compact" :caption="currentGroup.label"
             empty-title="Записей нет" empty-description="Добавьте первую запись или измените условия поиска.">
             <template #cell-value="{value}">{{ value || '—' }}</template>
@@ -215,6 +258,8 @@ onMounted(async()=>{try{await loadCompanies();if(company.value)await loadRecords
       <form class="directory-create-form" @submit.prevent="saveRecord">
         <BaseFormField v-model="draft.code" label="Код" required />
         <BaseFormField v-model="draft.name" label="Наименование" required />
+        <BaseSelectField v-if="activeGroup==='tariff-types'" :model-value="draft.parent_id??''" @update:model-value="draft.parent_id=$event||null"
+          label="Родительская группа" :options="parentOptions" />
         <BaseFormField v-model="draft.category" label="Категория" />
         <BaseFormField v-model="draft.unit" label="Единица" />
         <BaseFormField v-model="draft.value" label="Значение" />
@@ -230,6 +275,16 @@ onMounted(async()=>{try{await loadCompanies();if(company.value)await loadRecords
 
 <style scoped>
 .directory-hub{display:grid;grid-template-columns:minmax(0,1fr);gap:14px;min-width:0;max-width:100%}
+.directory-tariff-tree{width:100%;min-width:0;border:1px solid var(--color-stroke);border-radius:8px;overflow-x:auto}
+.tariff-tree-row{display:flex;align-items:center;gap:10px;min-width:650px;min-height:43px;padding:6px 12px;border-bottom:1px solid var(--color-stroke);font-size:12px}
+.tariff-tree-row:last-child{border-bottom:0}
+.tariff-tree-row:hover{background:var(--color-hover)}
+.tariff-name{flex:1;min-width:140px;color:var(--color-text)}
+.tariff-code{width:110px;flex:none;color:var(--color-muted)}
+.tariff-status{width:80px;flex:none;color:var(--color-muted)}
+.tariff-expand{display:grid;place-items:center;flex:none;width:23px;height:23px;border:0;background:transparent;color:var(--color-muted);cursor:pointer}
+.tariff-leaf-icon{color:var(--color-muted);flex:none}
+.tariff-tree-row :deep(.base-button){font-weight:500;font-size:11px;min-height:27px;height:27px;padding:4px 8px}
 .directory-sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap;border:0}
 .directory-breadcrumb{display:flex;align-items:center;gap:9px;min-height:22px;color:var(--color-muted);font-size:12px}
 .directory-breadcrumb img{width:15px;height:15px}.directory-breadcrumb strong{color:var(--color-text);font-weight:500}

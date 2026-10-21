@@ -133,15 +133,24 @@ async function loadCompanies(){
   const response=await listCompanies();companies.value=response.data
   if(!companies.value.some(x=>x.id===company.value))company.value=companies.value[0]?.id??''
 }
+let directoryRequest=0
 async function loadRecords(){
-  if(!company.value||!activeGroup.value)return
+  const request=++directoryRequest
+  const companyId=company.value
+  const groupId=activeGroup.value
+  records.value=[]
+  writesEnabled.value=false
+  if(!companyId||!groupId){loading.value=false;return}
   loading.value=true;error.value=''
   try{
-    const response=await listDirectoryEntries(company.value,activeGroup.value)
+    const response=await listDirectoryEntries(companyId,groupId)
+    if(request!==directoryRequest||companyId!==company.value||groupId!==activeGroup.value)return
     records.value=response.data;writesEnabled.value=response.meta.writes_enabled
-    groupCounts.value={...groupCounts.value,[activeGroup.value]:response.data.length}
-  }catch(cause){records.value=[];error.value=cause instanceof Error?cause.message:'Не удалось загрузить справочник'}
-  finally{loading.value=false}
+    groupCounts.value={...groupCounts.value,[groupId]:response.data.length}
+  }catch(cause){
+    if(request!==directoryRequest)return
+    records.value=[];error.value=cause instanceof Error?cause.message:'Не удалось загрузить справочник'
+  }finally{if(request===directoryRequest)loading.value=false}
 }
 function selectSection(id:string){
   if(!groups[id])return
@@ -171,7 +180,7 @@ async function removeRecord(row:DirectoryEntry){
   catch(cause){error.value=cause instanceof Error?cause.message:'Не удалось удалить запись'}
 }
 function rowAction(id:string,row:DirectoryEntry){if(id==='edit')openEdit(row);if(id==='delete')void removeRecord(row)}
-watch([company,activeGroup],()=>{expandedCategories.value=[];void loadRecords()})
+watch([company,activeGroup],()=>{expandedCategories.value=[];editorOpen.value=false;success.value='';void loadRecords()})
 onMounted(async()=>{try{await loadCompanies();if(company.value)await loadRecords()}catch(cause){error.value=cause instanceof Error?cause.message:'Не удалось загрузить справочники'}})
 </script>
 

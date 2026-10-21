@@ -940,7 +940,7 @@ onMounted(load)
 
     <BaseDialog :open="identityEditOpen" :title="tr('Основные данные сотрудника')" @close="identityEditOpen = false">
       <EmployeeRecordForm
-        v-if="profile"
+        v-if="identityEditOpen && profile?.meta.employee_writes_enabled"
         :key="profile.data.id + ':' + profile.data.revision"
         :company-id="String(route.params.company)"
         :edit="profile.data"

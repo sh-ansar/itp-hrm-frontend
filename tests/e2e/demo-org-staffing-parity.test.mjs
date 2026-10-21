@@ -32,14 +32,26 @@ test('organization and staffing match the prototype KPI/drawer structure respons
       }
 
       const diagram = page.getByRole('region', { name: 'Схема подразделений компании' })
-      if (await diagram.count()) {
-        const scroll = await diagram.evaluate(el => ({
-          overflowX: getComputedStyle(el).overflowX,
-          overflowY: getComputedStyle(el).overflowY,
-        }))
-        assert.equal(scroll.overflowX, 'auto')
-        assert.ok(scroll.overflowY === 'clip' || scroll.overflowY === 'hidden')
-      }
+      await diagram.locator('.chart-company').waitFor()
+      const companyTitle = await diagram.locator('.chart-company-title strong').innerText()
+      assert.ok(companyTitle.trim().length > 0, 'ZIP chart must start with a real company name')
+      assert.ok(await diagram.locator('.chart-company-metrics > span').count() > 0,
+        'Company root uses staffing metrics from the company-scoped API')
+      const topDepartments = diagram.locator('.tree-branch--level-0 > .tree-children > .tree-branch')
+      assert.ok(await topDepartments.count() > 0, 'First department tier should be visible without expanding all')
+      const deeperBranches = diagram.locator('.tree-branch--level-1 > .tree-children')
+      assert.equal(await deeperBranches.count(), 0, 'Deeper departments start collapsed')
+      const expandAll = page.getByRole('checkbox', { name: 'Раскрыть нижестоящий уровень' })
+      await expandAll.check()
+      assert.ok(await deeperBranches.count() > 0, 'Global expansion reveals further departments')
+      await expandAll.uncheck()
+      assert.equal(await deeperBranches.count(), 0, 'Global collapse restores the compact diagram')
+      const scroll = await diagram.evaluate(el => ({
+        overflowX: getComputedStyle(el).overflowX,
+        overflowY: getComputedStyle(el).overflowY,
+      }))
+      assert.equal(scroll.overflowX, 'auto')
+      assert.ok(scroll.overflowY === 'clip' || scroll.overflowY === 'hidden')
 
       const addDepartment = page.getByRole('button', { name: /Добавить подразделение/ })
       if (await addDepartment.count()) {

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Pencil } from 'lucide-vue-next'
 import BaseButton from './ui/BaseButton.vue'
+import type { EmployeeFieldEditGroup } from '../types/employeeFields'
 import { useWorkspaceI18n } from '../composables/useWorkspaceI18n'
 
 const { tr } = useWorkspaceI18n()
@@ -13,7 +14,6 @@ const { tr } = useWorkspaceI18n()
  * Edits happen only through the existing domain API forms. Do not turn projections,
  * calculations or sensitive fields into locally mutable inputs.
  */
-export type EmployeeFieldEditGroup = 'employee' | 'private-personal' | 'private-military' | 'identity' | 'contract'
 interface EmployeeDisplayField {
   label: string
   value: string | number | null | undefined

@@ -35,6 +35,7 @@ test('organization and staffing match the prototype KPI/drawer structure respons
       await diagram.locator('.chart-company').waitFor()
       const companyTitle = await diagram.locator('.chart-company-title strong').innerText()
       assert.ok(companyTitle.trim().length > 0, 'ZIP chart must start with a real company name')
+      await diagram.locator('.chart-company-metrics > span').first().waitFor()
       assert.ok(await diagram.locator('.chart-company-metrics > span').count() > 0,
         'Company root uses staffing metrics from the company-scoped API')
       const topDepartments = diagram.locator('.tree-branch--level-0 > .tree-children > .tree-branch')

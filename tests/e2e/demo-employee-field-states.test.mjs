@@ -24,7 +24,15 @@ test('employee card distinguishes actionable fields from non-editable projection
       await familyName.getByRole('button', { name: 'Изменить поле: Фамилия' }).click()
       const identityEditor = page.getByRole('dialog', { name: 'Основные данные сотрудника' })
       await identityEditor.waitFor()
-      await identityEditor.getByLabel('Фамилия', { exact: true }).waitFor()
+      const identityDom = await identityEditor.evaluate(dialog => ({
+        open: dialog.open,
+        inputs: dialog.querySelectorAll('input').length,
+        labels: [...dialog.querySelectorAll('label')].map(label => label.textContent?.trim()),
+        forms: dialog.querySelectorAll('form').length,
+        content: dialog.textContent?.slice(0,500),
+      }))
+      assert.ok(identityDom.inputs >= 4 && identityDom.labels.some(label => label === 'Фамилия'),
+        'An editable name must open a populated employee form: ' + JSON.stringify(identityDom))
       await identityEditor.getByRole('button', { name: 'Отмена', exact: true }).click()
       await identityEditor.waitFor({ state: 'hidden' })
       const age = page.locator('.employee-data-field').filter({ has: page.locator('.employee-data-label').getByText('Возраст', { exact: true }) })

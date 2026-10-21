@@ -92,6 +92,26 @@ test('HR creates and edits an employment contract and registry expiry KPI become
     await page.goto(`/employees/${company}/${employee}?tab=employment`)
     const contractRow = page.getByRole('row').filter({ hasText: 'E2E-TD-001' })
     await contractRow.waitFor()
+
+    // ZIP profile semantics: every persisted contract input is genuinely editable
+    // via an authorized, revision-checked editor; absence of a contract is view-only.
+    const currentFields = page.locator('.employee-profile-section')
+      .filter({ has: page.getByRole('heading', { name: 'Договор и приём', exact: true }) })
+    for (const name of ['Номер договора', 'Тип договора', 'Дата подписания',
+      'Действует с', 'Действует до', 'Испытание до', 'Основание', 'Вид занятости']) {
+      const field = currentFields.locator('.employee-data-field')
+        .filter({ has: page.locator('.employee-data-label').getByText(name, { exact: true }) })
+      assert.equal(await field.getAttribute('data-field-state'), 'editable',
+        'Persisted contract field should be writable: ' + name)
+      assert.equal(await field.locator('button').count(), 1)
+    }
+    await currentFields.getByRole('button', { name: 'Изменить поле: Действует до' }).click()
+    const fromField = page.getByRole('dialog', { name: 'Редактировать трудовой договор' })
+    await fromField.waitFor()
+    assert.equal(await fromField.getByLabel(/^Действует до(?: \\*)?$/).inputValue(), expiresOn)
+    await fromField.getByRole('button', { name: 'Отмена', exact: true }).click()
+    await fromField.waitFor({ state: 'hidden' })
+
     await contractRow.getByRole('button', { name: 'Изменить', exact: true }).click()
 
     dialog = page.getByRole('dialog', { name: 'Редактировать трудовой договор' })

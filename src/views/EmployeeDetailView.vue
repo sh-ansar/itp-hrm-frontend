@@ -36,6 +36,9 @@ type EmployeeDisplayField = { label: string; value: string | number | null | und
 const route = useRoute()
 const fmt = useUiFormatters()
 const profile = ref<EmployeeDetail | null>(null)
+const historyRows = computed(() => import.meta.env.VITE_DEMO_MODE === 'true'
+  ? (profile.value?.history ?? profile.value?.reference_profile?.history ?? [])
+  : (profile.value?.history ?? []))
 const loading = ref(false)
 const error = ref('')
 const editing = ref<{ section: ProfileSection; record: ProfileEditRow } | null>(null)
@@ -1011,7 +1014,7 @@ onMounted(load)
         </template>
 
         <EmployeeProfileSection v-if="activeSection === 'history'" :title="tr('История изменений')">
-          <BaseDataTable density="compact" :rows="profile.history ?? reference?.history ?? []" :columns="historyColumns" row-key="id"
+          <BaseDataTable density="compact" :rows="historyRows" :columns="historyColumns" row-key="id"
             :caption="tr('История изменений карточки сотрудника')"
             :empty-title="tr('История изменений пуста')"
             :empty-description="tr('Для карточки ещё нет доступных событий.')">

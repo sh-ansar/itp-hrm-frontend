@@ -11,6 +11,7 @@ import EmployeePhoto from '../components/EmployeePhoto.vue'
 import EmployeeDocumentsPanel from '../components/EmployeeDocumentsPanel.vue'
 import EmployeeDataGrid from '../components/EmployeeDataGrid.vue'
 import EmployeeMonthWorktime from '../components/EmployeeMonthWorktime.vue'
+import EmployeeTimesheetHistory from '../components/EmployeeTimesheetHistory.vue'
 import EmployeeAddressBook from '../components/EmployeeAddressBook.vue'
 import EmployeeFamilyList from '../components/EmployeeFamilyList.vue'
 import type { EmployeeFieldEditGroup } from '../types/employeeFields'
@@ -954,13 +955,8 @@ onMounted(load)
             <EmployeeMonthWorktime :company-id="String(route.params.company)" :employee-id="profile.data.id" />
           </EmployeeProfileSection>
 
-          <EmployeeProfileSection v-if="reference?.timesheet_history?.length" :title="tr('История табелей')">
-            <BaseDataTable density="compact" :rows="reference?.timesheet_history ?? []"
-              :columns="timesheetHistoryColumns" row-key="id"
-              :caption="tr('История табелей сотрудника')"
-              :empty-title="tr('История табелей пуста')"
-              :empty-description="tr('Для сотрудника пока нет архивных табелей.')">
-            </BaseDataTable>
+          <EmployeeProfileSection :title="tr('История табелей')">
+            <EmployeeTimesheetHistory :company-id="String(route.params.company)" :employee-id="profile.data.id" />
           </EmployeeProfileSection>
         </template>
 

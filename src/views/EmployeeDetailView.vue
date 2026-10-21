@@ -11,6 +11,7 @@ import EmployeePhoto from '../components/EmployeePhoto.vue'
 import EmployeeDocumentsPanel from '../components/EmployeeDocumentsPanel.vue'
 import EmployeeDataGrid from '../components/EmployeeDataGrid.vue'
 import EmployeeAddressBook from '../components/EmployeeAddressBook.vue'
+import EmployeeFamilyList from '../components/EmployeeFamilyList.vue'
 import type { EmployeeFieldEditGroup } from '../types/employeeFields'
 import BaseButton from '../components/ui/BaseButton.vue'
 import BaseDataTable from '../components/ui/BaseDataTable.vue'
@@ -41,6 +42,19 @@ const assignmentTransitioning = ref<EmployeeAssignment | null>(null)
 const identityEditOpen = ref(false)
 const privateEditorSection = ref<EmployeePrivateSection | null>(null)
 const privateRecordsSection = ref<EmployeePrivateRecordSection | null>(null)
+const focusedFamilyId = ref<string | null>(null)
+const createFamilyOnOpen = ref(false)
+function openFamilyEditor(recordId: string | null = null, create = false) {
+  if (!profile.value?.meta.private_profile_writes_enabled || profile.value.meta.private_family_truncated) return
+  focusedFamilyId.value = recordId
+  createFamilyOnOpen.value = create
+  privateRecordsSection.value = 'family'
+}
+function closePrivateRecords() {
+  privateRecordsSection.value = null
+  focusedFamilyId.value = null
+  createFamilyOnOpen.value = false
+}
 const assignmentCreateOpen = ref(false)
 const profileCreateOpen = ref(false)
 const contracts = ref<EmployeeContract[]>([])
@@ -193,7 +207,6 @@ const personalFields = computed<EmployeeDisplayField[]>(() => [
   { label: 'Пол', value: genderLabel.value, editGroup: 'employee' },
   { label: 'Национальность', value: reference.value?.personal.nationality, editGroup: 'private-personal' },
   { label: 'Гражданство', value: reference.value?.personal.citizenship, editGroup: 'private-personal' },
-  { label: 'Семейное положение', value: reference.value?.personal.marital_status, editGroup: 'private-personal' },
   { label: 'Табельный номер', value: profile.value?.data.personnel_number, editGroup: 'employee' },
 ])
 // The ZIP puts login, email and telephone on one row, followed by repeatable addresses.
@@ -263,12 +276,9 @@ const militaryFields = computed<EmployeeDisplayField[]>(() => [
   { label: 'Военный билет', value: reference.value?.military?.document_reference, wide: true, editGroup: 'private-military' },
   { label: 'Общий комментарий', value: reference.value?.military?.comment, wide: true, editGroup: 'private-military' },
 ])
-const familyColumns = [
-  { key: 'relationship', label: 'Степень родства' },
-  { key: 'full_name', label: 'ФИО' },
-  { key: 'birth_date', label: 'Дата рождения' },
-  { key: 'document_reference', label: 'Документ' },
-]
+const maritalStatusFields = computed<EmployeeDisplayField[]>(() => [
+  { label: 'Семейное положение', value: reference.value?.personal.marital_status, editGroup: 'private-personal' },
+])
 
 const organizationPositionFields = computed<EmployeeDisplayField[]>(() => [
   { label: 'Компания', value: reference.value?.organization?.company_name },
@@ -761,13 +771,13 @@ onMounted(load)
         </EmployeeProfileSection>
         <EmployeeProfileSection :title="tr('Семейные данные')">
           <template v-if="profile.meta.private_profile_writes_enabled" #actions>
-            <BaseButton variant="secondary" @click="privateRecordsSection = 'family'">{{ tr('Изменить') }}</BaseButton>
+            <BaseButton variant="secondary" @click="openFamilyEditor()">{{ tr('Изменить') }}</BaseButton>
           </template>
-          <BaseDataTable density="compact" :rows="reference?.family ?? []" :columns="familyColumns" row-key="id"
-            :caption="tr('Сведения о родственниках сотрудника')" :empty-title="tr('Семейные данные не внесены')"
-            :empty-description="tr('Для сотрудника пока нет доступных сведений о родственниках.')">
-            <template #cell-birth_date="{ value }">{{ formatDate(typeof value === 'string' ? value : null) }}</template>
-          </BaseDataTable>
+          <EmployeeDataGrid :fields="maritalStatusFields" :editable-groups="editableFieldGroups" @edit="openFieldEditor" />
+          <EmployeeFamilyList :members="profile.private_profile?.family ?? reference?.family ?? []"
+            :writable="Boolean(profile.meta.private_profile_writes_enabled)"
+            :truncated="Boolean(profile.meta.private_family_truncated)"
+            @create="openFamilyEditor(null, true)" @edit="openFamilyEditor($event)" />
         </EmployeeProfileSection>
         <EmployeeProfileSection :title="tr('Воинский учёт')">
           <template v-if="profile.meta.private_profile_writes_enabled" #actions>
@@ -1072,11 +1082,12 @@ onMounted(load)
       :section="privateRecordsSection" :family="profile.private_profile?.family ?? []"
       :identities="profile.private_profile?.identity_documents ?? []"
       :education="profile.private_profile?.education ?? []"
+      :initial-family-id="focusedFamilyId" :create-family-on-open="createFamilyOnOpen"
       :truncated="privateRecordsSection === 'family' ? profile.meta.private_family_truncated
         : privateRecordsSection === 'education' ? profile.meta.private_education_truncated
         : profile.meta.private_identities_truncated"
-      @close="privateRecordsSection = null" @saved="privateRecordsSection = null; load()"
-      @refresh="privateRecordsSection = null; load()" />
+      @close="closePrivateRecords()" @saved="closePrivateRecords(); load()"
+      @refresh="closePrivateRecords(); load()" />
   </section>
 </template>
 

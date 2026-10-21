@@ -616,7 +616,7 @@ onMounted(load)
         </div>
         <div class="identity-fields">
           <div class="identity-fields-top">
-            <span class="status-toggle" :class="{ 'status-toggle--inactive': !currentAssignment }"><span class="status-toggle-dot"></span>{{ currentAssignment ? tr('Карточка активна') : employmentStatus }}</span>
+            <span class="status-toggle" role="status" :class="{ 'status-toggle--inactive': !currentAssignment }"><span class="status-toggle-dot"></span>{{ currentAssignment ? tr('Карточка активна') : employmentStatus }}</span>
             <div class="personnel-id"><span>{{ tr('Табельный №') }}</span><strong>{{ profile.data.personnel_number }}</strong></div>
           </div>
           <div class="identity-name-fields">
@@ -629,24 +629,28 @@ onMounted(load)
       </div>
 
       <BaseViewTabs v-model="activeSection" :options="sectionTabs" :label="tr('Разделы карточки сотрудника')" />
+      <div class="employee-field-legend" role="note">
+        <span v-if="editableFieldGroups.length"><Pencil :size="13" aria-hidden="true" /> {{ tr('Поле можно изменить') }}</span>
+        <span><LockKeyhole :size="13" aria-hidden="true" /> {{ tr('Информационные поля — только просмотр') }}</span>
+      </div>
       <template v-if="activeSection === 'personal' && profile.meta.extended_sections_visible">
         <EmployeeProfileSection :title="tr('Основные личные данные')">
           <template v-if="profile.meta.private_profile_writes_enabled" #actions>
             <BaseButton variant="secondary" @click="privateEditorSection = 'personal'">{{ tr('Изменить') }}</BaseButton>
           </template>
-          <EmployeeDataGrid :fields="personalFields" />
+          <EmployeeDataGrid :fields="personalFields" :editable-groups="editableFieldGroups" @edit="openFieldEditor" />
         </EmployeeProfileSection>
         <EmployeeProfileSection :title="tr('Контакты и адреса')">
-          <EmployeeDataGrid :fields="contactFields" />
+          <EmployeeDataGrid :fields="contactFields" :editable-groups="editableFieldGroups" @edit="openFieldEditor" />
         </EmployeeProfileSection>
         <EmployeeProfileSection :title="tr('Документы, удостоверяющие личность')">
           <template v-if="profile.meta.private_profile_writes_enabled" #actions>
             <BaseButton variant="secondary" @click="privateRecordsSection = 'identity'">{{ tr('Изменить') }}</BaseButton>
           </template>
-          <EmployeeDataGrid :fields="documentFields" />
+          <EmployeeDataGrid :fields="documentFields" :editable-groups="editableFieldGroups" @edit="openFieldEditor" />
         </EmployeeProfileSection>
         <EmployeeProfileSection :title="tr('Место рождения')">
-          <EmployeeDataGrid :fields="birthPlaceFields" />
+          <EmployeeDataGrid :fields="birthPlaceFields" :editable-groups="editableFieldGroups" @edit="openFieldEditor" />
         </EmployeeProfileSection>
         <EmployeeProfileSection :title="tr('Семейные данные')">
           <template v-if="profile.meta.private_profile_writes_enabled" #actions>
@@ -662,22 +666,22 @@ onMounted(load)
           <template v-if="profile.meta.private_profile_writes_enabled" #actions>
             <BaseButton variant="secondary" @click="privateEditorSection = 'military'">{{ tr('Изменить') }}</BaseButton>
           </template>
-          <EmployeeDataGrid :fields="militaryFields" />
+          <EmployeeDataGrid :fields="militaryFields" :editable-groups="editableFieldGroups" @edit="openFieldEditor" />
         </EmployeeProfileSection>
       </template>
 
       <template v-if="activeSection === 'organization' && profile.meta.extended_sections_visible">
         <EmployeeProfileSection :title="tr('Подразделение и должность')">
-          <EmployeeDataGrid :fields="organizationPositionFields" />
+          <EmployeeDataGrid :fields="organizationPositionFields" :editable-groups="editableFieldGroups" @edit="openFieldEditor" />
         </EmployeeProfileSection>
         <EmployeeProfileSection :title="tr('Объект и место работы')">
-          <EmployeeDataGrid :fields="workplaceFields" />
+          <EmployeeDataGrid :fields="workplaceFields" :editable-groups="editableFieldGroups" @edit="openFieldEditor" />
         </EmployeeProfileSection>
         <EmployeeProfileSection :title="tr('Бригада и руководитель')">
-          <EmployeeDataGrid :fields="teamFields" />
+          <EmployeeDataGrid :fields="teamFields" :editable-groups="editableFieldGroups" @edit="openFieldEditor" />
         </EmployeeProfileSection>
         <EmployeeProfileSection :title="tr('Статус и штатная позиция')">
-          <EmployeeDataGrid :fields="staffingStatusFields" />
+          <EmployeeDataGrid :fields="staffingStatusFields" :editable-groups="editableFieldGroups" @edit="openFieldEditor" />
         </EmployeeProfileSection>
       </template>
       <div v-if="profile.meta.profile_writes_enabled && activeSection === 'development'" class="profile-toolbar">
@@ -696,7 +700,7 @@ onMounted(load)
               </BaseButton>
             </div>
           </template>
-          <EmployeeDataGrid :fields="contractFields" />
+          <EmployeeDataGrid :fields="contractFields" :editable-groups="editableFieldGroups" @edit="openFieldEditor" />
 
           <template v-if="profile.meta.extended_sections_visible">
             <h3 class="assignment-history-title">{{ tr('История трудовых договоров') }}</h3>
@@ -719,7 +723,7 @@ onMounted(load)
         </EmployeeProfileSection>
 
         <EmployeeProfileSection :title="tr('Стаж и трудовой опыт')">
-          <EmployeeDataGrid :fields="seniorityFields" />
+          <EmployeeDataGrid :fields="seniorityFields" :editable-groups="editableFieldGroups" @edit="openFieldEditor" />
           <h3 class="assignment-history-title">{{ tr('История назначений') }}</h3>
           <BaseDataTable density="compact" :columns="columns" :rows="profile.assignments" row-key="id"
             :caption="tr('Доступная история назначений')" :empty-title="tr('Назначений не найдено')"
@@ -746,15 +750,15 @@ onMounted(load)
         </EmployeeProfileSection>
 
         <EmployeeProfileSection :title="tr('Условия труда и персонифицированный учёт')">
-          <EmployeeDataGrid :fields="workingConditionFields" />
+          <EmployeeDataGrid :fields="workingConditionFields" :editable-groups="editableFieldGroups" @edit="openFieldEditor" />
         </EmployeeProfileSection>
 
         <EmployeeProfileSection :title="tr('Совмещение и дополнительные обязанности')">
-          <EmployeeDataGrid :fields="combinationFields" />
+          <EmployeeDataGrid :fields="combinationFields" :editable-groups="editableFieldGroups" @edit="openFieldEditor" />
         </EmployeeProfileSection>
 
         <EmployeeProfileSection :title="tr('Прекращение договора')">
-          <EmployeeDataGrid :fields="terminationFields" />
+          <EmployeeDataGrid :fields="terminationFields" :editable-groups="editableFieldGroups" @edit="openFieldEditor" />
         </EmployeeProfileSection>
       </template>
       <template v-if="profile.meta.extended_sections_visible">
@@ -764,7 +768,7 @@ onMounted(load)
 
         <template v-if="activeSection === 'payroll'">
           <EmployeeProfileSection :title="tr('Условия оплаты')">
-            <EmployeeDataGrid :fields="payConditionFields" />
+            <EmployeeDataGrid :fields="payConditionFields" :editable-groups="editableFieldGroups" @edit="openFieldEditor" />
           </EmployeeProfileSection>
 
           <EmployeeProfileSection :title="tr('Надбавки, компенсации и удержания')">
@@ -778,7 +782,7 @@ onMounted(load)
           </EmployeeProfileSection>
 
           <EmployeeProfileSection :title="tr('Расчётный лист')">
-            <EmployeeDataGrid :fields="payrollSummaryFields" />
+            <EmployeeDataGrid :fields="payrollSummaryFields" :editable-groups="editableFieldGroups" @edit="openFieldEditor" />
           </EmployeeProfileSection>
 
           <EmployeeProfileSection :title="tr('Динамика выплат и отработанных часов')">
@@ -794,17 +798,17 @@ onMounted(load)
           </EmployeeProfileSection>
 
           <EmployeeProfileSection :title="tr('Банковские и налоговые данные')">
-            <EmployeeDataGrid :fields="bankTaxFields" />
+            <EmployeeDataGrid :fields="bankTaxFields" :editable-groups="editableFieldGroups" @edit="openFieldEditor" />
           </EmployeeProfileSection>
         </template>
 
         <template v-if="activeSection === 'schedule'">
           <EmployeeProfileSection :title="tr('График работы')">
-            <EmployeeDataGrid :fields="scheduleFields" />
+            <EmployeeDataGrid :fields="scheduleFields" :editable-groups="editableFieldGroups" @edit="openFieldEditor" />
           </EmployeeProfileSection>
 
           <EmployeeProfileSection :title="tr('Отпуска и лимиты отсутствий')">
-            <EmployeeDataGrid :fields="leaveSummaryFields" />
+            <EmployeeDataGrid :fields="leaveSummaryFields" :editable-groups="editableFieldGroups" @edit="openFieldEditor" />
             <h3 class="assignment-history-title">{{ tr('Лимиты и остатки') }}</h3>
             <BaseDataTable density="compact" :rows="reference?.leave_limits ?? []"
               :columns="leaveLimitColumns" row-key="id"
@@ -815,7 +819,7 @@ onMounted(load)
           </EmployeeProfileSection>
 
           <EmployeeProfileSection :title="tr('Табель за период')">
-            <EmployeeDataGrid :fields="currentTimesheetFields" />
+            <EmployeeDataGrid :fields="currentTimesheetFields" :editable-groups="editableFieldGroups" @edit="openFieldEditor" />
           </EmployeeProfileSection>
 
           <EmployeeProfileSection :title="tr('Явки, неявки и отсутствия')">
@@ -839,9 +843,9 @@ onMounted(load)
 
         <template v-if="activeSection === 'development'">
           <EmployeeProfileSection :title="tr('Кадровый резерв')">
-            <EmployeeDataGrid :fields="reserveSummaryFields" />
+            <EmployeeDataGrid :fields="reserveSummaryFields" :editable-groups="editableFieldGroups" @edit="openFieldEditor" />
             <h3 class="assignment-history-title">{{ tr('Параметры резерва') }}</h3>
-            <EmployeeDataGrid :fields="reserveDetailFields" />
+            <EmployeeDataGrid :fields="reserveDetailFields" :editable-groups="editableFieldGroups" @edit="openFieldEditor" />
             <h3 class="assignment-history-title">{{ tr('История кадрового резерва') }}</h3>
             <BaseDataTable density="compact" :rows="profile.reserve" row-key="id" :caption="tr('Кадровый резерв сотрудника')"
               :columns="[{key:'target_position',label:tr('Резервируемая должность')},{key:'reserve_level',label:tr('Уровень')},{key:'reserve_type',label:tr('Вид')},{key:'joined_year',label:tr('Год зачисления')},{key:'left_year',label:tr('Год исключения')}, ...(profile.meta.profile_writes_enabled ? [{key:'edit',label:tr('Действия')}] : [])]"
@@ -1045,16 +1049,8 @@ onMounted(load)
   display:inline-flex;align-items:center;gap:7px;
   color:var(--color-text);font-size:11px;font-weight:600;
 }
-.status-toggle-dot{
-  position:relative;flex:0 0 28px;width:28px;height:16px;
-  border-radius:12px;background:var(--color-primary);
-}
-.status-toggle-dot::after{
-  content:'';position:absolute;right:3px;top:3px;width:10px;height:10px;
-  border-radius:50%;background:var(--color-on-primary);
-}
-.status-toggle--inactive .status-toggle-dot{background:var(--color-stroke-strong)}
-.status-toggle--inactive .status-toggle-dot::after{right:auto;left:3px}
+.status-toggle-dot{flex:0 0 8px;width:8px;height:8px;border-radius:50%;background:var(--color-primary)}
+.status-toggle--inactive .status-toggle-dot{background:var(--color-muted)}
 .personnel-id{
   display:flex;align-items:stretch;border:1px solid var(--color-stroke);
   border-radius:var(--radius-sm);overflow:hidden;font-size:11px;
@@ -1072,11 +1068,13 @@ onMounted(load)
 .read-field{display:grid;align-content:start;gap:5px;min-width:0}
 .read-field span{color:var(--color-text);font-size:12px;line-height:17px;font-weight:600}
 .read-field strong{
-  min-height:35px;display:flex;align-items:center;padding:7px 10px;
-  border:1px solid var(--color-stroke);border-radius:var(--radius-sm);
-  background:var(--color-surface);box-shadow:var(--shadow-control);
-  color:var(--color-text);font-size:13px;line-height:19px;font-weight:400;overflow-wrap:anywhere;
+  min-height:29px;display:flex;align-items:center;padding:4px 0;
+  border:0;background:transparent;box-shadow:none;
+  color:var(--color-text);font-size:13px;line-height:19px;font-weight:500;overflow-wrap:anywhere;
 }
+.employee-field-legend{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin:-5px 0 1px;font-size:11px;line-height:17px;color:var(--color-muted)}
+.employee-field-legend>span{display:inline-flex;align-items:center;gap:5px}
+.employee-field-legend svg{flex:none;color:var(--color-muted)}
 .profile-toolbar{display:flex;justify-content:flex-end}
 .profile-toolbar :deep(.base-button){min-height:34px;font-size:12px}
 .row-actions{display:flex;gap:8px;flex-wrap:wrap}

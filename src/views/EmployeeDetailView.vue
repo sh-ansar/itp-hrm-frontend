@@ -161,7 +161,7 @@ const editableFieldGroups = computed<EmployeeFieldEditGroup[]>(() => [
   ...(profile.value?.meta.employee_writes_enabled ? ['employee' as const] : []),
   ...(profile.value?.meta.private_profile_writes_enabled
     ? ['private-personal' as const, 'private-military' as const, 'identity' as const] : []),
-  ...(contractWritesEnabled.value ? ['contract' as const] : []),
+  ...(contractWritesEnabled.value && currentContract.value ? ['contract' as const] : []),
 ])
 function openFieldEditor(group: EmployeeFieldEditGroup) {
   if (!editableFieldGroups.value.includes(group)) return
@@ -491,7 +491,7 @@ function beginEdit(section: ProfileSection, record: ProfileEditRow) {
 }
 
 let generation = 0
-const contractColumns = [
+const contractColumns = computed(() => [
   { key: 'contract_number', label: 'Номер договора' },
   { key: 'contract_type', label: 'Тип договора' },
   { key: 'employment_type', label: 'Вид занятости' },
@@ -499,8 +499,8 @@ const contractColumns = [
   { key: 'valid_to', label: 'Действует до' },
   { key: 'probation_until', label: 'Испытание до' },
   { key: 'basis_reference', label: 'Основание' },
-  { key: 'edit', label: 'Действия' },
-]
+  ...(contractWritesEnabled.value ? [{ key: 'edit', label: 'Действия' }] : []),
+])
 const columns = computed(() => [
   { key: 'department_name', label: 'Подразделение' },
   { key: 'position_name', label: 'Должность' },

@@ -3,6 +3,7 @@ import { computed, ref, watch } from 'vue'
 import BaseButton from './ui/BaseButton.vue'
 import BaseDrawer from './ui/BaseDrawer.vue'
 import BaseFormField from './ui/BaseFormField.vue'
+import BaseTextareaField from './ui/BaseTextareaField.vue'
 import BaseNotice from './ui/BaseNotice.vue'
 import { usePrivateProfileI18n, type PrivateProfileKey } from '../i18n/privateProfile'
 import {
@@ -77,9 +78,14 @@ async function save() {
     :description="t('description')" :close-label="t('close')" @close="close">
     <form class="private-profile-form" @submit.prevent="save">
       <BaseNotice v-if="section === 'military'" tone="info">{{ t('militaryNotice') }}</BaseNotice>
-      <BaseFormField v-for="field in fields" :key="field" v-model="form[field]"
-        :label="t(field)" :disabled="saving"
-        :autocomplete="field === 'iin' ? 'off' : undefined" />
+      <template v-for="field in fields" :key="field">
+        <BaseTextareaField v-if="section === 'military' && field === 'comment'"
+          v-model="form[field]" :label="t(field)" :disabled="saving"
+          :max-length="2000" :rows="5" show-count />
+        <BaseFormField v-else v-model="form[field]"
+          :label="t(field)" :disabled="saving"
+          :autocomplete="field === 'iin' ? 'off' : undefined" />
+      </template>
       <BaseNotice v-if="error" tone="error">{{ error }}</BaseNotice>
       <p class="privacy-hint">{{ t('confidentiality') }}</p>
     </form>

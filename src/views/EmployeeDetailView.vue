@@ -22,7 +22,7 @@ import EmployeeRecordForm from '../components/EmployeeRecordForm.vue'
 import EmployeeContractEditor from '../components/EmployeeContractEditor.vue'
 import BaseDialog from '../components/ui/BaseDialog.vue'
 import BaseViewTabs from '../components/ui/BaseViewTabs.vue'
-import { getEmployee, listEmployeeContracts, type EmployeeAssignment, type EmployeeContract, type EmployeeDetail, type EmployeeReferenceProfile, type EmployeePrivateSection, type EmployeePrivateRecordSection, type ProfileEditRow, type ProfileSection } from '../api/personnel'
+import { getEmployee, listEmployeeContracts, type EmployeeAssignment, type EmployeeContract, type EmployeeDetail, type EmployeeIdentityDocument, type EmployeeReferenceProfile, type EmployeePrivateSection, type EmployeePrivateRecordSection, type ProfileEditRow, type ProfileSection } from '../api/personnel'
 import { localTodayISO } from '../utils/localDate'
 import { useUiFormatters } from '../composables/useUiFormatters'
 
@@ -41,6 +41,7 @@ const assignmentTransitioning = ref<EmployeeAssignment | null>(null)
 const identityEditOpen = ref(false)
 const privateEditorSection = ref<EmployeePrivateSection | null>(null)
 const privateRecordsSection = ref<EmployeePrivateRecordSection | null>(null)
+const selectedIdentityDocumentId = ref<string | null>(null)
 const assignmentCreateOpen = ref(false)
 const profileCreateOpen = ref(false)
 const contracts = ref<EmployeeContract[]>([])
@@ -187,7 +188,6 @@ function ageFromBirthDate(value: string | null | undefined): string {
 
 const personalFields = computed<EmployeeDisplayField[]>(() => [
   { label: 'ИИН', value: reference.value?.personal.iin, editGroup: 'private-personal' },
-  { label: 'Логин', value: reference.value?.personal.login, editGroup: 'private-personal' },
   { label: 'Дата рождения', value: formatDate(profile.value?.data.birth_date), editGroup: 'employee' },
   { label: 'Возраст', value: ageFromBirthDate(profile.value?.data.birth_date) },
   { label: 'Пол', value: genderLabel.value, editGroup: 'employee' },
@@ -197,6 +197,7 @@ const personalFields = computed<EmployeeDisplayField[]>(() => [
   { label: 'Табельный номер', value: profile.value?.data.personnel_number, editGroup: 'employee' },
 ])
 const contactFields = computed<EmployeeDisplayField[]>(() => [
+  { label: 'Логин', value: reference.value?.personal.login, editGroup: 'private-personal' },
   { label: 'Email', value: profile.value?.data.email, editGroup: 'employee' },
   { label: 'Телефон', value: profile.value?.data.phone, editGroup: 'employee' },
   { label: 'Адрес проживания', value: reference.value?.personal.residence_address ?? profile.value?.data.address, wide: true, editGroup: reference.value?.personal.residence_address ? 'private-personal' : 'employee' },
@@ -207,18 +208,45 @@ const contactFields = computed<EmployeeDisplayField[]>(() => [
   { label: 'Контактное лицо', value: reference.value?.personal.emergency_contact_name, editGroup: 'private-personal' },
   { label: 'Телефон контактного лица', value: reference.value?.personal.emergency_contact_phone, editGroup: 'private-personal' },
 ])
-const documentFields = computed<EmployeeDisplayField[]>(() => [
+// Citizenship/nationality belong to the private personal profile, not to an identity-document record.
+const documentPersonFields = computed<EmployeeDisplayField[]>(() => [
   { label: 'Национальность', value: reference.value?.personal.nationality, editGroup: 'private-personal' },
-  { label: 'Персональный номер', value: reference.value?.identity_document.personal_number, editGroup: 'identity' },
-  { label: 'Страна выдачи', value: reference.value?.identity_document.country_of_issue, editGroup: 'identity' },
   { label: 'Гражданство', value: reference.value?.personal.citizenship, editGroup: 'private-personal' },
-  { label: 'Тип документа', value: reference.value?.identity_document.type, editGroup: 'identity' },
-  { label: 'Номер документа', value: reference.value?.identity_document.number, editGroup: 'identity' },
-  { label: 'Кем выдан', value: reference.value?.identity_document.issued_by, wide: true, editGroup: 'identity' },
-  { label: 'Дата выдачи', value: formatDate(reference.value?.identity_document.issued_on), editGroup: 'identity' },
-  { label: 'Действителен до', value: formatDate(reference.value?.identity_document.expires_on), editGroup: 'identity' },
+])
+// The legacy projection cannot be modified through the normalized identity-record editor.
+// Treat it as informative until a record really exists in private_profile.identity_documents.
+const legacyDocumentFields = computed<EmployeeDisplayField[]>(() => [
+  { label: 'Персональный номер', value: maskedIdentifier(reference.value?.identity_document.personal_number) },
+  { label: 'Страна выдачи', value: reference.value?.identity_document.country_of_issue },
+  { label: 'Тип документа', value: reference.value?.identity_document.type },
+  { label: 'Номер документа', value: maskedIdentifier(reference.value?.identity_document.number) },
+  { label: 'Кем выдан', value: reference.value?.identity_document.issued_by, wide: true },
+  { label: 'Дата выдачи', value: formatDate(reference.value?.identity_document.issued_on) },
+  { label: 'Действителен до', value: formatDate(reference.value?.identity_document.expires_on) },
   { label: 'Файл документа', value: reference.value?.identity_document.attachment_name, wide: true },
 ])
+const identityDocuments = computed(() =>
+  [...(profile.value?.private_profile?.identity_documents ?? [])]
+    .sort((a,b) => Number(b.is_primary) - Number(a.is_primary)))
+function maskedIdentifier(value: string | null | undefined): string {
+  return value ? '••••' + value.slice(-4) : '—'
+}
+function identityDocumentFields(document: EmployeeIdentityDocument): EmployeeDisplayField[] {
+  return [
+    { label: 'Тип документа', value: document.type },
+    { label: 'Номер документа', value: maskedIdentifier(document.number) },
+    { label: 'Персональный номер', value: maskedIdentifier(document.personal_number) },
+    { label: 'Страна выдачи', value: document.country_of_issue },
+    { label: 'Кем выдан', value: document.issued_by, wide: true },
+    { label: 'Дата выдачи', value: formatDate(document.issued_on) },
+    { label: 'Действителен до', value: formatDate(document.expires_on) },
+  ]
+}
+function manageIdentityDocument(recordId: string | null = null): void {
+  if (!profile.value?.meta.private_profile_writes_enabled) return
+  selectedIdentityDocumentId.value = recordId
+  privateRecordsSection.value = 'identity'
+}
 const birthPlaceFields = computed<EmployeeDisplayField[]>(() => [
   { label: 'Место рождения', value: reference.value?.personal.place_of_birth, wide: true, editGroup: 'private-personal' },
   { label: 'Свидетельство о рождении', value: reference.value?.personal.birth_certificate_attachment, wide: true },
@@ -671,12 +699,6 @@ onMounted(load)
         <span><LockKeyhole :size="13" aria-hidden="true" /> {{ tr('Информационные поля — только просмотр') }}</span>
       </div>
       <template v-if="activeSection === 'personal' && profile.meta.extended_sections_visible">
-        <EmployeeProfileSection :title="tr('Основные личные данные')">
-          <template v-if="profile.meta.private_profile_writes_enabled" #actions>
-            <BaseButton variant="secondary" @click="privateEditorSection = 'personal'">{{ tr('Изменить') }}</BaseButton>
-          </template>
-          <EmployeeDataGrid :fields="personalFields" :editable-groups="editableFieldGroups" @edit="openFieldEditor" />
-        </EmployeeProfileSection>
         <EmployeeProfileSection :title="tr('Контакты и адреса')">
           <EmployeeDataGrid :fields="contactFields" :editable-groups="editableFieldGroups" @edit="openFieldEditor" />
           <EmployeeAddressBook v-if="profile.private_profile?.addresses?.length || profile.meta.private_address_writes_enabled"
@@ -688,9 +710,29 @@ onMounted(load)
         </EmployeeProfileSection>
         <EmployeeProfileSection :title="tr('Документы, удостоверяющие личность')">
           <template v-if="profile.meta.private_profile_writes_enabled" #actions>
-            <BaseButton variant="secondary" @click="privateRecordsSection = 'identity'">{{ tr('Изменить') }}</BaseButton>
+            <BaseButton variant="secondary" @click="manageIdentityDocument()">{{ tr('Управлять документами') }}</BaseButton>
           </template>
-          <EmployeeDataGrid :fields="documentFields" :editable-groups="editableFieldGroups" @edit="openFieldEditor" />
+          <EmployeeDataGrid :fields="documentPersonFields" :editable-groups="editableFieldGroups" @edit="openFieldEditor" />
+          <div v-if="identityDocuments.length" class="identity-documents-list" role="list" :aria-label="tr('Документы, удостоверяющие личность')">
+            <article v-for="document in identityDocuments" :key="document.id" class="identity-document-record" role="listitem">
+              <header class="identity-document-top">
+                <span class="identity-document-type">{{ document.type }}</span>
+                <span v-if="document.is_primary" class="identity-document-primary">{{ tr('Основной') }}</span>
+                <BaseButton v-if="profile.meta.private_profile_writes_enabled" icon-only variant="secondary"
+                  :aria-label="tr('Изменить документ') + ': ' + document.type"
+                  :title="tr('Изменить документ')" @click="manageIdentityDocument(document.id)">
+                  <Pencil :size="15" aria-hidden="true" />
+                </BaseButton>
+              </header>
+              <EmployeeDataGrid :fields="identityDocumentFields(document)" />
+            </article>
+          </div>
+          <div v-else class="identity-legacy-record" data-document-state="informative">
+            <EmployeeDataGrid :fields="legacyDocumentFields" />
+          </div>
+          <p v-if="profile.meta.private_identities_truncated" class="identity-document-warning">
+            {{ tr('Список документов неполный. Обратитесь в отдел кадров.') }}
+          </p>
         </EmployeeProfileSection>
         <EmployeeProfileSection :title="tr('Место рождения')">
           <EmployeeDataGrid :fields="birthPlaceFields" :editable-groups="editableFieldGroups" @edit="openFieldEditor" />
@@ -711,6 +753,12 @@ onMounted(load)
           </template>
           <EmployeeDataGrid :fields="militaryFields" :editable-groups="editableFieldGroups" @edit="openFieldEditor" />
         </EmployeeProfileSection>
+        <EmployeeProfileSection :title="tr('Основные личные данные')">
+          <template v-if="profile.meta.private_profile_writes_enabled" #actions>
+            <BaseButton variant="secondary" @click="privateEditorSection = 'personal'">{{ tr('Изменить') }}</BaseButton>
+          </template>
+          <EmployeeDataGrid :fields="personalFields" :editable-groups="editableFieldGroups" @edit="openFieldEditor" />
+        </EmployeeProfileSection> 
       </template>
 
       <template v-if="activeSection === 'organization' && profile.meta.extended_sections_visible">
@@ -1007,16 +1055,29 @@ onMounted(load)
       :open="true" :company-id="String(route.params.company)" :employee-id="profile.data.id"
       :section="privateRecordsSection" :family="profile.private_profile?.family ?? []"
       :identities="profile.private_profile?.identity_documents ?? []"
+      :initial-record-id="selectedIdentityDocumentId"
       :education="profile.private_profile?.education ?? []"
       :truncated="privateRecordsSection === 'family' ? profile.meta.private_family_truncated
         : privateRecordsSection === 'education' ? profile.meta.private_education_truncated
         : profile.meta.private_identities_truncated"
-      @close="privateRecordsSection = null" @saved="privateRecordsSection = null; load()"
-      @refresh="privateRecordsSection = null; load()" />
+      @close="privateRecordsSection = null; selectedIdentityDocumentId = null"
+      @saved="privateRecordsSection = null; selectedIdentityDocumentId = null; load()"
+      @refresh="privateRecordsSection = null; selectedIdentityDocumentId = null; load()" />
   </section>
 </template>
 
 <style scoped>
+/* ZIP personal tab: normalized documents are compact, independently managed records. */
+.identity-documents-list{display:grid;gap:10px;min-width:0;margin-top:12px}
+.identity-document-record{display:grid;gap:10px;min-width:0;padding:12px;border:1px solid var(--color-stroke);border-radius:var(--radius-sm);background:var(--color-surface-raised)}
+.identity-document-top{display:flex;align-items:center;gap:8px;min-width:0}
+.identity-document-type{flex:1;min-width:0;font-size:12px;line-height:18px;font-weight:600;overflow-wrap:anywhere;color:var(--color-text)}
+.identity-document-primary{flex:none;padding:3px 7px;border-radius:4px;background:var(--color-success-surface);color:var(--color-success);font-size:11px;font-weight:500}
+.identity-document-top :deep(.base-button){height:28px;min-height:28px;min-width:28px;width:28px;padding:0;color:var(--color-muted);background:transparent;border-color:transparent;box-shadow:none}
+.identity-document-top :deep(.base-button:hover){color:var(--color-primary);background:var(--color-accent-soft)}
+.identity-document-record :deep(.employee-data-grid){row-gap:10px}
+.identity-legacy-record{min-width:0;margin-top:12px}
+.identity-document-warning{font-size:11px;line-height:17px;color:var(--color-muted);margin:6px 0 0}
 .employee-profile{
   display:grid;grid-template-columns:minmax(0,1fr);gap:12px;
   max-width:100%;min-width:0;scroll-behavior:smooth;

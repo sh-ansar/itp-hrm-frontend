@@ -38,6 +38,8 @@ const props = defineProps<{
   family: EmployeeFamilyMember[]
   identities: EmployeeIdentityDocument[]
   education: EmployeeEducationRecord[]
+  /** Optional direct-edit target, always resolved inside the authorized list. */
+  initialRecordId?: string | null
   truncated?: boolean
 }>()
 const emit = defineEmits<{ close: []; saved: []; refresh: [] }>()
@@ -149,7 +151,13 @@ function reset() {
   primary.value = false
   form.value = {}
 }
-watch(() => [props.open, props.companyId, props.employeeId, props.section], reset, { immediate: true })
+watch(() => [props.open, props.companyId, props.employeeId, props.section, props.initialRecordId], () => {
+  reset()
+  if (props.open && props.section === 'identity' && props.initialRecordId) {
+    const record = props.identities.find(item => item.id === props.initialRecordId)
+    if (record) beginEdit(record)
+  }
+}, { immediate: true })
 
 function fail(cause: unknown) {
   error.value = cause instanceof ApiError && cause.status === 409 ? t('stale')

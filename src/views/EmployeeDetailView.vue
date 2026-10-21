@@ -756,7 +756,8 @@ onMounted(load)
         </EmployeeProfileSection>
         <EmployeeProfileSection :title="tr('Документы, удостоверяющие личность')">
           <template v-if="profile.meta.private_profile_writes_enabled" #actions>
-            <BaseButton variant="secondary" @click="openIdentityRecord()">{{ tr('Управлять документами') }}</BaseButton>
+            <BaseButton variant="secondary" :disabled="Boolean(profile.meta.private_identities_truncated)"
+              @click="openIdentityRecord()">{{ tr('Управлять документами') }}</BaseButton>
           </template>
           <EmployeeDataGrid :fields="identityPersonFields" :editable-groups="editableFieldGroups" @edit="openFieldEditor" />
           <div v-if="hasNormalizedIdentityStore" class="employee-identity-records">
@@ -788,7 +789,8 @@ onMounted(load)
         </EmployeeProfileSection>
         <EmployeeProfileSection :title="tr('Семейные данные')">
           <template v-if="profile.meta.private_profile_writes_enabled" #actions>
-            <BaseButton variant="secondary" @click="openFamilyEditor()">{{ tr('Изменить') }}</BaseButton>
+            <BaseButton variant="secondary" :disabled="Boolean(profile.meta.private_family_truncated)"
+              @click="openFamilyEditor()">{{ tr('Изменить') }}</BaseButton>
           </template>
           <EmployeeDataGrid :fields="maritalStatusFields" :editable-groups="editableFieldGroups" @edit="openFieldEditor" />
           <EmployeeFamilyList :members="profile.private_profile?.family ?? reference?.family ?? []"

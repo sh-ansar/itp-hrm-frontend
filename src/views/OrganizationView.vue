@@ -5,7 +5,7 @@ import { useWorkspaceI18n } from '../composables/useWorkspaceI18n'
 import { useUiFormatters } from '../composables/useUiFormatters'
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { Minus, Pencil, Plus, Trash2, Search, UserPlus } from 'lucide-vue-next'
+import { Building2, Minus, Pencil, Plus, Trash2, Search, UserPlus, UsersRound } from 'lucide-vue-next'
 import BaseDataTable from '../components/ui/BaseDataTable.vue'
 import BaseLoadingState from '../components/ui/BaseLoadingState.vue'
 import BaseNotice from '../components/ui/BaseNotice.vue'
@@ -62,7 +62,8 @@ const searchQuery = ref('')
 const chartZoom = ref(100)
 const viewModes = [{ id: 'table', label: 'Таблица' }, { id: 'diagram', label: 'Схема' }]
 const diagramEmployees = ref<EmployeeRecord[]>([])
-const expandedLevels = ref(true)
+// Show the root's direct reports by default, while keeping deeper levels collapsed.
+const expandedLevels = ref(false)
 const diagramDepartments = ref<DepartmentRecord[]>([])
 const diagramLoading = ref(false)
 const diagramError = ref('')
@@ -416,8 +417,20 @@ onMounted(loadCompanies)
       <div v-if="viewMode === 'diagram'" class="structure-diagram" role="region" tabindex="0" :aria-label="tr('Схема подразделений компании')">
         <BaseLoadingState v-if="diagramLoading" :label="tr('Загрузка полной структуры')" />
         <div v-else-if="visibleDepartmentForest.length" class="organization-chart" :style="{ zoom: chartZoom + '%' }">
-          <div class="chart-branches">
-            <DepartmentTreeNode v-for="node in visibleDepartmentForest" :key="node.id + ':' + searchQuery" :node="node" :company-id="selectedCompany" :expand-all="expandedLevels" />
+          <div class="chart-company" :aria-label="tr('Компания') + ': ' + (currentCompany?.name ?? '')">
+            <div class="chart-company-title">
+              <Building2 :size="20" aria-hidden="true" />
+              <strong>{{ currentCompany?.name ?? tr('Компания') }}</strong>
+            </div>
+            <div v-if="orgMetrics.planned !== null || orgMetrics.vacant !== null" class="chart-company-metrics">
+              <span v-if="orgMetrics.planned !== null"><UsersRound :size="15" aria-hidden="true" /> {{ fmt.number(orgMetrics.planned, 0) }} {{ tr('штатных единиц') }}</span>
+              <span v-if="orgMetrics.vacant !== null" class="chart-company-vacant"><UserPlus :size="15" aria-hidden="true" /> {{ fmt.number(orgMetrics.vacant, 0) }} {{ tr('Вакантные позиции').toLocaleLowerCase(fmt.localeTag()) }}</span>
+            </div>
+            <span v-else class="chart-company-unavailable">{{ tr('Нет утверждённого штатного среза') }}</span>
+          </div>
+          <div class="chart-branches" :class="{ 'chart-branches--multi': visibleDepartmentForest.length > 1 }">
+            <DepartmentTreeNode v-for="node in visibleDepartmentForest" :key="node.id + ':' + searchQuery" :node="node" :company-id="selectedCompany"
+              :expand-all="expandedLevels || searchQuery.trim().length > 0" />
           </div>
         </div>
         <p v-else class="diagram-empty">{{ searchQuery.trim() ? tr('Подразделения по запросу не найдены.') : tr('Подразделений для отображения пока нет.') }}</p>
@@ -549,12 +562,17 @@ onMounted(loadCompanies)
 .organization-chart{display:grid;justify-items:center;gap:42px;min-width:1320px;padding:4px 10px 12px}
 .chart-company{position:relative;display:grid;justify-items:center;gap:6px;width:300px;padding:16px 18px;background:var(--color-surface);border:1px solid var(--color-stroke-strong);border-radius:var(--radius-md);box-shadow:var(--shadow-card);text-align:center}
 .chart-company::after{content:'';position:absolute;left:50%;bottom:-37px;width:1px;height:36px;background:var(--color-primary-stroke)}
-.chart-company-label{font-size:10px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--color-muted)}
-.chart-company strong{font-size:14px;line-height:1.35}
-.chart-company-count{font-size:12px;color:var(--color-primary)}
-.chart-branches{position:relative;display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));align-items:start;gap:28px;width:100%}
-.chart-branches::before{display:none;content:'';position:absolute;left:8%;right:8%;top:-18px;height:1px;background:var(--color-primary-stroke)}
-.chart-branches :deep(.tree-branch)::before{display:none;content:'';position:absolute;top:-24px;left:50%;height:24px;width:1px;background:var(--color-primary-stroke)}
+.chart-company-title{display:flex;align-items:center;justify-content:center;gap:10px;min-width:0}
+.chart-company-title svg{flex:none;color:var(--color-primary)}
+.chart-company strong{font-size:15px;line-height:1.4;font-weight:600;overflow-wrap:anywhere}
+.chart-company-metrics{display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:8px 18px;color:var(--color-primary);font-size:12px;line-height:1.4}
+.chart-company-metrics>span{display:inline-flex;align-items:center;gap:5px}
+.chart-company-metrics .chart-company-vacant{color:var(--color-warning)}
+.chart-company-unavailable{font-size:12px;line-height:1.4;color:var(--color-muted)}
+.chart-branches{position:relative;display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));align-items:start;justify-items:center;gap:28px;width:100%}
+.chart-branches::before{content:'';position:absolute;left:50%;top:-28px;height:28px;width:1px;background:var(--color-primary-stroke)}
+.chart-branches--multi::after{content:'';position:absolute;top:-13px;left:10%;right:10%;border-top:1px solid var(--color-primary-stroke)}
+.chart-branches--multi>:deep(.tree-branch)::before{content:'';position:absolute;left:50%;top:-13px;height:13px;width:1px;background:var(--color-primary-stroke)}
 @media(max-width:900px){
  .organization-chart{min-width:0;width:100%;gap:30px}
  .chart-branches{grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:18px}

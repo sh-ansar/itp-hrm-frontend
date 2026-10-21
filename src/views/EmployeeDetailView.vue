@@ -207,8 +207,10 @@ const personalFields = computed<EmployeeDisplayField[]>(() => [
   { label: 'Пол', value: genderLabel.value, editGroup: 'employee' },
   { label: 'Национальность', value: reference.value?.personal.nationality, editGroup: 'private-personal' },
   { label: 'Гражданство', value: reference.value?.personal.citizenship, editGroup: 'private-personal' },
-  { label: 'Семейное положение', value: reference.value?.personal.marital_status, editGroup: 'private-personal' },
   { label: 'Табельный номер', value: profile.value?.data.personnel_number, editGroup: 'employee' },
+])
+const maritalStatusFields = computed<EmployeeDisplayField[]>(() => [
+  { label: 'Семейное положение', value: reference.value?.personal.marital_status, editGroup: 'private-personal' },
 ])
 const contactFields = computed<EmployeeDisplayField[]>(() => [
   { label: 'Email', value: profile.value?.data.email, editGroup: 'employee' },
@@ -706,6 +708,7 @@ onMounted(load)
           <template v-if="profile.meta.private_profile_writes_enabled" #actions>
             <BaseButton variant="secondary" @click="openPrivateFamilyEditor()">{{ tr('Изменить') }}</BaseButton>
           </template>
+          <EmployeeDataGrid :fields="maritalStatusFields" :editable-groups="editableFieldGroups" @edit="openFieldEditor" />
           <EmployeeFamilyList :members="profile.private_profile?.family ?? reference?.family ?? []"
             :writable="Boolean(profile.meta.private_profile_writes_enabled)"
             :truncated="Boolean(profile.meta.private_family_truncated)"

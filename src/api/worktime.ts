@@ -43,7 +43,8 @@ export interface EmployeeWorktimeMonthResponse {
   meta: {
     source: 'worktime_entries'
     read_only: true
-    partial_period: boolean
+    recorded_days: number
+    calendar_days: number
   }
 }
 export function getEmployeeWorktimeMonth(

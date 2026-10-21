@@ -94,6 +94,7 @@ const workspaceCopy: Record<string, { kk: string; en: string }> = {
   "Разделы реестра сотрудников": { kk: "Қызметкерлер тізілімінің бөлімдері", en: "Employee register sections" },
   "Активные фильтры реестра": { kk: "Тізілімнің белсенді сүзгілері", en: "Active register filters" },
   "сотрудников": { kk: "қызметкер", en: "employees" },
+  "подразделений": { kk: "бөлімше", en: "departments" },
   "Группировка:": { kk: "Топтау:", en: "Grouping:" },
   "Фильтры применены к текущему реестру.": { kk: "Сүзгілер ағымдағы тізілімге қолданылды.", en: "Filters apply to the current register." },
   "Реестр сотрудников выбранной компании": { kk: "Таңдалған компания қызметкерлерінің тізілімі", en: "Selected company's employee register" },

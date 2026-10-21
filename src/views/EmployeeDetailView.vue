@@ -194,7 +194,6 @@ const personalFields = computed<EmployeeDisplayField[]>(() => [
   { label: 'Пол', value: genderLabel.value, editGroup: 'employee' },
   { label: 'Национальность', value: reference.value?.personal.nationality, editGroup: 'private-personal' },
   { label: 'Гражданство', value: reference.value?.personal.citizenship, editGroup: 'private-personal' },
-  { label: 'Семейное положение', value: reference.value?.personal.marital_status, editGroup: 'private-personal' },
   { label: 'Табельный номер', value: profile.value?.data.personnel_number, editGroup: 'employee' },
 ])
 // The ZIP puts login, email and telephone on one row, followed by repeatable addresses.
@@ -267,6 +266,9 @@ const militaryFields = computed<EmployeeDisplayField[]>(() => [
 // Normalized family records must take precedence over synthetic/legacy
 // projections after an HR user creates or archives a relative.
 const familyMembers = computed(() => profile.value?.private_profile?.family ?? reference.value?.family ?? [])
+const familyStatusFields = computed<EmployeeDisplayField[]>(() => [
+  { label: 'Семейное положение', value: reference.value?.personal.marital_status, editGroup: 'private-personal' },
+])
 
 const organizationPositionFields = computed<EmployeeDisplayField[]>(() => [
   { label: 'Компания', value: reference.value?.organization?.company_name },
@@ -761,6 +763,7 @@ onMounted(load)
           <template v-if="profile.meta.private_profile_writes_enabled" #actions>
             <BaseButton variant="secondary" @click="privateRecordsSection = 'family'">{{ tr('Изменить') }}</BaseButton>
           </template>
+          <EmployeeDataGrid :fields="familyStatusFields" :editable-groups="editableFieldGroups" @edit="openFieldEditor" />
           <EmployeeFamilyList :members="familyMembers" />
           <BaseNotice v-if="profile.meta.private_family_truncated" tone="warning">
             {{ tr('Показаны не все родственники. Для полной истории откройте управление записями.') }}

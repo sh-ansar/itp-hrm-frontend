@@ -39,6 +39,9 @@ const props = defineProps<{
   identities: EmployeeIdentityDocument[]
   education: EmployeeEducationRecord[]
   truncated?: boolean
+  /** Open a selected family row directly, without bypassing existing CRUD guards. */
+  initialFamilyId?: string | null
+  createFamilyOnOpen?: boolean
 }>()
 const emit = defineEmits<{ close: []; saved: []; refresh: [] }>()
 const { t } = usePrivateRecordsI18n()
@@ -149,7 +152,16 @@ function reset() {
   primary.value = false
   form.value = {}
 }
-watch(() => [props.open, props.companyId, props.employeeId, props.section], reset, { immediate: true })
+watch(() => [props.open, props.companyId, props.employeeId, props.section, props.initialFamilyId, props.createFamilyOnOpen], () => {
+  reset()
+  if (!props.open || props.section !== 'family') return
+  if (props.initialFamilyId) {
+    const target = props.family.find(row => row.id === props.initialFamilyId)
+    if (target) beginEdit(target)
+  } else if (props.createFamilyOnOpen) {
+    beginCreate()
+  }
+}, { immediate: true })
 
 function fail(cause: unknown) {
   error.value = cause instanceof ApiError && cause.status === 409 ? t('stale')

@@ -406,8 +406,8 @@ const referenceProfileFor=(e:any,i:number)=>({
   ],
 })
 const directoryHubRows:any[]=[
-  {id:id(9801),group:'tariff-types',code:'TRF-TYPE-001',name:'По грузам',category:'Тариф',unit:'KZT',value:'Базовый',status:'active',revision:1},
-  {id:id(9802),group:'tariff-types',code:'TRF-TYPE-002',name:'Дополнительные работы',category:'Тариф',unit:'KZT',value:'Повышенный',status:'active',revision:1},
+  {id:id(9801),group:'tariff-types',parent_id:null,code:'TRF-TYPE-001',name:'По грузам',category:'Тариф',unit:'KZT',value:'Базовый',status:'active',revision:1},
+  {id:id(9802),group:'tariff-types',parent_id:id(9801),code:'TRF-TYPE-002',name:'Дополнительные работы',category:'Тариф',unit:'KZT',value:'Повышенный',status:'active',revision:1},
   {id:id(9810),group:'leave-types',code:'LEAVE-ANNUAL',name:'Ежегодный оплачиваемый отпуск',category:'Отпуск',unit:'дней',value:'24',status:'active',revision:1},
   {id:id(9820),group:'work-conditions',code:'WC-NORMAL',name:'Нормальные условия труда',category:'Условия труда',unit:'—',value:null,status:'active',revision:1},
   {id:id(9830),group:'training-types',code:'TRN-INT',name:'Внутреннее обучение',category:'Обучение',unit:'—',value:null,status:'active',revision:1},
@@ -433,17 +433,32 @@ export async function mockApiRequest<T>(path:string,options:RequestInit={}):Prom
       const code=String(body.code||'').trim(),name=String(body.name||'').trim()
       if(!code||!name)throw new Error('Код и наименование обязательны')
       if(rows.some(row=>row.code.toLowerCase()===code.toLowerCase()))throw new Error('Такая запись уже существует')
-      const created:any={id:crypto.randomUUID(),group,code,name,category:body.category??null,unit:body.unit??null,value:body.value??null,status:body.status??'active',revision:1}
+      const parentId=body.parent_id??null
+      if(parentId!==null&&!rows.some(row=>row.id===parentId))throw new Error('Родитель должен принадлежать справочнику')
+      const created:any={id:crypto.randomUUID(),group,parent_id:parentId,code,name,category:body.category??null,unit:body.unit??null,value:body.value??null,status:body.status??'active',revision:1}
       directoryHubRows.push(created);return {data:structuredClone(created)} as T
     }
     const record:any=directoryHubRows.find(row=>row.group===group&&row.id===recordId)
     if(!record)throw new Error('Запись не найдена')
     if(Number(body.revision)!==Number(record.revision))throw new Error('Запись уже изменена. Обновите страницу')
     if(method==='PUT'){
-      Object.assign(record,{code:String(body.code||'').trim(),name:String(body.name||'').trim(),category:body.category??null,unit:body.unit??null,value:body.value??null,status:body.status??'active',revision:record.revision+1})
+      const parentId=body.parent_id??null
+      const seen=new Set([record.id])
+      let cursor=parentId
+      while(cursor){
+        if(seen.has(cursor))throw new Error('Циклическая иерархия')
+        seen.add(cursor)
+        const parent=rows.find(row=>row.id===cursor)
+        if(!parent)throw new Error('Родитель должен принадлежать справочнику')
+        cursor=parent.parent_id??null
+      }
+      Object.assign(record,{parent_id:parentId,code:String(body.code||'').trim(),name:String(body.name||'').trim(),category:body.category??null,unit:body.unit??null,value:body.value??null,status:body.status??'active',revision:record.revision+1})
       return {data:structuredClone(record)} as T
     }
-    if(method==='DELETE'){directoryHubRows.splice(directoryHubRows.indexOf(record),1);return undefined as T}
+    if(method==='DELETE'){
+      if(rows.some(row=>row.parent_id===record.id))throw new Error('Сначала удалите дочерние записи')
+      directoryHubRows.splice(directoryHubRows.indexOf(record),1);return undefined as T
+    }
   }
   m=p.match(/^\/companies\/[^/]+\/employees$/)
   if(m&&method==='POST'){

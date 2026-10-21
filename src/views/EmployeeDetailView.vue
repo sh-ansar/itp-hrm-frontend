@@ -704,13 +704,12 @@ onMounted(load)
         </EmployeeProfileSection>
         <EmployeeProfileSection :title="tr('Семейные данные')">
           <template v-if="profile.meta.private_profile_writes_enabled" #actions>
-            <BaseButton variant="secondary" @click="privateRecordsSection = 'family'">{{ tr('Изменить') }}</BaseButton>
+            <BaseButton variant="secondary" @click="openPrivateFamilyEditor()">{{ tr('Изменить') }}</BaseButton>
           </template>
-          <BaseDataTable density="compact" :rows="reference?.family ?? []" :columns="familyColumns" row-key="id"
-            :caption="tr('Сведения о родственниках сотрудника')" :empty-title="tr('Семейные данные не внесены')"
-            :empty-description="tr('Для сотрудника пока нет доступных сведений о родственниках.')">
-            <template #cell-birth_date="{ value }">{{ formatDate(typeof value === 'string' ? value : null) }}</template>
-          </BaseDataTable>
+          <EmployeeFamilyList :members="profile.private_profile?.family ?? reference?.family ?? []"
+            :writable="Boolean(profile.meta.private_profile_writes_enabled)"
+            :truncated="Boolean(profile.meta.private_family_truncated)"
+            @create="openPrivateFamilyEditor(null, true)" @edit="openPrivateFamilyEditor($event)" />
         </EmployeeProfileSection>
         <EmployeeProfileSection :title="tr('Воинский учёт')">
           <template v-if="profile.meta.private_profile_writes_enabled" #actions>
@@ -1013,13 +1012,14 @@ onMounted(load)
     <EmployeePrivateRecordsManager v-if="profile && privateRecordsSection !== null && profile.meta.private_profile_writes_enabled"
       :open="true" :company-id="String(route.params.company)" :employee-id="profile.data.id"
       :section="privateRecordsSection" :family="profile.private_profile?.family ?? []"
+      :initial-record-id="privateRecordFocus" :create-on-open="privateRecordCreate"
       :identities="profile.private_profile?.identity_documents ?? []"
       :education="profile.private_profile?.education ?? []"
       :truncated="privateRecordsSection === 'family' ? profile.meta.private_family_truncated
         : privateRecordsSection === 'education' ? profile.meta.private_education_truncated
         : profile.meta.private_identities_truncated"
-      @close="privateRecordsSection = null" @saved="privateRecordsSection = null; load()"
-      @refresh="privateRecordsSection = null; load()" />
+      @close="closePrivateRecords" @saved="closePrivateRecords(); load()"
+      @refresh="closePrivateRecords(); load()" />
   </section>
 </template>
 

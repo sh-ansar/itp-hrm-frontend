@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { publicAsset } from '../utils/publicAsset'
+import { useCompanyAccessStore } from '../stores/companyAccess'
 import { useActiveCompanySelection } from '../composables/useActiveCompanySelection'
 import { computed, onMounted, ref, watch } from 'vue'
 import { CalendarDays, Clock3, TriangleAlert, UsersRound } from 'lucide-vue-next'
@@ -34,6 +35,8 @@ const demoMode = import.meta.env.VITE_DEMO_MODE === 'true'
 const { t: leaveT } = useLeaveWorkflowI18n()
 const { balanceT } = useLeaveBalanceCopy()
 const managementOpen = ref(false)
+const access = useCompanyAccessStore()
+void access.refresh()
 const balancesOpen = ref(false)
 const companies = ref<CompanyRecord[]>([])
 const company = ref('')
@@ -61,6 +64,9 @@ const yearOptions = Array.from({ length: 5 }, (_, index) => {
 
 const selectedCompany = computed(() => companies.value.find(item => item.id === company.value) ?? null)
 const canManageLeaves = computed(() => !demoMode && !!productionMeta.value?.can_manage_leave_requests)
+const canReviewLeaves = computed(() => !demoMode && access.companies.some(item =>
+  item.company_id === company.value && item.capabilities['leave.requests.review'] === true))
+const canOpenLeaveWorkspace = computed(() => canManageLeaves.value || canReviewLeaves.value)
 const rows = computed<DemoLeaveRow[]>(() => {
   if (demoMode) return buildDemoLeaves(employees.value, Number(year.value))
   return productionLeaves.value.map(row => ({
@@ -243,7 +249,7 @@ onMounted(loadCompanies)
         <div class="leaves-controls">
           <BaseSelectField v-model="company" label="Компания" :options="companies" />
           <BaseSelectField v-model="year" label="Год" :options="yearOptions" />
-          <BaseButton v-if="canManageLeaves" variant="secondary" @click="managementOpen = !managementOpen">{{ leaveT('title') }}</BaseButton>
+          <BaseButton v-if="canOpenLeaveWorkspace" variant="secondary" @click="managementOpen = !managementOpen">{{ leaveT('title') }}</BaseButton>
           <BaseButton v-if="canManageLeaves" variant="secondary" @click="balancesOpen = !balancesOpen">{{ balanceT('title') }}</BaseButton>
         </div>
       </div>
@@ -254,7 +260,7 @@ onMounted(loadCompanies)
 
       <BaseViewTabs :model-value="activeTab" :options="tabs" label="Разделы графика отпусков"
         @update:model-value="setTab" />
-      <LeaveManagementPanel v-if="canManageLeaves && managementOpen" :company-id="company" @published="loadWorkspace" />
+      <LeaveManagementPanel v-if="canOpenLeaveWorkspace && managementOpen" :company-id="company" @published="loadWorkspace" />
       <LeaveBalancePanel v-if="canManageLeaves && balancesOpen" :company-id="company" />
 
       <div class="leaves-summary" aria-label="Сводка графика отпусков">

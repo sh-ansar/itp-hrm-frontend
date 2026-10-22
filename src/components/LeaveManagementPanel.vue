@@ -13,7 +13,6 @@ import ProtectedLeaveEvidencePanel from './ProtectedLeaveEvidencePanel.vue'
 import { useLeaveWorkflowI18n } from '../i18n/leaveWorkflow'
 import { useLeaveCategoryI18n } from '../i18n/leaveCategory'
 import { useUiFormatters } from '../composables/useUiFormatters'
-import { useWorkspaceI18n } from '../composables/useWorkspaceI18n'
 import { useCompanyAccessStore } from '../stores/companyAccess'
 import { useSessionStore } from '../stores/session'
 import { ApiError } from '../api/client'
@@ -27,7 +26,6 @@ import {
 const props = defineProps<{ companyId: string }>()
 const emit = defineEmits<{ published: [] }>()
 const { t } = useLeaveWorkflowI18n()
-const { tr } = useWorkspaceI18n()
 const { ct } = useLeaveCategoryI18n()
 const fmt = useUiFormatters()
 const session = useSessionStore()
@@ -320,11 +318,11 @@ async function submitManagerReview() {
         <article v-for="row in requests" :key="row.id" class="leave-management-row">
           <div class="leave-management-info">
             <strong>{{ [row.last_name, row.first_name, row.middle_name].filter(Boolean).join(' ') }}</strong>
-            <p>{{ row.leave_type_name || tr('Вид отпуска скрыт') }} · {{ fmt.date(row.planned_started_on) }} — {{ fmt.date(row.planned_ended_on) }}</p>
+            <p>{{ row.leave_type_name || t('leaveTypeHidden') }} · {{ fmt.date(row.planned_started_on) }} — {{ fmt.date(row.planned_ended_on) }}</p>
             <small>{{ t('plannedDays') }}: {{ fmt.number(row.planned_days, 0) }} · {{ t('status') }}: {{ statusLabel(row.status) }}</small>
             <p v-if="managerApprovalRequired && row.manager_recommendation" class="leave-management-comment">
-              {{ tr('Решение руководителя') }}:
-              {{ row.manager_recommendation === 'approved' ? tr('Согласовано') : tr('Отклонено') }}
+              {{ t('managerRecommendation') }}:
+              {{ row.manager_recommendation === 'approved' ? t('managerApproved') : t('managerRejected') }}
               <template v-if="row.manager_decision_comment"> — {{ row.manager_decision_comment }}</template>
             </p>
             <p v-if="row.decision_comment" class="leave-management-comment">{{ row.decision_comment }}</p>
@@ -338,8 +336,8 @@ async function submitManagerReview() {
             <BaseButton v-if="canManageRequests && ['draft','submitted'].includes(row.status)" variant="secondary" :disabled="busy"
               @click="transition(row, 'cancel')">{{ t('cancel') }}</BaseButton>
             <template v-if="row.status === 'submitted' && canReview && !row.manager_recommendation">
-              <BaseButton :disabled="busy" @click="openManagerReview(row, 'approved')">{{ tr('Согласовать как руководитель') }}</BaseButton>
-              <BaseButton variant="secondary" :disabled="busy" @click="openManagerReview(row, 'rejected')">{{ tr('Отклонить как руководитель') }}</BaseButton>
+              <BaseButton :disabled="busy" @click="openManagerReview(row, 'approved')">{{ t('managerApprove') }}</BaseButton>
+              <BaseButton variant="secondary" :disabled="busy" @click="openManagerReview(row, 'rejected')">{{ t('managerReject') }}</BaseButton>
             </template>
             <template v-if="row.status === 'submitted' && canApprove
               && (!managerApprovalRequired || row.manager_recommendation === 'approved')
@@ -396,11 +394,11 @@ async function submitManagerReview() {
     </template>
   </BaseDrawer>
 
-  <BaseDrawer :open="!!managerReviewTarget" :title="tr('Согласование руководителя')"
-    :description="tr('Рекомендация руководителя не является окончательным утверждением отпуска')"
+  <BaseDrawer :open="!!managerReviewTarget" :title="t('managerReviewTitle')"
+    :description="t('managerHint')"
     :close-label="t('close')" @close="managerReviewTarget = null">
     <div class="leave-form">
-      <p>{{ managerReviewDecision === 'approved' ? tr('Согласовать заявку') : tr('Отклонить заявку') }}</p>
+      <p>{{ managerReviewDecision === 'approved' ? t('reviewApprove') : t('reviewReject') }}</p>
       <label class="leave-textarea"><span>{{ t('decisionComment') }}</span>
         <textarea v-model="managerComment" rows="4" maxlength="2000"
           :placeholder="managerReviewDecision === 'rejected' ? t('rejectReason') : t('optional')" />
@@ -410,7 +408,7 @@ async function submitManagerReview() {
     <template #footer>
       <BaseButton variant="secondary" :disabled="busy" @click="managerReviewTarget = null">{{ t('close') }}</BaseButton>
       <BaseButton :disabled="busy || (managerReviewDecision === 'rejected' && !managerComment.trim())"
-        @click="submitManagerReview">{{ managerReviewDecision === 'approved' ? tr('Согласовать') : t('reject') }}</BaseButton>
+        @click="submitManagerReview">{{ managerReviewDecision === 'approved' ? t('reviewConfirm') : t('reject') }}</BaseButton>
     </template>
   </BaseDrawer>
 

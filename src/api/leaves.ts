@@ -96,7 +96,11 @@ export interface LeaveRequestRecord {
   id: string
   employee_id: string
   leave_type_id: string
-  leave_type_name: string
+  leave_type_name: string | null
+  manager_recommendation?: 'approved' | 'rejected' | null
+  manager_reviewed_by_user_id?: number | null
+  manager_reviewed_at?: string | null
+  manager_decision_comment?: string | null
   last_name: string
   first_name: string
   middle_name: string | null
@@ -120,6 +124,9 @@ export interface LeaveRequestsResponse {
     last_page: number
     total: number
     can_approve_leave_requests: boolean
+    manager_approval_required?: boolean
+    can_review_leave_requests?: boolean
+    can_manage_leave_requests?: boolean
     protected_evidence_uploads_enabled?: boolean
     protected_evidence_required?: boolean
   }
@@ -189,6 +196,16 @@ export function decideLeaveRequest(
   comment: string | null,
 ): Promise<{ data: LeaveRequestRecord }> {
   return apiRequest(requestPath(companyId, requestId) + '/decision', {
+    method: 'POST', body: JSON.stringify({ revision, decision, comment }),
+  })
+}
+
+/** Scoped recommendation only. The final HR decision remains a separate endpoint. */
+export function reviewLeaveRequestAsManager(
+  companyId: string, requestId: string, revision: number,
+  decision: 'approved' | 'rejected', comment: string | null,
+): Promise<{ data: LeaveRequestRecord }> {
+  return apiRequest(requestPath(companyId, requestId) + '/manager-decision', {
     method: 'POST', body: JSON.stringify({ revision, decision, comment }),
   })
 }

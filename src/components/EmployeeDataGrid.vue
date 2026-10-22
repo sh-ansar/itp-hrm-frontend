@@ -62,7 +62,7 @@ function valueOf(field: EmployeeDisplayField): string | number {
   display:grid;align-content:start;gap:6px;min-width:0;
 }
 .employee-data-label{
-  font-size:12px;line-height:17px;font-weight:500;color:var(--color-muted);
+  font-size:13px;line-height:18px;font-weight:500;color:var(--color-muted);
 }
 .employee-data-field > strong,
 .employee-data-editable > strong{

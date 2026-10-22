@@ -27,7 +27,10 @@ test('employee prototype register has real status filter, archive, grouping and 
     await page.getByRole('row', { name: /E2E-001/ }).waitFor({ timeout: 15000 })
     const table = page.getByRole('table', { name: 'Реестр сотрудников выбранной компании' })
     assert.equal(await table.getByRole('columnheader', { name: 'Дата рождения' }).count(), 1)
-    assert.equal(await table.getByRole('columnheader', { name: 'Подразделение' }).count(), 1)
+    assert.equal(await table.getByRole('columnheader', { name: 'Подразделение' }).count(), 0)
+    await page.getByRole('button', { name: 'Настройка колонок', exact: true }).click()
+    await page.locator('.column-options').getByLabel('Подразделение').check()
+    await page.getByRole('dialog', { name: 'Настройка колонок' }).getByRole('button', { name: 'Применить' }).click()
 
     await page.getByRole('button', { name: 'Группировка' }).click()
     await page.getByRole('menuitem', { name: 'По подразделениям' }).click()

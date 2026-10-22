@@ -58,6 +58,13 @@ function closeMobile() { if (props.mobileOpen) emit('update:mobileOpen', false) 
         <img :src="link.icon" class="nav-svg-icon" alt="" aria-hidden="true" />
         <span class="nav-label">{{ linkLabel(link) }}</span>
       </RouterLink>
+      <RouterLink v-if="connected && access.can('self_service.view')" to="/my" class="nav-item"
+        :class="{ 'is-active': route.path === '/my' }" :aria-current="route.path === '/my' ? 'page' : undefined"
+        :title="ui.sidebarCollapsed ? { ru: 'Мой кабинет', kk: 'Менің кабинетім', en: 'My workspace', ka: 'ჩემი კაბინეტი' }[ui.locale] : undefined"
+        @click="closeMobile">
+        <img :src="publicAsset('prototype-icons/People-groupf.svg')" class="nav-svg-icon" alt="" aria-hidden="true" />
+        <span class="nav-label">{{ { ru: 'Мой кабинет', kk: 'Менің кабинетім', en: 'My workspace', ka: 'ჩემი კაბინეტი' }[ui.locale] }}</span>
+      </RouterLink>
       <div class="nav-divider" role="separator" :aria-label="t('shell.serviceSections')"></div>
       <RouterLink v-for="link in services" :key="link.to" class="nav-item"
         :class="{ 'is-active': active(link.to), 'router-link-active': active(link.to) }"

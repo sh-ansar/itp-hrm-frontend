@@ -19,8 +19,9 @@ test('register matches prototype structure and only shows genuine scoped KPI num
     assert.equal(await page.getByRole('navigation', { name: 'Разделы реестра сотрудников' }).getByRole('button').count(), 3)
     const table = page.getByRole('table', { name: 'Реестр сотрудников выбранной компании' })
     await table.getByRole('row').nth(1).waitFor()
-    assert.equal(await table.getByRole('columnheader', { name: 'Подразделение' }).count(), 1)
-    assert.equal(await table.getByRole('columnheader', { name: 'Категория' }).count(), 1)
+    // The source ZIP uses a compact initial table; these columns remain opt-in via column settings.
+    assert.equal(await table.getByRole('columnheader', { name: 'Подразделение' }).count(), 0)
+    assert.equal(await table.getByRole('columnheader', { name: 'Категория' }).count(), 0)
     assert.equal(await table.getByRole('row').count(), 11, 'Page size 10 is backed by API, not only a visual control')
     assert.equal(await page.getByRole('button', { name: 'На весь экран' }).count(), 1)
     assert.equal(await page.getByRole('button', { name: 'Шаблоны' }).count(), 1)

@@ -15,6 +15,7 @@ withDefaults(defineProps<{
   options: ActionItem[]
   variant?: 'primary' | 'secondary' | 'icon'
   disabled?: boolean
+  icon?: string
 }>(), { variant: 'secondary', disabled: false })
 const emit = defineEmits<{ select: [id: string] }>()
 const open = ref(false)
@@ -78,7 +79,8 @@ onBeforeUnmount(() => {
     <button ref="trigger" type="button" class="action-trigger"
       :disabled="disabled" :aria-label="tr(label)" :title="variant==='icon'?tr(label):undefined"
       :aria-expanded="open" aria-haspopup="menu" @click="toggle">
-      <MoreHorizontal v-if="variant==='icon'" :size="18" aria-hidden="true" />
+      <img v-if="variant==='icon' && icon" :src="icon" width="16" height="16" alt="" aria-hidden="true" />
+      <MoreHorizontal v-else-if="variant==='icon'" :size="18" aria-hidden="true" />
       <template v-else>{{ tr(label) }}<ChevronDown :size="14" aria-hidden="true" /></template>
     </button>
     <Teleport to="body">

@@ -8,7 +8,8 @@ on:
 # Purely disposable runner services. NEVER target any existing platform/ETP/Spyon database.
 jobs:
   postgres16-laravel-minio-chromium:
-    runs-on: ubuntu-latest
+    # Playwright 1.56.1 supports 24.04; ubuntu-latest has moved to unsupported 26.04.
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
     services:
       postgres:

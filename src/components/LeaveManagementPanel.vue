@@ -20,7 +20,7 @@ import { ApiError } from '../api/client'
 import {
   getLeaveRequests, getLeaveTypes, createLeaveRequest, updateLeaveRequest,
   createLeaveType, submitLeaveRequest, cancelLeaveRequest, decideLeaveRequest, reviewLeaveRequestAsManager,
-  type LeaveRequestRecord, type LeaveTypeRecord, type LeavePlanInput,
+  type LeaveRequestRecord, type LeaveTypeRecord, type LeaveTypesResponse, type LeavePlanInput,
   type LeaveCategory, type LeaveTypeInput,
 } from '../api/leaves'
 
@@ -107,7 +107,7 @@ async function load() {
       item.company_id === props.companyId && item.role_code === 'department_manager')
     const [kinds, records] = await Promise.all([
       managerOnly
-        ? Promise.resolve({ data: [] as LeaveTypeRecord[], meta: { can_manage_leave_types: false } })
+        ? Promise.resolve<LeaveTypesResponse>({ data: [], meta: { can_manage_leave_types: false } })
         : getLeaveTypes(props.companyId),
       getLeaveRequests(props.companyId, page.value),
     ])

@@ -43,7 +43,7 @@ async function openManagement(page) {
   await open.click()
   await page.locator('.leave-management').waitFor()
 }
-test('manager recommends only scoped leave; distinct HR finally approves and publishes', async () => {
+test('manager recommends only scoped leave; distinct company approver finally publishes', async () => {
   const browser = await chromium.launch({ headless: true })
   const errors = []
   try {
@@ -122,8 +122,8 @@ test('manager recommends only scoped leave; distinct HR finally approves and pub
       await context.close()
     }
     {
-      const { context, page } = await login(browser, 'hr')
-      page.on('pageerror', error => errors.push('final HR: ' + error.message))
+      const { context, page } = await login(browser, 'admin')
+      page.on('pageerror', error => errors.push('final company approver: ' + error.message))
       await openManagement(page)
       const panel = page.locator('.leave-management')
       await panel.getByText('Согласовано').waitFor()

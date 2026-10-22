@@ -13,11 +13,12 @@ import ProtectedLeaveEvidencePanel from './ProtectedLeaveEvidencePanel.vue'
 import { useLeaveWorkflowI18n } from '../i18n/leaveWorkflow'
 import { useLeaveCategoryI18n } from '../i18n/leaveCategory'
 import { useUiFormatters } from '../composables/useUiFormatters'
+import { useWorkspaceI18n } from '../composables/useWorkspaceI18n'
 import { useSessionStore } from '../stores/session'
 import { ApiError } from '../api/client'
 import {
   getLeaveRequests, getLeaveTypes, createLeaveRequest, updateLeaveRequest,
-  createLeaveType, submitLeaveRequest, cancelLeaveRequest, decideLeaveRequest,
+  createLeaveType, submitLeaveRequest, cancelLeaveRequest, decideLeaveRequest, reviewLeaveRequestAsManager,
   type LeaveRequestRecord, type LeaveTypeRecord, type LeavePlanInput,
   type LeaveCategory, type LeaveTypeInput,
 } from '../api/leaves'
@@ -25,6 +26,7 @@ import {
 const props = defineProps<{ companyId: string }>()
 const emit = defineEmits<{ published: [] }>()
 const { t } = useLeaveWorkflowI18n()
+const { tr } = useWorkspaceI18n()
 const { ct } = useLeaveCategoryI18n()
 const fmt = useUiFormatters()
 const session = useSessionStore()
@@ -38,6 +40,11 @@ const page = ref(1)
 const lastPage = ref(1)
 const total = ref(0)
 const canApprove = ref(false)
+const canReview = ref(false)
+const managerApprovalRequired = ref(false)
+const managerReviewTarget = ref<LeaveRequestRecord | null>(null)
+const managerReviewDecision = ref<'approved' | 'rejected'>('approved')
+const managerComment = ref('')
 const canManageTypes = ref(false)
 const editorOpen = ref(false)
 const typeOpen = ref(false)
@@ -104,6 +111,8 @@ async function load() {
     requests.value = records.data
     canManageTypes.value = kinds.meta.can_manage_leave_types
     canApprove.value = records.meta.can_approve_leave_requests
+    canReview.value = records.meta.can_review_leave_requests ?? false
+    managerApprovalRequired.value = records.meta.manager_approval_required ?? false
     evidenceUploadsEnabled.value = records.meta.protected_evidence_uploads_enabled ?? false
     evidenceRequired.value = records.meta.protected_evidence_required ?? false
     page.value = records.meta.current_page
@@ -121,6 +130,7 @@ watch(() => props.companyId, () => {
   editorOpen.value = false
   typeOpen.value = false
   rejectionTarget.value = null
+  managerReviewTarget.value = null
   category.value = 'ordinary'
   void load()
 }, { immediate: true })
@@ -241,6 +251,35 @@ async function transition(row: LeaveRequestRecord, action: 'submit' | 'cancel' |
     busy.value = false
   }
 }
+function openManagerReview(row: LeaveRequestRecord, decision: 'approved' | 'rejected') {
+  managerReviewTarget.value = row
+  managerReviewDecision.value = decision
+  managerComment.value = ''
+  error.value = ''
+}
+async function submitManagerReview() {
+  const row = managerReviewTarget.value
+  if (!row || busy.value) return
+  if (managerReviewDecision.value === 'rejected' && !managerComment.value.trim()) {
+    error.value = t('rejectReason')
+    return
+  }
+  if (!window.confirm(t('confirmed'))) return
+  busy.value = true
+  error.value = ''
+  try {
+    await reviewLeaveRequestAsManager(props.companyId, row.id, row.revision,
+      managerReviewDecision.value, managerComment.value.trim() || null)
+    managerReviewTarget.value = null
+    managerComment.value = ''
+    info.value = t('saved')
+    await load()
+  } catch (cause) {
+    operationFailed(cause)
+  } finally {
+    busy.value = false
+  }
+}
 </script>
 
 <template>
@@ -271,8 +310,13 @@ async function transition(row: LeaveRequestRecord, action: 'submit' | 'cancel' |
         <article v-for="row in requests" :key="row.id" class="leave-management-row">
           <div class="leave-management-info">
             <strong>{{ [row.last_name, row.first_name, row.middle_name].filter(Boolean).join(' ') }}</strong>
-            <p>{{ row.leave_type_name }} · {{ fmt.date(row.planned_started_on) }} — {{ fmt.date(row.planned_ended_on) }}</p>
+            <p>{{ row.leave_type_name || tr('Вид отпуска скрыт') }} · {{ fmt.date(row.planned_started_on) }} — {{ fmt.date(row.planned_ended_on) }}</p>
             <small>{{ t('plannedDays') }}: {{ fmt.number(row.planned_days, 0) }} · {{ t('status') }}: {{ statusLabel(row.status) }}</small>
+            <p v-if="managerApprovalRequired && row.manager_recommendation" class="leave-management-comment">
+              {{ tr('Решение руководителя') }}:
+              {{ row.manager_recommendation === 'approved' ? tr('Согласовано') : tr('Отклонено') }}
+              <template v-if="row.manager_decision_comment"> — {{ row.manager_decision_comment }}</template>
+            </p>
             <p v-if="row.decision_comment" class="leave-management-comment">{{ row.decision_comment }}</p>
             <ProtectedLeaveEvidencePanel v-if="row.category && row.category !== 'ordinary'"
               :company-id="companyId" :request="row" :can-upload="evidenceUploadsEnabled"
@@ -283,7 +327,13 @@ async function transition(row: LeaveRequestRecord, action: 'submit' | 'cancel' |
             <BaseButton v-if="row.status === 'draft'" :disabled="busy" @click="transition(row, 'submit')">{{ t('submit') }}</BaseButton>
             <BaseButton v-if="['draft','submitted'].includes(row.status)" variant="secondary" :disabled="busy"
               @click="transition(row, 'cancel')">{{ t('cancel') }}</BaseButton>
-            <template v-if="row.status === 'submitted' && canApprove && String(row.created_by_user_id) !== myUserId">
+            <template v-if="row.status === 'submitted' && canReview && !row.manager_recommendation">
+              <BaseButton :disabled="busy" @click="openManagerReview(row, 'approved')">{{ tr('Согласовать как руководитель') }}</BaseButton>
+              <BaseButton variant="secondary" :disabled="busy" @click="openManagerReview(row, 'rejected')">{{ tr('Отклонить как руководитель') }}</BaseButton>
+            </template>
+            <template v-if="row.status === 'submitted' && canApprove
+              && (!managerApprovalRequired || row.manager_recommendation === 'approved')
+              && String(row.created_by_user_id) !== myUserId">
               <BaseButton :disabled="busy" @click="transition(row, 'approved')">{{ t('approve') }}</BaseButton>
               <BaseButton variant="secondary" :disabled="busy" @click="rejectionTarget = row">{{ t('reject') }}</BaseButton>
             </template>
@@ -333,6 +383,24 @@ async function transition(row: LeaveRequestRecord, action: 'submit' | 'cancel' |
     <template #footer>
       <BaseButton variant="secondary" :disabled="busy" @click="typeOpen = false">{{ t('close') }}</BaseButton>
       <BaseButton :disabled="busy" @click="addType">{{ t('newType') }}</BaseButton>
+    </template>
+  </BaseDrawer>
+
+  <BaseDrawer :open="!!managerReviewTarget" :title="tr('Согласование руководителя')"
+    :description="tr('Рекомендация руководителя не является окончательным утверждением отпуска')"
+    :close-label="t('close')" @close="managerReviewTarget = null">
+    <div class="leave-form">
+      <p>{{ managerReviewDecision === 'approved' ? tr('Согласовать заявку') : tr('Отклонить заявку') }}</p>
+      <label class="leave-textarea"><span>{{ t('decisionComment') }}</span>
+        <textarea v-model="managerComment" rows="4" maxlength="2000"
+          :placeholder="managerReviewDecision === 'rejected' ? t('rejectReason') : t('optional')" />
+      </label>
+      <BaseNotice v-if="error" tone="error">{{ error }}</BaseNotice>
+    </div>
+    <template #footer>
+      <BaseButton variant="secondary" :disabled="busy" @click="managerReviewTarget = null">{{ t('close') }}</BaseButton>
+      <BaseButton :disabled="busy || (managerReviewDecision === 'rejected' && !managerComment.trim())"
+        @click="submitManagerReview">{{ managerReviewDecision === 'approved' ? tr('Согласовать') : t('reject') }}</BaseButton>
     </template>
   </BaseDrawer>
 

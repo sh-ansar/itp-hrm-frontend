@@ -22,7 +22,7 @@ test('HR saves personal and military data in Laravel from a mobile employee prof
 
     await page.goto('/employees/11111111-1111-4111-8111-111111111111/77777777-7777-4777-8777-777777777777')
     await page.getByRole('heading', { name: 'Основные личные данные' }).waitFor()
-    await page.getByRole('button', { name: 'Изменить', exact: true }).first().click()
+    await page.locator('.employee-profile-section').filter({ has: page.getByRole('heading', { name: 'Основные личные данные', exact: true }) }).getByRole('button', { name: 'Изменить', exact: true }).click()
     const personal = page.getByRole('dialog', { name: 'Личные данные и контакты' })
     await personal.waitFor()
     await personal.getByLabel('Гражданство').fill('GE')
@@ -33,13 +33,13 @@ test('HR saves personal and military data in Laravel from a mobile employee prof
 
     await page.reload()
     await page.getByRole('heading', { name: 'Основные личные данные' }).waitFor()
-    await page.getByRole('button', { name: 'Изменить', exact: true }).first().click()
+    await page.locator('.employee-profile-section').filter({ has: page.getByRole('heading', { name: 'Основные личные данные', exact: true }) }).getByRole('button', { name: 'Изменить', exact: true }).click()
     await personal.waitFor()
     assert.equal(await personal.getByLabel('Место рождения').inputValue(), 'Synthetic City')
     await personal.getByRole('button', { name: 'Закрыть', exact: true }).last().click()
     await personal.waitFor({ state: 'hidden' })
 
-    await page.getByRole('button', { name: 'Изменить', exact: true }).last().click()
+    await page.locator('.employee-profile-section').filter({ has: page.getByRole('heading', { name: 'Воинский учёт', exact: true }) }).getByRole('button', { name: 'Изменить', exact: true }).click()
     const military = page.getByRole('dialog', { name: 'Воинский учёт' })
     await military.getByLabel('Статус воинского учёта').fill('liable')
     await military.getByLabel('Категория воинского учёта').fill('reserve')

@@ -89,7 +89,7 @@ const total = ref(0)
 const lastPage = ref(1)
 const contractExpiryDays = ref('30')
 const contractExpiryOptions = computed(() => [30, 60, 90].map(days => ({
-  id: String(days), name: tr('договоров истекают в ближайшие '+days+' дней'),
+  id: String(days), label: tr('договоров истекают в ближайшие '+days+' дней'),
 })))
 const counters = ref({
   active: null as number | null,
@@ -156,7 +156,7 @@ const columnKeys = [
 function savedColumnPreferences(): Record<string, boolean> {
   const defaultVisible = new Set([
     'birth_date', 'gender', 'personnel_number', 'current_assignment_valid_from',
-    'employee_category', 'current_position_name', 'current_department_name', 'status_label',
+    'status_label',
   ])
   const initial = Object.fromEntries(columnKeys.map(key => [key, defaultVisible.has(key)]))
   try {
@@ -660,8 +660,11 @@ onMounted(() => {
       <BaseRegistryMetricCard :title="tr('Истекающие договоры')" :value="counters.expiring"
         :description="tr('договоров истекают в ближайшие '+contractExpiryDays+' дней')"
         :icon="publicAsset('prototype-icons/Info.svg')" tone="danger">
-        <BaseSelectField v-model="contractExpiryDays" :label="tr('Период')"
-          :options="contractExpiryOptions" />
+        <template #action>
+          <BaseActionDropdown :label="tr('Период')" :options="contractExpiryOptions"
+            variant="icon" :icon="publicAsset('prototype-icons/Filter.svg')"
+            @select="contractExpiryDays = $event" />
+        </template>
       </BaseRegistryMetricCard>
     </BaseKpiGrid>
 
@@ -828,10 +831,11 @@ onMounted(() => {
 
 <style scoped>
 .personnel-page{display:grid;grid-template-columns:minmax(0,1fr);gap:16px;max-width:100%;min-width:0}
-.registry-breadcrumb{display:flex;align-items:center;gap:10px;color:var(--color-muted);font-size:12px;min-height:24px}
+.registry-breadcrumb{display:flex;align-items:center;gap:10px;color:var(--color-muted);font-size:14px;min-height:24px}
 .registry-breadcrumb img{width:15px;height:15px}
 .registry-breadcrumb strong{font-weight:500;color:var(--color-text)}
-.registry-metrics{min-width:0;gap:12px}
+.registry-metrics{min-width:0;gap:24px}
+.registry-metrics :deep(.action-trigger){width:20px;height:20px;min-height:20px;padding:0;border:0;background:transparent;box-shadow:none}
 .registry-card{min-width:0;background:transparent;border:0;box-shadow:none;padding:0}
 .registry-card--fullscreen{
   position:fixed;z-index:220;inset:10px;display:block;
@@ -904,9 +908,9 @@ onMounted(() => {
 }
 .registry-mobile-list{display:none}
 .name-cell{min-width:180px;display:grid;gap:3px}
-.name-cell a{font-size:12px;line-height:18px;font-weight:500;color:var(--color-text)}
+.name-cell a{font-size:14px;line-height:20px;font-weight:400;color:var(--color-text)}
 .name-cell a:hover{color:var(--color-primary);text-decoration:underline}
-.name-cell span{font-size:11px;line-height:16px;color:var(--color-muted)}
+.name-cell span{font-size:12px;line-height:17px;color:var(--color-muted)}
 .employee-row-actions{display:flex;align-items:center;justify-content:center;gap:5px;white-space:nowrap}
 .employee-link{display:inline-flex;align-items:center;justify-content:center;width:29px;height:29px;border-radius:5px;color:var(--color-primary)}
 .employee-link:hover{background:var(--color-accent-soft)}

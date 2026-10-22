@@ -53,9 +53,9 @@ const contentId = useId()
 .section-heading h2{
   margin:0;
   color:var(--color-text);
-  font-size:15px;
+  font-size:18px;
   font-weight:600;
-  line-height:21px;
+  line-height:24px;
 }
 .section-actions{display:flex;align-items:center;gap:8px;min-width:0}
 .expand-button{
@@ -83,7 +83,7 @@ const contentId = useId()
 .section-content{min-width:0;padding:16px}
 @media(max-width:600px){
   .section-heading{min-height:45px;padding:9px 12px}
-  .section-heading h2{font-size:14px;line-height:19px}
+  .section-heading h2{font-size:16px;line-height:22px}
   .section-content{padding:12px}
 }
 @media(prefers-reduced-motion:reduce){.chevron{transition:none}}

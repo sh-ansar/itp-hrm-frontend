@@ -722,12 +722,7 @@ onMounted(load)
         <span><LockKeyhole :size="13" aria-hidden="true" /> {{ tr('Информационные поля — только просмотр') }}</span>
       </div>
       <template v-if="activeSection === 'personal' && profile.meta.extended_sections_visible">
-        <EmployeeProfileSection :title="tr('Основные личные данные')">
-          <template v-if="profile.meta.private_profile_writes_enabled" #actions>
-            <BaseButton variant="secondary" @click="privateEditorSection = 'personal'">{{ tr('Изменить') }}</BaseButton>
-          </template>
-          <EmployeeDataGrid :fields="personalFields" :editable-groups="editableFieldGroups" @edit="openFieldEditor" />
-        </EmployeeProfileSection>
+
         <EmployeeProfileSection :title="tr('Контакты и адреса')">
           <EmployeeDataGrid :fields="contactFields" :editable-groups="editableFieldGroups" @edit="openFieldEditor" />
           <EmployeeAddressBook v-if="hasNormalizedAddressStore"
@@ -799,6 +794,12 @@ onMounted(load)
             <BaseButton variant="secondary" @click="privateEditorSection = 'military'">{{ tr('Изменить') }}</BaseButton>
           </template>
           <EmployeeDataGrid :fields="militaryFields" :editable-groups="editableFieldGroups" @edit="openFieldEditor" />
+        </EmployeeProfileSection>
+        <EmployeeProfileSection :title="tr('Основные личные данные')">
+          <template v-if="profile.meta.private_profile_writes_enabled" #actions>
+            <BaseButton variant="secondary" @click="privateEditorSection = 'personal'">{{ tr('Изменить') }}</BaseButton>
+          </template>
+          <EmployeeDataGrid :fields="personalFields" :editable-groups="editableFieldGroups" @edit="openFieldEditor" />
         </EmployeeProfileSection>
       </template>
 
@@ -1114,7 +1115,7 @@ onMounted(load)
 .employee-profile :deep(.view-tab){
   min-height:36px;
   padding:8px 12px;
-  font-size:11px;
+  font-size:13px;
   line-height:17px;
 }
 .employee-breadcrumb{

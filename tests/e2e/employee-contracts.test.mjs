@@ -141,17 +141,19 @@ test('HR creates and edits an employment contract and registry expiry KPI become
     assert.equal(contractsApi.body.data[0].revision, 2)
 
     await page.goto('/employees')
+    let selectedExpiryDays = '30'
     for (const [days, expected] of [['30', '0'], ['60', '1'], ['90', '1'], ['30', '0']]) {
       const card = page.locator('.registry-summary-card').filter({ hasText: 'Истекающие договоры' })
-      const select = card.getByRole('combobox', { name: 'Период', exact: true })
-      if (await select.inputValue() !== days) {
+      if (selectedExpiryDays !== days) {
+        await card.getByRole('button', { name: 'Период', exact: true }).click()
         const [response] = await Promise.all([
           page.waitForResponse(r => r.url().includes('/employees?')
             && new URL(r.url()).searchParams.get('contract_expiry_days') === days),
-          select.selectOption(days),
+          page.getByRole('menuitem', { name: 'договоров истекают в ближайшие '+days+' дней', exact: true }).click(),
         ])
         assert.equal(response.status(), 200)
         assert.equal((await response.json()).meta.registry_summary.expiring_contracts_days, Number(days))
+        selectedExpiryDays = days
       }
       await page.waitForFunction(expected => {
         const card = [...document.querySelectorAll('.registry-summary-card')]

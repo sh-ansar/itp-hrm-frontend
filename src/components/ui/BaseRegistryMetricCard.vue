@@ -31,7 +31,7 @@ const ringStyle = computed(() => ({
     :to="to || undefined">
     <div class="registry-summary-heading">
       <span>{{ title }}</span>
-      <img v-if="icon" :src="icon" alt="" aria-hidden="true" />
+      <slot name="action"><img v-if="icon" :src="icon" alt="" aria-hidden="true" /></slot>
     </div>
     <div v-if="kind==='ring'" class="registry-summary-ring-layout">
       <span class="registry-summary-ring" :style="ringStyle"
@@ -63,7 +63,7 @@ const ringStyle = computed(() => ({
 .registry-summary-card--warning{--registry-metric-color:var(--color-warning)}
 .registry-summary-card--linked:hover{border-color:var(--color-primary-stroke);box-shadow:0 5px 14px rgba(35,115,160,.08)}
 .registry-summary-card--linked:focus-visible{outline:2px solid var(--color-primary);outline-offset:2px}
-.registry-summary-heading{display:flex;align-items:start;justify-content:space-between;gap:9px;min-width:0}
+.registry-summary-heading{display:flex;align-items:center;justify-content:space-between;gap:9px;min-width:0}
 .registry-summary-heading span{
   min-width:0;color:var(--color-text);font-size:12px;line-height:17px;font-weight:600;text-transform:uppercase
 }

@@ -157,7 +157,7 @@ onMounted(loadCompanies)
         </div>
 
         <div class="directory-toolbar" role="search" aria-label="Поиск должностей">
-          <BaseSearchField v-model="search" class="directory-search" :label="tr('Поиск должностей')" />
+          <BaseSearchField v-model="search" class="directory-search" label="Поиск должностей" />
           <BaseButton v-if="search.trim()" variant="secondary" @click="search = ''">Сбросить поиск</BaseButton>
           <span class="directory-result-count" aria-live="polite">{{ filteredPositions.length }} из {{ positions.length }} на странице</span>
         </div>

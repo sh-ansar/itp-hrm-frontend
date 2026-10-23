@@ -429,7 +429,7 @@ tbody tr:not(.table-group):hover{background:var(--color-table-hover)}
 tbody tr.table-row--selected{background:var(--color-accent-soft)}
 .table-group th{
   padding:8px 12px;background:var(--color-soft);color:var(--color-text);
-  font-size:12px;font-weight:700;line-height:18px;border-bottom:1px solid var(--color-table-border,var(--color-stroke));
+  font-size:12px;font-weight:600;line-height:18px;border-bottom:1px solid var(--color-table-border,var(--color-stroke));
 }
 .table-group th span{margin-left:9px;color:var(--color-muted);font-size:11px;font-weight:400}
 .selection-column{width:45px;min-width:45px;max-width:45px;text-align:center;padding:9px 8px!important}

@@ -1,0 +1,119 @@
+name: Real HRM Vue-Laravel PostgreSQL Subpath E2E
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  chromium-connected-postgres:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: hrm_connected_ci
+          POSTGRES_USER: hrm_e2e
+          POSTGRES_PASSWORD: synthetic-postgres-test-only
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U hrm_e2e -d hrm_connected_ci"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      GITHUB_ACTIONS: 'true'
+      APP_ENV: testing
+      APP_DEBUG: 'false'
+      APP_KEY: base64:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+      APP_URL: http://127.0.0.1:4189
+      DB_CONNECTION: pgsql
+      DB_HOST: 127.0.0.1
+      DB_PORT: '5432'
+      DB_DATABASE: hrm_connected_ci
+      DB_USERNAME: hrm_e2e
+      DB_PASSWORD: synthetic-postgres-test-only
+      DB_SCHEMA: public
+      CACHE_STORE: file
+      QUEUE_CONNECTION: sync
+      SESSION_DRIVER: file
+      SESSION_COOKIE: hrm_connected_e2e_session
+      SESSION_SECURE_COOKIE: 'false'
+      SESSION_HTTP_ONLY: 'true'
+      SESSION_SAME_SITE: lax
+      HRM_XSRF_COOKIE_NAME: HRM-XSRF-TOKEN
+      SANCTUM_STATEFUL_DOMAINS: 127.0.0.1:4189
+      HRM_FRONTEND_URL: http://127.0.0.1:4189/hrm
+      HRM_BROWSER_LOGIN_ENABLED: 'true'
+      HRM_ROLE_MANAGEMENT_ENABLED: 'true'
+      HRM_PERSONNEL_WRITES_ENABLED: 'false'
+      HRM_DOCUMENT_WRITES_ENABLED: 'false'
+      HRM_LEAVE_WRITES_ENABLED: 'false'
+      HRM_BONUS_WRITES_ENABLED: 'false'
+      HRM_PASSWORD_RESET_ENABLED: 'false'
+    steps:
+      - name: Checkout Vue frontend
+        uses: actions/checkout@v4
+      - name: Checkout reviewed Laravel main at a fixed SHA
+        uses: actions/checkout@v4
+        with:
+          repository: sh-ansar/itp-hrm-backend
+          ref: e457095a7fd97c008ebf890c4243ab681b5111ff
+          path: backend
+          persist-credentials: false
+      - name: PHP 8.4 with real PostgreSQL driver
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: mbstring, bcmath, intl, exif, gd, fileinfo, pdo_pgsql, pgsql
+          coverage: none
+      - name: Node and dependency caches
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install locked Vue dependencies and build production /hrm/
+        run: |
+          npm ci --no-audit --no-fund
+          npm run build:htdocs
+      - name: Install reviewed Laravel dependencies and migrate ephemeral PostgreSQL
+        run: |
+          set -euo pipefail
+          cd backend
+          composer install --prefer-dist --no-interaction --no-progress
+          php artisan migrate --force
+          cd ..
+          php tests/e2e/seed-connected-pgsql.php
+      - name: Install pinned Playwright Chromium as CI-only dependency
+        run: |
+          set -euo pipefail
+          npm install --prefix "$RUNNER_TEMP/hrm-connected-browser" --no-save --no-audit --no-fund playwright@1.56.1
+          ln -s "$RUNNER_TEMP/hrm-connected-browser/node_modules/playwright" node_modules/playwright
+          ln -s "$RUNNER_TEMP/hrm-connected-browser/node_modules/playwright-core" node_modules/playwright-core
+          "$RUNNER_TEMP/hrm-connected-browser/node_modules/.bin/playwright" install --with-deps chromium
+      - name: Start real Laravel and first-party /hrm/ + /hrm-api gateway
+        run: |
+          set -euo pipefail
+          ( cd backend && php artisan serve --host=127.0.0.1 --port=8000 > "$RUNNER_TEMP/hrm-pg-laravel.log" 2>&1 ) &
+          node tests/e2e/serve-connected-subpath.mjs > "$RUNNER_TEMP/hrm-pg-gateway.log" 2>&1 &
+          for attempt in $(seq 1 40); do
+            if curl --silent --fail http://127.0.0.1:8000/api/v1/health >/dev/null \
+                && curl --silent --fail http://127.0.0.1:4189/hrm/ >/dev/null \
+                && curl --silent --fail http://127.0.0.1:4189/hrm-api/api/v1/health >/dev/null; then
+              echo 'Real Laravel health and Vue subpath are ready'
+              exit 0
+            fi
+            sleep 1
+          done
+          tail -n 80 "$RUNNER_TEMP/hrm-pg-laravel.log" || true
+          tail -n 80 "$RUNNER_TEMP/hrm-pg-gateway.log" || true
+          exit 1
+      - name: E2E login, CSRF isolation, PostgreSQL reads, roles, employee workspace
+        run: node --test --test-concurrency=1 tests/e2e/connected-subpath-postgres.test.mjs
+      - name: Print isolated staging logs on failure
+        if: failure()
+        run: |
+          tail -n 100 "$RUNNER_TEMP/hrm-pg-laravel.log" || true
+          tail -n 100 "$RUNNER_TEMP/hrm-pg-gateway.log" || true

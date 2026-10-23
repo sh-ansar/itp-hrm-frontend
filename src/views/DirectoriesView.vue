@@ -3,8 +3,9 @@ import { publicAsset } from '../utils/publicAsset'
 import { useActiveCompanySelection } from '../composables/useActiveCompanySelection'
 import { useWorkspaceI18n } from '../composables/useWorkspaceI18n'
 import { computed, onMounted, ref, watch } from 'vue'
-import { BriefcaseBusiness, Pencil, Plus, Search, Trash2 } from 'lucide-vue-next'
+import { BriefcaseBusiness, Pencil, Plus, Trash2 } from 'lucide-vue-next'
 import BaseButton from '../components/ui/BaseButton.vue'
+import BaseSearchField from '../components/ui/BaseSearchField.vue'
 import BaseCard from '../components/ui/BaseCard.vue'
 import BaseDataTable from '../components/ui/BaseDataTable.vue'
 import BaseDialog from '../components/ui/BaseDialog.vue'
@@ -157,13 +158,10 @@ onMounted(loadCompanies)
           <span>{{ total }} {{ tr('записей') }}</span>
         </div>
 
-        <div class="directory-toolbar" role="search" :aria-label="tr('Поиск должностей')">
-          <label class="directory-search"><Search :size="17" aria-hidden="true" />
-            <span class="sr-only">{{ tr('Поиск должностей') }}</span>
-            <input v-model="search" type="search" :placeholder="tr('Поиск должностей')" :aria-label="tr('Поиск должностей')" />
-          </label>
-          <BaseButton v-if="search.trim()" variant="secondary" @click="search = ''">{{ tr('Сбросить поиск') }}</BaseButton>
-          <span class="directory-result-count" aria-live="polite">{{ filteredPositions.length }} {{ tr('из') }} {{ positions.length }} {{ tr('на странице') }}</span>
+        <div class="directory-toolbar" role="search" :aria-label="tr('РџРѕРёСЃРє РґРѕР»Р¶РЅРѕСЃС‚РµР№')">
+          <BaseSearchField v-model="search" class="directory-search" :label="tr('РџРѕРёСЃРє РґРѕР»Р¶РЅРѕСЃС‚РµР№')" />
+          <BaseButton v-if="search.trim()" variant="secondary" @click="search = ''">{{ tr('РЎР±СЂРѕСЃРёС‚СЊ РїРѕРёСЃРє') }}</BaseButton>
+          <span class="directory-result-count" aria-live="polite">{{ filteredPositions.length }} {{ tr('РёР·') }} {{ positions.length }} {{ tr('РЅР° СЃС‚СЂР°РЅРёС†Рµ') }}</span>
         </div>
 
         <div class="directory-desktop">
@@ -255,9 +253,6 @@ onMounted(loadCompanies)
 .position-name{color:var(--color-text);font-size:13px}
 .row-actions{display:flex;justify-content:flex-end;gap:7px}
 .directory-toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px;min-width:0}
-.directory-search{display:flex;align-items:center;gap:9px;flex:1 1 240px;max-width:420px;min-width:0;height:var(--control-height);padding:0 12px;border:1px solid var(--color-stroke);border-radius:var(--space-2);background:var(--color-surface-raised);color:var(--color-muted)}
-.directory-search input{width:100%;min-width:0;border:0;outline:0;background:transparent;color:var(--color-text);font:inherit;font-size:var(--font-caption-size)}
-.directory-search:focus-within{outline:2px solid var(--color-primary);outline-offset:1px}
 .directory-result-count{margin-left:auto;color:var(--color-muted);font-size:11px}
 .sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap}
 .directory-mobile{display:none}
@@ -277,7 +272,7 @@ onMounted(loadCompanies)
 .delete-actions{display:flex;justify-content:flex-end;gap:var(--space-2)}
 @media(max-width:700px){.directory-desktop{display:none}.directory-mobile{display:grid;gap:8px}}
 @media(max-width:650px){
-  .directory-search{max-width:none;flex-basis:100%}
+
   .directory-result-count{margin-left:0}
   .directories-controls{display:grid;grid-template-columns:1fr;width:100%}
   .directories-controls :deep(.base-select-field){width:100%;max-width:none}

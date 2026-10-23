@@ -5,11 +5,12 @@ import { useWorkspaceI18n } from '../composables/useWorkspaceI18n'
 import { useUiFormatters } from '../composables/useUiFormatters'
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { Building2, Minus, Pencil, Plus, Trash2, Search, UserPlus, UsersRound } from 'lucide-vue-next'
+import { Building2, Minus, Pencil, Plus, Trash2, UserPlus, UsersRound } from 'lucide-vue-next'
 import BaseDataTable from '../components/ui/BaseDataTable.vue'
 import BaseLoadingState from '../components/ui/BaseLoadingState.vue'
 import BaseNotice from '../components/ui/BaseNotice.vue'
 import BaseButton from '../components/ui/BaseButton.vue'
+import BaseSearchField from '../components/ui/BaseSearchField.vue'
 import BaseSelectionToolbar from '../components/ui/BaseSelectionToolbar.vue'
 import BaseSelectField from '../components/ui/BaseSelectField.vue'
 import BasePagination from '../components/ui/BasePagination.vue'
@@ -404,7 +405,7 @@ onMounted(loadCompanies)
       <div class="structure-tools">
         <BaseViewTabs v-model="viewMode" class="structure-tabs"
         :options="viewModes" :label="tr('Представление организационной структуры')" />
-        <label class="structure-search"><Search :size="17" aria-hidden="true" /><span class="visually-hidden">{{ tr('Поиск подразделений') }}</span><input v-model="searchQuery" type="search" :placeholder="tr('Поиск подразделений')" /></label>
+        <BaseSearchField v-model="searchQuery" class="structure-search" :label="tr('Поиск подразделений')" />
         <BaseColumnPicker v-if="viewMode === 'table'" v-model="shownOrgColumns" :columns="extraColumns" :title="tr('Колонки')" />
         <div v-if="viewMode === 'diagram'" class="chart-zoom">
           <BaseButton icon-only variant="secondary" :aria-label="tr('Уменьшить схему')"
@@ -563,9 +564,7 @@ onMounted(loadCompanies)
 
 .structure-tools{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:var(--space-4)}
 .structure-tabs{flex:1;min-width:220px}
-.structure-search{display:flex;align-items:center;gap:9px;padding:0 12px;min-height:40px;border:1px solid var(--color-stroke);border-radius:var(--radius-sm);background:var(--color-surface);color:var(--color-muted)}
-.structure-search:focus-within{outline:2px solid var(--color-focus)}
-.structure-search input{width:220px;max-width:100%;border:0;background:transparent;color:var(--color-text);outline:none;font:inherit;font-size:13px}
+
 .visually-hidden{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}
 .chart-zoom{display:flex;align-items:center;gap:7px}
 .chart-zoom :deep(.base-button){width:32px;min-width:32px;height:32px;min-height:32px;color:var(--color-primary)}
@@ -623,7 +622,7 @@ onMounted(loadCompanies)
  .org-desktop-table{display:none}
  .structure-tabs{min-width:0;width:100%;flex-basis:100%}
  .structure-search{flex:1}
- .structure-search input{width:100%}
+
  .chart-zoom{width:100%;justify-content:center}
  .structure-tools :deep(.column-settings){display:none}
  .delete-actions :deep(button){flex:1}

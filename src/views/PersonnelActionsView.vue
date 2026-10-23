@@ -260,7 +260,7 @@ onMounted(loadCompanies)
 .actions-breadcrumb img{width:15px;height:15px}
 .actions-breadcrumb strong{color:var(--color-text);font-weight:500}
 .actions-heading{display:flex;align-items:end;justify-content:space-between;gap:16px;flex-wrap:wrap}
-.actions-heading h1{margin:0;color:var(--color-text);font-size:21px;line-height:1.25;font-weight:700;letter-spacing:-.025em}
+.actions-heading h1{margin:0;color:var(--color-text);font-size:21px;line-height:1.3;font-weight:600;letter-spacing:-.025em}
 .actions-heading p{margin:6px 0 0;color:var(--color-muted);font-size:12px}
 .actions-heading-controls{display:flex;align-items:end;justify-content:flex-end;gap:10px;flex-wrap:wrap}
 .actions-heading-controls :deep(.base-select-field){width:220px;max-width:220px}
@@ -268,17 +268,17 @@ onMounted(loadCompanies)
 .action-metric{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:9px;min-height:72px}
 .action-metric svg{color:var(--color-primary)}
 .action-metric span{color:var(--color-muted);font-size:12px}
-.action-metric strong{color:var(--color-text);font-size:21px}
+.action-metric strong{color:var(--color-text);font-size:20px;font-weight:600}
 .action-register{min-width:0}
 .section-heading{display:flex;align-items:end;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:14px}
 .section-heading h2{margin:0;color:var(--color-text);font-size:16px;line-height:1.35;font-weight:600}
 .section-heading p{margin:4px 0 0;color:var(--color-muted);font-size:11px}
 .section-heading>span{color:var(--color-muted);font-size:11px}
 .employee-cell{display:grid;gap:3px;min-width:170px}
-.employee-cell a{color:var(--color-text);font-size:13px;font-weight:600}
+.employee-cell a{color:var(--color-text);font-size:13px;font-weight:500}
 .employee-cell a:hover{color:var(--color-primary)}
 .employee-cell span{color:var(--color-muted);font-size:11px}
-.action-pill{display:inline-flex;padding:5px 8px;border-radius:999px;font-size:10px;line-height:1;font-weight:700;white-space:nowrap}
+.action-pill{display:inline-flex;padding:5px 9px;border-radius:var(--radius-md);font-size:11px;line-height:1.2;font-weight:500;white-space:nowrap}
 .action-pill--hire{background:var(--color-success-surface);color:var(--color-success)}
 .action-pill--transfer{background:var(--color-accent-soft);color:var(--color-primary)}
 .action-pill--termination{background:var(--color-warning-surface);color:var(--color-warning)}

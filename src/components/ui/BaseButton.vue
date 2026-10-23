@@ -14,13 +14,13 @@ withDefaults(defineProps<{ variant?: 'primary' | 'secondary'; disabled?: boolean
   display:inline-flex;align-items:center;justify-content:center;gap:var(--space-1);
   margin:0;padding:var(--space-2) var(--space-3);overflow:hidden;appearance:none;
   border:1px solid transparent;border-radius:var(--space-2);
-  font-family:inherit;font-size:var(--font-label-size);line-height:var(--line-caption);font-weight:600;
+  font-family:inherit;font-size:var(--font-label-size);line-height:var(--line-caption);font-weight:500;
   text-align:center;text-decoration:none;white-space:nowrap;cursor:pointer;
-  transition:transform .16s ease,box-shadow .16s ease,background .16s ease;
+  transition:background .16s ease,border-color .16s ease;
 }
 .base-button::before{content:"";position:absolute;z-index:0;inset:0;background:currentColor;opacity:0;transition:opacity .16s ease}
 .base-button:hover:not(:disabled)::before{opacity:.08}
-.base-button:active:not(:disabled){transform:translateY(1px)}
+.base-button:active:not(:disabled)::before{opacity:.12}
 .base-button:focus-visible{outline:2px solid var(--color-primary);outline-offset:2px}
 .base-button:disabled{opacity:.5;cursor:not-allowed}
 .base-button :deep(svg){position:relative;z-index:1;width:20px;height:20px;flex:none}

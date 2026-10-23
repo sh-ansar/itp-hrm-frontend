@@ -14,7 +14,7 @@ test('directory search uses shared compact toolbar on desktop and mobile without
         await page.getByLabel('Пароль').fill('SyntheticE2E-Only!2026')
         await page.getByRole('button', { name: 'Войти' }).click()
         await page.getByRole('heading', { name: 'Главная' }).waitFor()
-        await page.goto('/directories')
+        await page.goto('/directories/positions')
         await page.getByRole('heading', { name: 'Справочники', exact: true }).waitFor()
         const search = page.getByRole('searchbox', { name: 'Поиск должностей' })
         await search.waitFor()

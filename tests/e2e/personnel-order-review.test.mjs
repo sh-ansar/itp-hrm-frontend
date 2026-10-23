@@ -142,6 +142,21 @@ test('HR prepares an order PDF; separate company admin approves; employee sees o
     assert.equal(file.status, 200)
     assert.equal(file.kind, 'application/pdf')
 
+    // Explicit revocation must withdraw access immediately, not just hide a frontend link.
+    const approvedList = await api(admin.page, base + '/documents?document_type=order')
+    assert.equal(approvedList.status, 200)
+    const sharedOrder = approvedList.body.data.find(item => item.id === order.id)
+    assert.ok(sharedOrder?.employee_visible)
+    const revoked = await api(admin.page, base + '/documents/' + order.id + '/employee-access',
+      'PUT', { revision: sharedOrder.revision, employee_visible: false })
+    assert.equal(revoked.status, 200)
+    assert.equal(revoked.body.data.employee_visible, false)
+    const postRevoke = await api(staff.page, base + '/me/documents')
+    assert.equal(postRevoke.status, 200)
+    assert.equal(postRevoke.body.data.length, 0)
+    const forbiddenFile = await api(staff.page, base + '/me/documents/' + order.id + '/file')
+    assert.equal(forbiddenFile.status, 404, 'previously shared private PDF must be inaccessible after revocation')
+
     const actions = await api(hr.page, base + '/personnel-actions')
     assert.equal(actions.status, 200)
     assert.equal(actions.body.data.length, 0,

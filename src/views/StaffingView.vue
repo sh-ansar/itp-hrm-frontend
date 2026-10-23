@@ -5,6 +5,7 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { CheckCircle2, CircleDollarSign, FolderTree, Pencil, Plus, UsersRound } from 'lucide-vue-next'
 import BaseButton from '../components/ui/BaseButton.vue'
+import BaseSelectionToolbar from '../components/ui/BaseSelectionToolbar.vue'
 import BaseCard from '../components/ui/BaseCard.vue'
 import BaseDataTable from '../components/ui/BaseDataTable.vue'
 import BaseDialog from '../components/ui/BaseDialog.vue'
@@ -386,10 +387,7 @@ onMounted(refreshCompanies)
         <span class="muted">{{ fmt.number(historyTotal, 0) }} {{ tr('событий') }}</span>
       </div>
       <BaseNotice v-if="historyError" tone="error">{{ historyError }}</BaseNotice>
-      <div v-if="selectedHistoryRows.length" class="staffing-selection-toolbar" role="status">
-        <span>{{ tr('Выбрано на странице:') }} {{ fmt.number(selectedHistoryRows.length, 0) }}</span>
-        <BaseButton variant="secondary" @click="clearSelectedRows">{{ tr('Снять выделение') }}</BaseButton>
-      </div>
+      <BaseSelectionToolbar :count="selectedHistoryRows.length" :label="tr('Выбрано на странице:')" :clear-label="tr('Снять выделение')" @clear="clearSelectedRows" />
       <div class="staffing-history-desktop">
         <BaseDataTable
         v-model:selected-keys="selectedHistoryIds"
@@ -498,10 +496,7 @@ onMounted(refreshCompanies)
           <BaseColumnPicker v-model="shownColumns" :columns="optionalLineColumns" />
         </div>
         <p v-if="grouped" class="line-hint">{{ tr('Группировка по подразделениям выбранной версии штатного расписания.') }}</p>
-        <div v-if="selectedLineRows.length" class="staffing-selection-toolbar" role="status">
-          <span>{{ tr('Выбрано на странице:') }} {{ fmt.number(selectedLineRows.length, 0) }}</span>
-          <BaseButton variant="secondary" @click="clearSelectedRows">{{ tr('Снять выделение') }}</BaseButton>
-        </div>
+        <BaseSelectionToolbar :count="selectedLineRows.length" :label="tr('Выбрано на странице:')" :clear-label="tr('Снять выделение')" @clear="clearSelectedRows" />
 
         <div class="staffing-desktop-table">
           <BaseDataTable

@@ -412,7 +412,6 @@ onMounted(async()=>{try{await loadCompanies();if(company.value)await loadRecords
 .directory-accordion-content{display:grid;gap:10px;padding:0 17px 15px;min-width:0}
 .directory-card-toolbar{display:flex;align-items:center;gap:7px;min-width:0}
 .directory-card-toolbar .directory-card-search{flex:1;min-width:0;height:34px}
-.directory-card-toolbar .directory-search input{font-size:12px}
 .directory-card-toolbar :deep(.base-button){height:30px;min-height:30px;width:30px;min-width:30px;padding:0}
 .directory-card-toolbar :deep(.base-select-field){width:120px;flex:0 0 120px}
 .directory-tariff-tree--cards{border:0;border-radius:0;overflow-x:auto}
@@ -459,7 +458,6 @@ onMounted(async()=>{try{await loadCompanies();if(company.value)await loadRecords
 .directory-detail-heading>div{display:grid;gap:5px}.directory-eyebrow{font-size:10px;color:var(--color-muted)}.directory-detail-heading h2{font-size:18px;line-height:24px;font-weight:750;margin:0}.directory-detail-heading p{margin:0;font-size:11px;line-height:17px;color:var(--color-muted);max-width:570px}
 .directory-detail-count{padding:6px 9px;border:1px solid var(--color-stroke);border-radius:7px;font-size:11px;font-weight:700;color:var(--color-muted)}
 .directory-toolbar{display:grid;grid-template-columns:minmax(190px,1fr) minmax(138px,165px) auto;gap:10px;align-items:end;min-width:0}
-.directory-search input{width:100%;min-width:0;border:0;outline:0;background:transparent;color:var(--color-text);font:inherit;font-size:12px}
 .directory-table-scroll{min-width:0;max-width:100%;overflow-x:auto;overflow-y:hidden;overscroll-behavior-inline:contain}.directory-table-scroll :deep(table){min-width:650px}
 .directory-create-form{display:grid;gap:16px;min-height:calc(100dvh - 160px)}.create-actions{display:flex;justify-content:flex-end;gap:9px;margin-top:auto;padding-top:12px;border-top:1px solid var(--color-stroke)}
 @media(max-width:1050px){.directory-workspace{grid-template-columns:minmax(195px,240px) minmax(0,1fr)}.directory-toolbar{grid-template-columns:minmax(150px,1fr) minmax(120px,150px)}.directory-toolbar :deep(.base-button){grid-column:1/-1;justify-self:start}}

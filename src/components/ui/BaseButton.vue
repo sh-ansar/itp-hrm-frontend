@@ -20,7 +20,7 @@ withDefaults(defineProps<{ variant?: 'primary' | 'secondary'; disabled?: boolean
 }
 .base-button::before{content:"";position:absolute;z-index:0;inset:0;background:currentColor;opacity:0;transition:opacity .16s ease}
 .base-button:hover:not(:disabled)::before{opacity:.08}
-.base-button:active:not(:disabled){transform:translateY(1px)}
+.base-button:active:not(:disabled)::before{opacity:.12}
 .base-button:focus-visible{outline:2px solid var(--color-primary);outline-offset:2px}
 .base-button:disabled{opacity:.5;cursor:not-allowed}
 .base-button :deep(svg){position:relative;z-index:1;width:20px;height:20px;flex:none}

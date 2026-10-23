@@ -158,10 +158,10 @@ onMounted(loadCompanies)
           <span>{{ total }} {{ tr('записей') }}</span>
         </div>
 
-        <div class="directory-toolbar" role="search" :aria-label="tr('РџРѕРёСЃРє РґРѕР»Р¶РЅРѕСЃС‚РµР№')">
-          <BaseSearchField v-model="search" class="directory-search" :label="tr('РџРѕРёСЃРє РґРѕР»Р¶РЅРѕСЃС‚РµР№')" />
-          <BaseButton v-if="search.trim()" variant="secondary" @click="search = ''">{{ tr('РЎР±СЂРѕСЃРёС‚СЊ РїРѕРёСЃРє') }}</BaseButton>
-          <span class="directory-result-count" aria-live="polite">{{ filteredPositions.length }} {{ tr('РёР·') }} {{ positions.length }} {{ tr('РЅР° СЃС‚СЂР°РЅРёС†Рµ') }}</span>
+        <div class="directory-toolbar" role="search" :aria-label="tr('Поиск должностей')">
+          <BaseSearchField v-model="search" class="directory-search" :label="tr('Поиск должностей')" />
+          <BaseButton v-if="search.trim()" variant="secondary" @click="search = ''">{{ tr('Сбросить поиск') }}</BaseButton>
+          <span class="directory-result-count" aria-live="polite">{{ filteredPositions.length }} {{ tr('из') }} {{ positions.length }} {{ tr('на странице') }}</span>
         </div>
 
         <div class="directory-desktop">

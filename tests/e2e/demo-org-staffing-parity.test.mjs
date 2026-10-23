@@ -53,7 +53,7 @@ test('organization and staffing match the prototype KPI/drawer structure respons
         overflowX: getComputedStyle(el).overflowX,
         overflowY: getComputedStyle(el).overflowY,
       }))
-      assert.equal(scroll.overflowX, 'auto')
+      assert.equal(scroll.overflowX, 'hidden', 'The pan/zoom viewport clips content instead of adding a second scrollbar')
       assert.ok(scroll.overflowY === 'clip' || scroll.overflowY === 'hidden')
 
       const addDepartment = page.getByRole('button', { name: /Добавить подразделение/ })

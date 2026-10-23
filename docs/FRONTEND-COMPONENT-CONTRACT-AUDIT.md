@@ -19,6 +19,14 @@ Scope: checked current frontend `main` (Vue) and backend `main` (Laravel) on the
 - Actual screenshots exposed Russian-only titles on Personnel Actions and Positions Directory in Georgian UI. Fix and regression via frontend PR #198 (pending CI at audit time).
 - Company/personnel workflows are tested with synthetic demos and isolated CI. They are not proof that real production credentials, SMTP, data migrations or feature flags are configured.
 
+## Explicit live-vs-demo API boundary
+
+`src/api/client.ts` uses the **mock adapter only when `VITE_DEMO_MODE === 'true'`**. Otherwise it makes same-origin calls via `requestJson`, with CSRF and HTTP error handling; no silent mock fallback was found in that client. A green Vercel demo cannot be evidence of a production Laravel API deployment.
+
+Backend `config/hrm.php` explicitly defaults all major write workflows to **false**: personnel, roles, documents and internal order reviews, worktime, leave requests, manager leave review, leave balances/enforcement, supporting medical/maternity evidence, bonuses, directories, browser login, password reset, bootstrapping. Code and tested routes exist, but **availability for a real user depends on controlled configuration and deployment**. Never activate these globally just to make an inert button work.
+
+The 64 extracted URL sites were compared against a fresh `php artisan route:list --path=api --json`. 58 were exact static matches and the six remaining call-site shapes were manually traced to existing parameterized endpoints (string concatenation or query suffixes). **No missing endpoint is confirmed in this sample.** This check does not validate server payload shape, authorization correctness, or every indirect API helper.
+
 ## Confirmed backend/service gaps and gating decisions
 
 Refer to backend `docs/HRM-FUNCTIONAL-COVERAGE.md`, `docs/QA-RELEASE-RECOVERY-GATES.md` and issue #118:

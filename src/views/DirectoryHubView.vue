@@ -4,6 +4,7 @@ import { ChevronDown, ChevronRight, FolderTree, LayoutGrid, ListTree, Pencil, Pl
 import { publicAsset } from '../utils/publicAsset'
 import BaseActionDropdown from '../components/ui/BaseActionDropdown.vue'
 import BaseButton from '../components/ui/BaseButton.vue'
+import BaseSearchField from '../components/ui/BaseSearchField.vue'
 import BaseCard from '../components/ui/BaseCard.vue'
 import BaseDataTable from '../components/ui/BaseDataTable.vue'
 import BaseDrawer from '../components/ui/BaseDrawer.vue'
@@ -269,7 +270,7 @@ onMounted(async()=>{try{await loadCompanies();if(company.value)await loadRecords
         </div>
         <BaseNotice v-if="!writesEnabled" tone="info">Редактирование этого справочника закрыто серверным release flag.</BaseNotice>
         <div class="directory-toolbar">
-          <label class="directory-search"><Search :size="16" aria-hidden="true" /><input v-model="search" type="search" placeholder="Поиск по названию или коду" aria-label="Поиск по справочнику" /></label>
+          <BaseSearchField v-model="search" class="directory-main-search" label="Поиск по справочнику" placeholder="Поиск по названию или коду" />
           <BaseSelectField v-model="statusFilter" label="Статус" :options="statusOptions" />
           <BaseButton :disabled="!writesEnabled" @click="openCreate()"><Plus :size="16" /> Добавить запись</BaseButton>
         </div>

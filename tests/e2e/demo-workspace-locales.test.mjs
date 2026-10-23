@@ -67,6 +67,16 @@ for (const [locale, expected] of Object.entries(locales)) {
         await title.waitFor()
         assert.ok((await title.innerText()).includes(heading), `Expected ${heading} on ${route}`)
       }
+      await page.goto('/personnel-actions')
+      const localizedTabs = locale === 'en' ? ['All actions', 'Hire', 'Transfer', 'Termination']
+        : locale === 'kk' ? ['Барлық әрекеттер', 'Қабылдау', 'Ауыстыру', 'Жұмыстан босату']
+        : ['ყველა მოქმედება', 'მიღება', 'გადაყვანა', 'გათავისუფლება']
+      for (const name of localizedTabs) {
+        await page.getByRole('button', { name, exact: true }).first().waitFor()
+      }
+      await page.getByText(locale === 'en' ? 'Completed personnel actions and their grounds.'
+        : locale === 'kk' ? 'Орындалған кадрлық әрекеттер және олардың негіздері.'
+        : 'შესრულებული საკადრო მოქმედებები და მათი საფუძვლები.', { exact: true }).waitFor()
       await page.goto(employeeUrl)
       await page.getByRole('button', { name: expected.personal, exact: true }).click()
       const birth = page.locator('.employee-data-field').filter({ hasText: expected.birth }).first()

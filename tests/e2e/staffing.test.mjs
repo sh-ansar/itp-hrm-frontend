@@ -61,6 +61,17 @@ test('HR creates staffs and approves a real staffing-plan version at mobile widt
     assert.match(rowText, /KZT/)
     assert.match(rowText, /Есть вакансии/)
 
+    // Staffing ZIP filter control: occupancy filtering applies to both desktop and mobile.
+    const filter = page.getByLabel('Фильтр занятости')
+    await filter.selectOption('vacant')
+    await row.waitFor()
+    await filter.selectOption('filled')
+    await page.getByText('По вашему запросу ничего не найдено.').waitFor()
+    await filter.selectOption('overstaffed')
+    await page.getByText('По вашему запросу ничего не найдено.').waitFor()
+    await filter.selectOption('all')
+    await row.waitFor()
+
     const metrics = page.locator('.staffing-summary-item')
     assert.equal(await metrics.nth(0).locator('strong').innerText(), '3', 'planned units')
     assert.equal(await metrics.nth(1).locator('strong').innerText(), '1', 'occupied units')

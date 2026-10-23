@@ -14,7 +14,7 @@ withDefaults(defineProps<{ variant?: 'primary' | 'secondary'; disabled?: boolean
   display:inline-flex;align-items:center;justify-content:center;gap:var(--space-1);
   margin:0;padding:var(--space-2) var(--space-3);overflow:hidden;appearance:none;
   border:1px solid transparent;border-radius:var(--space-2);
-  font-family:inherit;font-size:var(--font-label-size);line-height:var(--line-caption);font-weight:600;
+  font-family:inherit;font-size:var(--font-label-size);line-height:var(--line-caption);font-weight:500;
   text-align:center;text-decoration:none;white-space:nowrap;cursor:pointer;
   transition:transform .16s ease,box-shadow .16s ease,background .16s ease;
 }

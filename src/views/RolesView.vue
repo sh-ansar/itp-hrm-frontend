@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
-import { Search, ShieldCheck } from 'lucide-vue-next'
+import { ShieldCheck } from 'lucide-vue-next'
 import { publicAsset } from '../utils/publicAsset'
 import BaseActionDropdown from '../components/ui/BaseActionDropdown.vue'
 import BaseButton from '../components/ui/BaseButton.vue'
+import BaseSearchField from '../components/ui/BaseSearchField.vue'
 import BaseCard from '../components/ui/BaseCard.vue'
 import BaseDataTable from '../components/ui/BaseDataTable.vue'
 import BaseDrawer from '../components/ui/BaseDrawer.vue'
@@ -340,10 +341,7 @@ onMounted(async () => {
       </div>
 
       <div class="roles-toolbar">
-        <label class="roles-search">
-          <Search :size="16" aria-hidden="true" />
-          <input v-model="search" type="search" placeholder="ФИО или email" aria-label="Поиск пользователей" />
-        </label>
+        <BaseSearchField v-model="search" class="roles-registry-search" label="Поиск пользователей" placeholder="ФИО или email" />
         <BaseSelectField v-model="roleFilter" label="Роль" :options="roleOptions" />
         <BaseSelectField v-model="statusFilter" label="Статус" :options="statusOptions" />
       </div>
@@ -453,7 +451,6 @@ onMounted(async () => {
 .roles-heading p{margin:4px 0 0;color:var(--color-muted);font-size:11px}
 .roles-heading :deep(.base-select-field){width:250px}
 .roles-toolbar{display:grid;grid-template-columns:minmax(220px,1fr) minmax(170px,230px) minmax(150px,190px);gap:10px;align-items:end;margin-bottom:10px}
-.roles-search{display:flex;align-items:center;gap:8px;height:var(--control-height);padding:0 11px;border:1px solid var(--color-stroke);border-radius:8px;background:var(--color-surface-raised);box-shadow:var(--shadow-control);color:var(--color-muted)}
 .roles-search input{min-width:0;width:100%;border:0;outline:0;background:transparent;color:var(--color-text);font:inherit;font-size:12px}
 .user-cell{display:flex;align-items:center;gap:8px;min-width:190px}.user-cell strong{font-size:12px}
 .user-dot{display:grid;place-items:center;flex:0 0 27px;width:27px;height:27px;border-radius:50%;background:var(--color-accent-soft);color:var(--color-primary);font-size:11px;font-weight:800}
@@ -464,6 +461,6 @@ onMounted(async () => {
 .department-picker legend{padding:0 0 9px;font-size:12px;font-weight:600}
 .department-picker label{display:flex;align-items:center;gap:9px;min-height:42px;border-bottom:1px solid var(--color-stroke);font-size:12px}
 .department-picker input{width:16px;height:16px;accent-color:var(--color-primary)}
-@media(max-width:800px){.roles-toolbar{grid-template-columns:1fr 1fr}.roles-search{grid-column:1/-1}}
-@media(max-width:620px){.roles-toolbar{grid-template-columns:1fr}.roles-search{grid-column:auto}.roles-heading :deep(.base-select-field){width:100%}}
+@media(max-width:800px){.roles-toolbar{grid-template-columns:1fr 1fr}.roles-registry-search{grid-column:1/-1}}
+@media(max-width:620px){.roles-toolbar{grid-template-columns:1fr}.roles-registry-search{grid-column:auto}.roles-heading :deep(.base-select-field){width:100%}}
 </style>

@@ -533,7 +533,7 @@ onMounted(refreshCompanies)
         </div>
         <div class="staffing-mobile-only">
           <StaffingMobileList :rows="mobileLines" :can-edit="canEdit" :grouped="grouped"
-            :filtered="!!searchLines.trim()" :vacant-only="activeView === 'vacant'"
+            :filtered="!!searchLines.trim() || occupancyFilter !== 'all'" :vacant-only="activeView === 'vacant'"
             @edit="editLine" />
         </div>
       </BaseCard>

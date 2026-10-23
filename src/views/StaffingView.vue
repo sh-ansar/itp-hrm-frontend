@@ -92,6 +92,13 @@ const asOf = ref(localTodayISO())
 const initialView = ['all', 'vacant', 'changes'].includes(String(route.query.view)) ? String(route.query.view) : 'all'
 const activeView = ref(initialView)
 const searchLines = ref('')
+const occupancyFilter = ref('all')
+const occupancyFilterOptions = [
+  { id: 'all', name: 'Все позиции' },
+  { id: 'vacant', name: 'Есть вакансии' },
+  { id: 'filled', name: 'Укомплектовано' },
+  { id: 'overstaffed', name: 'Сверх штата' },
+]
 const grouped = ref(false)
 const selectedLineIds = ref<string[]>([])
 const selectedHistoryIds = ref<string[]>([])
@@ -112,6 +119,9 @@ const filteredLines = computed(() => {
   const term = searchLines.value.trim().toLocaleLowerCase('ru')
   return (detail.value?.lines ?? []).filter(line => {
     if (activeView.value === 'vacant' && Number(line.vacant_units) <= 0) return false
+    if (occupancyFilter.value === 'vacant' && Number(line.vacant_units) <= 0) return false
+    if (occupancyFilter.value === 'filled' && (Number(line.vacant_units) > 0 || Number(line.overstaffed_units) > 0)) return false
+    if (occupancyFilter.value === 'overstaffed' && Number(line.overstaffed_units) <= 0) return false
     if (!term) return true
     return (line.department_name + ' ' + line.position_name).toLocaleLowerCase('ru').includes(term)
   })
@@ -480,6 +490,8 @@ onMounted(refreshCompanies)
         <div class="line-toolbar" :aria-label="tr('Фильтры штатного расписания')">
           <BaseFormField v-model="searchLines" class="line-search" :label="tr('Поиск штатных единиц')"
             :placeholder="tr('Подразделение или должность')" />
+          <BaseSelectField v-model="occupancyFilter" :label="tr('Фильтр занятости')"
+            :options="occupancyFilterOptions.map(item => ({ ...item, name: tr(item.name) }))" />
           <BaseButton variant="secondary" @click="grouped = !grouped">
             <FolderTree :size="16" /> {{ grouped ? tr('Без группировки') : tr('Группировка') }}
           </BaseButton>

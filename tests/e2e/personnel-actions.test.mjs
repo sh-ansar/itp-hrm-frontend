@@ -100,6 +100,19 @@ test('HR conducts transfer termination and rehire through personnel actions work
     await hireRow.waitFor()
     assert.match(await hireRow.innerText(),/Приём/)
     assert.equal(await page.locator('.action-mobile-card').filter({ hasText: 'ORDER-E2E-' }).count(),3)
+    // A page reload must not discard rehire or silently reactivate the old assignment.
+    await page.reload()
+    for (const reference of ['ORDER-E2E-TRANSFER', 'ORDER-E2E-TERM', 'ORDER-E2E-REHIRE']) {
+      await page.locator('.action-mobile-card').filter({ hasText: reference }).waitFor({ timeout: 15000 })
+    }
+    await page.goto('/employees?status=active')
+    await page.locator('.employee-mobile-card').filter({ hasText: 'E2E-001' })
+      .getByRole('link', { name: /Открыть карточку/ }).click()
+    // Verify the employment assignment in the organizational tab, not the default
+    // personal-data tab. The previous check could not find a field not rendered there.
+    await page.getByRole('button', { name: 'Организационные данные', exact: true }).click()
+    await page.getByText('Visible Finance', { exact: true }).first().waitFor({ timeout: 15000 })
+    await page.getByText('15.10.2026', { exact: false }).first().waitFor({ timeout: 15000 })
     assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>window.innerWidth+1),false)
   }finally{
     await context.close()

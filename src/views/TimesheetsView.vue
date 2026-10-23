@@ -7,6 +7,7 @@ import BaseCard from '../components/ui/BaseCard.vue'
 import BaseButton from '../components/ui/BaseButton.vue'
 import ProductionCalendarEditor from '../components/ProductionCalendarEditor.vue'
 import TimesheetEntryEditor from '../components/TimesheetEntryEditor.vue'
+import TimesheetPeriodReview from '../components/TimesheetPeriodReview.vue'
 import WorkScheduleEditor from '../components/WorkScheduleEditor.vue'
 import BaseDataTable from '../components/ui/BaseDataTable.vue'
 import BaseStatusPill from '../components/ui/BaseStatusPill.vue'
@@ -29,6 +30,7 @@ import {
   type WorktimeAbsenceRow,
   type WorktimeTimesheetResponse,
   type WorktimeTimesheetRow,
+  type WorktimePeriodStatus,
 } from '../api/worktime'
 import { localTodayISO } from '../utils/localDate'
 import {
@@ -101,6 +103,8 @@ const productionSchedules = ref<WorkScheduleRow[]>([])
 const productionCalendar = ref<ProductionCalendarDay[]>([])
 const productionAbsences = ref<WorktimeAbsenceRow[]>([])
 const productionTimesheetMeta = ref<WorktimeTimesheetResponse['meta'] | null>(null)
+const periodStatus = ref<WorktimePeriodStatus | null>(null)
+const periodLocked = computed(() => periodStatus.value === 'submitted' || periodStatus.value === 'approved')
 const productionCalendarMeta = ref<ProductionCalendarResponse['meta'] | null>(null)
 const productionScheduleMeta = ref<WorkScheduleResponse['meta'] | null>(null)
 const calendarEditorOpen = ref(false)
@@ -480,6 +484,7 @@ function calendarUpdated() {
   void loadWorkspace()
 }
 watch([company, month], () => {
+  periodStatus.value = null
   calendarEditorOpen.value = false
   closeTimesheetEditor()
   closeScheduleEditor()
@@ -546,6 +551,8 @@ onMounted(loadCompanies)
         </BaseCard>
       </div>
 
+      <TimesheetPeriodReview v-if="!demoMode && activeTab === 'timesheet' && productionTimesheetMeta?.worktime_writes_enabled"
+        :company-id="company" :month="month" @status="periodStatus = $event" />
       <BaseCard v-if="activeTab === 'timesheet'" class="worktime-register">
         <div class="section-heading">
           <div>
@@ -577,7 +584,7 @@ onMounted(loadCompanies)
               </BaseStatusPill>
             </template>
             <template #cell-actions="{ row }">
-              <BaseButton v-if="!demoMode && productionTimesheetMeta?.worktime_writes_enabled"
+              <BaseButton v-if="!demoMode && productionTimesheetMeta?.worktime_writes_enabled && !periodLocked"
                 variant="secondary" type="button" @click="openTimesheetEditor(row)">
                 Заполнить
               </BaseButton>
@@ -606,7 +613,7 @@ onMounted(loadCompanies)
               <div><dt>Неявки</dt><dd>{{ hoursLabel(row.absence_hours) }}<template v-if="row.absence_hours !== null"> ч</template></dd></div>
               <div><dt>Сверхурочно</dt><dd>{{ hoursLabel(row.overtime_hours) }}<template v-if="row.overtime_hours !== null"> ч</template></dd></div>
             </dl>
-            <BaseButton v-if="!demoMode && productionTimesheetMeta?.worktime_writes_enabled"
+            <BaseButton v-if="!demoMode && productionTimesheetMeta?.worktime_writes_enabled && !periodLocked"
               variant="secondary" type="button" @click="openTimesheetEditor(row)">
               Заполнить табель
             </BaseButton>

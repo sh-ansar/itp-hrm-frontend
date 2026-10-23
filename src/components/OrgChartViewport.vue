@@ -138,7 +138,7 @@ onBeforeUnmount(() => {
 
 <template>
   <Teleport to="body" :disabled="!expanded">
-    <section class="org-chart-workspace" :class="{ 'org-chart-workspace--expanded':expanded }" :aria-label="copy.region">
+    <div class="org-chart-workspace" :class="{ 'org-chart-workspace--expanded':expanded }" :aria-label="copy.region">
       <div class="org-chart-toolbar">
         <BaseButton icon-only variant="secondary" :aria-label="copy.out" :title="copy.out" :disabled="scale <= .25" @click="zoom(scale - .1)"><Minus /></BaseButton>
         <output class="org-chart-percent" aria-live="polite">{{ percent }}%</output>
@@ -157,7 +157,7 @@ onBeforeUnmount(() => {
         <div ref="content" class="org-chart-content" :style="transform"><slot /></div>
       </div>
       <p class="org-chart-hint">{{ copy.hint }}</p>
-    </section>
+    </div>
   </Teleport>
 </template>
 

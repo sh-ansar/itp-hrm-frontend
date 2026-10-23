@@ -145,7 +145,7 @@ async function submit() {
             <BaseNotice v-if="!recoveryReady" tone="info">
               {{ authText('Восстановление пароля временно недоступно. Попробуйте позднее.') }}
             </BaseNotice>
-            <form v-else class="login-form recovery-form" @submit.prevent="requestRecovery">
+            <form v-else-if="recoveryOpen" class="login-form recovery-form" @submit.prevent="requestRecovery">
               <BaseField id="recovery-email" v-model="recoveryEmail" label="Электронная почта" type="email"
                 autocomplete="email" required :disabled="recoveryBusy" />
               <BaseNotice v-if="recoveryMessage" tone="success">{{ authText(recoveryMessage) }}</BaseNotice>

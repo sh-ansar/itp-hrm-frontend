@@ -52,6 +52,17 @@ const ru = {
   help: 'Одобренные заявки появятся в графике. Для расчёта по рабочим дням календарь должен быть заполнен.',
   status: 'Статус',
   companyTypes: 'Виды отпусков компании',
+  managerReviewTitle: 'Согласование руководителя',
+  managerHint: 'Рекомендация руководителя не является окончательным утверждением отпуска.',
+  managerApprove: 'Согласовать как руководитель',
+  managerReject: 'Отклонить как руководитель',
+  managerRecommendation: 'Решение руководителя',
+  managerApproved: 'Согласовано',
+  managerRejected: 'Отклонено',
+  leaveTypeHidden: 'Вид отпуска скрыт',
+  reviewApprove: 'Согласовать заявку',
+  reviewReject: 'Отклонить заявку',
+  reviewConfirm: 'Согласовать',
 }
 type CopyKey = keyof typeof ru
 const kk: Record<CopyKey, string> = {
@@ -79,6 +90,17 @@ const kk: Record<CopyKey, string> = {
   refresh: 'Тізімді жаңарту', page: 'Өтінім беттері', confirmed: 'Растайсыз ба?',
   help: 'Бекітілген өтінімдер кестеде көрсетіледі. Жұмыс күндерін есептеу үшін күнтізбе толық болуы тиіс.',
   status: 'Мәртебе', companyTypes: 'Компанияның демалыс түрлері',
+  managerReviewTitle: 'Басшының келісімі',
+  managerHint: 'Басшының келісімі демалысты түпкілікті бекіту болып саналмайды.',
+  managerApprove: 'Басшы ретінде келісу',
+  managerReject: 'Басшы ретінде қабылдамау',
+  managerRecommendation: 'Басшы шешімі',
+  managerApproved: 'Келісілді',
+  managerRejected: 'Қабылданбады',
+  leaveTypeHidden: 'Демалыс түрі жасырылған',
+  reviewApprove: 'Өтінімді келісу',
+  reviewReject: 'Өтінімді қабылдамау',
+  reviewConfirm: 'Келісу',
 }
 const en: Record<CopyKey, string> = {
   title: 'Leave management', description: 'Plan, review and approve employees’ leave',
@@ -105,6 +127,17 @@ const en: Record<CopyKey, string> = {
   refresh: 'Refresh list', page: 'Request pages', confirmed: 'Are you sure?',
   help: 'Approved requests appear in the schedule. A complete production calendar is required for working-day calculations.',
   status: 'Status', companyTypes: 'Company leave types',
+  managerReviewTitle: 'Manager review',
+  managerHint: 'The manager recommendation is not the final approval of leave.',
+  managerApprove: 'Recommend approval',
+  managerReject: 'Recommend rejection',
+  managerRecommendation: 'Manager recommendation',
+  managerApproved: 'Recommended',
+  managerRejected: 'Rejected',
+  leaveTypeHidden: 'Leave type withheld',
+  reviewApprove: 'Recommend this request',
+  reviewReject: 'Reject this request',
+  reviewConfirm: 'Recommend approval',
 }
 const ka: Record<CopyKey, string> = {
   title: 'შვებულებების მართვა', description: 'თანამშრომლების შვებულებების დაგეგმვა, შემოწმება და დამტკიცება',
@@ -131,6 +164,17 @@ const ka: Record<CopyKey, string> = {
   refresh: 'სიის განახლება', page: 'განაცხადების გვერდები', confirmed: 'დარწმუნებული ხართ?',
   help: 'დამტკიცებული განაცხადები გრაფიკში გამოჩნდება. სამუშაო დღეების გამოსათვლელად კალენდარი სრულად უნდა იყოს შევსებული.',
   status: 'სტატუსი', companyTypes: 'კომპანიის შვებულების ტიპები',
+  managerReviewTitle: 'ხელმძღვანელის განხილვა',
+  managerHint: 'ხელმძღვანელის რეკომენდაცია არ წარმოადგენს შვებულების საბოლოო დამტკიცებას.',
+  managerApprove: 'ხელმძღვანელის თანხმობა',
+  managerReject: 'ხელმძღვანელის უარყოფა',
+  managerRecommendation: 'ხელმძღვანელის რეკომენდაცია',
+  managerApproved: 'შეთანხმებულია',
+  managerRejected: 'უარყოფილია',
+  leaveTypeHidden: 'შვებულების ტიპი დაფარულია',
+  reviewApprove: 'განაცხადის შეთანხმება',
+  reviewReject: 'განაცხადის უარყოფა',
+  reviewConfirm: 'შეთანხმება',
 }
 const messages: Record<UiLocale, Record<CopyKey, string>> = { ru, kk, en, ka }
 export function useLeaveWorkflowI18n() {

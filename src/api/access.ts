@@ -12,7 +12,7 @@ export type CapabilityKey =
   | 'development.view' | 'reports.view' | 'settings.view'
   | 'roles.interface' | 'employees.write' | 'staffing.write'
   | 'documents.write' | 'directories.write' | 'worktime.calendar.edit'
-  | 'leave.requests.manage' | 'leave.requests.approve'
+  | 'leave.requests.manage' | 'leave.requests.approve' | 'leave.requests.review'
   | 'leave.types.manage' | 'roles.assign'
 
 export type CompanyRole = 'company_admin' | 'hr_specialist' | 'department_manager' | 'employee'

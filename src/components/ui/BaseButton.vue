@@ -16,7 +16,7 @@ withDefaults(defineProps<{ variant?: 'primary' | 'secondary'; disabled?: boolean
   border:1px solid transparent;border-radius:var(--space-2);
   font-family:inherit;font-size:var(--font-label-size);line-height:var(--line-caption);font-weight:500;
   text-align:center;text-decoration:none;white-space:nowrap;cursor:pointer;
-  transition:transform .16s ease,box-shadow .16s ease,background .16s ease;
+  transition:background .16s ease,border-color .16s ease;
 }
 .base-button::before{content:"";position:absolute;z-index:0;inset:0;background:currentColor;opacity:0;transition:opacity .16s ease}
 .base-button:hover:not(:disabled)::before{opacity:.08}

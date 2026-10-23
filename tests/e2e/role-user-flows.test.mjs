@@ -63,6 +63,10 @@ test('four real user roles have distinct navigation, inputs, outputs and server 
           assert.equal(await page.getByRole('searchbox', { name: 'Поиск сотрудника' }).count(), 0)
           assert.equal(await page.getByRole('button', { name: 'Открыть меню', exact: true }).count(), 0)
           assert.equal((await api(page, `/api/v1/companies/${company}/employees`)).status, 403)
+          assert.equal((await api(page, `/api/v1/companies/${company}/documents`)).status, 403,
+            'employees cannot enumerate company-wide personnel documents')
+          assert.equal((await api(page, `/api/v1/companies/${company}/documents/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa/file`)).status, 404,
+            'employees cannot use HR-only document file routes')
           await page.goto('/employees')
           await page.getByRole('heading', { name: 'Доступ ограничен' }).waitFor()
           await page.goto('/')
@@ -87,6 +91,10 @@ test('four real user roles have distinct navigation, inputs, outputs and server 
             assert.equal('contract_type' in rows.body.data[0], false)
             assert.equal((await api(page, `/api/v1/companies/${company}/employees/${restricted}`)).status, 404)
             assert.equal((await api(page, `/api/v1/companies/${company}/employees/${employee}/contracts`)).status, 403)
+            assert.equal((await api(page, `/api/v1/companies/${company}/documents`)).status, 403,
+              'department managers must not list HR personnel documents')
+            assert.equal((await api(page, `/api/v1/companies/${company}/documents/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa/file`)).status, 404,
+              'department managers must not access direct private document URLs')
             assert.equal((await api(page, `/api/v1/companies/${company}/employees/${employee}`, 'PUT', { revision: 1, last_name: 'Denied' })).status, 403)
             await page.goto('/employees')
             await page.getByRole('row', { name: /E2E-001/ }).waitFor()

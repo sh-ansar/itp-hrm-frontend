@@ -63,6 +63,39 @@ test('HR creates a document draft, uploads private PDF and downloads it at mobil
     assert.equal(downloaded.status, 200)
     assert.ok(downloaded.type?.includes('application/pdf'))
     assert.ok(downloaded.bytes > 10)
+
+    // Security regression: the exact real download URL is never publicly accessible.
+    const unauthenticated = await browser.newContext({ baseURL: 'http://127.0.0.1:5173' })
+    try {
+      const raw = await unauthenticated.request.get(url, { failOnStatusCode: false })
+      assert.ok([401, 403, 404].includes(raw.status()), 'private file must reject anonymous access')
+      assert.equal(raw.headers()['content-type']?.includes('application/pdf') ?? false, false,
+        'unauthorized callers must not receive PDF bytes')
+    } finally {
+      await unauthenticated.close()
+    }
+
+    // Tenant UUID swapping and opaque UUID enumeration cannot escape company-scoped authorization.
+    const wrongCompanyUrl = url.replace('11111111-1111-4111-8111-111111111111',
+      '22222222-2222-4222-8222-222222222222')
+    assert.notEqual(wrongCompanyUrl, url, 'test must actually change the tenant identifier')
+    const crossTenant = await page.evaluate(async path => {
+      const response = await fetch(path, { credentials: 'same-origin', headers: { Accept: 'application/json' } })
+      return { status: response.status, type: response.headers.get('content-type') }
+    }, wrongCompanyUrl)
+    assert.ok([403, 404].includes(crossTenant.status), 'cross-tenant file access must be denied')
+
+    const list = await page.evaluate(async () => {
+      const response = await fetch('/api/v1/companies/11111111-1111-4111-8111-111111111111/documents', {
+        credentials: 'same-origin', headers: { Accept: 'application/json' },
+      })
+      return { status: response.status, body: await response.text() }
+    })
+    assert.equal(list.status, 200)
+    assert.equal(list.body.includes('storage_path'), false, 'never serialize object-store paths')
+    assert.equal(list.body.includes('sha256'), false, 'never serialize private file hashes')
+    assert.equal(list.body.includes('storage_disk'), false, 'never expose internal disk names')
+
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1), false)
   } finally {
     await context.close()

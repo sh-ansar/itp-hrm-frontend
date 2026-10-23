@@ -397,7 +397,7 @@ table{
 thead th{
   padding:0;height:46px;min-height:46px;vertical-align:middle;
   background:var(--color-table-heading);color:var(--color-table-heading-text);
-  font-size:12px;font-weight:600;line-height:17px;
+  font-size:12px;font-weight:500;line-height:17px;
   border-bottom:1px solid var(--color-table-border,var(--color-stroke));
 }
 thead th:not(:last-child),tbody td:not(:last-child){border-right:1px solid var(--color-table-border,var(--color-stroke))}

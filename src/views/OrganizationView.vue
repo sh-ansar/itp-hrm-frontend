@@ -388,7 +388,7 @@ onMounted(loadCompanies)
           :icon="publicAsset('prototype-icons/Link-External.svg')" to="/staffing?view=vacant" />
       </BaseKpiGrid>
       <div class="section-title">
-        <h1>{{ tr('Организационная структура') }}<span class="structure-total">({{ fmt.number(total, 0) }})</span></h1>
+        <h1>{{ tr('Организационная структура') }} <span class="structure-total">({{ fmt.number(total, 0) }})</span></h1>
         <div class="org-heading-actions">
           <BaseSelectField v-model="selectedCompany" :label="tr('Компания')" :options="companies" />
           <BaseButton v-if="filteredHierarchyRows.length" variant="secondary" @click="exportDepartments">{{ tr('Экспорт CSV') }}</BaseButton>
@@ -552,8 +552,8 @@ onMounted(loadCompanies)
 .org-selection-toolbar :deep(.base-button){height:30px;min-height:30px;font-weight:500}
 
 .section-title{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:end;gap:16px;margin-bottom:0}
-.section-title h1{font-size:24px;line-height:1.2;margin:0}
-.structure-total{font-size:16px;font-weight:500}
+.section-title h1{font-size:22px;line-height:1.3;margin:0;font-weight:600;letter-spacing:-.02em}
+.structure-total{display:inline-block;margin-inline-start:6px;font-size:15px;font-weight:500;white-space:nowrap;color:var(--color-muted)}
 .org-table-view{min-width:0}
 .org-mobile-item{padding:16px;background:var(--color-surface);border:1px solid var(--color-stroke);border-radius:8px}
 .org-mobile-item-head{display:flex;justify-content:space-between;gap:10px;align-items:start}

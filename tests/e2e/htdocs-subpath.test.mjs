@@ -101,7 +101,7 @@ test('browser login is enabled only after a verified HRM API readiness response'
         await recovery.click()
         assert.equal(await page.getByRole('heading', { name: 'Сброс пароля' }).isVisible(), true)
         assert.equal(await page.getByText('Восстановление пароля временно недоступно. Попробуйте позднее.').isVisible(), true)
-        await page.getByRole('button', { name: 'Закрыть' }).click()
+        await page.locator('.recovery-body').getByRole('button', { name: 'Закрыть', exact: true }).click()
       }
       assert.equal(await email.isDisabled(), !allowed)
       assert.equal(await password.isDisabled(), !allowed)

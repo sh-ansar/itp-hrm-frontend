@@ -277,7 +277,7 @@ onMounted(loadCompanies)
       <BaseViewTabs v-model="typeFilter" :options="typeTabs" :label="tr('Виды кадровых документов')" />
 
       <div class="documents-filter-row">
-        <EmployeeLookupField v-if="company" :key="company" v-model="employeeFilter" :company-id="company" allow-all />
+        <EmployeeLookupField v-if="company" :key="company" v-model="employeeFilter" :company-id="company" allow-all compact />
         <BaseSelectField v-if="orderApprovalsEnabled && typeFilter === 'order'"
           v-model="statusFilter" label="Статус приказа" :options="statusOptions" />
       </div>
@@ -432,13 +432,14 @@ onMounted(loadCompanies)
 .documents-breadcrumb img{width:15px;height:15px}
 .documents-breadcrumb strong{color:var(--color-text);font-weight:500}
 .documents-heading{display:flex;align-items:end;justify-content:space-between;gap:16px;flex-wrap:wrap}
-.documents-heading h1{margin:0;color:var(--color-text);font-size:21px;line-height:1.25;font-weight:700;letter-spacing:-.025em}
+.documents-heading h1{margin:0;color:var(--color-text);font-size:21px;line-height:1.25;font-weight:600;letter-spacing:-.025em}
 .documents-heading p{margin:6px 0 0;color:var(--color-muted);font-size:12px}
 .documents-heading-controls{display:flex;align-items:end;justify-content:flex-end;gap:10px;flex-wrap:wrap}
 .documents-heading-controls :deep(.base-select-field){width:220px;max-width:220px}
-.documents-filter-row{display:flex;align-items:end;justify-content:flex-end;gap:var(--space-3);flex-wrap:wrap;min-width:0}
+.documents-filter-row{display:flex;align-items:end;justify-content:flex-start;gap:var(--space-3);flex-wrap:wrap;min-width:0}
 .documents-filter-row :deep(.base-select-field){width:210px;max-width:100%}
-.documents-filter-row :deep(.lookup){width:min(420px,100%)}
+.documents-filter-row :deep(.lookup){flex:1;max-width:850px;min-width:0}
+.documents-filter-row :deep(.lookup .base-select-field){width:100%}
 .summary-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
 .summary-card{display:grid;grid-template-columns:auto minmax(0,1fr);align-content:start;gap:5px 9px;min-height:104px}
 .summary-card svg{grid-column:2;grid-row:1;color:var(--color-primary);justify-self:end}

@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { useAuthCopy } from '../i18n/auth'
+const { authText } = useAuthCopy()
 import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useCompanyAccessStore } from '../stores/companyAccess'
@@ -6,6 +8,7 @@ import { routeCapability } from '../config/routeAccess'
 import { useSessionStore } from '../stores/session'
 import { useUiPreferencesStore } from '../stores/uiPreferences'
 import BaseCard from '../components/ui/BaseCard.vue'
+import BaseDialog from '../components/ui/BaseDialog.vue'
 import BaseNotice from '../components/ui/BaseNotice.vue'
 import BaseButton from '../components/ui/BaseButton.vue'
 import BaseField from '../components/ui/BaseField.vue'
@@ -100,22 +103,22 @@ async function submit() {
           <img :src="publicAsset('brand/itp-mark.svg')" alt="ITP" width="62" height="47" />
           <strong>HRM</strong>
         </div>
-        <span>Кадровая информационная система</span>
+        <span>{{ authText('Кадровая информационная система') }}</span>
       </div>
 
       <BaseCard>
-        <h1>Вход в систему</h1>
-        <p class="muted">Используйте корпоративную учётную запись.</p>
+        <h1>{{ authText('Вход в систему') }}</h1>
+        <p class="muted">{{ authText('Используйте корпоративную учётную запись.') }}</p>
 
         <BaseNotice v-if="!enabled" tone="warning">
-          Авторизация пока не включена. Подключение доступно после согласования безопасности и адресов размещения.
+          {{ authText('Авторизация пока не включена. Подключение доступно после согласования безопасности и адресов размещения.') }}
         </BaseNotice>
 
         <BaseNotice v-else-if="readiness === 'checking'" tone="info">
-          Проверяем защищённое подключение к серверу HRM…
+          {{ authText('Проверяем защищённое подключение к серверу HRM…') }}
         </BaseNotice>
         <BaseNotice v-else-if="!loginReady" tone="warning">
-          Вход временно недоступен: сервер HRM ещё не разрешил авторизацию. Повторите попытку позднее.
+          {{ authText('Вход временно недоступен: сервер HRM ещё не разрешил авторизацию. Повторите попытку позднее.') }}
         </BaseNotice>
 
         <form v-if="enabled" class="login-form" @submit.prevent="submit">
@@ -123,43 +126,40 @@ async function submit() {
             autocomplete="username" required :disabled="session.loading || !loginReady" :invalid="!!message" />
           <BaseField id="login-password" v-model="password" label="Пароль" type="password" revealable
             autocomplete="current-password" required :disabled="session.loading || !loginReady" :invalid="!!message" />
-          <BaseNotice v-if="message || session.error" tone="error">{{ message || session.error }}</BaseNotice>
+          <BaseNotice v-if="message || session.error" tone="error">{{ authText(message || session.error || '') }}</BaseNotice>
           <BaseButton type="submit" :disabled="session.loading || !loginReady || !email || !password">
-            {{ session.loading ? 'Проверка данных…' : 'Войти' }}
+            {{ session.loading ? authText('Проверка данных…') : authText('Войти') }}
           </BaseButton>
         </form>
 
         <div class="recovery-panel">
           <BaseButton variant="secondary" type="button"
             @click="recoveryOpen = true; recoveryEmail = email; recoveryMessage = ''; recoveryError = ''">
-            Забыли пароль?
+            {{ authText('Забыли пароль?') }}
           </BaseButton>
         </div>
 
-        <div v-if="recoveryOpen" class="recovery-modal" role="dialog" aria-modal="true" aria-labelledby="recovery-title">
-          <div class="recovery-modal__backdrop" @click="recoveryOpen = false"></div>
-          <BaseCard class="recovery-modal__card">
-            <h2 id="recovery-title">Сброс пароля</h2>
-            <p class="muted">Укажите корпоративную почту. Мы отправим ссылку для установки нового пароля.</p>
+        <BaseDialog :open="recoveryOpen" :title="authText('Сброс пароля')" :close-label="authText('Закрыть')" @close="recoveryOpen = false">
+          <div class="recovery-body">
+            <p class="muted">{{ authText('Укажите корпоративную почту. Мы отправим ссылку для установки нового пароля.') }}</p>
             <BaseNotice v-if="!recoveryReady" tone="info">
-              Восстановление пароля временно недоступно. Попробуйте позднее.
+              {{ authText('Восстановление пароля временно недоступно. Попробуйте позднее.') }}
             </BaseNotice>
             <form v-else class="login-form recovery-form" @submit.prevent="requestRecovery">
               <BaseField id="recovery-email" v-model="recoveryEmail" label="Электронная почта" type="email"
                 autocomplete="email" required :disabled="recoveryBusy" />
-              <BaseNotice v-if="recoveryMessage" tone="success">{{ recoveryMessage }}</BaseNotice>
-              <BaseNotice v-if="recoveryError" tone="error">{{ recoveryError }}</BaseNotice>
+              <BaseNotice v-if="recoveryMessage" tone="success">{{ authText(recoveryMessage) }}</BaseNotice>
+              <BaseNotice v-if="recoveryError" tone="error">{{ authText(recoveryError) }}</BaseNotice>
               <BaseButton type="submit" :disabled="recoveryBusy || !recoveryEmail">
-                {{ recoveryBusy ? 'Отправка…' : 'Получить ссылку' }}
+                {{ recoveryBusy ? authText('Отправка…') : authText('Получить ссылку') }}
               </BaseButton>
             </form>
-            <BaseButton variant="secondary" type="button" @click="recoveryOpen = false">Закрыть</BaseButton>
-          </BaseCard>
-        </div>
-        <RouterLink class="login-back" to="/">Вернуться к обзору</RouterLink>
+            <BaseButton variant="secondary" type="button" @click="recoveryOpen = false">{{ authText('Закрыть') }}</BaseButton>
+          </div>
+        </BaseDialog>
       </BaseCard>
 
-      <p class="login-footnote">Доступ к кадровым данным предоставляется в пределах разрешённых подразделений.</p>
+      <p class="login-footnote">{{ authText('Доступ к кадровым данным предоставляется в пределах разрешённых подразделений.') }}</p>
     </div>
   </main>
 </template>
@@ -194,16 +194,11 @@ async function submit() {
 .login-wrap p{line-height:1.5;margin:0 0 20px}
 .login-form{display:flex;flex-direction:column;gap:18px}
 .login-form :deep(.base-button){width:100%;min-height:44px;margin-top:4px}
-.login-back{display:inline-block;margin-top:20px;color:var(--color-primary);font-size:14px;text-decoration:underline}
 .recovery-panel{margin-top:18px;padding-top:18px;border-top:1px solid var(--color-stroke)}
 .recovery-panel :deep(.base-button){width:100%}
+.recovery-body{display:grid;gap:16px}
 .recovery-form{margin-top:0}
 .recovery-form .muted{margin:0}
-.recovery-modal{position:fixed;inset:0;z-index:1000;display:grid;place-items:center;padding:20px}
-.recovery-modal__backdrop{position:absolute;inset:0;background:rgba(0,0,0,.48);backdrop-filter:blur(2px)}
-.recovery-modal__card{position:relative;z-index:1;width:min(100%,440px);display:grid;gap:16px}
-.recovery-modal__card h2{margin:0;font-size:22px}
-.recovery-modal__card :deep(.base-button){width:100%}
 .login-footnote{font-size:12px;line-height:18px;color:var(--color-muted);text-align:center;margin:0}
 @media(max-width:520px){
   .login-page{align-items:flex-start;padding:20px 14px}

@@ -1,13 +1,14 @@
 <script setup lang="ts">
 import { publicAsset } from '../../utils/publicAsset'
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { Moon, Sun, Menu } from 'lucide-vue-next'
+import { Menu } from 'lucide-vue-next'
 import { useRoute, useRouter } from 'vue-router'
 import { useSessionStore } from '../../stores/session'
 import { useCompanyAccessStore } from '../../stores/companyAccess'
 import { useUiPreferencesStore, type UiLocale } from '../../stores/uiPreferences'
 import { localeOptions, useAppI18n } from '../../i18n'
 import { browserLoginEnabled } from '../../router'
+import BaseThemeToggle from '../ui/BaseThemeToggle.vue'
 
 const emit = defineEmits<{
   openMobileMenu: []
@@ -96,13 +97,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', handleShortcut))
           <option v-for="option in localeOptions" :key="option.id" :value="option.id">{{ option.id === 'ka' ? 'GE' : option.id === 'kk' ? 'KZ' : option.id.toUpperCase() }}</option>
         </select>
       </label>
-      <button class="theme-toggle topbar-icon" type="button"
-        :aria-label="ui.theme === 'dark' ? t('topbar.enableLightTheme') : t('topbar.enableDarkTheme')"
-        :title="ui.theme === 'dark' ? t('topbar.lightTheme') : t('topbar.darkTheme')"
-        :aria-pressed="ui.theme === 'dark'" @click="ui.toggleTheme()">
-        <Sun v-if="ui.theme === 'dark'" :size="20" aria-hidden="true" />
-        <Moon v-else :size="20" aria-hidden="true" />
-      </button>
+      <BaseThemeToggle />
       <div class="profile-summary" :title="accountName">
         <span class="user-avatar" aria-hidden="true">{{ initials }}</span>
         <span class="profile-copy">

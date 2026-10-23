@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { publicAsset } from '../utils/publicAsset'
 import { useActiveCompanySelection } from '../composables/useActiveCompanySelection'
+import { useWorkspaceI18n } from '../composables/useWorkspaceI18n'
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { ArrowRightLeft, LogIn, LogOut, Plus } from 'lucide-vue-next'
@@ -27,6 +28,7 @@ import {
 
 type ActionFilter = 'all' | PersonnelActionType | 'bonuses'
 const route = useRoute()
+const { tr } = useWorkspaceI18n()
 
 const companies = ref<CompanyRecord[]>([])
 const company = ref('')
@@ -152,7 +154,7 @@ onMounted(loadCompanies)
   <section class="actions-page">
     <div class="actions-breadcrumb">
       <img :src="publicAsset('prototype-icons/Home.svg')" alt="" aria-hidden="true" />
-      <span>/</span><strong>Кадровые процессы</strong>
+      <span>/</span><strong>{{ tr('Кадровые процессы') }}</strong>
     </div>
 
     <BaseNotice v-if="error" tone="error">{{ error }}</BaseNotice>
@@ -162,7 +164,7 @@ onMounted(loadCompanies)
     <template v-else-if="companies.length">
       <div class="actions-heading">
         <div>
-          <h1>Кадровые процессы</h1>
+          <h1>{{ tr('Кадровые процессы') }}</h1>
           <p>{{ selectedCompany?.name }}</p>
         </div>
         <div class="actions-heading-controls">

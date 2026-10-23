@@ -77,6 +77,12 @@ for (const [locale, expected] of Object.entries(locales)) {
       await page.getByText(locale === 'en' ? 'Completed personnel actions and their grounds.'
         : locale === 'kk' ? 'Орындалған кадрлық әрекеттер және олардың негіздері.'
         : 'შესრულებული საკადრო მოქმედებები და მათი საფუძვლები.', { exact: true }).waitFor()
+      await page.goto('/directories/positions')
+      const positionSearch = locale === 'en' ? 'Search positions'
+        : locale === 'kk' ? 'Лауазымдарды іздеу' : 'თანამდებობების ძიება'
+      await page.getByRole('searchbox', { name: positionSearch }).waitFor()
+      await page.getByRole('heading', { name: locale === 'en' ? 'Positions'
+        : locale === 'kk' ? 'Лауазымдар' : 'თანამდებობები', exact: true }).last().waitFor()
       await page.goto(employeeUrl)
       await page.getByRole('button', { name: expected.personal, exact: true }).click()
       const birth = page.locator('.employee-data-field').filter({ hasText: expected.birth }).first()

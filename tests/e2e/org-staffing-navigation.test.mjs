@@ -61,6 +61,9 @@ test('all four organization and staffing tabs work at four viewport widths witho
         name: 'Изменения штатного расписания',
       }).getAttribute('aria-current'), 'page')
       await tabs.getByRole('button', { name: 'Организационная структура' }).click()
+      // ZIP parity opens the table first; switch explicitly to the diagram for canvas assertions.
+      await page.getByRole('navigation', { name: 'Представление организационной структуры' })
+        .getByRole('button', { name: 'Схема', exact: true }).click()
       const diagram = page.getByRole('region', { name: 'Схема подразделений компании' })
       await diagram.waitFor()
       assert.ok(['hidden', 'clip'].includes(await diagram.evaluate(el => getComputedStyle(el).overflowY)),

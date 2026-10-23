@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { onBeforeUnmount, ref, watch } from 'vue'
 import BaseButton from './ui/BaseButton.vue'
 import BaseNotice from './ui/BaseNotice.vue'
 import {
@@ -11,7 +11,7 @@ import {
 import { ApiError } from '../api/client'
 
 const props = defineProps<{ companyId: string; month: string }>()
-const emit = defineEmits<{ status: [status: WorktimePeriodStatus | null] }>()
+const emit = defineEmits<{ status: [status: WorktimePeriodStatus | null]; editable: [editable: boolean] }>()
 const period = ref<WorktimePeriodResponse | null>(null)
 const pending = ref(false)
 const unavailable = ref(false)
@@ -32,6 +32,8 @@ async function refresh() {
   unavailable.value = false
   reason.value = ''
   emit('status', null)
+  emit('editable', false)
+  pending.value = false
   if (!props.companyId || !props.month) return
   pending.value = true
   try {
@@ -39,11 +41,13 @@ async function refresh() {
     if (sequence !== current) return
     period.value = data
     emit('status', data.data.status)
+    emit('editable', data.data.status === 'draft')
   } catch (cause) {
     if (sequence !== current) return
     if (cause instanceof ApiError && cause.status === 404) {
       // The opt-in backend feature is absent or disabled: legacy editor stays usable.
       unavailable.value = true
+      emit('editable', true)
     } else {
       error.value = cause instanceof Error ? cause.message : 'Не удалось загрузить состояние табеля'
     }
@@ -54,26 +58,39 @@ async function refresh() {
 
 async function change(action: 'submit' | 'approve' | 'reopen') {
   if (!period.value || pending.value) return
+  const current = sequence
+  const companyId = props.companyId
+  const month = props.month
+  const revision = period.value.data.revision
+  const reopenReason = reason.value
   pending.value = true
+  emit('editable', false)
   error.value = ''
   try {
-    await transitionWorktimePeriod(
-      props.companyId, props.month, period.value.data.revision, action,
-      action === 'reopen' ? reason.value : undefined,
-    )
+    await transitionWorktimePeriod(companyId, month, revision, action,
+      action === 'reopen' ? reopenReason : undefined)
+    if (sequence !== current) return
     await refresh()
   } catch (cause) {
-    error.value = cause instanceof Error ? cause.message : 'Не удалось изменить состояние табеля'
-    pending.value = false
+    if (sequence !== current) return
+    const message = cause instanceof Error ? cause.message : 'Не удалось изменить состояние табеля'
+    // A stale revision or failed transition must re-read the server before
+    // offering edits again. A failed read keeps the editor disabled.
+    const recoverySequence = sequence + 1
+    await refresh()
+    if (sequence === recoverySequence) error.value = message
   }
 }
 
 watch(() => [props.companyId, props.month], () => { void refresh() }, { immediate: true })
+onBeforeUnmount(() => { sequence++ })
 </script>
 
 <template>
   <div v-if="!unavailable" class="period-review" aria-label="Согласование табельного периода">
-    <BaseNotice v-if="error" tone="error">{{ error }}</BaseNotice>
+    <BaseNotice v-if="error" tone="error">{{ error }}
+      <BaseButton variant="secondary" :disabled="pending" @click="refresh">Повторить загрузку</BaseButton>
+    </BaseNotice>
     <div v-if="period" class="period-review__row">
       <div class="period-review__text">
         <strong>Согласование табеля</strong>

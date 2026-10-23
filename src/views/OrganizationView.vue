@@ -5,7 +5,7 @@ import { useWorkspaceI18n } from '../composables/useWorkspaceI18n'
 import { useUiFormatters } from '../composables/useUiFormatters'
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { Building2, Minus, Pencil, Plus, Trash2, UserPlus, UsersRound } from 'lucide-vue-next'
+import { Building2, Pencil, Plus, Trash2, UserPlus, UsersRound } from 'lucide-vue-next'
 import BaseDataTable from '../components/ui/BaseDataTable.vue'
 import BaseLoadingState from '../components/ui/BaseLoadingState.vue'
 import BaseNotice from '../components/ui/BaseNotice.vue'
@@ -28,6 +28,7 @@ import { downloadCsv } from '../utils/exportCsv'
 import { preferredApprovedStaffingPlan } from '../utils/staffingPlanChoice'
 import { localTodayISO } from '../utils/localDate'
 import OrgStaffingNav from '../components/OrgStaffingNav.vue'
+import OrgChartViewport from '../components/OrgChartViewport.vue'
 import { buildDepartmentForest, filterDepartmentForest } from '../utils/departmentTree'
 import DepartmentForm from '../components/DepartmentForm.vue'
 import {
@@ -63,7 +64,6 @@ const deleting = ref(false)
 const viewMode = ref('table')
 const searchQuery = ref('')
 const selectedDepartmentIds = ref<string[]>([])
-const chartZoom = ref(100)
 const viewModes = [{ id: 'table', label: 'Таблица' }, { id: 'diagram', label: 'Схема' }]
 const diagramEmployees = ref<EmployeeRecord[]>([])
 // Show the root's direct reports by default, while keeping deeper levels collapsed.
@@ -407,13 +407,6 @@ onMounted(loadCompanies)
         :options="viewModes" :label="tr('Представление организационной структуры')" />
         <BaseSearchField v-model="searchQuery" class="structure-search" :label="tr('Поиск подразделений')" />
         <BaseColumnPicker v-if="viewMode === 'table'" v-model="shownOrgColumns" :columns="extraColumns" :title="tr('Колонки')" />
-        <div v-if="viewMode === 'diagram'" class="chart-zoom">
-          <BaseButton icon-only variant="secondary" :aria-label="tr('Уменьшить схему')"
-            :disabled="chartZoom <= 70" @click="chartZoom = Math.max(70, chartZoom - 10)"><Minus :size="16" /></BaseButton>
-          <input v-model.number="chartZoom" type="range" min="70" max="130" step="10" :aria-label="tr('Масштаб схемы')" />
-          <BaseButton icon-only variant="secondary" :aria-label="tr('Увеличить схему')"
-            :disabled="chartZoom >= 130" @click="chartZoom = Math.min(130, chartZoom + 10)"><Plus :size="16" /></BaseButton>
-        </div>
         <label v-if="viewMode === 'diagram'" class="expand-levels"><input v-model="expandedLevels" type="checkbox" /> {{ tr('Раскрыть нижестоящий уровень') }}</label>
       </div>
       <BaseNotice v-if="viewMode === 'table' && total > departments.length" tone="info">
@@ -423,9 +416,9 @@ onMounted(loadCompanies)
         {{ tr('Схема слишком велика: показаны первые') }} {{ fmt.number(diagramDepartments.length, 0) }} {{ tr('подразделений из доступных') }} {{ fmt.number(total, 0) }}.
       </BaseNotice>
 
-      <div v-if="viewMode === 'diagram'" class="structure-diagram" role="region" tabindex="0" :aria-label="tr('Схема подразделений компании')">
+      <OrgChartViewport v-if="viewMode === 'diagram'" :key="selectedCompany">
         <BaseLoadingState v-if="diagramLoading" :label="tr('Загрузка полной структуры')" />
-        <div v-else-if="visibleDepartmentForest.length" class="organization-chart" :style="{ zoom: chartZoom + '%' }">
+        <div v-else-if="visibleDepartmentForest.length" class="organization-chart">
           <div class="chart-company" :aria-label="tr('Компания') + ': ' + (currentCompany?.name ?? '')">
             <div class="chart-company-title">
               <Building2 :size="20" aria-hidden="true" />
@@ -443,7 +436,7 @@ onMounted(loadCompanies)
           </div>
         </div>
         <p v-else class="diagram-empty">{{ searchQuery.trim() ? tr('Подразделения по запросу не найдены.') : tr('Подразделений для отображения пока нет.') }}</p>
-      </div>
+      </OrgChartViewport>
 
       <div v-else class="org-table-view">
         <BaseLoadingState v-if="loadingDepartments" class="org-mobile-only" :label="tr('Загрузка подразделений')" />

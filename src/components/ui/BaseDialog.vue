@@ -5,8 +5,9 @@ import { X } from 'lucide-vue-next'
 const props = withDefaults(defineProps<{
   open: boolean
   title: string
+  closeLabel?: string
   size?: 'default' | 'wide' | 'half-screen'
-}>(), { size: 'default' })
+}>(), { size: 'default', closeLabel: 'Закрыть диалог' })
 
 const emit = defineEmits<{ close: [] }>()
 const panel = ref<HTMLDialogElement | null>(null)
@@ -43,7 +44,7 @@ onUnmounted(() => { if (panel.value?.open) panel.value.close() })
           <h2 :id="titleId">{{ title }}</h2>
           <slot name="subtitle" />
         </div>
-        <button type="button" class="drawer-close" aria-label="Закрыть диалог" @click="close">
+        <button type="button" class="drawer-close" :aria-label="closeLabel" @click="close">
           <X :size="20" aria-hidden="true" />
         </button>
       </header>

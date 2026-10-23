@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { useAuthCopy } from '../i18n/auth'
+const { authText } = useAuthCopy()
 import { computed, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import BaseButton from '../components/ui/BaseButton.vue'
@@ -50,34 +52,34 @@ async function submit() {
           <img :src="publicAsset('brand/itp-mark.svg')" alt="ITP" width="62" height="47" />
           <strong>HRM</strong>
         </div>
-        <span>Кадровая информационная система</span>
+        <span>{{ authText('Кадровая информационная система') }}</span>
       </div>
 
       <BaseCard>
-        <h1>Установка пароля</h1>
-        <p class="muted">Новый пароль: минимум 8 символов, минимум одна цифра и один специальный символ.</p>
+        <h1>{{ authText('Установка пароля') }}</h1>
+        <p class="muted">{{ authText('Новый пароль: минимум 8 символов, минимум одна цифра и один специальный символ.') }}</p>
 
-        <BaseNotice v-if="success" tone="success">{{ success }}</BaseNotice>
+        <BaseNotice v-if="success" tone="success">{{ authText(success) }}</BaseNotice>
         <BaseNotice v-else-if="!validLink" tone="warning">
-          Ссылка для установки пароля отсутствует или уже использована. Запросите новую ссылку на странице входа.
+          {{ authText('Ссылка для установки пароля отсутствует или уже использована. Запросите новую ссылку на странице входа.') }}
         </BaseNotice>
 
         <form v-else class="reset-form" @submit.prevent="submit">
-          <div class="reset-email"><span>Учётная запись</span><strong>{{ email }}</strong></div>
+          <div class="reset-email"><span>{{ authText('Учётная запись') }}</span><strong>{{ email }}</strong></div>
           <BaseField id="reset-new-password" v-model="nextPassword" label="Новый пароль" type="password" revealable
             autocomplete="new-password" required :disabled="busy" />
           <BaseField id="reset-confirm-password" v-model="confirmation" label="Повторите пароль" type="password" revealable
             autocomplete="new-password" required :disabled="busy" />
-          <BaseNotice v-if="nextPassword && !passwordValid" tone="warning">Нужно минимум 8 символов, цифра и специальный символ.</BaseNotice>
-          <BaseNotice v-if="confirmation && nextPassword !== confirmation" tone="error">Пароли не совпадают.</BaseNotice>
-          <BaseNotice v-if="error" tone="error">{{ error }}</BaseNotice>
+          <BaseNotice v-if="nextPassword && !passwordValid" tone="warning">{{ authText('Нужно минимум 8 символов, цифра и специальный символ.') }}</BaseNotice>
+          <BaseNotice v-if="confirmation && nextPassword !== confirmation" tone="error">{{ authText('Пароли не совпадают.') }}</BaseNotice>
+          <BaseNotice v-if="error" tone="error">{{ authText(error) }}</BaseNotice>
           <BaseButton type="submit"
             :disabled="busy || !passwordValid || nextPassword !== confirmation">
-            {{ busy ? 'Сохранение…' : 'Установить пароль' }}
+            {{ busy ? authText('Сохранение…') : authText('Установить пароль') }}
           </BaseButton>
         </form>
 
-        <RouterLink class="reset-back" to="/login">Вернуться ко входу</RouterLink>
+        <RouterLink class="reset-back" to="/login">{{ authText('Вернуться ко входу') }}</RouterLink>
       </BaseCard>
     </div>
   </main>

@@ -1,11 +1,14 @@
 <script setup lang="ts">
 import { useId } from 'vue'
 import { Search } from 'lucide-vue-next'
+import { useWorkspaceI18n } from '../../composables/useWorkspaceI18n'
+const { tr } = useWorkspaceI18n()
 
 defineProps<{
   modelValue: string
   label: string
   placeholder?: string
+  disabled?: boolean
 }>()
 defineEmits<{ 'update:modelValue': [value: string] }>()
 const id = useId()
@@ -14,9 +17,9 @@ const id = useId()
 <template>
   <div class="registry-search">
     <Search :size="17" aria-hidden="true" />
-    <label class="sr-only" :for="id">{{ label }}</label>
-    <input :id="id" type="search" :value="modelValue" :aria-label="label"
-      :placeholder="placeholder || label"
+    <label class="sr-only" :for="id">{{ tr(label) }}</label>
+    <input :id="id" type="search" :value="modelValue" :disabled="disabled" :aria-label="tr(label)"
+      :placeholder="tr(placeholder || label)"
       @input="$emit('update:modelValue', ($event.target as HTMLInputElement).value)" />
   </div>
 </template>
@@ -37,4 +40,6 @@ const id = useId()
 }
 .sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap}
 @media(max-width:650px){.registry-search{max-width:none}}
+.registry-search:has(input:disabled){opacity:.55;cursor:not-allowed}
+.registry-search input:disabled{cursor:not-allowed}
 </style>

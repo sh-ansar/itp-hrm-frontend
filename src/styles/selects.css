@@ -1,0 +1,39 @@
+/* Shared select chrome and picker. Native semantics keep required validation,
+   keyboard/type-ahead, form submission and screen-reader support intact.
+   Unsupported browsers retain an operable standard select. */
+:root select:not([multiple]):not([size]){
+  appearance:none;-webkit-appearance:none;box-sizing:border-box;
+  height:var(--control-height);min-height:var(--control-height);max-width:100%;min-width:0;
+  padding:0 34px 0 12px;border:1px solid var(--color-stroke);border-radius:var(--space-2);
+  background-color:var(--color-surface-raised);color:var(--color-text);
+  background-image:url('/prototype-icons/Expand-Arrow.svg');background-repeat:no-repeat;
+  background-position:right 9px center;background-size:18px 18px;
+  font-family:inherit;font-size:var(--font-caption-size);font-weight:400;line-height:var(--line-caption);
+  box-shadow:var(--shadow-control);cursor:pointer;
+}
+:root select:not([multiple]):not([size]):hover:not(:disabled){border-color:var(--color-stroke-strong)}
+:root select:not([multiple]):not([size]):focus-visible{outline:2px solid var(--color-primary);outline-offset:2px}
+:root select:not([multiple]):not([size]):disabled{opacity:.55;cursor:not-allowed}
+:root select:not([multiple]):not([size])[aria-invalid="true"]{border-color:var(--color-danger)}
+@supports (appearance:base-select){
+  :root select:not([multiple]):not([size]),:root select:not([multiple]):not([size])::picker(select){appearance:base-select}
+  :root select:not([multiple]):not([size]){align-items:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  :root select:not([multiple]):not([size])::picker-icon{display:none}
+  :root select:not([multiple]):not([size])::picker(select){
+    box-sizing:border-box;min-inline-size:anchor-size(width);max-inline-size:calc(100vw - 24px);
+    max-block-size:min(320px,calc(100dvh - 24px));margin-block:5px;padding:4px;
+    border:1px solid var(--color-stroke-strong);border-radius:var(--space-2);
+    background:var(--color-surface);color:var(--color-text);box-shadow:var(--shadow-float);
+    overflow:auto;overscroll-behavior:contain;font:inherit;
+  }
+  :root select:not([multiple]):not([size]) option{
+    display:flex;align-items:center;min-height:34px;padding:7px 10px;border-radius:4px;
+    background:transparent;color:var(--color-text);font:inherit;font-weight:400;
+    white-space:normal;overflow-wrap:anywhere;cursor:pointer;
+  }
+  :root select:not([multiple]):not([size]) option::checkmark{display:none}
+  :root select:not([multiple]):not([size]) option:hover,
+  :root select:not([multiple]):not([size]) option:focus-visible{background:var(--color-hover);outline:0}
+  :root select:not([multiple]):not([size]) option:checked{background:var(--color-accent-soft);color:var(--color-primary)}
+  :root select:not([multiple]):not([size]) option:disabled{opacity:.55;cursor:not-allowed}
+}

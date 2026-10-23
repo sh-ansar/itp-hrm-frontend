@@ -2,7 +2,7 @@
 import { publicAsset } from '../utils/publicAsset'
 import { useActiveCompanySelection } from '../composables/useActiveCompanySelection'
 import { computed, onMounted, ref, watch } from 'vue'
-import { BriefcaseBusiness, Pencil, Plus, Trash2 } from 'lucide-vue-next'
+import { BriefcaseBusiness, Pencil, Plus, Search, Trash2 } from 'lucide-vue-next'
 import BaseButton from '../components/ui/BaseButton.vue'
 import BaseCard from '../components/ui/BaseCard.vue'
 import BaseDataTable from '../components/ui/BaseDataTable.vue'
@@ -24,6 +24,10 @@ const companies = ref<CompanyRecord[]>([])
 const company = ref('')
 const { preferCompany } = useActiveCompanySelection(company)
 const positions = ref<PositionRecord[]>([])
+const search = ref('')
+const filteredPositions = computed(() => positions.value.filter(row =>
+  row.name.toLocaleLowerCase('ru').includes(search.value.trim().toLocaleLowerCase('ru')),
+))
 const companyBusy = ref(false)
 const busy = ref(false)
 const positionWritesEnabled = ref(false)
@@ -106,7 +110,7 @@ async function confirmDelete() {
   }
 }
 
-watch(company, () => { page.value = 1 })
+watch(company, () => { page.value = 1; search.value = '' })
 watch([company, page], loadPositions)
 onMounted(loadCompanies)
 </script>
@@ -151,10 +155,19 @@ onMounted(loadCompanies)
           <span>{{ total }} записей</span>
         </div>
 
+        <div class="directory-toolbar" role="search" aria-label="Поиск должностей">
+          <label class="directory-search"><Search :size="17" aria-hidden="true" />
+            <span class="sr-only">Поиск должностей</span>
+            <input v-model="search" type="search" placeholder="Поиск должностей" aria-label="Поиск должностей" />
+          </label>
+          <BaseButton v-if="search.trim()" variant="secondary" @click="search = ''">Сбросить поиск</BaseButton>
+          <span class="directory-result-count" aria-live="polite">{{ filteredPositions.length }} из {{ positions.length }} на странице</span>
+        </div>
+
         <div class="directory-desktop">
-          <BaseDataTable :rows="positions" :columns="columns" row-key="id" :loading="busy"
-            caption="Справочник должностей компании" empty-title="Должностей пока нет"
-            empty-description="Добавьте первую должность для выбранной компании.">
+          <BaseDataTable :rows="filteredPositions" :columns="columns" row-key="id" :loading="busy"
+            caption="Справочник должностей компании" empty-title="Должностей не найдено"
+            :empty-description="search.trim() ? 'Измените запрос или сбросьте поиск.' : 'Добавьте первую должность для выбранной компании.'">
             <template #cell-name="{ value }"><strong class="position-name">{{ value }}</strong></template>
             <template #cell-actions="{ row }">
               <div class="row-actions">
@@ -170,7 +183,7 @@ onMounted(loadCompanies)
         </div>
 
         <div class="directory-mobile">
-          <article v-for="row in positions" :key="row.id" class="position-card">
+          <article v-for="row in filteredPositions" :key="row.id" class="position-card">
             <div>
               <strong>{{ row.name }}</strong>
               <span>Должность</span>
@@ -184,7 +197,7 @@ onMounted(loadCompanies)
               </BaseButton>
             </div>
           </article>
-          <p v-if="!busy && !positions.length" class="mobile-empty">Должностей пока нет.</p>
+          <p v-if="!busy && !filteredPositions.length" class="mobile-empty">{{ search.trim() ? 'Должностей по запросу не найдено.' : 'Должностей пока нет.' }}</p>
         </div>
 
         <BasePagination :page="page" :last-page="pages" :loading="busy"
@@ -239,6 +252,12 @@ onMounted(loadCompanies)
 .section-heading>span{color:var(--color-muted);font-size:11px}
 .position-name{color:var(--color-text);font-size:13px}
 .row-actions{display:flex;justify-content:flex-end;gap:7px}
+.directory-toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px;min-width:0}
+.directory-search{display:flex;align-items:center;gap:9px;flex:1 1 240px;max-width:420px;min-width:0;height:var(--control-height);padding:0 12px;border:1px solid var(--color-stroke);border-radius:var(--space-2);background:var(--color-surface-raised);color:var(--color-muted)}
+.directory-search input{width:100%;min-width:0;border:0;outline:0;background:transparent;color:var(--color-text);font:inherit;font-size:var(--font-caption-size)}
+.directory-search:focus-within{outline:2px solid var(--color-primary);outline-offset:1px}
+.directory-result-count{margin-left:auto;color:var(--color-muted);font-size:11px}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap}
 .directory-mobile{display:none}
 .position-card{
   display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 13px;
@@ -256,6 +275,8 @@ onMounted(loadCompanies)
 .delete-actions{display:flex;justify-content:flex-end;gap:var(--space-2)}
 @media(max-width:700px){.directory-desktop{display:none}.directory-mobile{display:grid;gap:8px}}
 @media(max-width:650px){
+  .directory-search{max-width:none;flex-basis:100%}
+  .directory-result-count{margin-left:0}
   .directories-controls{display:grid;grid-template-columns:1fr;width:100%}
   .directories-controls :deep(.base-select-field){width:100%;max-width:none}
   .directories-controls :deep(.base-button){width:100%}

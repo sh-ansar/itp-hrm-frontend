@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { publicAsset } from '../utils/publicAsset'
 import { useActiveCompanySelection } from '../composables/useActiveCompanySelection'
+import { useWorkspaceI18n } from '../composables/useWorkspaceI18n'
 import { computed, onMounted, ref, watch } from 'vue'
 import { BriefcaseBusiness, Pencil, Plus, Trash2 } from 'lucide-vue-next'
 import BaseButton from '../components/ui/BaseButton.vue'
@@ -20,6 +21,7 @@ import {
   type PositionRecord,
 } from '../api/organization'
 
+const { tr } = useWorkspaceI18n()
 const companies = ref<CompanyRecord[]>([])
 const company = ref('')
 const { preferCompany } = useActiveCompanySelection(company)
@@ -115,7 +117,7 @@ onMounted(loadCompanies)
   <section class="directories-page">
     <div class="directories-breadcrumb">
       <img :src="publicAsset('prototype-icons/Home.svg')" alt="" aria-hidden="true" />
-      <span>/</span><strong>Справочники</strong>
+      <span>/</span><strong>{{ tr('Справочники') }}</strong>
     </div>
 
     <BaseNotice v-if="error" tone="error">{{ error }}</BaseNotice>
@@ -125,7 +127,7 @@ onMounted(loadCompanies)
     <template v-else-if="companies.length">
       <div class="directories-heading">
         <div>
-          <h1>Справочники</h1>
+          <h1>{{ tr('Справочники') }}</h1>
           <p>{{ selectedCompany?.name }}</p>
         </div>
         <div class="directories-controls">

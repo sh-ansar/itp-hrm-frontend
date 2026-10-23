@@ -31,6 +31,8 @@ test('organization and staffing match the prototype KPI/drawer structure respons
         assert.equal(await page.getByText(title, { exact: true }).count() >= 1, true, 'missing KPI: ' + title)
       }
 
+      await page.getByRole('navigation', { name: 'Представление организационной структуры' })
+        .getByRole('button', { name: 'Схема', exact: true }).click()
       const diagram = page.getByRole('region', { name: 'Схема подразделений компании' })
       await diagram.locator('.chart-company').waitFor()
       const companyTitle = await diagram.locator('.chart-company-title strong').innerText()

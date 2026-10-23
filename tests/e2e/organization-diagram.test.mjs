@@ -21,6 +21,9 @@ test('organization table and nested chart switch without losing company scope or
     await page.goto('/organization')
     await page.getByRole('heading', { name: 'Организационная структура' }).waitFor()
     const navigation = page.getByRole('navigation', { name: 'Представление организационной структуры' })
+    await page.locator('.org-mobile-list').waitFor()
+    assert.equal(await page.getByRole('region', { name: 'Схема подразделений компании' }).count(), 0,
+      'ZIP default must show table, not diagram')
     await navigation.getByRole('button', { name: 'Схема' }).click()
     await page.locator('.chart-branches .tree-card').first().waitFor({ timeout: 15000 })
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1), false)

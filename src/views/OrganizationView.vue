@@ -10,6 +10,7 @@ import BaseDataTable from '../components/ui/BaseDataTable.vue'
 import BaseLoadingState from '../components/ui/BaseLoadingState.vue'
 import BaseNotice from '../components/ui/BaseNotice.vue'
 import BaseButton from '../components/ui/BaseButton.vue'
+import BaseSelectionToolbar from '../components/ui/BaseSelectionToolbar.vue'
 import BaseSelectField from '../components/ui/BaseSelectField.vue'
 import BasePagination from '../components/ui/BasePagination.vue'
 import BaseDialog from '../components/ui/BaseDialog.vue'
@@ -459,10 +460,7 @@ onMounted(loadCompanies)
           </article>
         </div>
         <div class="org-desktop-table">
-          <div v-if="selectedDepartmentRows.length" class="org-selection-toolbar" role="status">
-            <span>{{ tr('Выбрано на странице:') }} {{ fmt.number(selectedDepartmentRows.length, 0) }}</span>
-            <BaseButton variant="secondary" @click="selectedDepartmentIds = []">{{ tr('Сбросить выбор') }}</BaseButton>
-          </div>
+          <BaseSelectionToolbar :count="selectedDepartmentRows.length" :label="tr('Выбрано на странице:')" :clear-label="tr('Сбросить выбор')" @clear="selectedDepartmentIds = []" />
           <BaseDataTable
         v-model:selected-keys="selectedDepartmentIds"
         selectable

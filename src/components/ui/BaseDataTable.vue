@@ -404,7 +404,7 @@ thead th:not(:last-child),tbody td:not(:last-child){border-right:1px solid var(-
 .heading-content{display:flex;align-items:center;justify-content:space-between;gap:6px;min-height:45px;padding:8px 11px}
 .heading-label,.sort-heading{
   display:block;min-width:0;max-width:100%;color:inherit;
-  font-size:12px;font-weight:600;line-height:17px;white-space:normal;
+  font-size:12px;font-weight:500;line-height:17px;white-space:normal;
   overflow-wrap:normal;text-align:left;
 }
 .sort-heading{padding:0;border:0;background:transparent;cursor:pointer}

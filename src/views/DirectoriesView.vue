@@ -2,8 +2,9 @@
 import { publicAsset } from '../utils/publicAsset'
 import { useActiveCompanySelection } from '../composables/useActiveCompanySelection'
 import { computed, onMounted, ref, watch } from 'vue'
-import { BriefcaseBusiness, Pencil, Plus, Search, Trash2 } from 'lucide-vue-next'
+import { BriefcaseBusiness, Pencil, Plus, Trash2 } from 'lucide-vue-next'
 import BaseButton from '../components/ui/BaseButton.vue'
+import BaseSearchField from '../components/ui/BaseSearchField.vue'
 import BaseCard from '../components/ui/BaseCard.vue'
 import BaseDataTable from '../components/ui/BaseDataTable.vue'
 import BaseDialog from '../components/ui/BaseDialog.vue'
@@ -156,10 +157,7 @@ onMounted(loadCompanies)
         </div>
 
         <div class="directory-toolbar" role="search" aria-label="Поиск должностей">
-          <label class="directory-search"><Search :size="17" aria-hidden="true" />
-            <span class="sr-only">Поиск должностей</span>
-            <input v-model="search" type="search" placeholder="Поиск должностей" aria-label="Поиск должностей" />
-          </label>
+          <BaseSearchField v-model="search" class="directory-search" :label="tr('Поиск должностей')" />
           <BaseButton v-if="search.trim()" variant="secondary" @click="search = ''">Сбросить поиск</BaseButton>
           <span class="directory-result-count" aria-live="polite">{{ filteredPositions.length }} из {{ positions.length }} на странице</span>
         </div>
@@ -253,9 +251,6 @@ onMounted(loadCompanies)
 .position-name{color:var(--color-text);font-size:13px}
 .row-actions{display:flex;justify-content:flex-end;gap:7px}
 .directory-toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px;min-width:0}
-.directory-search{display:flex;align-items:center;gap:9px;flex:1 1 240px;max-width:420px;min-width:0;height:var(--control-height);padding:0 12px;border:1px solid var(--color-stroke);border-radius:var(--space-2);background:var(--color-surface-raised);color:var(--color-muted)}
-.directory-search input{width:100%;min-width:0;border:0;outline:0;background:transparent;color:var(--color-text);font:inherit;font-size:var(--font-caption-size)}
-.directory-search:focus-within{outline:2px solid var(--color-primary);outline-offset:1px}
 .directory-result-count{margin-left:auto;color:var(--color-muted);font-size:11px}
 .sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap}
 .directory-mobile{display:none}
@@ -275,7 +270,7 @@ onMounted(loadCompanies)
 .delete-actions{display:flex;justify-content:flex-end;gap:var(--space-2)}
 @media(max-width:700px){.directory-desktop{display:none}.directory-mobile{display:grid;gap:8px}}
 @media(max-width:650px){
-  .directory-search{max-width:none;flex-basis:100%}
+
   .directory-result-count{margin-left:0}
   .directories-controls{display:grid;grid-template-columns:1fr;width:100%}
   .directories-controls :deep(.base-select-field){width:100%;max-width:none}

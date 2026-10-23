@@ -103,6 +103,8 @@ jobs:
           set -euo pipefail
           (cd backend && composer install --prefer-dist --no-interaction --no-progress)
           npm ci --no-audit --no-fund
+      - name: Verify Vue API requests against reviewed Laravel routes
+        run: node --test tests/frontend-laravel-route-parity.test.mjs
       - name: Refuse any database other than disposable PostgreSQL
         run: |
           set -euo pipefail

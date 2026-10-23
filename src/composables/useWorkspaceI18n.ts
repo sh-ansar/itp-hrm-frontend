@@ -6,6 +6,23 @@ import { useUiPreferencesStore } from '../stores/uiPreferences'
  * Business data returned by the API is never translated here.
  */
 const workspaceCopy: Record<string, { kk: string; en: string }> = {
+  "Новое действие": { kk: "Жаңа әрекет", en: "New action" },
+  "Тип кадрового действия": { kk: "Кадрлық әрекет түрі", en: "Personnel action type" },
+  "Сводка кадровых действий": { kk: "Кадрлық әрекеттер жиынтығы", en: "Personnel action summary" },
+  "Приём": { kk: "Қабылдау", en: "Hire" },
+  "Перевод": { kk: "Ауыстыру", en: "Transfer" },
+  "Увольнение": { kk: "Жұмыстан босату", en: "Termination" },
+  "Все действия": { kk: "Барлық әрекеттер", en: "All actions" },
+  "Проведённые кадровые операции и основания.": { kk: "Орындалған кадрлық әрекеттер және олардың негіздері.", en: "Completed personnel actions and their grounds." },
+  "операций": { kk: "операция", en: "actions" },
+  "Журнал кадровых действий": { kk: "Кадрлық әрекеттер журналы", en: "Personnel action log" },
+  "Кадровых действий пока нет": { kk: "Кадрлық әрекеттер әзірге жоқ", en: "No personnel actions yet" },
+  "Проведённые операции появятся здесь.": { kk: "Орындалған әрекеттер осында көрсетіледі.", en: "Completed actions will appear here." },
+  "Страницы журнала кадровых действий": { kk: "Кадрлық әрекеттер журналының беттері", en: "Personnel action log pages" },
+  "Новое кадровое действие": { kk: "Жаңа кадрлық әрекет", en: "New personnel action" },
+  "Назначение не найдено": { kk: "Тағайындау табылмады", en: "Assignment not found" },
+  "Назначение прекращено": { kk: "Тағайындау тоқтатылды", en: "Assignment ended" },
+  "прекращено": { kk: "тоқтатылды", en: "ended" },
   "Кадровые процессы": { kk: "Кадрлық процестер", en: "Personnel processes" },
   "Справочники": { kk: "Анықтамалықтар", en: "Directories" },
   "договоров истекают в ближайшие 30 дней": { kk: "келесі 30 күнде аяқталатын шарттар", en: "contracts expiring within 30 days" },

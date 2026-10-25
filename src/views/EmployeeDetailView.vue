@@ -668,7 +668,7 @@ onMounted(load)
         </div>
         <div class="identity-fields">
           <div class="identity-fields-top">
-            <span class="status-toggle" role="status" :class="{ 'status-toggle--inactive': !currentAssignment }"><span class="status-toggle-dot"></span>{{ currentAssignment ? tr('Карточка активна') : employmentStatus }}</span>
+            <span class="status-toggle" role="status" :class="{ 'status-toggle--inactive': !currentAssignment }">{{ currentAssignment ? tr('Карточка активна') : employmentStatus }}</span>
             <div class="personnel-id"><span>{{ tr('Табельный №') }}</span><strong>{{ profile.data.personnel_number }}</strong></div>
           </div>
           <div class="identity-name-fields">
@@ -1174,8 +1174,6 @@ onMounted(load)
   display:inline-flex;align-items:center;gap:7px;
   color:var(--color-text);font-size:11px;font-weight:600;
 }
-.status-toggle-dot{flex:0 0 8px;width:8px;height:8px;border-radius:50%;background:var(--color-primary)}
-.status-toggle--inactive .status-toggle-dot{background:var(--color-muted)}
 .personnel-id{
   display:flex;align-items:stretch;border:1px solid var(--color-stroke);
   border-radius:var(--radius-sm);overflow:hidden;font-size:11px;

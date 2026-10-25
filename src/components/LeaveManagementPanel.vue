@@ -11,6 +11,7 @@ import BasePagination from './ui/BasePagination.vue'
 import EmployeeLookupField from './EmployeeLookupField.vue'
 import ProtectedLeaveEvidencePanel from './ProtectedLeaveEvidencePanel.vue'
 import { useLeaveWorkflowI18n } from '../i18n/leaveWorkflow'
+import { useLeaveReversalI18n } from '../i18n/leaveReversal'
 import { useLeaveCategoryI18n } from '../i18n/leaveCategory'
 import { useUiFormatters } from '../composables/useUiFormatters'
 import { useCompanyAccessStore } from '../stores/companyAccess'
@@ -18,7 +19,7 @@ import { useSessionStore } from '../stores/session'
 import { ApiError } from '../api/client'
 import {
   getLeaveRequests, getLeaveTypes, createLeaveRequest, updateLeaveRequest,
-  createLeaveType, submitLeaveRequest, cancelLeaveRequest, decideLeaveRequest, reviewLeaveRequestAsManager,
+  createLeaveType, submitLeaveRequest, cancelLeaveRequest, decideLeaveRequest, reviewLeaveRequestAsManager, reverseApprovedLeave,
   type LeaveRequestRecord, type LeaveTypeRecord, type LeaveTypesResponse, type LeavePlanInput,
   type LeaveCategory, type LeaveTypeInput,
 } from '../api/leaves'
@@ -27,6 +28,10 @@ const props = defineProps<{ companyId: string }>()
 const emit = defineEmits<{ published: [] }>()
 const { t } = useLeaveWorkflowI18n()
 const { ct } = useLeaveCategoryI18n()
+const reversalCopy = useLeaveReversalI18n()
+const canReverse = ref(false)
+const reversalTarget = ref<LeaveRequestRecord | null>(null)
+const reversalReason = ref('')
 const fmt = useUiFormatters()
 const session = useSessionStore()
 const access = useCompanyAccessStore()
@@ -117,6 +122,7 @@ async function load() {
     )
     requests.value = records.data
     canManageTypes.value = kinds.meta.can_manage_leave_types
+    canReverse.value = records.meta.can_reverse_approved_leave === true
     canApprove.value = records.meta.can_approve_leave_requests
     canManageRequests.value = records.meta.can_manage_leave_requests ?? !managerOnly
     canReview.value = records.meta.can_review_leave_requests ?? false
@@ -139,6 +145,9 @@ watch(() => props.companyId, () => {
   typeOpen.value = false
   rejectionTarget.value = null
   managerReviewTarget.value = null
+  reversalTarget.value = null
+  reversalReason.value = ''
+  canReverse.value = false
   category.value = 'ordinary'
   void load()
 }, { immediate: true })
@@ -288,6 +297,32 @@ async function submitManagerReview() {
     busy.value = false
   }
 }
+async function reverseApproved() {
+  const row = reversalTarget.value
+  const reason = reversalReason.value.trim()
+  if (!row || busy.value || !canReverse.value) return
+  if ([...reason].length < 5 || [...reason].length > 500) { error.value = reversalCopy.value.invalid; return }
+  const company = props.companyId
+  const generation = loadGeneration
+  busy.value = true
+  error.value = ''
+  try {
+    await reverseApprovedLeave(company, row.id, row.revision, reason)
+    if (props.companyId !== company || generation !== loadGeneration) return
+    reversalTarget.value = null
+    reversalReason.value = ''
+    await load()
+    if (props.companyId !== company) return
+    info.value = reversalCopy.value.done
+    emit('published')
+  } catch (cause) {
+    if (props.companyId !== company || generation !== loadGeneration) return
+    // Keep the server's rejected state; require an explicit reload before retrying conflicts.
+    operationFailed(cause)
+  } finally {
+    busy.value = false
+  }
+}
 </script>
 
 <template>
@@ -325,12 +360,15 @@ async function submitManagerReview() {
               {{ row.manager_recommendation === 'approved' ? t('managerApproved') : t('managerRejected') }}
               <template v-if="row.manager_decision_comment"> — {{ row.manager_decision_comment }}</template>
             </p>
+            <p v-if="row.reversal_reason" class="leave-management-comment">{{ reversalCopy.reason }}: {{ row.reversal_reason }}</p>
             <p v-if="row.decision_comment" class="leave-management-comment">{{ row.decision_comment }}</p>
             <ProtectedLeaveEvidencePanel v-if="row.category && row.category !== 'ordinary'"
               :company-id="companyId" :request="row" :can-upload="evidenceUploadsEnabled"
               :can-review="evidenceUploadsEnabled" :required="evidenceRequired" @changed="load" />
           </div>
           <div class="leave-management-row-actions">
+            <BaseButton v-if="canReverse && row.status === 'approved'" variant="secondary" :disabled="busy || loading"
+              @click="reversalTarget = row; reversalReason = ''; error = ''">{{ reversalCopy.action }}</BaseButton>
             <BaseButton v-if="canManageRequests && row.status === 'draft' && !row.evidence_status" variant="secondary" :disabled="busy" @click="openEdit(row)">{{ t('edit') }}</BaseButton>
             <BaseButton v-if="canManageRequests && row.status === 'draft'" :disabled="busy" @click="transition(row, 'submit')">{{ t('submit') }}</BaseButton>
             <BaseButton v-if="canManageRequests && ['draft','submitted'].includes(row.status)" variant="secondary" :disabled="busy"
@@ -355,6 +393,21 @@ async function submitManagerReview() {
     </template>
     <p class="leave-management-help">{{ t('noOverwrite') }}</p>
   </BaseCard>
+
+  <BaseDrawer :open="!!reversalTarget" :title="reversalCopy.action" :description="reversalCopy.hint"
+    :close-label="t('close')" @close="!busy && (reversalTarget = null)">
+    <form id="leave-reversal-form" class="leave-form" @submit.prevent="reverseApproved">
+      <label class="leave-textarea"><span>{{ reversalCopy.reason }}</span>
+        <textarea v-model="reversalReason" rows="4" minlength="5" maxlength="500" required :disabled="busy" />
+      </label>
+      <BaseNotice v-if="error" tone="error">{{ error }}</BaseNotice>
+    </form>
+    <template #footer>
+      <BaseButton variant="secondary" :disabled="busy" @click="reversalTarget = null">{{ t('close') }}</BaseButton>
+      <BaseButton type="submit" form="leave-reversal-form" :disabled="busy || reversalReason.trim().length < 5">
+        {{ busy ? t('saving') : reversalCopy.confirm }}</BaseButton>
+    </template>
+  </BaseDrawer>
 
   <BaseDrawer :open="editorOpen" :title="editing ? t('edit') : t('newRequest')"
     :description="t('approvedHint')" :close-label="t('close')" @close="closeEditor">

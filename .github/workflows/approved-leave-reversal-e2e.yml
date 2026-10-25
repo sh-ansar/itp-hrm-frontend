@@ -1,0 +1,95 @@
+name: Approved Leave Reversal Paired E2E
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  staged-manager-review:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      APP_ENV: local
+      APP_DEBUG: 'false'
+      APP_URL: http://127.0.0.1:8000
+      DB_CONNECTION: sqlite
+      CACHE_STORE: file
+      SESSION_DRIVER: file
+      SESSION_COOKIE: hrm_staged_review_ci
+      SESSION_SECURE_COOKIE: 'false'
+      SESSION_HTTP_ONLY: 'true'
+      SESSION_SAME_SITE: lax
+      QUEUE_CONNECTION: sync
+      MAIL_MAILER: log
+      SANCTUM_STATEFUL_DOMAINS: 127.0.0.1:5173,localhost:5173
+      VITE_API_BASE_URL: /api/v1
+      VITE_ENABLE_BROWSER_LOGIN: 'true'
+      HRM_BROWSER_LOGIN_ENABLED: 'true'
+      HRM_ROLE_MANAGEMENT_ENABLED: 'true'
+      HRM_PERSONNEL_WRITES_ENABLED: 'true'
+      HRM_BONUS_WRITES_ENABLED: 'true'
+      HRM_LEAVE_WRITES_ENABLED: 'true'
+      HRM_LEAVE_MANAGER_APPROVAL_ENABLED: 'false'
+      HRM_APPROVED_LEAVE_REVERSAL_ENABLED: 'true'
+      HRM_LEAVE_BALANCE_WRITES_ENABLED: 'true'
+      HRM_LEAVE_BALANCE_ENFORCEMENT_ENABLED: 'false'
+    steps:
+      - name: Checkout frontend candidate
+        uses: actions/checkout@v4
+      - name: Checkout pinned staged-review backend candidate
+        uses: actions/checkout@v4
+        with:
+          repository: sh-ansar/itp-hrm-backend
+          ref: 7f13441b35e5afa04b24b4a6975311defae95fc5
+          path: backend
+          persist-credentials: false
+      - name: PHP 8.4 and SQLite
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: exif, gd, mbstring, pdo_sqlite, sqlite3, fileinfo
+          coverage: none
+      - name: Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Generate disposable application key
+        run: echo "APP_KEY=$(php -r 'echo "base64:".base64_encode(random_bytes(32));')" >> "$GITHUB_ENV"
+      - name: Install dependencies and headless browser
+        run: |
+          (cd backend && composer install --prefer-dist --no-interaction --no-progress)
+          npm ci --no-audit --no-fund
+          mkdir -p "$RUNNER_TEMP/hrm-browser-runtime"
+          npm install --prefix "$RUNNER_TEMP/hrm-browser-runtime" --no-save --no-audit --no-fund playwright@1.56.1
+          ln -s "$RUNNER_TEMP/hrm-browser-runtime/node_modules/playwright" node_modules/playwright
+          ln -s "$RUNNER_TEMP/hrm-browser-runtime/node_modules/playwright-core" node_modules/playwright-core
+          "$RUNNER_TEMP/hrm-browser-runtime/node_modules/.bin/playwright" install --with-deps chromium
+      - name: Migrate fresh disposable database and seed scoped roles
+        run: |
+          touch backend/database/browser-e2e.sqlite
+          echo "DB_DATABASE=$GITHUB_WORKSPACE/backend/database/browser-e2e.sqlite" >> "$GITHUB_ENV"
+          export DB_DATABASE="$GITHUB_WORKSPACE/backend/database/browser-e2e.sqlite"
+          php backend/artisan migrate --force
+          php tests/e2e/seed-synthetic-user.php
+          php tests/e2e/seed-synthetic-organization.php
+          php tests/e2e/seed-role-scenarios.php
+          php tests/e2e/seed-bonus-approver.php
+      - name: Start isolated Laravel and Vue
+        run: |
+          (cd backend && php artisan serve --host=127.0.0.1 --port=8000 > "$RUNNER_TEMP/backend.log" 2>&1 &)
+          npm run dev -- --host 127.0.0.1 > "$RUNNER_TEMP/frontend.log" 2>&1 &
+          for i in $(seq 1 60); do
+            if curl -fsS http://127.0.0.1:8000/api/v1/health > /dev/null &&
+               curl -fsS http://127.0.0.1:5173/login > /dev/null; then exit 0; fi
+            sleep 1
+          done
+          cat "$RUNNER_TEMP/backend.log" "$RUNNER_TEMP/frontend.log"
+          exit 1
+      - name: Verify authorized reversal, balance restoration and preserved history
+        run: node --test --test-concurrency=1 tests/e2e/approved-leave-reversal.test.mjs
+      - name: Sanitized diagnostics
+        if: failure()
+        run: |
+          tail -n 75 "$RUNNER_TEMP/backend.log" || true
+          tail -n 75 "$RUNNER_TEMP/frontend.log" || true

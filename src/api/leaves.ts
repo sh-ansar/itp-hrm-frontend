@@ -111,6 +111,8 @@ export interface LeaveRequestRecord {
   revision: number
   note: string | null
   decision_comment: string | null
+  reversed_at?: string | null
+  reversal_reason?: string | null
   published_leave_id: string | null
   created_by_user_id: number
   category?: LeaveCategory
@@ -123,6 +125,7 @@ export interface LeaveRequestsResponse {
     current_page: number
     last_page: number
     total: number
+    can_reverse_approved_leave?: boolean
     can_approve_leave_requests: boolean
     manager_approval_required?: boolean
     can_review_leave_requests?: boolean
@@ -207,5 +210,13 @@ export function reviewLeaveRequestAsManager(
 ): Promise<{ data: LeaveRequestRecord }> {
   return apiRequest(requestPath(companyId, requestId) + '/manager-decision', {
     method: 'POST', body: JSON.stringify({ revision, decision, comment }),
+  })
+}
+
+/** Preserves approved booking history; server enforces future-only/admin restrictions. */
+export function reverseApprovedLeave(companyId: string, requestId: string, revision: number, reason: string)
+  : Promise<{ data: Pick<LeaveRequestRecord, 'id' | 'status' | 'revision' | 'reversed_at' | 'reversal_reason'> }> {
+  return apiRequest(requestPath(companyId, requestId) + '/reverse-approved', {
+    method: 'POST', body: JSON.stringify({ revision, reason: reason.trim() }),
   })
 }

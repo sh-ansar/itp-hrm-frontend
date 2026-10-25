@@ -65,8 +65,15 @@ test('dark theme is neutral slate and custom select arrows are consistently styl
     const selects = page.locator('.base-select-field')
     await selects.first().waitFor()
     const select = selects.first()
-    assert.equal(await select.locator('select').evaluate(el => getComputedStyle(el).appearance), 'none')
-    assert.equal(await select.locator('.base-select-chevron').count(), 1)
+    const chrome = await select.locator('select').evaluate(el => ({
+      appearance: getComputedStyle(el).appearance,
+      customizable: CSS.supports('appearance', 'base-select'),
+      arrow: getComputedStyle(el).backgroundImage,
+      pickerIcon: CSS.supports('appearance', 'base-select') ? getComputedStyle(el, '::picker-icon').display : null,
+    }))
+    assert.equal(chrome.appearance, chrome.customizable ? 'base-select' : 'none')
+    assert.match(chrome.arrow, /prototype-icons\/Expand-Arrow\.svg/)
+    if (chrome.customizable) assert.equal(chrome.pickerIcon, 'none', 'The browser arrow must not duplicate the shared SVG')
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1), false)
   } finally { await context.close() }
 })

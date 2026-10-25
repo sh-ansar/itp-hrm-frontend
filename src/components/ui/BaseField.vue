@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import { useAuthCopy } from '../../i18n/auth'
+const { authText } = useAuthCopy()
 import { publicAsset } from '../../utils/publicAsset'
 
 const model = defineModel<string>({ required: true })
@@ -21,7 +23,7 @@ const inputType = computed(() => props.type === 'password' && props.revealable &
 
 <template>
   <div class="base-field">
-    <label :for="id">{{ label }}</label>
+    <label :for="id">{{ authText(label) }}</label>
     <div class="base-field__control">
       <input
         :id="id"
@@ -38,8 +40,8 @@ const inputType = computed(() => props.type === 'password' && props.revealable &
         class="base-field__reveal"
         type="button"
         :disabled="disabled"
-        :aria-label="revealed ? 'Скрыть' : 'Показать'"
-        :title="revealed ? 'Скрыть пароль' : 'Показать пароль'"
+        :aria-label="revealed ? authText('Скрыть') : authText('Показать')"
+        :title="revealed ? authText('Скрыть пароль') : authText('Показать пароль')"
         @click="revealed = !revealed"
       >
         <img :src="publicAsset(revealed ? 'prototype-icons/eye-slashf.svg' : 'prototype-icons/eyef.svg')" alt="" aria-hidden="true" />

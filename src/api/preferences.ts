@@ -13,6 +13,7 @@ export type NotificationRules = {
 }
 
 export type UserPreferences = {
+  locale?: 'ru' | 'kk' | 'en' | 'ka'
   notification_channels: NotificationChannels
   notification_rules: NotificationRules
   revision: number

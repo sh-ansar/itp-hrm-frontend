@@ -236,6 +236,7 @@ async function saveNotificationPreferences() {
   success.value = ''
   try {
     const response = await updateUserPreferences({
+      locale: ui.locale,
       notification_channels: Object.fromEntries(notificationChannels.value.map(item => [item.id, item.enabled])) as { email: boolean; in_app: boolean },
       notification_rules: Object.fromEntries(notificationRules.value.map(item => [item.id, item.enabled])) as {
         employee_changes: boolean

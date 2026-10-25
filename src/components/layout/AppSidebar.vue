@@ -39,7 +39,7 @@ function closeMobile() { if (props.mobileOpen) emit('update:mobileOpen', false) 
         :aria-label="ui.sidebarCollapsed ? t('shell.expandMenu') : t('shell.collapseMenu')"
         :aria-expanded="!ui.sidebarCollapsed"
         @click="ui.toggleSidebar()">
-        <img :src="publicAsset(ui.sidebarCollapsed ? 'prototype-icons/Open-Side.svg' : 'prototype-icons/Collapsed-screen.svg')"
+        <img :src="publicAsset('prototype-icons/Menu.svg')"
           alt="" aria-hidden="true" />
       </button>
       <button class="mobile-nav-close icon-control" type="button"
@@ -76,12 +76,12 @@ function closeMobile() { if (props.mobileOpen) emit('update:mobileOpen', false) 
         <span class="nav-label">{{ linkLabel(link) }}</span>
       </RouterLink>
     </nav>
-    <footer class="sidebar-foot">
+    <a class="sidebar-foot" href="https://platform.itpmining.kz/" :aria-label="'ITP HRM · ' + t('shell.unifiedHrSystem')" title="ITP Platform">
       <img class="sidebar-foot-mark" :src="publicAsset('brand/itp-mark.svg')" alt="" aria-hidden="true" width="33" height="25" />
       <span class="sidebar-foot-copy">
         <strong>ITP HRM</strong><small>{{ t('shell.unifiedHrSystem') }}</small>
       </span>
-    </footer>
+    </a>
   </aside>
 </template>
 
@@ -135,10 +135,12 @@ function closeMobile() { if (props.mobileOpen) emit('update:mobileOpen', false) 
 .nav-divider{
   flex:0 0 auto;min-height:1px;margin:13px 9px 9px;background:var(--color-stroke);
 }
-.sidebar-foot{
+.sidebar-foot{color:var(--color-text);text-decoration:none;
   display:flex;align-items:center;gap:10px;min-height:64px;flex:0 0 64px;
   padding:10px 17px;border-top:1px solid var(--color-stroke);
 }
+.sidebar-foot:focus-visible{outline:2px solid var(--color-primary);outline-offset:-3px}
+.sidebar-foot:hover{background:var(--color-hover)}
 .sidebar-foot-mark{
   display:block;flex:0 0 33px;width:33px;height:25px;object-fit:contain;
 }
@@ -152,7 +154,7 @@ function closeMobile() { if (props.mobileOpen) emit('update:mobileOpen', false) 
 .hrm-sidebar--collapsed .nav-item{justify-content:center;padding:10px 6px;gap:0}
 .hrm-sidebar--collapsed .nav-label{display:none}
 .hrm-sidebar--collapsed .nav-divider{margin:12px 5px 8px}
-.hrm-sidebar--collapsed .sidebar-foot{justify-content:center;padding:9px 4px}
+.hrm-sidebar--collapsed .sidebar-foot{color:var(--color-text);text-decoration:none;justify-content:center;padding:9px 4px}
 .hrm-sidebar--collapsed .sidebar-foot-copy{display:none}
 @media(max-width:860px){
   .hrm-sidebar{
@@ -170,7 +172,7 @@ function closeMobile() { if (props.mobileOpen) emit('update:mobileOpen', false) 
   .hrm-sidebar--collapsed .nav-item{justify-content:flex-start;padding:9px 11px;gap:12px}
   .hrm-sidebar--collapsed .nav-label{display:block}
   .hrm-sidebar--collapsed .nav-divider{margin:13px 9px 9px}
-  .hrm-sidebar--collapsed .sidebar-foot{justify-content:flex-start;padding:10px 17px}
+  .hrm-sidebar--collapsed .sidebar-foot{color:var(--color-text);text-decoration:none;justify-content:flex-start;padding:10px 17px}
   .hrm-sidebar--collapsed .sidebar-foot-copy{display:grid}
 }
 :global(:root[data-theme="dark"] .nav-svg-icon),

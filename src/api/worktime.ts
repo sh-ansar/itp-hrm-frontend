@@ -363,3 +363,45 @@ export function assignWorkSchedule(
     body: JSON.stringify({ valid_from: validFrom }),
   })
 }
+
+/** Authoritative month-wide approval state; 404 when the separate release gate is disabled. */
+export type WorktimePeriodStatus = 'draft' | 'submitted' | 'approved'
+export interface WorktimePeriod {
+  company_id: string
+  month: string
+  status: WorktimePeriodStatus
+  revision: number
+  submitted_at?: string | null
+  approved_at?: string | null
+  reopen_reason?: string | null
+}
+export interface WorktimePeriodResponse {
+  data: WorktimePeriod
+  meta: {
+    can_submit: boolean
+    can_approve: boolean
+    can_reopen: boolean
+  }
+}
+export function getWorktimePeriod(companyId: string, month: string): Promise<WorktimePeriodResponse> {
+  assertCompany(companyId)
+  assertMonth(month)
+  return apiRequest<WorktimePeriodResponse>(
+    `/companies/${companyId}/worktime/periods?month=${encodeURIComponent(month)}`,
+  )
+}
+export function transitionWorktimePeriod(
+  companyId: string, month: string, revision: number,
+  action: 'submit' | 'approve' | 'reopen', reason?: string,
+): Promise<{ data: WorktimePeriod }> {
+  assertCompany(companyId)
+  assertMonth(month)
+  if (!Number.isSafeInteger(revision) || revision < 0) throw new Error('Некорректная версия периода')
+  if (action === 'reopen' && (!reason || reason.trim().length < 5)) {
+    throw new Error('Укажите причину повторного открытия (минимум 5 символов)')
+  }
+  return apiRequest<{ data: WorktimePeriod }>(`/companies/${companyId}/worktime/periods/transition`, {
+    method: 'POST',
+    body: JSON.stringify({ month, revision, action, reason: reason?.trim() ?? null }),
+  })
+}

@@ -48,10 +48,10 @@ const summary = ref<{ hire:number; transfer:number; termination:number } | null>
 const selectedCompany = computed(() => companies.value.find(item => item.id === company.value) ?? null)
 const { t: bonusT } = useBonusWorkflowI18n()
 const actionTabs = computed(() => [
-  { id:'all', label:'Все действия' },
-  { id:'hire', label:'Приём' },
-  { id:'transfer', label:'Перевод' },
-  { id:'termination', label:'Увольнение' },
+  { id:'all', label:tr('Все действия') },
+  { id:'hire', label:tr('Приём') },
+  { id:'transfer', label:tr('Перевод') },
+  { id:'termination', label:tr('Увольнение') },
   { id:'bonuses', label:bonusT('title') },
 ])
 const columns = [
@@ -63,7 +63,7 @@ const columns = [
 ]
 
 function actionLabel(type: PersonnelActionType) {
-  return type === 'hire' ? 'Приём' : type === 'transfer' ? 'Перевод' : 'Увольнение'
+  return type === 'hire' ? tr('Приём') : type === 'transfer' ? tr('Перевод') : tr('Увольнение')
 }
 function employeeName(row: PersonnelActionRow) {
   return [row.last_name,row.first_name,row.middle_name].filter(Boolean).join(' ')
@@ -71,8 +71,8 @@ function employeeName(row: PersonnelActionRow) {
 function transitionText(row: PersonnelActionRow) {
   const from = [row.source_position_name,row.source_department_name].filter(Boolean).join(' · ')
   const to = [row.target_position_name,row.target_department_name].filter(Boolean).join(' · ')
-  if (row.action_type === 'hire') return to || 'Назначение не найдено'
-  if (row.action_type === 'termination') return from ? from + ' → прекращено' : 'Назначение прекращено'
+  if (row.action_type === 'hire') return to || tr('Назначение не найдено')
+  if (row.action_type === 'termination') return from ? from + ' → ' + tr('прекращено') : tr('Назначение прекращено')
   return `${from || '—'} → ${to || '—'}`
 }
 function displayDate(value: unknown): string {
@@ -158,8 +158,8 @@ onMounted(loadCompanies)
     </div>
 
     <BaseNotice v-if="error" tone="error">{{ error }}</BaseNotice>
-    <BaseLoadingState v-if="companyBusy" label="Загрузка компаний" />
-    <BaseNotice v-else-if="!companies.length && !error" tone="info">Нет доступных компаний.</BaseNotice>
+    <BaseLoadingState v-if="companyBusy"  :label="tr('Загрузка компаний')" />
+    <BaseNotice v-else-if="!companies.length && !error" tone="info">{{ tr('Нет доступных компаний.') }}</BaseNotice>
 
     <template v-else-if="companies.length">
       <div class="actions-heading">
@@ -170,29 +170,29 @@ onMounted(loadCompanies)
         <div class="actions-heading-controls">
           <BaseSelectField v-model="company" label="Компания" :options="companies" />
           <BaseButton v-if="writesEnabled && typeFilter !== 'bonuses'" @click="createOpen = true">
-            <Plus :size="17" /> Новое действие
+            <Plus :size="17" /> {{ tr('Новое действие') }}
           </BaseButton>
         </div>
       </div>
 
       <ApprovalInboxPanel v-if="company" :company-id="company" />
       <BaseViewTabs :model-value="typeFilter" :options="actionTabs"
-        label="Тип кадрового действия" @update:model-value="setActionFilter" />
+         :label="tr('Тип кадрового действия')" @update:model-value="setActionFilter" />
 
-      <div v-if="summary && typeFilter !== 'bonuses'" class="action-metrics" aria-label="Сводка кадровых действий">
+      <div v-if="summary && typeFilter !== 'bonuses'" class="action-metrics"  :aria-label="tr('Сводка кадровых действий')">
         <BaseCard class="action-metric">
           <LogIn :size="18" aria-hidden="true" />
-          <span>Приём</span>
+          <span>{{ tr('Приём') }}</span>
           <strong>{{ summary.hire }}</strong>
         </BaseCard>
         <BaseCard class="action-metric">
           <ArrowRightLeft :size="18" aria-hidden="true" />
-          <span>Перевод</span>
+          <span>{{ tr('Перевод') }}</span>
           <strong>{{ summary.transfer }}</strong>
         </BaseCard>
         <BaseCard class="action-metric">
           <LogOut :size="18" aria-hidden="true" />
-          <span>Увольнение</span>
+          <span>{{ tr('Увольнение') }}</span>
           <strong>{{ summary.termination }}</strong>
         </BaseCard>
       </div>
@@ -203,9 +203,9 @@ onMounted(loadCompanies)
         <div class="section-heading">
           <div>
             <h2>{{ actionTabs.find(item => item.id === typeFilter)?.label }}</h2>
-            <p>Проведённые кадровые операции и основания.</p>
+            <p>{{ tr('Проведённые кадровые операции и основания.') }}</p>
           </div>
-          <span>{{ total }} операций</span>
+          <span>{{ total }} {{ tr('операций') }}</span>
         </div>
 
         <div class="actions-desktop">
@@ -214,9 +214,9 @@ onMounted(loadCompanies)
             :columns="columns"
             row-key="id"
             :loading="busy"
-            caption="Журнал кадровых действий"
-            empty-title="Кадровых действий пока нет"
-            empty-description="Проведённые операции появятся здесь."
+             :caption="tr('Журнал кадровых действий')"
+             :empty-title="tr('Кадровых действий пока нет')"
+             :empty-description="tr('Проведённые операции появятся здесь.')"
           >
             <template #cell-effective_on="{ value }">{{ displayDate(value) }}</template>
             <template #cell-action_type="{ row }">
@@ -243,14 +243,14 @@ onMounted(loadCompanies)
           :page="page"
           :last-page="pages"
           :loading="busy"
-          caption="Страницы журнала кадровых действий"
+           :caption="tr('Страницы журнала кадровых действий')"
           @previous="page--"
           @next="page++"
         />
       </BaseCard>
     </template>
 
-    <BaseDialog :open="createOpen" title="Новое кадровое действие" @close="createOpen = false">
+    <BaseDialog :open="createOpen" :title="tr('Новое кадровое действие')" @close="createOpen = false">
       <PersonnelActionForm v-if="company" :company-id="company" @saved="saved" @cancelled="createOpen = false" />
     </BaseDialog>
   </section>

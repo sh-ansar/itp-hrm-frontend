@@ -84,7 +84,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: sh-ansar/itp-hrm-backend
-          ref: cba2d81df4a20a47e39dc969f6a5d0fb32eed636
+          ref: d6117d7a3968f2354a0bfcab51d6ef86b4ff20aa
           path: backend
           persist-credentials: false
       - name: Set up PHP 8.4 with native PostgreSQL PDO

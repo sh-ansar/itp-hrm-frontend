@@ -126,8 +126,8 @@ onMounted(loadCompanies)
     </div>
 
     <BaseNotice v-if="error" tone="error">{{ error }}</BaseNotice>
-    <BaseLoadingState v-if="companyBusy" label="Загрузка компаний" />
-    <BaseNotice v-else-if="!companies.length && !error" tone="info">Нет доступных компаний.</BaseNotice>
+    <BaseLoadingState v-if="companyBusy" :label="tr('Загрузка компаний')" />
+    <BaseNotice v-else-if="!companies.length && !error" tone="info">{{ tr('Нет доступных компаний.') }}</BaseNotice>
 
     <template v-else-if="companies.length">
       <div class="directories-heading">
@@ -138,43 +138,43 @@ onMounted(loadCompanies)
         <div class="directories-controls">
           <BaseSelectField v-model="company" label="Компания" :options="companies" />
           <BaseButton v-if="positionWritesEnabled" @click="createRecord">
-            <Plus :size="17" /> Добавить должность
+            <Plus :size="17" /> {{ tr('Добавить должность') }}
           </BaseButton>
         </div>
       </div>
 
       <BaseCard class="directory-summary">
         <div class="summary-icon"><BriefcaseBusiness :size="19" aria-hidden="true" /></div>
-        <div><span>Должности</span><small>Справочник компании</small></div>
+        <div><span>{{ tr('Должности') }}</span><small>{{ tr('Справочник компании') }}</small></div>
         <strong>{{ busy ? '…' : total }}</strong>
       </BaseCard>
 
       <BaseCard class="directory-register">
         <div class="section-heading">
           <div>
-            <h2>Должности</h2>
-            <p>Наименования должностей. Количество ставок и вакансии ведутся в штатном расписании.</p>
+            <h2>{{ tr('Должности') }}</h2>
+            <p>{{ tr('Наименования должностей. Количество ставок и вакансии ведутся в штатном расписании.') }}</p>
           </div>
-          <span>{{ total }} записей</span>
+          <span>{{ total }} {{ tr('записей') }}</span>
         </div>
 
-        <div class="directory-toolbar" role="search" aria-label="Поиск должностей">
-          <BaseSearchField v-model="search" class="directory-search" label="Поиск должностей" />
-          <BaseButton v-if="search.trim()" variant="secondary" @click="search = ''">Сбросить поиск</BaseButton>
-          <span class="directory-result-count" aria-live="polite">{{ filteredPositions.length }} из {{ positions.length }} на странице</span>
+        <div class="directory-toolbar" role="search" :aria-label="tr('Поиск должностей')">
+          <BaseSearchField v-model="search" class="directory-search" :label="tr('Поиск должностей')" />
+          <BaseButton v-if="search.trim()" variant="secondary" @click="search = ''">{{ tr('Сбросить поиск') }}</BaseButton>
+          <span class="directory-result-count" aria-live="polite">{{ filteredPositions.length }} {{ tr('из') }} {{ positions.length }} {{ tr('на странице') }}</span>
         </div>
 
         <div class="directory-desktop">
           <BaseDataTable :rows="filteredPositions" :columns="columns" row-key="id" :loading="busy"
-            caption="Справочник должностей компании" empty-title="Должностей не найдено"
-            :empty-description="search.trim() ? 'Измените запрос или сбросьте поиск.' : 'Добавьте первую должность для выбранной компании.'">
+             :caption="tr('Справочник должностей компании')" :empty-title="tr('Должностей не найдено')"
+            :empty-description="search.trim() ? tr('Измените запрос или сбросьте поиск.') : tr('Добавьте первую должность для выбранной компании.')">
             <template #cell-name="{ value }"><strong class="position-name">{{ value }}</strong></template>
             <template #cell-actions="{ row }">
               <div class="row-actions">
-                <BaseButton icon-only variant="secondary" :aria-label="'Изменить должность ' + row.name" @click="editRecord(row)">
+                <BaseButton icon-only variant="secondary" :aria-label="tr('Изменить должность') + ' ' + row.name" @click="editRecord(row)">
                   <Pencil :size="15" />
                 </BaseButton>
-                <BaseButton icon-only variant="secondary" :aria-label="'Удалить должность ' + row.name" @click="deleteCandidate = row">
+                <BaseButton icon-only variant="secondary" :aria-label="tr('Удалить должность') + ' ' + row.name" @click="deleteCandidate = row">
                   <Trash2 :size="15" />
                 </BaseButton>
               </div>
@@ -186,43 +186,43 @@ onMounted(loadCompanies)
           <article v-for="row in filteredPositions" :key="row.id" class="position-card">
             <div>
               <strong>{{ row.name }}</strong>
-              <span>Должность</span>
+              <span>{{ tr('Должность') }}</span>
             </div>
             <div v-if="positionWritesEnabled" class="position-card-actions">
-              <BaseButton icon-only variant="secondary" :aria-label="'Изменить должность ' + row.name" @click="editRecord(row)">
+              <BaseButton icon-only variant="secondary" :aria-label="tr('Изменить должность') + ' ' + row.name" @click="editRecord(row)">
                 <Pencil :size="15" />
               </BaseButton>
-              <BaseButton icon-only variant="secondary" :aria-label="'Удалить должность ' + row.name" @click="deleteCandidate = row">
+              <BaseButton icon-only variant="secondary" :aria-label="tr('Удалить должность') + ' ' + row.name" @click="deleteCandidate = row">
                 <Trash2 :size="15" />
               </BaseButton>
             </div>
           </article>
-          <p v-if="!busy && !filteredPositions.length" class="mobile-empty">{{ search.trim() ? 'Должностей по запросу не найдено.' : 'Должностей пока нет.' }}</p>
+          <p v-if="!busy && !filteredPositions.length" class="mobile-empty">{{ search.trim() ? tr('Должностей по запросу не найдено.') : tr('Должностей пока нет.') }}</p>
         </div>
 
         <BasePagination :page="page" :last-page="pages" :loading="busy"
-          caption="Страницы справочника должностей" @previous="page--" @next="page++" />
+           :caption="tr('Страницы справочника должностей')" @previous="page--" @next="page++" />
       </BaseCard>
 
       <BaseNotice tone="info">
-        Подразделения управляются в разделе «Оргструктура и штатка», чтобы не дублировать один и тот же справочник.
+        {{ tr('Подразделения управляются в разделе «Оргструктура и штатка», чтобы не дублировать один и тот же справочник.') }}
       </BaseNotice>
     </template>
 
-    <BaseDialog :open="editorOpen" :title="editingPosition ? 'Изменить должность' : 'Новая должность'" @close="editorOpen = false">
+    <BaseDialog :open="editorOpen" :title="editingPosition ? tr('Изменить должность') : tr('Новая должность')" @close="editorOpen = false">
       <PositionForm v-if="company" :key="editingPosition?.id ?? 'new'"
         :company-id="company" :edit="editingPosition" @saved="saved" @cancelled="editorOpen = false" />
     </BaseDialog>
 
-    <BaseDialog :open="!!deleteCandidate" title="Удалить должность" @close="deleteCandidate = null">
+    <BaseDialog :open="!!deleteCandidate" :title="tr('Удалить должность')" @close="deleteCandidate = null">
       <div class="delete-copy">
         <BaseNotice tone="warning">
-          Должность нельзя удалить, если она уже используется в истории назначений или штатном расписании.
+          {{ tr('Должность нельзя удалить, если она уже используется в истории назначений или штатном расписании.') }}
         </BaseNotice>
         <p v-if="deleteCandidate"><strong>{{ deleteCandidate.name }}</strong></p>
         <div class="delete-actions">
-          <BaseButton variant="secondary" :disabled="deleting" @click="deleteCandidate = null">Отмена</BaseButton>
-          <BaseButton :disabled="deleting" @click="confirmDelete">{{ deleting ? 'Удаление…' : 'Удалить' }}</BaseButton>
+          <BaseButton variant="secondary" :disabled="deleting" @click="deleteCandidate = null">{{ tr('Отмена') }}</BaseButton>
+          <BaseButton :disabled="deleting" @click="confirmDelete">{{ deleting ? tr('Удаление…') : tr('Удалить') }}</BaseButton>
         </div>
       </div>
     </BaseDialog>

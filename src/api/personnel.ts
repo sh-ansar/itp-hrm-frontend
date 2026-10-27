@@ -26,6 +26,7 @@ export interface EmployeeRecord extends Record<string, unknown> {
   supervisor_name?: string | null
   current_department_id?: string | null
   current_position_id?: string | null
+  company_name?: string | null
   current_department_name?: string | null
   current_position_name?: string | null
   current_assignment_valid_from?: string | null

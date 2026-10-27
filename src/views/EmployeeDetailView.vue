@@ -297,7 +297,7 @@ const maritalStatusFields = computed<EmployeeDisplayField[]>(() => [
 ])
 
 const organizationPositionFields = computed<EmployeeDisplayField[]>(() => [
-  { label: 'Компания', value: reference.value?.organization?.company_name },
+  { label: 'Компания', value: profile.value?.data.company_name ?? reference.value?.organization?.company_name },
   { label: 'Подразделение', value: currentAssignment.value?.department_name ?? plannedAssignment.value?.department_name },
   { label: 'Должность', value: currentAssignment.value?.position_name ?? plannedAssignment.value?.position_name },
   { label: 'Категория сотрудника', value: reference.value?.organization?.employee_category },

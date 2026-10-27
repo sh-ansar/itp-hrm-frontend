@@ -45,6 +45,7 @@ const editing = ref<{ section: ProfileSection; record: ProfileEditRow } | null>(
 const assignmentEditing = ref<EmployeeAssignment | null>(null)
 const assignmentTransitioning = ref<EmployeeAssignment | null>(null)
 const identityEditOpen = ref(false)
+const photoEditOpen = ref(false)
 const privateEditorSection = ref<EmployeePrivateSection | null>(null)
 const privateRecordsSection = ref<EmployeePrivateRecordSection | null>(null)
 const focusedIdentityId = ref<string | null>(null)
@@ -659,12 +660,10 @@ onMounted(load)
           <EmployeePhoto v-if="profile.meta.extended_sections_visible"
             :company-id="String(route.params.company)" :employee-id="profile.data.id"
             :revision="profile.data.revision" :has-photo="!!profile.data.has_photo"
-            :can-edit="profile.meta.employee_writes_enabled" :name="displayName" :initials="initials" @saved="load" />
+            :can-edit="false" :name="displayName" :initials="initials" @saved="load" />
           <div v-else class="avatar" :aria-label="tr('Карточка сотрудника')">{{ initials }}</div>
-          <div v-if="profile.meta.extended_sections_visible" class="gender-options" :aria-label="tr('Пол сотрудника')">
-            <span :class="{ 'gender-selected': profile.data.gender === 'male' }"><i aria-hidden="true"></i> {{ tr('Мужчина') }}</span>
-            <span :class="{ 'gender-selected': profile.data.gender === 'female' }"><i aria-hidden="true"></i> {{ tr('Женщина') }}</span>
-          </div>
+          <BaseButton v-if="profile.meta.employee_writes_enabled && profile.meta.extended_sections_visible" variant="secondary" @click="photoEditOpen = true">Изменить фото</BaseButton>
+
         </div>
         <div class="identity-fields">
           <div class="identity-fields-top">
@@ -1061,6 +1060,12 @@ onMounted(load)
         @saved="load" @cancelled="editing = null" />
     </BaseDialog>
 
+    <BaseDialog :open="photoEditOpen" title="Изменить фотографию" @close="photoEditOpen = false">
+      <EmployeePhoto v-if="photoEditOpen && profile" :company-id="String(route.params.company)"
+        :employee-id="profile.data.id" :revision="profile.data.revision"
+        :has-photo="!!profile.data.has_photo" :can-edit="profile.meta.employee_writes_enabled"
+        :name="displayName" :initials="initials" @saved="photoEditOpen = false; load()" />
+    </BaseDialog>
     <BaseDialog :open="identityEditOpen" :title="tr('Основные данные сотрудника')" @close="identityEditOpen = false">
       <EmployeeRecordForm
         v-if="identityEditOpen && profile?.meta.employee_writes_enabled"

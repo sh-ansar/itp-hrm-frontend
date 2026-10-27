@@ -14,6 +14,10 @@ const expanded = ref(props.depth === 0 || props.expandAll)
 const allMembers = ref(false)
 watch(() => props.expandAll, value => { expanded.value = props.depth === 0 || value })
 const members = computed(() => props.node.members ?? [])
+function countMembers(node: DepartmentTreeItem): number {
+  return (node.members?.length ?? 0) + node.children.reduce((sum, child) => sum + countMembers(child), 0)
+}
+const totalMembers = computed(() => countMembers(props.node))
 const visibleMembers = computed(() => allMembers.value ? members.value : members.value.slice(0, 3))
 function initials(name: string) { return name.split(' ').slice(0,2).map(word=>word[0] ?? '').join('') }
 </script>
@@ -26,7 +30,7 @@ function initials(name: string) { return name.split(' ').slice(0,2).map(word=>wo
           <RouterLink class="root-person" :to="{ name:'employee-detail',params:{company:companyId,employee:members[0]!.id} }"><span class="person-avatar">{{ initials(members[0]!.name) }}</span>{{ members[0]!.name }}</RouterLink>
         </template>
         <span v-if="node.hiddenParent">{{ tr('Родитель вне доступного списка') }}</span>
-        <span v-else class="department-count"><Users :size="15" /> {{ members.length }} {{ tr("сотрудников") }}<span v-if="node.children.length"> · {{ node.children.length }} {{ tr("подразделений") }}</span></span>
+        <span v-else class="department-count"><Users :size="15" /> {{ totalMembers }} {{ tr("сотрудников") }}<span v-if="node.children.length"> · {{ node.children.length }} {{ tr("подразделений") }}</span></span>
       </div>
       <BaseButton v-if="node.children.length || members.length" icon-only variant="secondary"
         :aria-label="expanded ? tr('Свернуть ') + node.name : tr('Развернуть ') + node.name" :aria-expanded="expanded" @click="expanded = !expanded">
@@ -45,7 +49,7 @@ function initials(name: string) { return name.split(' ').slice(0,2).map(word=>wo
   </div>
 </template>
 <style scoped>
-.tree-branch{--branch-color:var(--color-primary-stroke);position:relative;display:grid;align-content:start;gap:24px;min-width:0}
+.tree-branch{--branch-color:var(--color-primary-stroke);position:relative;display:grid;align-content:start;gap:24px;min-width:320px;width:max-content}
 .tree-branch--green{--branch-color:color-mix(in srgb,var(--color-success) 55%,var(--color-stroke))}
 .tree-card{position:relative;display:flex;align-items:start;gap:12px;width:320px;min-width:0;max-width:100%;padding:18px 16px;background:var(--color-surface);border:1px solid var(--color-stroke);border-radius:var(--radius-md);box-shadow:var(--shadow-card)}
 .tree-card--department{background:color-mix(in srgb,var(--color-primary) 12%,var(--color-surface));border-color:color-mix(in srgb,var(--color-primary) 18%,var(--color-stroke))}
@@ -64,8 +68,6 @@ function initials(name: string) { return name.split(' ').slice(0,2).map(word=>wo
 .tree-branch--level-0>.tree-card{margin-inline:auto}
 .tree-branch--level-0>.tree-children{display:flex;align-items:flex-start;gap:48px;margin-left:0;padding:38px 0 0;border-left:0}
 .tree-branch--level-0>.tree-children::before{content:'';position:absolute;top:14px;left:160px;right:160px;height:1px;background:var(--color-primary-stroke)}
-.tree-branch--level-0>.tree-children>.tree-branch{width:320px;flex:0 0 320px}
+.tree-branch--level-0>.tree-children>.tree-branch{width:max-content;min-width:320px;flex:0 0 auto}
 .tree-branch--level-0>.tree-children>.tree-branch::before{content:'';position:absolute;top:-24px;left:160px;width:1px;height:24px;background:var(--branch-color)}
-@media(max-width:900px){.tree-card{width:100%}.tree-branch--level-0>.tree-children{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}.tree-branch--level-0>.tree-children>.tree-branch{width:auto}.tree-branch--level-0>.tree-children::before,.tree-branch--level-0>.tree-children>.tree-branch::before{display:none}.person-card{width:100%}}
-@media(max-width:600px){.tree-branch--level-0>.tree-children{grid-template-columns:1fr;padding-top:10px}.tree-card{padding:14px}.tree-members,.tree-children{margin-left:10px;padding-left:12px}.person-card{padding:14px}.tree-copy strong{font-size:14px}}
 </style>

@@ -94,3 +94,34 @@ test('mobile touch pan, viewport reset and localized expansion controls remain a
     }
   } finally {await browser.close()}
 })
+
+test('expanded department subtrees never overlap at any viewport size', async () => {
+  const browser = await chromium.launch({ headless: true })
+  try {
+    for (const width of [375, 768, 1280, 1440]) {
+      const page = await browser.newPage({ baseURL, viewport: { width, height: 1000 } })
+      try {
+        await page.goto('/organization')
+        await page.getByRole('button', { name: 'Схема', exact: true }).click()
+        await page.locator('.organization-chart').waitFor()
+        await page.getByRole('checkbox', { name: 'Раскрыть нижестоящий уровень' }).check()
+        await page.getByRole('button', { name: 'Вместить схему', exact: true }).click()
+        const collisions = await page.locator('.org-chart-content').evaluate(content => {
+          const cards = [...content.querySelectorAll('.tree-card,.person-card')].map(card => ({
+            label: card.textContent?.trim().slice(0, 80), box: card.getBoundingClientRect(),
+          }))
+          const collisions = []
+          for (let a = 0; a < cards.length; a++) for (let b = a + 1; b < cards.length; b++) {
+            const x = cards[a].box, y = cards[b].box
+            if (Math.min(x.right, y.right) - Math.max(x.left, y.left) > .5 &&
+                Math.min(x.bottom, y.bottom) - Math.max(x.top, y.top) > .5)
+              collisions.push([cards[a].label, cards[b].label])
+          }
+          return collisions
+        })
+        assert.deepEqual(collisions, [], 'Expanded cards overlap at width ' + width)
+        assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1))
+      } finally { await page.close() }
+    }
+  } finally { await browser.close() }
+})

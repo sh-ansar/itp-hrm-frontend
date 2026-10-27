@@ -33,7 +33,7 @@ function zoom(next:number, anchorX?:number, anchorY?:number) {
   if (!box) return
   const ax = anchorX ?? box.clientWidth / 2
   const ay = anchorY ?? box.clientHeight / 2
-  const clamped = Math.min(2, Math.max(.25, next))
+  const clamped = Math.min(2, Math.max(.05, next))
   const ratio = clamped / scale.value
   x.value = ax - (ax - x.value) * ratio
   y.value = ay - (ay - y.value) * ratio
@@ -53,7 +53,7 @@ function fit() {
   const w = (Math.max(...boxes.map(rect => rect.right)) - origin.left) / scale.value - left
   const h = (Math.max(...boxes.map(rect => rect.bottom)) - origin.top) / scale.value - top
   if (!w || !h) return
-  scale.value = Math.min(1, Math.max(.25, Math.min((viewport.value.clientWidth - 48) / w, (viewport.value.clientHeight - 48) / h)))
+  scale.value = Math.min(1, Math.max(.05, Math.min((viewport.value.clientWidth - 48) / w, (viewport.value.clientHeight - 48) / h)))
   x.value = (viewport.value.clientWidth - w * scale.value) / 2 - left * scale.value
   y.value = (viewport.value.clientHeight - h * scale.value) / 2 - top * scale.value
 }
@@ -140,7 +140,7 @@ onBeforeUnmount(() => {
   <Teleport to="body" :disabled="!expanded">
     <div class="org-chart-workspace" :class="{ 'org-chart-workspace--expanded':expanded }" :aria-label="copy.region">
       <div class="org-chart-toolbar">
-        <BaseButton icon-only variant="secondary" :aria-label="copy.out" :title="copy.out" :disabled="scale <= .25" @click="zoom(scale - .1)"><Minus /></BaseButton>
+        <BaseButton icon-only variant="secondary" :aria-label="copy.out" :title="copy.out" :disabled="scale <= .05" @click="zoom(scale - .1)"><Minus /></BaseButton>
         <output class="org-chart-percent" aria-live="polite">{{ percent }}%</output>
         <BaseButton icon-only variant="secondary" :aria-label="copy.in" :title="copy.in" :disabled="scale >= 2" @click="zoom(scale + .1)"><Plus /></BaseButton>
         <BaseButton icon-only variant="secondary" :aria-label="copy.reset" :title="copy.reset" @click="reset"><RotateCcw /></BaseButton>
@@ -169,7 +169,7 @@ onBeforeUnmount(() => {
 .org-chart-viewport.is-dragging{cursor:grabbing}
 .org-chart-viewport:focus-visible{outline:2px solid var(--color-primary);outline-offset:2px}
 .org-chart-content{position:absolute;inset:0 auto auto 0;width:max-content;min-width:0;transform-origin:0 0}
-.org-chart-content :deep(.organization-chart){width:1320px;min-width:1320px}
+.org-chart-content :deep(.organization-chart){width:max-content;min-width:0}
 .org-chart-content :deep(a),.org-chart-content :deep(button){cursor:pointer}
 .org-chart-hint{margin:0;color:var(--color-muted);font-size:11px;line-height:1.5}
 .org-chart-workspace--expanded{position:fixed;inset:0;z-index:900;padding:16px;background:var(--color-page)}

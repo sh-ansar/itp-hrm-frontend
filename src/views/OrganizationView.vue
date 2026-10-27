@@ -574,20 +574,21 @@ onMounted(loadCompanies)
 .chart-company-metrics>span{display:inline-flex;align-items:center;gap:5px}
 .chart-company-metrics .chart-company-vacant{color:var(--color-warning)}
 .chart-company-unavailable{font-size:12px;line-height:1.4;color:var(--color-muted)}
-.chart-branches{position:relative;display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));align-items:start;justify-items:center;gap:28px;width:100%}
+.chart-branches{position:relative;display:flex;align-items:flex-start;justify-content:center;gap:48px;width:max-content;min-width:100%}
+.chart-branches>:deep(.tree-branch){flex:0 0 auto;width:max-content;min-width:320px}
 .chart-branches::before{content:'';position:absolute;left:50%;top:-28px;height:28px;width:1px;background:var(--color-primary-stroke)}
 .chart-branches--multi::after{content:'';position:absolute;top:-13px;left:10%;right:10%;border-top:1px solid var(--color-primary-stroke)}
 .chart-branches--multi>:deep(.tree-branch)::before{content:'';position:absolute;left:50%;top:-13px;height:13px;width:1px;background:var(--color-primary-stroke)}
 @media(max-width:900px){
  .organization-chart{min-width:0;width:100%;gap:30px}
- .chart-branches{grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:18px}
+ .chart-branches{gap:36px}
 }
 @media(max-width:640px){
  .structure-diagram{padding:16px 12px 22px}
  .organization-chart{min-width:0;gap:24px}
  .chart-company{width:min(100%,320px)}
  .chart-company::after{bottom:-25px;height:24px}
- .chart-branches{grid-template-columns:1fr;gap:12px}
+ .chart-branches{gap:32px}
  .chart-branches::before,.chart-branches :deep(.tree-branch)::before{display:none}
 }
 .diagram-empty{margin:0;color:var(--color-muted);font-size:13px}

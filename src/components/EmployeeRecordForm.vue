@@ -98,7 +98,7 @@ async function submit() {
 <template>
   <form class="employee-record-form" @submit.prevent="submit">
     <BaseNotice v-if="error" tone="error">{{ error }}</BaseNotice>
-    <div class="photo-choice">
+    <div v-if="!edit" class="photo-choice">
       <div class="photo-choice-image"><img v-if="selectedPhotoUrl" :src="selectedPhotoUrl" alt="Предпросмотр фото сотрудника" /><span v-else aria-hidden="true">+</span></div>
       <div><strong>Фото сотрудника</strong><input ref="photoInput" class="photo-choice-input" type="file" accept="image/jpeg,image/png,.jpg,.png" aria-label="Фото для карточки сотрудника" :disabled="saving" @change="choosePhoto" /><BaseButton variant="secondary" :disabled="saving" @click="photoInput?.click()">Выбрать файл</BaseButton><p>{{ selectedPhoto?.name || 'JPG или PNG, до 5 МБ' }}</p><button v-if="selectedPhoto" type="button" :disabled="saving" class="photo-choice-clear" @click="clearPhoto">Убрать выбранное фото</button></div>
     </div>

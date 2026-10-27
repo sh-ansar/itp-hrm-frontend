@@ -77,16 +77,16 @@ const activeSection = ref('personal')
 const legacyContactsOpen = ref(false)
 const sectionTabs = computed(() => [
   ...(profile.value?.meta.extended_sections_visible ? [
-    { id: 'personal', label: 'Личные данные' },
-    { id: 'organization', label: 'Организационные данные' },
+    { id: 'personal', label: tr('Личные данные') },
+    { id: 'organization', label: tr('Организационные данные') },
   ] : []),
-  { id: 'employment', label: 'Трудовые данные' },
+  { id: 'employment', label: tr('Трудовые данные') },
   ...(profile.value?.meta.extended_sections_visible ? [
-    { id: 'documents', label: 'Документы' },
-    { id: 'payroll', label: 'Расчёты и начисления' },
-    { id: 'schedule', label: 'График и табель' },
-    { id: 'development', label: 'Кадровый резерв и обучение' },
-    { id: 'history', label: 'История изменений' },
+    { id: 'documents', label: tr('Документы') },
+    { id: 'payroll', label: tr('Расчёты и начисления') },
+    { id: 'schedule', label: tr('График и табель') },
+    { id: 'development', label: tr('Кадровый резерв и обучение') },
+    { id: 'history', label: tr('История изменений') },
   ] : []),
 ])
 

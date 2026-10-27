@@ -385,11 +385,6 @@ onMounted(loadCompanies)
           :caption="tr('Страницы реестра документов')" @previous="page--" @next="page++" />
       </BaseCard>
 
-      <BaseNotice tone="info">
-        {{ demoMode
-          ? tr('Демонстрация: PDF хранится только в текущем окне браузера до перезагрузки. Образцы без загруженного файла не открываются.')
-          : tr('Реестр доступен только кадровым ролям. PDF хранится приватно и скачивается через авторизованный API.') }}
-      </BaseNotice>
     </template>
 
     <BaseDialog :open="createOpen" :title="tr('Новый черновик документа')" @close="createOpen = false">

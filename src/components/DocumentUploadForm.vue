@@ -35,9 +35,7 @@ async function upload() {
 
 <template>
   <form class="upload-form" @submit.prevent="upload">
-    <BaseNotice tone="info">{{ demoMode
-      ? 'Демоверсия: PDF можно открыть только в этой вкладке до обновления страницы. На сервер файл не загружается.'
-      : 'Файл останется в приватном хранилище. Доступ предоставляется только авторизованным сотрудникам кадровой службы этой компании.' }}</BaseNotice>
+    <BaseNotice v-if="demoMode" tone="info">Демоверсия: PDF можно открыть только в этой вкладке до обновления страницы. На сервер файл не загружается.</BaseNotice>
     <div class="document-summary">
       <strong>{{ document.title }}</strong>
       <span>{{ document.document_number || 'Без номера' }}</span>

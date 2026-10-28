@@ -60,7 +60,7 @@ const documentSection = computed<DocumentSection | null>(() =>
     ? activeSection.value as DocumentSection : null)
 const attachSection = ref<DocumentSection | null>(null)
 const newDocumentId = ref('')
-const newDocumentRecord = ref<DocumentRow | null>(null)
+const newDocumentRecord = ref<Pick<DocumentRow, 'id' | 'revision' | 'title' | 'document_number'> | null>(null)
 function confirmDiscard(): boolean {
   return !cardDirty.value || window.confirm('Есть несохранённое изменение поля. Выйти без сохранения?')
 }
@@ -83,7 +83,7 @@ function documentCreated(id: string, title?: string) {
   newDocumentId.value = id
   newDocumentRecord.value = {
     id, revision: 1, title: title || 'Документ сотрудника', document_number: null,
-  } as DocumentRow
+  }
 }
 function closeAttach() {
   attachSection.value = null

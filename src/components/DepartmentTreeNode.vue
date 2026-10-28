@@ -15,7 +15,15 @@ const expanded = ref(props.depth === 0 || props.expandAll)
 const allMembers = ref(false)
 watch(() => props.expandAll, value => { expanded.value = props.depth === 0 || value })
 const members = computed(() => props.node.members ?? [])
-const departmentLeader = computed(() => selectDepartmentLeader(props.node.name, members.value))
+const departmentLeader = computed(() => {
+  if (Object.prototype.hasOwnProperty.call(props.node, 'manager_employee_id')) {
+    const id = props.node.manager_employee_id
+    if (!id) return null
+    return members.value.find(person => person.id === id)
+      ?? { id, name: props.node.manager_employee_name || 'Назначенный руководитель', position: null }
+  }
+  return selectDepartmentLeader(props.node.name, members.value)
+})
 function countMembers(node: DepartmentTreeItem): number {
   return (node.members?.length ?? 0) + node.children.reduce((sum, child) => sum + countMembers(child), 0)
 }
@@ -36,6 +44,8 @@ function initials(name: string) { return name.split(' ').slice(0,2).map(word=>wo
           <span class="department-leader-caption">Руководитель по штатной должности</span>
           <span class="department-leader-name">{{ departmentLeader.name }}</span>
         </RouterLink>
+        <span v-if="Object.prototype.hasOwnProperty.call(node, 'manager_employee_id') && !departmentLeader"
+          class="department-leader-unset">Руководитель не назначен</span>
         <span v-if="node.hiddenParent">{{ tr('Родитель вне доступного списка') }}</span>
         <span v-else class="department-count"><Users :size="15" /> {{ totalMembers }} {{ tr("сотрудников") }}<span v-if="node.children.length"> · {{ node.children.length }} {{ tr("подразделений") }}</span></span>
       </div>
@@ -67,6 +77,7 @@ function initials(name: string) { return name.split(' ').slice(0,2).map(word=>wo
 .department-leader-caption{font-size:11px;line-height:1.3;color:var(--color-muted)}
 .department-leader-name{font-size:12px;line-height:1.35;font-weight:500;overflow-wrap:anywhere}
 .department-leader:hover{text-decoration:underline}
+.department-leader-unset{font-size:12px;color:var(--color-muted)}
 .department-count{display:flex;flex-wrap:wrap;align-items:center;gap:5px;color:var(--color-muted);font-size:13px;line-height:1.5}.department-count svg{color:var(--color-primary)}
 .tree-card :deep(.base-button){position:absolute;bottom:-10px;right:12px;width:24px;min-width:24px;height:24px;min-height:24px;border-radius:50%;padding:0;color:var(--color-muted)}
 .closed{transform:rotate(-90deg)}

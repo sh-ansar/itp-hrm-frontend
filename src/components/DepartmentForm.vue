@@ -9,16 +9,34 @@ import {
   updateDepartment,
   type DepartmentRecord,
 } from '../api/organization'
+import type { EmployeeRecord } from '../api/personnel'
 
 const props = defineProps<{
   companyId: string
   departments: DepartmentRecord[]
+  employees?: EmployeeRecord[]
+  managerAssignmentSupported?: boolean
   edit?: DepartmentRecord | null
 }>()
 const emit = defineEmits<{ saved: []; cancelled: [] }>()
 
 const name = ref(props.edit?.name ?? '')
 const parentId = ref(props.edit?.parent_id ?? '__root__')
+const managerId = ref(props.edit?.manager_employee_id ?? '__none__')
+const managerOptions = computed(() => {
+  const items = (props.employees ?? []).map(employee => ({
+    id: employee.id,
+    name: [employee.last_name, employee.first_name, employee.middle_name]
+      .filter(Boolean).join(' ') + (employee.current_position_name ? ' — ' + employee.current_position_name : ''),
+  })).sort((a,b) => a.name.localeCompare(b.name, 'ru'))
+  if (props.edit?.manager_employee_id && !items.some(item => item.id === props.edit?.manager_employee_id)) {
+    items.push({
+      id: props.edit.manager_employee_id,
+      name: (props.edit.manager_employee_name ?? 'Назначенный руководитель') + ' (нет в текущем списке)',
+    })
+  }
+  return [{ id: '__none__', name: 'Не назначен' }, ...items]
+})
 const saving = ref(false)
 const error = ref('')
 
@@ -59,6 +77,9 @@ async function submit() {
     const payload = {
       name: name.value.trim(),
       parent_id: parentId.value && parentId.value !== '__root__' ? parentId.value : null,
+      ...(props.managerAssignmentSupported ? {
+        manager_employee_id: managerId.value === '__none__' ? null : managerId.value,
+      } : {}),
     }
     if (props.edit) {
       await updateDepartment(props.companyId, props.edit.id, props.edit.revision, payload)
@@ -79,6 +100,9 @@ async function submit() {
     <BaseNotice v-if="error" tone="error">{{ error }}</BaseNotice>
     <BaseFormField v-model="name" label="Название подразделения" placeholder="Например: Финансовый департамент" :disabled="saving" required />
     <BaseSelectField v-model="parentId" label="Родительское подразделение" :options="parentOptions" :disabled="saving" />
+    <BaseSelectField v-if="managerAssignmentSupported" v-model="managerId"
+      label="Руководитель подразделения" :options="managerOptions" :disabled="saving" />
+    <p v-if="managerAssignmentSupported" class="hint">Для согласования отпусков выбранному руководителю нужна личная учётная запись с ролью руководителя и доступом к этому подразделению. Выбор сотрудника сам по себе не выдаёт права.</p>
     <p class="hint">Выберите уровень структуры. Подразделение нельзя подчинить самому себе или своему дочернему подразделению.</p>
     <div class="actions">
       <BaseButton type="button" variant="secondary" :disabled="saving" @click="emit('cancelled')">Отмена</BaseButton>

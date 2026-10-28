@@ -51,6 +51,7 @@ const { preferCompany } = useActiveCompanySelection(selectedCompany)
 const loadingCompanies = ref(false)
 const loadingDepartments = ref(false)
 const departmentWritesEnabled = ref(false)
+const managerAssignmentSupported = ref(false)
 const employeeWritesEnabled = ref(false)
 const addEmployeeOpen = ref(false)
 const error = ref('')
@@ -77,21 +78,30 @@ function toggleDepartment(id: string) {
 }
 const managerByDepartment = computed(() => {
   const map = new Map<string, { name: string; position: string }>()
-  const grouped = new Map<string, Array<{ id: string; name: string; position: string | null }>>()
-  for (const employee of tableEmployees.value) {
-    const id = employee.current_department_id
-    if (!id) continue
-    const group = grouped.get(id) ?? []
-    group.push({
-      id: employee.id,
-      name: [employee.last_name, employee.first_name, employee.middle_name].filter(Boolean).join(' '),
-      position: employee.current_position_name ?? null,
-    })
-    grouped.set(id, group)
-  }
+  const members = new Map(tableEmployees.value.map(employee => [employee.id, employee]))
   for (const dep of departments.value) {
-    const head = selectDepartmentLeader(dep.name, grouped.get(dep.id) ?? [])
-    if (head) map.set(dep.id, { name: head.name, position: head.position ?? '—' })
+    if (managerAssignmentSupported.value) {
+      if (!dep.manager_employee_id) continue
+      const employee = members.get(dep.manager_employee_id)
+      const fullName = employee
+        ? [employee.last_name, employee.first_name, employee.middle_name].filter(Boolean).join(' ')
+        : dep.manager_employee_name
+      map.set(dep.id, {
+        name: fullName || 'Назначенный руководитель',
+        position: employee?.current_position_name || '—',
+      })
+      continue
+    }
+    // Compatibility with an older API without explicit manager selection.
+    const group = tableEmployees.value
+      .filter(employee => employee.current_department_id === dep.id)
+      .map(employee => ({
+        id: employee.id,
+        name: [employee.last_name, employee.first_name, employee.middle_name].filter(Boolean).join(' '),
+        position: employee.current_position_name ?? null,
+      }))
+    const suggested = selectDepartmentLeader(dep.name, group)
+    if (suggested) map.set(dep.id, { name: suggested.name, position: suggested.position ?? '—' })
   }
   return map
 })
@@ -254,7 +264,7 @@ watch(shownOrgColumns, value => {
 }, { deep: true })
 const columns = computed(() => [
   { key: 'name', label: 'Подразделение' },
-  { key: 'manager_name', label: 'Руководитель по штатке' },
+  { key: 'manager_name', label: 'Руководитель' },
   { key: 'manager_position', label: 'Должность руководителя' },
   ...extraColumns.filter(column => shownOrgColumns.value[column.key] !== false),
   ...(departmentWritesEnabled.value ? [{ key: 'actions', label: 'Действие' }] : []),
@@ -320,6 +330,7 @@ async function loadDepartments() {
   departments.value = []
   total.value = 0
   departmentWritesEnabled.value = false
+  managerAssignmentSupported.value = false
   if (!id) return
 
   loadingDepartments.value = true
@@ -331,6 +342,7 @@ async function loadDepartments() {
     total.value = result.meta.total
     lastPage.value = result.meta.last_page
     departmentWritesEnabled.value = result.meta.department_writes_enabled
+    managerAssignmentSupported.value = result.meta.manager_assignment_supported === true
   } catch (cause) {
     if (current === generation) {
       error.value = cause instanceof Error ? cause.message : 'Ошибка загрузки подразделений'
@@ -588,6 +600,8 @@ onMounted(loadCompanies)
         :key="editingDepartment?.id ?? 'new'"
         :company-id="selectedCompany"
         :departments="departments"
+        :employees="tableEmployees"
+        :manager-assignment-supported="managerAssignmentSupported"
         :edit="editingDepartment"
         @saved="departmentSaved"
         @cancelled="editorOpen = false"

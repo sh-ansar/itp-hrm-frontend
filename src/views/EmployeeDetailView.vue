@@ -30,6 +30,7 @@ import { localTodayISO } from '../utils/localDate'
 import { unionTenureDays, formatTenure, type TenurePeriod } from '../utils/employeeTenure'
 import { listEmployees } from '../api/personnel'
 import { selectDepartmentLeader } from '../utils/departmentLeader'
+import { listDepartments } from '../api/organization'
 import { useUiFormatters } from '../composables/useUiFormatters'
 
 const { tr } = useWorkspaceI18n()
@@ -686,22 +687,53 @@ async function load() {
 
 async function loadDepartmentManager(company: string, departmentId: string, name: string, current: number) {
   try {
-    // Current staffing occupants, not a textual supervisor field or a demo placeholder.
-    const first = await listEmployees(company, 1, '', 'active', 100)
+    const response = await listDepartments(company, 1)
     if (current !== generation) return
+    let department = response.data.find(item => item.id === departmentId)
+    for (let page = 2; !department && page <= Math.min(response.meta.last_page, 10); page++) {
+      const next = await listDepartments(company, page)
+      if (current !== generation) return
+      department = next.data.find(item => item.id === departmentId)
+    }
+    if (response.meta.manager_assignment_supported && department) {
+      if (!department.manager_employee_id) {
+        staffingManagerName.value = 'Не назначен в оргструктуре'
+        staffingManagerPosition.value = null
+        return
+      }
+      staffingManagerName.value = department.manager_employee_name || 'Назначенный руководитель'
+      staffingManagerPosition.value = null
+      // Position is a separate effective-dated staffing assignment.
+      try {
+        const first = await listEmployees(company, 1, '', 'active', 100)
+        if (current !== generation) return
+        const found = first.data.find(row => row.id === department?.manager_employee_id)
+        if (found) {
+          staffingManagerName.value = [found.last_name, found.first_name, found.middle_name]
+            .filter(Boolean).join(' ')
+          staffingManagerPosition.value = found.current_position_name ?? null
+        }
+      } catch {
+        // The authoritative department manager name is still available.
+      }
+      return
+    }
+    // The compatibility path is used only for older APIs without the field.
+    if (response.meta.manager_assignment_supported) return
+    const first = await listEmployees(company, 1, '', 'active', 100)
+    if (current !== generation || first.meta.last_page > 1) return
     const members = first.data.filter(row => row.current_department_id === departmentId)
       .map(row => ({
         id: row.id,
         name: [row.last_name, row.first_name, row.middle_name].filter(Boolean).join(' '),
         position: row.current_position_name ?? null,
       }))
-    if (first.meta.last_page > 1) return // partial scope cannot prove uniqueness
     const leader = selectDepartmentLeader(name, members)
     if (!leader || current !== generation) return
     staffingManagerName.value = leader.name
     staffingManagerPosition.value = leader.position
   } catch {
-    // No authority for a leader guess. The viewer still sees their own assignment.
+    // Do not synthesize a department head when the caller lacks read access.
   }
 }
 

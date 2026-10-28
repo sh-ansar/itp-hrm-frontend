@@ -616,39 +616,39 @@ onMounted(loadCompanies)
         @update:model-value="setTab" />
 
       <div class="worktime-summary" aria-label="Сводка рабочего времени">
-        <BaseCard class="summary-card">
+        <BaseCard class="summary-card hrm-flat-panel">
           <UsersRound :size="19" aria-hidden="true" />
           <span>Сотрудники</span>
           <strong>{{ loading ? '…' : employeeCount }}</strong>
           <small>{{ demoMode ? 'в табеле периода' : employeesWithEntries + ' с табельными данными' }}</small>
         </BaseCard>
-        <BaseCard class="summary-card">
+        <BaseCard class="summary-card hrm-flat-panel">
           <CalendarDays :size="19" aria-hidden="true" />
           <span>Плановые часы</span>
           <strong>{{ loading ? '…' : hoursLabel(summary.planned) }}</strong>
           <small>{{ demoMode ? 'по графикам работы' : 'по загруженным данным' }}</small>
         </BaseCard>
-        <BaseCard class="summary-card">
+        <BaseCard class="summary-card hrm-flat-panel">
           <Clock3 :size="19" aria-hidden="true" />
           <span>Отработано</span>
           <strong>{{ loading ? '…' : hoursLabel(summary.worked) }}</strong>
-          <small>часов за период</small>
+          
         </BaseCard>
-        <BaseCard class="summary-card">
+        <BaseCard class="summary-card hrm-flat-panel">
           <TriangleAlert :size="19" aria-hidden="true" />
           <span>Неявки</span>
           <strong>{{ loading ? '…' : hoursLabel(summary.absence) }}</strong>
-          <small>часов учтено</small>
+          
         </BaseCard>
       </div>
 
       <TimesheetPeriodReview v-if="!demoMode && activeTab === 'timesheet' && productionTimesheetMeta?.worktime_writes_enabled"
         :company-id="company" :month="month" @status="periodStatus = $event" @editable="periodEditable = $event" />
-      <section v-if="activeTab === 'timesheet'" class="worktime-register worktime-register--flat">
+      <section v-if="activeTab === 'timesheet'" class="worktime-register worktime-register--flat hrm-flat-panel">
         <div class="section-heading">
           <div>
             <h2>Табель учёта рабочего времени</h2>
-            <p>Плановые и фактически отработанные часы сотрудников.</p>
+            
           </div>
           <span>{{ employeeCount }} сотрудников</span>
         </div>
@@ -731,11 +731,11 @@ onMounted(loadCompanies)
         </div>
       </section>
 
-      <BaseCard v-else-if="activeTab === 'schedules'" class="worktime-register">
+      <BaseCard v-else-if="activeTab === 'schedules'" class="worktime-register hrm-flat-panel">
         <div class="section-heading">
           <div>
             <h2>Графики работы</h2>
-            <p>Основные, сменные, индивидуальные и суммированные графики.</p>
+            
           </div>
           <div class="section-actions">
             <BaseButton v-if="!demoMode && productionScheduleMeta?.can_manage_schedules"
@@ -773,7 +773,7 @@ onMounted(loadCompanies)
         </div>
       </BaseCard>
 
-      <BaseCard v-else-if="activeTab === 'calendar'" class="calendar-card">
+      <BaseCard v-else-if="activeTab === 'calendar'" class="calendar-card hrm-flat-panel">
         <div class="section-heading">
           <div>
             <h2>Производственный календарь</h2>
@@ -823,7 +823,7 @@ onMounted(loadCompanies)
         <div class="section-heading">
           <div>
             <h2>Невыходы и отсутствия</h2>
-            <p>Больничные, командировки, отпуска и другие причины отсутствия.</p>
+            
           </div>
           <span>{{ absenceRows.length }} записей</span>
         </div>

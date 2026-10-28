@@ -542,13 +542,13 @@ onMounted(loadCompanies)
       >
         <template #cell-name="{ row }">
           <span class="hierarchy-label" :style="{ '--depth': Math.min(Number(row.depth), 12) }">
-            <button v-if="visibleChildIds.has(row.id)" type="button" class="hierarchy-toggle"
+            <BaseButton v-if="visibleChildIds.has(row.id)" type="button" icon-only variant="secondary" class="hierarchy-toggle"
               :aria-label="(collapsedDepartments.includes(row.id) ? 'Раскрыть: ' : 'Свернуть: ') + row.name"
               :aria-expanded="!collapsedDepartments.includes(row.id)"
               @click.stop="toggleDepartment(row.id)">
               <ChevronRight v-if="collapsedDepartments.includes(row.id)" :size="15" aria-hidden="true" />
               <ChevronDown v-else :size="15" aria-hidden="true" />
-            </button>
+            </BaseButton>
             <span v-else class="hierarchy-toggle-placeholder" aria-hidden="true"></span>
             <span v-if="row.depth" class="branch-mark">↳</span>
             <strong>{{ row.name }}</strong>

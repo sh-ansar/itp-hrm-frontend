@@ -22,18 +22,16 @@ test('employee card distinguishes actionable fields from non-editable projection
       const familyName = page.locator('.identity-name-fields .read-field').filter({ hasText: 'Фамилия' })
       assert.equal(await familyName.getAttribute('data-field-state'), 'editable')
       await familyName.getByRole('button', { name: 'Изменить поле: Фамилия' }).click()
-      const identityEditor = page.getByRole('dialog', { name: 'Основные данные сотрудника' })
+      const identityEditor = page.locator('#employee-card-edit-form')
       await identityEditor.waitFor()
-      const identityDom = await identityEditor.evaluate(dialog => ({
-        open: dialog.open,
-        inputs: dialog.querySelectorAll('input').length,
-        labels: [...dialog.querySelectorAll('label')].map(label => label.textContent?.trim()),
-        forms: dialog.querySelectorAll('form').length,
-        content: dialog.textContent?.slice(0,500),
+      const identityDom = await identityEditor.evaluate(form => ({
+        inputs: form.querySelectorAll('input').length,
+        labels: [...form.querySelectorAll('label')].map(label => label.textContent?.trim()),
+        content: form.textContent?.slice(0,500),
       }))
-      assert.ok(identityDom.open && identityDom.forms === 1 && identityDom.inputs >= 4 && identityDom.labels.some(label => /^Фамилия(?:\s*\*)?$/.test(label || '')),
-        'An editable name must open a populated employee form: ' + JSON.stringify(identityDom))
-      await identityEditor.getByRole('button', { name: 'Отмена', exact: true }).click()
+      assert.ok(identityDom.inputs >= 4 && identityDom.labels.some(label => /^Фамилия(?:\s*\*)?$/.test(label || '')),
+        'An editable name must open an inline employee form: ' + JSON.stringify(identityDom))
+      await page.getByRole('button', { name: 'Отменить', exact: true }).click()
       await identityEditor.waitFor({ state: 'hidden' })
       const age = page.locator('.employee-data-field').filter({ has: page.locator('.employee-data-label').getByText('Возраст', { exact: true }) })
       await age.waitFor()
@@ -52,17 +50,20 @@ test('employee card distinguishes actionable fields from non-editable projection
       assert.equal(await email.getAttribute('data-field-state'), 'editable')
       const edit = email.getByRole('button', { name: 'Изменить поле: Email' })
       await edit.click()
-      const dialog = page.getByRole('dialog', { name: 'Основные данные сотрудника' })
-      await dialog.waitFor()
-      const existing = await dialog.getByLabel('Email', { exact: true }).inputValue()
-      await dialog.getByLabel('Email', { exact: true }).fill('cancelled-edit@example.test')
-      await dialog.getByRole('button', { name: 'Отмена', exact: true }).click()
-      await dialog.waitFor({ state: 'hidden' })
+      await identityEditor.waitFor()
+      const existing = await identityEditor.getByLabel('Email', { exact: true }).inputValue()
+      await identityEditor.getByLabel('Email', { exact: true }).fill('cancelled-edit@example.test')
+      page.once('dialog', async dialog => { assert.match(dialog.message(), /несохранённые/); await dialog.dismiss() })
+      await page.getByRole('button', { name: 'Отменить', exact: true }).click()
+      assert.equal(await identityEditor.isVisible(), true, 'Declining discard keeps the draft')
+      page.once('dialog', async dialog => { await dialog.accept() })
+      await page.getByRole('button', { name: 'Отменить', exact: true }).click()
+      await identityEditor.waitFor({ state: 'hidden' })
       await edit.click()
-      await dialog.waitFor()
-      assert.equal(await dialog.getByLabel('Email', { exact: true }).inputValue(), existing,
+      await identityEditor.waitFor()
+      assert.equal(await identityEditor.getByLabel('Email', { exact: true }).inputValue(), existing,
         'Cancelling never persists the draft')
-      await dialog.getByRole('button', { name: 'Отмена', exact: true }).click()
+      await page.getByRole('button', { name: 'Отменить', exact: true }).click()
 
       await nav.getByRole('button', { name: 'Организационные данные' }).click()
       const department = page.locator('.employee-data-field').filter({ has: page.locator('.employee-data-label').getByText('Подразделение', { exact: true }) })
@@ -73,9 +74,9 @@ test('employee card distinguishes actionable fields from non-editable projection
       const workplace = page.locator('.employee-data-field').filter({ has: page.locator('.employee-data-label').getByText('Объект', { exact: true }) })
       assert.equal(await workplace.getAttribute('data-field-state'), 'editable')
       await workplace.getByRole('button', { name: 'Изменить поле: Объект' }).click()
-      await dialog.waitFor()
-      await dialog.getByLabel('Объект', { exact: true }).waitFor()
-      await dialog.getByRole('button', { name: 'Отмена', exact: true }).click()
+      await identityEditor.waitFor()
+      await identityEditor.getByLabel('Объект', { exact: true }).waitFor()
+      await page.getByRole('button', { name: 'Отменить', exact: true }).click()
 
       await nav.getByRole('button', { name: 'Расчёты и начисления' }).click()
       const payroll = page.locator('.employee-profile-section').filter({ has: page.getByRole('heading', { name: 'Условия оплаты' }) })

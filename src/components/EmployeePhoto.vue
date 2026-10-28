@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import { onBeforeUnmount, ref, useId, watch } from 'vue'
+import { Pencil } from 'lucide-vue-next'
 import BaseButton from './ui/BaseButton.vue'
 import BaseNotice from './ui/BaseNotice.vue'
 import BaseDialog from './ui/BaseDialog.vue'
 import { readEmployeePhoto, removeEmployeePhoto, uploadEmployeePhoto, validateEmployeePhoto } from '../api/employeePhoto'
 
 const props = defineProps<{ companyId: string; employeeId: string; revision: number; hasPhoto: boolean; canEdit: boolean; name: string; initials: string; compactEdit?: boolean }>()
-const emit = defineEmits<{ saved: [] }>()
+const emit = defineEmits<{ saved: []; dirty: [value: boolean] }>()
 const inputId = useId()
 const imageUrl = ref('')
 const imageLoading = ref(false)
@@ -17,7 +18,13 @@ const error = ref('')
 const input = ref<HTMLInputElement | null>(null)
 const pendingPhoto = ref<File | null>(null)
 const pendingPreview = ref('')
-function resetPending() { if (pendingPreview.value) URL.revokeObjectURL(pendingPreview.value); pendingPreview.value = ''; pendingPhoto.value = null }
+function resetPending() {
+  const hadPending = !!pendingPhoto.value
+  if (pendingPreview.value) URL.revokeObjectURL(pendingPreview.value)
+  pendingPreview.value = ''
+  pendingPhoto.value = null
+  if (hadPending) emit('dirty', false)
+}
 let request: AbortController | null = null
 let generation = 0
 let displayedFor = ''
@@ -64,6 +71,7 @@ async function select(file?: File) {
       resetPending()
       pendingPhoto.value = file
       pendingPreview.value = URL.createObjectURL(file)
+      emit('dirty', true)
       return
     }
     saving.value = true
@@ -114,7 +122,7 @@ async function remove() {
         <input :id="inputId" ref="input" class="photo-input" type="file" accept="image/jpeg,image/png,.jpg,.jpeg,.png"
           aria-label="Выбрать фотографию" :disabled="saving" @change="choose" />
         <BaseButton variant="secondary" icon-only type="button" class="photo-pencil" :disabled="saving"
-          aria-label="Изменить фотографию" title="Изменить фотографию" @click="input?.click()">✎</BaseButton>
+          aria-label="Изменить фотографию" title="Изменить фотографию" @click="input?.click()"><Pencil :size="15" aria-hidden="true" /></BaseButton>
         <div v-if="pendingPhoto" class="photo-compact-save">
           <BaseButton size="sm" :disabled="saving" @click="savePending">{{ saving ? 'Сохранение…' : 'Сохранить' }}</BaseButton>
           <BaseButton size="sm" variant="secondary" :disabled="saving" @click="resetPending">Отмена</BaseButton>

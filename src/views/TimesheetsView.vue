@@ -8,6 +8,7 @@ import BaseButton from '../components/ui/BaseButton.vue'
 import ProductionCalendarEditor from '../components/ProductionCalendarEditor.vue'
 import ProductionCalendarPeriodOverview from '../components/ProductionCalendarPeriodOverview.vue'
 import TimesheetEntryEditor from '../components/TimesheetEntryEditor.vue'
+import BulkTimesheetFillPanel from '../components/BulkTimesheetFillPanel.vue'
 import TimesheetPeriodReview from '../components/TimesheetPeriodReview.vue'
 import WorkScheduleEditor from '../components/WorkScheduleEditor.vue'
 import BaseDataTable from '../components/ui/BaseDataTable.vue'
@@ -112,6 +113,7 @@ const productionScheduleMeta = ref<WorkScheduleResponse['meta'] | null>(null)
 const calendarEditorOpen = ref(false)
 const calendarPeriodView = ref<'month' | 'quarter' | 'year'>('month')
 const timesheetEditorOpen = ref(false)
+const bulkTimesheetOpen = ref(false)
 const editingTimesheetEmployee = ref<TimesheetViewRow | null>(null)
 const scheduleEditorOpen = ref(false)
 const editingSchedule = ref<WorkScheduleRow | null>(null)
@@ -454,6 +456,14 @@ async function loadWorkspace() {
   }
 }
 
+const canBulkFill = computed(() => !demoMode
+  && productionTimesheetMeta.value?.worktime_bulk_fill_enabled === true
+  && periodEditable.value && !periodLocked.value)
+
+function bulkTimesheetSaved() {
+  void loadWorkspace()
+}
+
 function openTimesheetEditor(row: TimesheetViewRow) {
   if (!productionTimesheetMeta.value?.worktime_writes_enabled || !periodEditable.value || periodLocked.value) return
   editingTimesheetEmployee.value = row
@@ -491,6 +501,7 @@ watch([company, month], () => {
   periodStatus.value = null
   periodEditable.value = false
   calendarEditorOpen.value = false
+  bulkTimesheetOpen.value = false
   closeTimesheetEditor()
   closeScheduleEditor()
   void loadWorkspace()
@@ -567,6 +578,10 @@ onMounted(loadCompanies)
           <span>{{ employeeCount }} сотрудников</span>
         </div>
 
+        <div v-if="canBulkFill" class="worktime-bulk-toolbar">
+          <BaseButton variant="secondary" type="button" @click="bulkTimesheetOpen = true">Массовое заполнение табеля</BaseButton>
+          <span>С предпросмотром, без перезаписи уже введённых явок, отпусков и неявок</span>
+        </div>
         <div class="worktime-desktop">
           <BaseDataTable :rows="timesheetRows" :columns="timesheetColumns" row-key="employee_id"
             :loading="loading" caption="Табель учёта рабочего времени"
@@ -767,6 +782,9 @@ onMounted(loadCompanies)
   </section>
   <ProductionCalendarEditor :open="calendarEditorOpen" :company-id="company" :month="month"
     :days="productionCalendar" @close="calendarEditorOpen = false" @saved="calendarUpdated" @refresh="calendarUpdated" />
+  <BulkTimesheetFillPanel :open="bulkTimesheetOpen" :company-id="company" :month="month"
+    :employees="timesheetRows.map(row => ({ employee_id: row.employee_id, full_name: row.full_name, department: row.department }))"
+    @close="bulkTimesheetOpen = false" @saved="bulkTimesheetSaved" />
   <TimesheetEntryEditor v-if="editingTimesheetEmployee"
     :open="timesheetEditorOpen"
     :company-id="company"
@@ -784,6 +802,8 @@ onMounted(loadCompanies)
 </template>
 
 <style scoped>
+.worktime-bulk-toolbar{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin:0 0 14px}
+.worktime-bulk-toolbar span{font-size:12px;color:var(--color-muted)}
 .timesheets-page{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;min-width:0;max-width:100%;overflow-x:clip}
 .timesheets-breadcrumb{display:flex;align-items:center;gap:10px;min-height:24px;color:var(--color-muted);font-size:12px}
 .timesheets-breadcrumb img{width:15px;height:15px}

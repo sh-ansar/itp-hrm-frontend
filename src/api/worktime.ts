@@ -88,6 +88,7 @@ export interface WorktimeTimesheetResponse {
       overtime_minutes: number | null
     }
     worktime_writes_enabled: boolean
+    worktime_bulk_fill_enabled?: boolean
     current_page: number
     last_page: number
     per_page: number
@@ -306,6 +307,45 @@ export function putEmployeeTimesheet(
   })
 }
 
+
+export interface BulkTimesheetFillRequest {
+  month: string
+  employee_ids: string[]
+  dates: string[]
+  apply: boolean
+  confirm?: boolean
+}
+
+export interface BulkTimesheetFillResponse {
+  data: {
+    candidate_count: number
+    already_recorded: number
+    outside_employment: number
+    approved_leave: number
+    recorded_absence: number
+    nonworking_date: number
+  }
+  meta: {
+    month: string
+    employee_count: number
+    date_count: number
+    mode: 'preview' | 'applied'
+    created_count: number
+    period_locked: boolean
+  }
+}
+
+export function fillMissingTimesheetBulk(companyId: string, payload: BulkTimesheetFillRequest): Promise<BulkTimesheetFillResponse> {
+  assertCompany(companyId)
+  assertMonth(payload.month)
+  if (payload.employee_ids.length < 1 || payload.employee_ids.length > 100
+    || payload.dates.length < 1 || payload.dates.length > 31) throw new Error('Invalid bulk selection size')
+  if (payload.employee_ids.some(id => !uuid.test(id))) throw new Error('Invalid employee ID')
+  return apiRequest<BulkTimesheetFillResponse>(`/companies/${companyId}/worktime/timesheet/bulk-fill`, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
+}
 
 export interface WorkSchedulePayload {
   code: string

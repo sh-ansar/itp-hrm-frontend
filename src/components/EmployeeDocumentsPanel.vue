@@ -4,6 +4,8 @@ import { computed, ref, watch, onBeforeUnmount } from 'vue'
 import { Maximize2, Minimize2, Search } from 'lucide-vue-next'
 import BaseActionDropdown from './ui/BaseActionDropdown.vue'
 import BaseButton from './ui/BaseButton.vue'
+import BaseDialog from './ui/BaseDialog.vue'
+import DocumentMetadataForm from './DocumentMetadataForm.vue'
 import BaseColumnPicker from './ui/BaseColumnPicker.vue'
 import BaseDataTable from './ui/BaseDataTable.vue'
 import BaseFilterSummary from './ui/BaseFilterSummary.vue'
@@ -26,6 +28,8 @@ type EmployeeDocument = {
   file_name?: string | null
   has_file?: boolean
   stored_id?: string
+  description?: string | null
+  tags?: string[]
 }
 type DocumentRow = EmployeeDocument & { folder: string }
 type GroupMode = 'folder' | 'type' | 'none'
@@ -33,6 +37,9 @@ type GroupMode = 'folder' | 'type' | 'none'
 const props = defineProps<{ documents: EmployeeDocument[]; companyId?: string; employeeId?: string }>()
 const connected = import.meta.env.VITE_DEMO_MODE !== 'true'
 const stored = ref<StoredDocument[]>([])
+const search = ref('')
+const tagFilter = ref('')
+const metadataTarget = ref<StoredDocument | null>(null)
 const loading = ref(false)
 const loadError = ref('')
 const serverPage = ref(1)
@@ -45,7 +52,8 @@ async function reload() {
   loading.value = true
   loadError.value = ''
   try {
-    const response = await listDocuments(props.companyId, serverPage.value, '', props.employeeId)
+    const response = await listDocuments(props.companyId, serverPage.value, '', props.employeeId,
+      '', { search: search.value, tag: tagFilter.value })
     if (generation !== requestGeneration) return
     stored.value = response.data.filter(row => row.employee_id === props.employeeId)
     serverPages.value = response.meta.last_page
@@ -61,10 +69,10 @@ async function reload() {
 }
 watch([() => props.companyId, () => props.employeeId], () => {serverPage.value=1;void reload()}, { immediate:true })
 watch(serverPage, () => {void reload()})
+watch([search, tagFilter], () => { serverPage.value = 1; void reload() })
 onBeforeUnmount(()=>{requestGeneration++})
 const fmt = useUiFormatters()
 
-const search = ref('')
 const typeFilter = ref('all')
 const statusFilter = ref('all')
 const groupMode = ref<GroupMode>('folder')
@@ -72,6 +80,7 @@ const selectedIds = ref<string[]>([])
 const fullscreen = ref(false)
 const visibleFields = ref<Record<string, boolean>>({
   file_name: true,
+  tags: true,
   number: true,
   document_type: true,
   issued_on: true,
@@ -80,6 +89,7 @@ const visibleFields = ref<Record<string, boolean>>({
 
 const allColumns = [
   { key: 'title', label: 'Папка / Название документа' },
+  { key: 'tags', label: 'Теги' },
   { key: 'file_name', label: 'Файл' },
   { key: 'number', label: '№ документа' },
   { key: 'document_type', label: 'Тип документа' },
@@ -106,6 +116,7 @@ const rows = computed<DocumentRow[]>(() => {
     issued_on:row.issued_on,status:row.status,
     document_type:row.document_type,file_name:row.has_file ? 'PDF' : null,
     has_file:row.has_file,
+    description:row.description ?? null,tags:row.tags ?? [],
   })) : props.documents
   return source.map(document => ({...document,folder:folderFor(document)}))
 })
@@ -124,7 +135,7 @@ const filteredRows = computed(() => {
   return rows.value.filter(row =>
     (typeFilter.value === 'all' || row.document_type === typeFilter.value)
     && (statusFilter.value === 'all' || row.status === statusFilter.value)
-    && (!q || [row.title,row.file_name,row.number,row.document_type,row.status,row.folder]
+    && (!q || connected || [row.title,row.file_name,row.number,row.document_type,row.status,row.folder,row.description,...(row.tags ?? [])]
       .filter(Boolean).join(' ').toLowerCase().includes(q)))
 })
 const selectedRows = computed(() => filteredRows.value.filter(row => selectedIds.value.includes(row.id)))
@@ -213,6 +224,7 @@ function statusTone(status: string): 'success' | 'warning' | 'danger' | 'info' {
         <Search :size="16" aria-hidden="true" />
         <input v-model="search" type="search" :aria-label="tr('Поиск документов')" :placeholder="tr('Поиск')" />
       </label>
+      <label class="documents-search"><Search :size="15" aria-hidden="true" /><input v-model="tagFilter" type="search" aria-label="Фильтр по тегу" placeholder="Тег" /></label>
       <BaseSelectField v-model="typeFilter" :label="tr('Тип документа')" :options="typeOptions" />
       <BaseSelectField v-model="statusFilter" :label="tr('Статус')" :options="statusOptions" />
       <BaseActionDropdown
@@ -237,6 +249,15 @@ function statusTone(status: string): 'success' | 'warning' | 'danger' | 'info' {
         <div class="document-title-cell">
           <strong>{{ row.title }}</strong>
           <span>{{ tr(row.folder) }}</span>
+          <span v-if="row.description">{{ row.description }}</span>
+        </div>
+      </template>
+      <template #cell-tags="{ row }">
+        <div class="document-tags-cell">
+          <span v-for="tag in (row.tags ?? [])" :key="tag" class="document-tag">{{ tag }}</span>
+          <BaseButton v-if="connected && row.stored_id && companyId" variant="secondary" size="sm"
+            :aria-label="'Изменить теги: ' + row.title"
+            @click="metadataTarget = stored.find(item => item.id === row.stored_id) ?? null">Изменить</BaseButton>
         </div>
       </template>
       <template #cell-file_name="{ row, value }">
@@ -251,6 +272,10 @@ function statusTone(status: string): 'success' | 'warning' | 'danger' | 'info' {
       </template>
     </BaseDataTable>
 
+    <BaseDialog :open="metadataTarget !== null" title="Теги и описание документа" @close="metadataTarget = null">
+      <DocumentMetadataForm v-if="metadataTarget && companyId" :company-id="companyId" :document="metadataTarget"
+        @cancelled="metadataTarget = null" @saved="metadataTarget = null; reload()" />
+    </BaseDialog>
     <div v-if="connected && serverPages > 1" class="document-pager">
       <span>{{ tr('Страница') }} {{ serverPage }} / {{ serverPages }} · {{ serverTotal }}</span>
       <BaseButton variant="secondary" :disabled="loading || serverPage <= 1" @click="serverPage--">{{ tr('Назад') }}</BaseButton>
@@ -275,6 +300,8 @@ function statusTone(status: string): 'success' | 'warning' | 'danger' | 'info' {
 .documents-link-button--primary{background:var(--color-primary);border-color:var(--color-primary);color:var(--color-on-primary)}
 .documents-link-button--primary:hover{background:var(--color-primary-hover);border-color:var(--color-primary-hover)}
 .document-title-cell{display:grid;gap:2px;min-width:170px}.document-title-cell strong{font-size:12px}.document-title-cell span{color:var(--color-muted);font-size:10px}
+ .document-tags-cell{display:flex;gap:5px;flex-wrap:wrap;align-items:center}
+.document-tag{border:1px solid var(--color-stroke);border-radius:5px;padding:2px 6px;font-size:11px}
 .document-file{display:block;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .related-module-link{justify-self:start;color:var(--color-primary);font-size:12px;font-weight:600;text-decoration:underline;text-underline-offset:2px}
 .is-fullscreen{position:fixed;z-index:240;inset:10px;overflow:auto;padding:18px;border:1px solid var(--color-stroke);border-radius:10px;background:var(--color-page);box-shadow:var(--shadow-float)}

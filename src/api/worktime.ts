@@ -326,6 +326,8 @@ export interface BulkTimesheetFillResponse {
     approved_leave: number
     recorded_absence: number
     nonworking_date: number
+    /** Nonstandard or overlapping schedules without verified daily shift attendance. */
+    unknown_shift_schedule?: number
     future_date?: number
   }
   meta: {

@@ -5,7 +5,7 @@ import BaseNotice from './ui/BaseNotice.vue'
 import { uploadDocumentPdf, type DocumentRow } from '../api/documents'
 const demoMode = import.meta.env.VITE_DEMO_MODE === 'true'
 
-const props = defineProps<{ companyId: string; document: DocumentRow }>()
+const props = defineProps<{ companyId: string; document: Pick<DocumentRow, 'id' | 'title' | 'document_number' | 'revision'> }>()
 const emit = defineEmits<{ saved: []; cancelled: [] }>()
 const inputId = useId()
 const selected = ref<File | null>(null)

@@ -31,7 +31,7 @@ test('employee card uses compact reference typography in each tab and dark mode'
           value:get('.employee-data-field > strong'),
           header:get('.employee-profile-section .section-heading h2'),
           tab:get('.employee-profile .view-tab'),
-          name:get('.read-field strong'),
+          name:get('.identity-name-grid .employee-data-field strong'),
         }
       })
       assert.ok(result.label.font<=13, `Field labels too large at ${width}: ${result.label.font}`)

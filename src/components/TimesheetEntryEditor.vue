@@ -13,6 +13,7 @@ const props = defineProps<{
   employeeId: string
   employeeName: string
   month: string
+  focusDate?: string
 }>()
 
 const emit = defineEmits<{ close: []; saved: [] }>()
@@ -29,7 +30,10 @@ const error = ref('')
 const success = ref('')
 const rows = ref<DraftDay[]>([])
 
-const recordedCount = computed(() => rows.value.filter(row =>
+const shownRows = computed(() => props.focusDate
+  ? rows.value.filter(row => row.date === props.focusDate)
+  : rows.value)
+const recordedCount = computed(() => shownRows.value.filter(row =>
   row.worked_hours !== '' || row.absence_hours !== '' || row.overtime_hours !== '').length)
 
 function hours(minutes: number | null): string {
@@ -87,19 +91,19 @@ async function load() {
 function fillByPlan() {
   rows.value = rows.value.map(row => ({
     ...row,
-    worked_hours: row.planned_minutes > 0 ? hours(row.planned_minutes) : '0',
-    absence_hours: '0',
-    overtime_hours: '0',
+    worked_hours: props.focusDate && row.date !== props.focusDate ? row.worked_hours : row.planned_minutes > 0 ? hours(row.planned_minutes) : '0',
+    absence_hours: props.focusDate && row.date !== props.focusDate ? row.absence_hours : '0',
+    overtime_hours: props.focusDate && row.date !== props.focusDate ? row.overtime_hours : '0',
   }))
 }
 
 async function save() {
-  if (saving.value || !rows.value.length) return
+  if (saving.value || !shownRows.value.length) return
   saving.value = true
   error.value = ''
   success.value = ''
   try {
-    await putEmployeeTimesheet(props.companyId, props.employeeId, props.month, rows.value.map(row => ({
+    await putEmployeeTimesheet(props.companyId, props.employeeId, props.month, shownRows.value.map(row => ({
       date: row.date,
       worked_minutes: minutes(row.worked_hours),
       absence_minutes: minutes(row.absence_hours),
@@ -133,19 +137,19 @@ watch(() => [props.open, props.companyId, props.employeeId, props.month], () => 
         <div class="editor-toolbar">
           <div>
             <strong>{{ recordedCount }} дней заполнено</strong>
-            <span>{{ rows.length }} дней календаря доступно</span>
+            <span>{{ shownRows.length }} дней календаря доступно</span>
           </div>
-          <BaseButton variant="secondary" type="button" :disabled="saving || !rows.length" @click="fillByPlan">
+          <BaseButton variant="secondary" type="button" :disabled="saving || !shownRows.length" @click="fillByPlan">
             Заполнить по плану
           </BaseButton>
         </div>
 
-        <BaseNotice v-if="!rows.length && !error" tone="warning">
+        <BaseNotice v-if="!shownRows.length && !error" tone="warning">
           Производственный календарь на выбранный месяц не заполнен.
         </BaseNotice>
 
         <div v-else class="day-list">
-          <article v-for="row in rows" :key="row.date" class="day-row"
+          <article v-for="row in shownRows" :key="row.date" class="day-row"
             :class="{ 'day-row--off': row.planned_minutes === 0 }">
             <header>
               <div>
@@ -167,7 +171,7 @@ watch(() => [props.open, props.companyId, props.employeeId, props.month], () => 
 
     <template #footer>
       <BaseButton variant="secondary" type="button" :disabled="saving" @click="$emit('close')">Закрыть</BaseButton>
-      <BaseButton type="button" :disabled="saving || loading || !rows.length" @click="save">
+      <BaseButton type="button" :disabled="saving || loading || !shownRows.length" @click="save">
         {{ saving ? 'Сохранение…' : 'Сохранить табель' }}
       </BaseButton>
     </template>

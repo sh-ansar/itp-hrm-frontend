@@ -5,7 +5,7 @@ import { useWorkspaceI18n } from '../composables/useWorkspaceI18n'
 import { useUiFormatters } from '../composables/useUiFormatters'
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { Building2, Pencil, Plus, Trash2, UserPlus, UsersRound } from 'lucide-vue-next'
+import { Building2, ChevronDown, ChevronRight, Pencil, Plus, Trash2, UserPlus, UsersRound } from 'lucide-vue-next'
 import BaseDataTable from '../components/ui/BaseDataTable.vue'
 import BaseLoadingState from '../components/ui/BaseLoadingState.vue'
 import BaseNotice from '../components/ui/BaseNotice.vue'
@@ -30,6 +30,7 @@ import { localTodayISO } from '../utils/localDate'
 import OrgStaffingNav from '../components/OrgStaffingNav.vue'
 import OrgChartViewport from '../components/OrgChartViewport.vue'
 import { buildDepartmentForest, filterDepartmentForest } from '../utils/departmentTree'
+import { selectDepartmentLeader } from '../utils/departmentLeader'
 import DepartmentForm from '../components/DepartmentForm.vue'
 import {
   deleteDepartment,
@@ -66,6 +67,74 @@ const searchQuery = ref('')
 const selectedDepartmentIds = ref<string[]>([])
 const viewModes = [{ id: 'table', label: 'Таблица' }, { id: 'diagram', label: 'Схема' }]
 const diagramEmployees = ref<EmployeeRecord[]>([])
+const tableEmployees = ref<EmployeeRecord[]>([])
+const leaderLoading = ref(false)
+const collapsedDepartments = ref<string[]>([])
+function toggleDepartment(id: string) {
+  collapsedDepartments.value = collapsedDepartments.value.includes(id)
+    ? collapsedDepartments.value.filter(item => item !== id)
+    : [...collapsedDepartments.value, id]
+}
+const managerByDepartment = computed(() => {
+  const map = new Map<string, { name: string; position: string }>()
+  const grouped = new Map<string, Array<{ id: string; name: string; position: string | null }>>()
+  for (const employee of tableEmployees.value) {
+    const id = employee.current_department_id
+    if (!id) continue
+    const group = grouped.get(id) ?? []
+    group.push({
+      id: employee.id,
+      name: [employee.last_name, employee.first_name, employee.middle_name].filter(Boolean).join(' '),
+      position: employee.current_position_name ?? null,
+    })
+    grouped.set(id, group)
+  }
+  for (const dep of departments.value) {
+    const head = selectDepartmentLeader(dep.name, grouped.get(dep.id) ?? [])
+    if (head) map.set(dep.id, { name: head.name, position: head.position ?? '—' })
+  }
+  return map
+})
+const visibleChildIds = computed(() => new Set(departments.value.map(dep => dep.parent_id).filter(Boolean)))
+const completeTableRows = computed(() => {
+  const lookup = new Map(departments.value.map(dep => [dep.id, dep]))
+  return hierarchyRows.value.filter(row => {
+    if (searchQuery.value.trim()) return true
+    let parentId = row.parent_id
+    const visited = new Set<string>()
+    while (parentId && lookup.has(parentId) && !visited.has(parentId)) {
+      if (collapsedDepartments.value.includes(parentId)) return false
+      visited.add(parentId)
+      parentId = lookup.get(parentId)?.parent_id ?? null
+    }
+    return true
+  })
+})
+let managerLoadGeneration = 0
+async function loadTableManagers() {
+  const current = ++managerLoadGeneration
+  const companyId = selectedCompany.value
+  tableEmployees.value = []
+  if (!companyId) return
+  leaderLoading.value = true
+  try {
+    const first = await listEmployees(companyId, 1, '', 'active', 100)
+    const people = [...first.data]
+    const last = Math.min(first.meta.last_page, 20)
+    for (let page = 2; page <= last; page++) {
+      const next = await listEmployees(companyId, page, '', 'active', 100)
+      if (current !== managerLoadGeneration || selectedCompany.value !== companyId) return
+      people.push(...next.data)
+    }
+    if (current === managerLoadGeneration) tableEmployees.value = people
+  } catch {
+    // Inaccessible staff cannot be used to imply an authorized manager.
+    tableEmployees.value = []
+  } finally {
+    if (current === managerLoadGeneration) leaderLoading.value = false
+  }
+}
+
 // Show the root's direct reports by default, while keeping deeper levels collapsed.
 const expandedLevels = ref(false)
 const diagramDepartments = ref<DepartmentRecord[]>([])
@@ -126,6 +195,8 @@ const hierarchyRows = computed(() => {
   const rows = departments.value.map(item => ({
     ...item,
     depth: depthOf(item.id),
+    manager_name: managerByDepartment.value.get(item.id)?.name ?? '—',
+    manager_position: managerByDepartment.value.get(item.id)?.position ?? '—',
     parentLabel: !item.parent_id
       ? tr('Верхний уровень')
       : (departmentNames.value.get(item.parent_id) ?? tr('Родитель вне текущего списка')),
@@ -156,7 +227,7 @@ const hierarchyRows = computed(() => {
 
 const filteredHierarchyRows = computed(() => {
   const query = searchQuery.value.trim().toLocaleLowerCase(fmt.localeTag())
-  return !query ? hierarchyRows.value : hierarchyRows.value.filter(row =>
+  return !query ? completeTableRows.value : completeTableRows.value.filter(row =>
     (row.name + ' ' + row.parentLabel).toLocaleLowerCase(fmt.localeTag()).includes(query),
   )
 })
@@ -164,11 +235,10 @@ const filteredHierarchyRows = computed(() => {
 const selectedDepartmentRows = computed(() => filteredHierarchyRows.value.filter(row => selectedDepartmentIds.value.includes(row.id)))
 
 const extraColumns = [
-  { key: 'parentLabel', label: 'Входит в' },
   { key: 'depth', label: 'Уровень' },
 ]
 function orgColumnPreferences(): Record<string, boolean> {
-  const initial = Object.fromEntries(extraColumns.map(column => [column.key, true]))
+  const initial = Object.fromEntries(extraColumns.map(column => [column.key, false]))
   try {
     const saved = JSON.parse(localStorage.getItem('hrm-org-columns-v1') || '{}') as Record<string, unknown>
     for (const column of extraColumns) {
@@ -184,6 +254,8 @@ watch(shownOrgColumns, value => {
 }, { deep: true })
 const columns = computed(() => [
   { key: 'name', label: 'Подразделение' },
+  { key: 'manager_name', label: 'Руководитель по штатке' },
+  { key: 'manager_position', label: 'Должность руководителя' },
   ...extraColumns.filter(column => shownOrgColumns.value[column.key] !== false),
   ...(departmentWritesEnabled.value ? [{ key: 'actions', label: 'Действие' }] : []),
 ])
@@ -360,8 +432,8 @@ async function confirmDelete() {
   }
 }
 
-watch(selectedCompany, () => { page.value = 1; void loadOrgMetrics() })
-watch([selectedCompany, page], () => { selectedDepartmentIds.value = []; void loadDepartments() })
+watch(selectedCompany, () => { page.value = 1; collapsedDepartments.value = []; void loadOrgMetrics(); void loadTableManagers() })
+watch([selectedCompany, page], () => { selectedDepartmentIds.value = []; collapsedDepartments.value = []; void loadDepartments() })
 watch([selectedCompany, viewMode], loadDiagram)
 onMounted(loadCompanies)
 </script>
@@ -447,7 +519,7 @@ onMounted(loadCompanies)
               <strong>{{ row.name }}</strong>
               <span>{{ tr('Уровень') }} {{ fmt.number(Number(row.depth) + 1, 0) }}</span>
             </div>
-            <p>{{ row.parentLabel }}</p>
+            <p>{{ row.manager_name !== '—' ? row.manager_name + ' · ' + row.manager_position : 'Руководитель не определён по штатной должности' }}</p>
             <div v-if="departmentWritesEnabled" class="org-mobile-actions">
               <BaseButton variant="secondary" @click="editDepartmentRecord(row)"><Pencil :size="15" /> {{ tr('Изменить') }}</BaseButton>
               <BaseButton variant="secondary" @click="deleteCandidate = row"><Trash2 :size="15" /> {{ tr('Удалить') }}</BaseButton>
@@ -470,11 +542,20 @@ onMounted(loadCompanies)
       >
         <template #cell-name="{ row }">
           <span class="hierarchy-label" :style="{ '--depth': Math.min(Number(row.depth), 12) }">
+            <BaseButton v-if="visibleChildIds.has(row.id)" type="button" icon-only variant="secondary" class="hierarchy-toggle"
+              :aria-label="(collapsedDepartments.includes(row.id) ? 'Раскрыть: ' : 'Свернуть: ') + row.name"
+              :aria-expanded="!collapsedDepartments.includes(row.id)"
+              @click.stop="toggleDepartment(row.id)">
+              <ChevronRight v-if="collapsedDepartments.includes(row.id)" :size="15" aria-hidden="true" />
+              <ChevronDown v-else :size="15" aria-hidden="true" />
+            </BaseButton>
+            <span v-else class="hierarchy-toggle-placeholder" aria-hidden="true"></span>
             <span v-if="row.depth" class="branch-mark">↳</span>
             <strong>{{ row.name }}</strong>
           </span>
         </template>
-        <template #cell-parentLabel="{ value }">{{ value }}</template>
+        <template #cell-manager_name="{ row }">{{ leaderLoading ? '…' : row.manager_name }}</template>
+        <template #cell-manager_position="{ row }">{{ leaderLoading ? '…' : row.manager_position }}</template>
         <template #cell-depth="{ row }">{{ Number(row.depth) + 1 }}</template>
         <template #cell-actions="{ row }">
           <div class="row-actions">
@@ -592,6 +673,10 @@ onMounted(loadCompanies)
  .chart-branches::before,.chart-branches :deep(.tree-branch)::before{display:none}
 }
 .diagram-empty{margin:0;color:var(--color-muted);font-size:13px}
+.hierarchy-toggle{display:grid;place-items:center;flex:0 0 22px;width:22px;height:22px;border:0;border-radius:5px;background:transparent;color:var(--color-muted);cursor:pointer}
+.hierarchy-toggle:hover{background:var(--color-soft);color:var(--color-text)}
+.hierarchy-toggle:focus-visible{outline:2px solid var(--color-primary)}
+.hierarchy-toggle-placeholder{display:inline-block;flex:0 0 22px;width:22px}
 .hierarchy-label{display:inline-flex;align-items:center;gap:6px;padding-inline-start:clamp(0px,calc(var(--depth) * 15px),180px);max-width:100%;min-width:160px;overflow-wrap:anywhere}
 .branch-mark{color:var(--color-muted)}
 .row-actions{display:flex;align-items:center;gap:6px;flex-wrap:nowrap;min-width:max-content}

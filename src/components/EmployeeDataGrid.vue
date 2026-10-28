@@ -77,10 +77,10 @@ function valueOf(field: EmployeeDisplayField): string | number {
 }
 .employee-data-editable{
   display:flex;align-items:center;gap:5px;min-width:0;min-height:36px;
-  padding:2px 3px 2px 10px;border:1px solid var(--color-stroke);
-  border-radius:var(--radius-sm);background:var(--color-surface-raised);
+  padding:2px 0;border:0;
+  border-radius:0;background:transparent;
 }
-.employee-data-editable > strong{flex:1;font-weight:400}
+.employee-data-editable > strong{flex:0 1 auto;font-weight:500}
 .employee-data-edit-button{
   flex:none;width:29px;height:29px;min-width:29px;min-height:29px;
   padding:0;border-color:transparent;background:transparent;box-shadow:none;

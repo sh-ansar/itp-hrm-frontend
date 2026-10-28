@@ -89,6 +89,7 @@ const lineEditorOpen = ref(false)
 const approveOpen = ref(false)
 const editingLine = ref<StaffingPlanLine | null>(null)
 const staffingWritesEnabled = ref(false)
+const cloneSupported = ref(false)
 const asOf = ref(localTodayISO())
 const initialView = ['all', 'vacant', 'changes'].includes(String(route.query.view)) ? String(route.query.view) : 'all'
 const activeView = ref(initialView)
@@ -225,6 +226,7 @@ async function loadPlans() {
     if (current !== planRequest || companyId !== company.value) return
     plans.value = response.data
     staffingWritesEnabled.value = response.meta.staffing_writes_enabled
+    cloneSupported.value = response.meta.clone_supported === true
     if (!plans.value.some(item => item.id === selectedPlanId.value)) {
       selectedPlanId.value = preferredStaffingPlan(plans.value, asOf.value)?.id ?? ''
     }
@@ -234,6 +236,7 @@ async function loadPlans() {
     error.value = cause instanceof Error ? cause.message : 'Не удалось загрузить версии штатного расписания'
     plans.value = []
     staffingWritesEnabled.value = false
+    cloneSupported.value = false
     selectedPlanId.value = ''
   } finally {
     if (current === planRequest) planBusy.value = false
@@ -536,7 +539,7 @@ onMounted(refreshCompanies)
 
     <BaseDrawer :open="createPlanOpen" :title="tr('Новая версия штатного расписания')"
       :description="tr('Период действия и параметры новой версии')" @close="createPlanOpen = false">
-      <StaffingPlanForm v-if="company" :company-id="company" @saved="planCreated" @cancelled="createPlanOpen = false" />
+      <StaffingPlanForm v-if="company" :company-id="company" :plans="plans" :clone-supported="cloneSupported" @saved="planCreated" @cancelled="createPlanOpen = false" />
     </BaseDrawer>
 
     <BaseDrawer :open="lineEditorOpen" :title="editingLine ? tr('Изменить штатную единицу') : tr('Новая штатная единица')"

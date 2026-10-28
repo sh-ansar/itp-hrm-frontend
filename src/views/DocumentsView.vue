@@ -303,7 +303,7 @@ onMounted(loadCompanies)
         </BaseCard>
       </div>
 
-      <BaseCard class="documents-register">
+      <BaseCard class="documents-register hrm-flat-panel">
         <div class="register-heading">
           <div>
             <h2>{{ tr('Кадровые документы') }}</h2>

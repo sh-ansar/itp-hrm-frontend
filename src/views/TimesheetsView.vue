@@ -5,7 +5,7 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { CalendarDays, Clock3, TriangleAlert, UsersRound } from 'lucide-vue-next'
 import BaseCard from '../components/ui/BaseCard.vue'
 import BaseButton from '../components/ui/BaseButton.vue'
-import ProductionCalendarEditor from '../components/ProductionCalendarEditor.vue'
+import ProductionCalendarInlineEditor from '../components/ProductionCalendarInlineEditor.vue'
 import ProductionCalendarPeriodOverview from '../components/ProductionCalendarPeriodOverview.vue'
 import TimesheetEntryEditor from '../components/TimesheetEntryEditor.vue'
 import BulkTimesheetFillPanel from '../components/BulkTimesheetFillPanel.vue'
@@ -318,9 +318,6 @@ const calendarOffset = computed(() => {
   const weekday = new Date(first.date + 'T00:00:00Z').getUTCDay()
   return (weekday + 6) % 7
 })
-const workdayCount = computed(() => calendarDays.value.filter(day => ['workday', 'shortened'].includes(day.type)).length)
-const weekendCount = computed(() => calendarDays.value.filter(day => day.type === 'weekend').length)
-const holidayCount = computed(() => calendarDays.value.filter(day => day.type === 'holiday').length)
 const missingCalendarCount = computed(() => calendarDays.value.filter(day => day.type === 'missing').length)
 
 const timesheetColumns = [
@@ -616,39 +613,39 @@ onMounted(loadCompanies)
         @update:model-value="setTab" />
 
       <div class="worktime-summary" aria-label="Сводка рабочего времени">
-        <BaseCard class="summary-card">
+        <BaseCard class="summary-card hrm-flat-panel">
           <UsersRound :size="19" aria-hidden="true" />
           <span>Сотрудники</span>
           <strong>{{ loading ? '…' : employeeCount }}</strong>
           <small>{{ demoMode ? 'в табеле периода' : employeesWithEntries + ' с табельными данными' }}</small>
         </BaseCard>
-        <BaseCard class="summary-card">
+        <BaseCard class="summary-card hrm-flat-panel">
           <CalendarDays :size="19" aria-hidden="true" />
           <span>Плановые часы</span>
           <strong>{{ loading ? '…' : hoursLabel(summary.planned) }}</strong>
           <small>{{ demoMode ? 'по графикам работы' : 'по загруженным данным' }}</small>
         </BaseCard>
-        <BaseCard class="summary-card">
+        <BaseCard class="summary-card hrm-flat-panel">
           <Clock3 :size="19" aria-hidden="true" />
           <span>Отработано</span>
           <strong>{{ loading ? '…' : hoursLabel(summary.worked) }}</strong>
-          <small>часов за период</small>
+          
         </BaseCard>
-        <BaseCard class="summary-card">
+        <BaseCard class="summary-card hrm-flat-panel">
           <TriangleAlert :size="19" aria-hidden="true" />
           <span>Неявки</span>
           <strong>{{ loading ? '…' : hoursLabel(summary.absence) }}</strong>
-          <small>часов учтено</small>
+          
         </BaseCard>
       </div>
 
       <TimesheetPeriodReview v-if="!demoMode && activeTab === 'timesheet' && productionTimesheetMeta?.worktime_writes_enabled"
         :company-id="company" :month="month" @status="periodStatus = $event" @editable="periodEditable = $event" />
-      <section v-if="activeTab === 'timesheet'" class="worktime-register worktime-register--flat">
+      <section v-if="activeTab === 'timesheet'" class="worktime-register worktime-register--flat hrm-flat-panel">
         <div class="section-heading">
           <div>
             <h2>Табель учёта рабочего времени</h2>
-            <p>Плановые и фактически отработанные часы сотрудников.</p>
+            
           </div>
           <span>{{ employeeCount }} сотрудников</span>
         </div>
@@ -731,11 +728,11 @@ onMounted(loadCompanies)
         </div>
       </section>
 
-      <BaseCard v-else-if="activeTab === 'schedules'" class="worktime-register">
+      <BaseCard v-else-if="activeTab === 'schedules'" class="worktime-register hrm-flat-panel">
         <div class="section-heading">
           <div>
             <h2>Графики работы</h2>
-            <p>Основные, сменные, индивидуальные и суммированные графики.</p>
+            
           </div>
           <div class="section-actions">
             <BaseButton v-if="!demoMode && productionScheduleMeta?.can_manage_schedules"
@@ -773,35 +770,36 @@ onMounted(loadCompanies)
         </div>
       </BaseCard>
 
-      <BaseCard v-else-if="activeTab === 'calendar'" class="calendar-card">
+      <BaseCard v-else-if="activeTab === 'calendar'" class="calendar-card hrm-flat-panel">
         <div class="section-heading">
           <div>
             <h2>Производственный календарь</h2>
             <p>{{ monthLabel }} · рабочие и выходные дни периода.</p>
           </div>
-          <BaseButton v-if="!demoMode && productionCalendarMeta?.can_edit_calendar" variant="secondary" :disabled="loading || calendarPeriodView !== 'month'" @click="calendarEditorOpen = true">Редактировать календарь</BaseButton>
-          <span v-if="calendarPeriodView === 'month'">
-            {{ workdayCount }} рабочих · {{ weekendCount }} выходных · {{ holidayCount }} праздничных
-            <template v-if="missingCalendarCount"> · {{ missingCalendarCount }} без данных</template>
-          </span>
+          <BaseButton v-if="!demoMode && productionCalendarMeta?.can_edit_calendar && !calendarEditorOpen"
+            variant="secondary" :disabled="loading" @click="calendarEditorOpen = true">
+            Редактировать календарь
+          </BaseButton>
         </div>
-        <ProductionCalendarPeriodOverview :company-id="company" :month="month" :view="calendarPeriodView"
+        <ProductionCalendarPeriodOverview v-if="!calendarEditorOpen" :company-id="company" :month="month" :view="calendarPeriodView"
           :demo-mode="demoMode" :active="activeTab === 'calendar'"
           @view="calendarPeriodView = $event" @navigate="month = $event" @select-month="month = $event; calendarPeriodView = 'month'" />
+        <ProductionCalendarInlineEditor v-else :company-id="company" :month="month" :view="calendarPeriodView"
+          @cancel="calendarEditorOpen = false" @saved="calendarUpdated" />
         <BaseNotice v-if="calendarPeriodView === 'month' && !demoMode && productionCalendarMeta && !productionCalendarMeta.calendar_complete" tone="warning">
           Календарь заполнен частично: {{ productionCalendarMeta.recorded_days }} из {{ productionCalendarMeta.expected_days }} дней.
           Незагруженные даты не классифицируются автоматически.
         </BaseNotice>
-        <div v-if="calendarPeriodView === 'month'" class="calendar-legend" role="list" aria-label="Обозначения типов дней">
+        <div class="calendar-legend" role="list" aria-label="Обозначения типов дней">
           <span role="listitem"><i class="calendar-key calendar-key--workday" aria-hidden="true" /> Рабочие</span>
           <span role="listitem"><i class="calendar-key calendar-key--weekend" aria-hidden="true" /> Выходные</span>
           <span role="listitem"><i class="calendar-key calendar-key--holiday" aria-hidden="true" /> Праздничные</span>
           <span v-if="missingCalendarCount" role="listitem"><i class="calendar-key calendar-key--missing" aria-hidden="true" /> Не заполнены</span>
         </div>
-        <div v-if="calendarPeriodView === 'month'" class="calendar-weekdays" aria-hidden="true">
+        <div v-if="calendarPeriodView === 'month' && !calendarEditorOpen" class="calendar-weekdays" aria-hidden="true">
           <span v-for="label in ['Пн','Вт','Ср','Чт','Пт','Сб','Вс']" :key="label">{{ label }}</span>
         </div>
-        <div v-if="calendarPeriodView === 'month'" class="calendar-grid" :aria-label="'Производственный календарь: ' + monthLabel">
+        <div v-if="calendarPeriodView === 'month' && !calendarEditorOpen" class="calendar-grid" :aria-label="'Производственный календарь: ' + monthLabel">
           <span v-for="blank in calendarOffset" :key="'blank-' + blank" class="calendar-blank" aria-hidden="true" />
           <article v-for="day in calendarDays" :key="day.date" class="calendar-day"
             :aria-label="day.date + ' — ' + calendarTypeLabel(day)"
@@ -823,7 +821,7 @@ onMounted(loadCompanies)
         <div class="section-heading">
           <div>
             <h2>Невыходы и отсутствия</h2>
-            <p>Больничные, командировки, отпуска и другие причины отсутствия.</p>
+            
           </div>
           <span>{{ absenceRows.length }} записей</span>
         </div>
@@ -870,8 +868,6 @@ onMounted(loadCompanies)
       </BaseCard>
     </template>
   </section>
-  <ProductionCalendarEditor :open="calendarEditorOpen" :company-id="company" :month="month"
-    :days="productionCalendar" @close="calendarEditorOpen = false" @saved="calendarUpdated" @refresh="calendarUpdated" />
   <BulkTimesheetFillPanel :open="bulkTimesheetOpen" :company-id="company" :month="month"
     :initial-date="timesheetPeriodView === 'day' ? selectedDay : undefined"
     :employees="timesheetRows.filter(row => !selectedTimesheetIds.length || selectedTimesheetIds.includes(row.employee_id))

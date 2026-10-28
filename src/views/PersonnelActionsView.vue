@@ -180,17 +180,17 @@ onMounted(loadCompanies)
          :label="tr('Тип кадрового действия')" @update:model-value="setActionFilter" />
 
       <div v-if="summary && typeFilter !== 'bonuses'" class="action-metrics"  :aria-label="tr('Сводка кадровых действий')">
-        <BaseCard class="action-metric">
+        <BaseCard class="action-metric hrm-flat-panel">
           <LogIn :size="18" aria-hidden="true" />
           <span>{{ tr('Приём') }}</span>
           <strong>{{ summary.hire }}</strong>
         </BaseCard>
-        <BaseCard class="action-metric">
+        <BaseCard class="action-metric hrm-flat-panel">
           <ArrowRightLeft :size="18" aria-hidden="true" />
           <span>{{ tr('Перевод') }}</span>
           <strong>{{ summary.transfer }}</strong>
         </BaseCard>
-        <BaseCard class="action-metric">
+        <BaseCard class="action-metric hrm-flat-panel">
           <LogOut :size="18" aria-hidden="true" />
           <span>{{ tr('Увольнение') }}</span>
           <strong>{{ summary.termination }}</strong>
@@ -199,11 +199,11 @@ onMounted(loadCompanies)
 
       <BonusManagementPanel v-if="typeFilter === 'bonuses'" :company-id="company" />
 
-      <BaseCard v-else class="action-register">
+      <BaseCard v-else class="action-register hrm-flat-panel">
         <div class="section-heading">
           <div>
             <h2>{{ actionTabs.find(item => item.id === typeFilter)?.label }}</h2>
-            <p>{{ tr('Проведённые кадровые операции и основания.') }}</p>
+            
           </div>
           <span>{{ total }} {{ tr('операций') }}</span>
         </div>

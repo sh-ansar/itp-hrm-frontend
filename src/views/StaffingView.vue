@@ -381,11 +381,11 @@ onMounted(refreshCompanies)
       </div>
     </div>
 
-    <BaseCard v-if="activeView === 'changes' && company">
+    <BaseCard v-if="activeView === 'changes' && company" class="hrm-flat-panel">
       <div class="section-heading">
         <div>
           <h2>{{ tr('Реестр изменений штатного расписания') }}</h2>
-          <p class="section-copy">{{ tr('История операций со штатными позициями и версиями расписания.') }}</p>
+          
         </div>
         <span class="muted">{{ fmt.number(historyTotal, 0) }} {{ tr('событий') }}</span>
       </div>
@@ -437,7 +437,7 @@ onMounted(refreshCompanies)
 
     <BaseLoadingState v-if="activeView !== 'changes' && (planBusy || detailBusy)" :label="tr('Загрузка штатного расписания')" />
 
-    <BaseCard v-else-if="activeView !== 'changes' && company && !plans.length">
+    <BaseCard v-else-if="activeView !== 'changes' && company && !plans.length" class="hrm-flat-panel">
       <div class="empty-state">
         <UsersRound :size="30" />
         <h2>{{ tr('Штатное расписание ещё не создано') }}</h2>
@@ -447,7 +447,7 @@ onMounted(refreshCompanies)
     </BaseCard>
 
     <template v-else-if="activeView !== 'changes' && detail && selectedPlan">
-      <BaseCard class="plan-header">
+      <BaseCard class="plan-header hrm-flat-panel">
         <div class="snapshot-row">
           <BaseFormField v-model="asOf" :label="tr('Дата среза занятости')" type="date" :disabled="detailBusy" />
           <BaseButton variant="secondary" :disabled="detailBusy || !asOf" @click="loadDetail">{{ tr('Показать на дату') }}</BaseButton>
@@ -479,11 +479,11 @@ onMounted(refreshCompanies)
         <div class="staffing-summary-item"><span>{{ tr('Сверх штата') }}</span><strong>{{ formatUnits(totals.overstaffed) }}</strong></div>
       </div>
 
-      <BaseCard>
+      <BaseCard class="hrm-flat-panel">
         <div class="section-heading">
           <div>
             <h2>{{ activeView === 'vacant' ? tr('Вакантные позиции') : tr('Штатное расписание') }}</h2>
-            <p class="section-copy">{{ activeView === 'vacant' ? tr('Открытые позиции по подразделениям.') : tr('Должности, ставки и текущая занятость.') }}</p>
+            
           </div>
           <span class="muted">{{ fmt.number(filteredLines.length, 0) }} {{ tr('из') }} {{ fmt.number(detail.lines.length, 0) }} {{ tr('строк') }}</span>
         </div>
@@ -498,7 +498,7 @@ onMounted(refreshCompanies)
           </BaseButton>
           <BaseColumnPicker v-model="shownColumns" :columns="optionalLineColumns" />
         </div>
-        <p v-if="grouped" class="line-hint">{{ tr('Группировка по подразделениям выбранной версии штатного расписания.') }}</p>
+        
         <BaseSelectionToolbar :count="selectedLineRows.length" :label="tr('Выбрано на странице:')" :clear-label="tr('Снять выделение')" @clear="clearSelectedRows" />
 
         <div class="staffing-desktop-table">

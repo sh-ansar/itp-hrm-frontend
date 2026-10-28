@@ -74,9 +74,9 @@ for (const [locale, expected] of Object.entries(locales)) {
       for (const name of localizedTabs) {
         await page.getByRole('button', { name, exact: true }).first().waitFor()
       }
-      await page.getByText(locale === 'en' ? 'Completed personnel actions and their grounds.'
-        : locale === 'kk' ? 'Орындалған кадрлық әрекеттер және олардың негіздері.'
-        : 'შესრულებული საკადრო მოქმედებები და მათი საფუძვლები.', { exact: true }).waitFor()
+      // The redundant explanatory subheading was removed deliberately.
+      // Verify translated active tabs and data table instead.
+      await page.locator('.action-register table').first().waitFor()
       await page.goto('/directories/positions')
       const positionSearch = locale === 'en' ? 'Search positions'
         : locale === 'kk' ? 'Лауазымдарды іздеу' : 'თანამდებობების ძიება'

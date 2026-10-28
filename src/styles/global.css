@@ -21,3 +21,8 @@ button:focus-visible,a:focus-visible{outline:2px solid var(--color-primary);outl
 @media(max-width:860px){.app-shell,.app-shell--collapsed{display:block;min-height:100vh;max-width:100%}.sidebar{height:100dvh}.topbar{padding:0 16px}.content{padding:20px 18px 32px;min-width:0;max-width:100vw}}
 @media(max-width:600px){.content{padding:16px 14px 30px}.cards{grid-template-columns:1fr}.topbar{height:64px;gap:10px}}
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}.app-shell{transition:none}}
+
+/* HRM registries use the Employees register as the visual reference.
+   Keep the table, filters and actions; omit duplicate white card surfaces. */
+.hrm-flat-panel {background:transparent!important;border:0!important;border-radius:0!important;box-shadow:none!important;padding:0!important}
+.hrm-flat-panel>.section-heading {border:0;background:transparent}

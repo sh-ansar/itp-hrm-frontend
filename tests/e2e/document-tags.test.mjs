@@ -52,7 +52,7 @@ test('HR records searchable tags and descriptions with revisioned changes in the
     await row.waitFor()
     assert.match(await row.innerText(), /Автоматизация/)
     await search.fill('грамота')
-    await page.getByText('Документы не найдены').waitFor()
+    await page.getByRole('heading', { name: 'Документы не найдены' }).waitFor()
     await search.fill('')
     await row.waitFor()
     assert.deepEqual(errors, [])

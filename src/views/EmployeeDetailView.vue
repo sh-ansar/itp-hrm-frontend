@@ -77,12 +77,13 @@ function warnUnload(event: BeforeUnloadEvent) {
 window.addEventListener('beforeunload', warnUnload)
 onBeforeUnmount(() => window.removeEventListener('beforeunload', warnUnload))
 onBeforeRouteLeave(() => confirmDiscard())
-async function documentCreated(id: string) {
-  // The PDF is uploaded in the same card instead of navigating to Documents.
+function documentCreated(id: string, title?: string) {
+  // Newly created draft has revision 1. Do not depend on an employee's first
+  // paginated list including this draft before allowing the PDF upload.
   newDocumentId.value = id
-  const result = await listDocuments(String(route.params.company), 1, '', profile.value?.data.id ?? '')
-  newDocumentRecord.value = result.data.find(row => row.id === id) ?? null
-  if (!newDocumentRecord.value) attachmentError.value = 'Черновик создан. Откройте реестр документов, чтобы прикрепить PDF.'
+  newDocumentRecord.value = {
+    id, revision: 1, title: title || 'Документ сотрудника', document_number: null,
+  } as DocumentRow
 }
 function closeAttach() {
   attachSection.value = null

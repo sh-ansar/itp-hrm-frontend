@@ -79,6 +79,7 @@ async function save() {
       <form v-if="field.editKey && activeKey === field.editKey" class="employee-inline-field-form"
         @submit.prevent="save">
         <select v-if="field.inputType === 'select'" v-model="draft" :disabled="busy"
+          @change="emit('dirty', dirty)"
           :aria-label="tr(field.label)">
           <option value="">Не указано</option>
           <option value="male">Мужчина</option>

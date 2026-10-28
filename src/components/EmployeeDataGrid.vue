@@ -33,8 +33,9 @@ const dirty = computed(() => activeKey.value !== '' && draft.value !== original.
 function isEditable(field: EmployeeDisplayField): boolean {
   // A pencil must always open a real single-field editor. Composite
   // identity/contract records have their own explicit management actions.
-  return !!(field.editKey && props.saveField && field.editGroup
-    && props.editableGroups.includes(field.editGroup))
+  return !!(field.editGroup && props.editableGroups.includes(field.editGroup)
+    && ((field.editKey && props.saveField) || field.editGroup === 'contract'
+      || field.editGroup === 'identity'))
 }
 function valueOf(field: EmployeeDisplayField): string | number {
   return field.value === null || field.value === undefined || field.value === '' ? '—' : field.value

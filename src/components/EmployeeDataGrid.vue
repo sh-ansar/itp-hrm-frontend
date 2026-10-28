@@ -31,7 +31,10 @@ const busy = ref(false)
 const error = ref('')
 const dirty = computed(() => activeKey.value !== '' && draft.value !== original.value)
 function isEditable(field: EmployeeDisplayField): boolean {
-  return !!field.editGroup && props.editableGroups.includes(field.editGroup)
+  // A pencil must always open a real single-field editor. Composite
+  // identity/contract records have their own explicit management actions.
+  return !!(field.editKey && props.saveField && field.editGroup
+    && props.editableGroups.includes(field.editGroup))
 }
 function valueOf(field: EmployeeDisplayField): string | number {
   return field.value === null || field.value === undefined || field.value === '' ? '—' : field.value

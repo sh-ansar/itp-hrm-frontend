@@ -13,7 +13,7 @@ test('employee photo pencil stages the full-size image until save, supports canc
  page.on('pageerror',error=>failures.push(error.message))
  let uploads=0
  page.on('request',request=>{
-  if(request.method()==='POST' && /\\/employees\\/[^/]+\\/photo$/.test(request.url()))uploads++
+  if(request.method()==='POST' && /\/employees\/[^/]+\/photo$/.test(request.url()))uploads++
  })
  try{
   await page.goto('/login')

@@ -51,7 +51,8 @@ test('protected employee photo persists, replaces, rejects invalid files and rem
 
   // Changing a field must trigger the unsaved guard on tab switching.
   editor=await openPhotoEditor()
-  await editor.form.getByLabel('Имя',{exact:true}).fill('Synthetic unsaved name')
+  // The required-field marker is part of the label text, so match the field semantically.
+  await editor.form.getByLabel('Имя').fill('Synthetic unsaved name')
   page.once('dialog',async dialog=>{assert.match(dialog.message(),/несохранённые/);await dialog.dismiss()})
   await page.locator('.view-tab').last().click()
   assert.equal(await editor.form.count(),1)

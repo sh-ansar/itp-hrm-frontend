@@ -155,7 +155,7 @@ watch(() => [props.open, props.companyId, props.employeeId, props.month], () => 
             <strong>{{ recordedCount }} дней заполнено</strong>
             <span>{{ shownRows.length }} дней календаря доступно</span>
           </div>
-          <BaseButton variant="secondary" type="button" :disabled="saving || !shownRows.length" @click="fillByPlan">
+          <BaseButton variant="secondary" type="button" :disabled="saving || !canFillByPlan" @click="fillByPlan">
             Заполнить по плану
           </BaseButton>
         </div>
@@ -174,11 +174,15 @@ watch(() => [props.open, props.companyId, props.employeeId, props.month], () => 
               </div>
               <small>План: {{ Math.round((row.planned_minutes / 60) * 100) / 100 }} ч</small>
             </header>
+            <div v-if="futureDay(row)" class="future-note">
+              <span>Будущие даты доступны только для планирования; фактические часы вводятся после наступления даты.</span>
+              <BaseButton v-if="futureHasActual(row)" type="button" variant="secondary" :disabled="saving" @click="clearFuture(row)">Очистить преждевременные часы</BaseButton>
+            </div>
             <div class="day-fields">
-              <BaseFormField v-model="row.worked_hours" label="Отработано, ч" type="number" :disabled="saving" />
+              <BaseFormField v-model="row.worked_hours" label="Отработано, ч" type="number" :disabled="saving || futureDay(row)" />
               <BaseFormField v-model="row.absence_hours" label="Неявка, ч" type="number"
-                :disabled="saving || row.planned_minutes === 0" />
-              <BaseFormField v-model="row.overtime_hours" label="Сверхурочно, ч" type="number" :disabled="saving" />
+                :disabled="saving || futureDay(row) || row.planned_minutes === 0" />
+              <BaseFormField v-model="row.overtime_hours" label="Сверхурочно, ч" type="number" :disabled="saving || futureDay(row)" />
             </div>
           </article>
         </div>
@@ -187,7 +191,7 @@ watch(() => [props.open, props.companyId, props.employeeId, props.month], () => 
 
     <template #footer>
       <BaseButton variant="secondary" type="button" :disabled="saving" @click="$emit('close')">Закрыть</BaseButton>
-      <BaseButton type="button" :disabled="saving || loading || !shownRows.length" @click="save">
+      <BaseButton type="button" :disabled="saving || loading || !changedRows.length" @click="save">
         {{ saving ? 'Сохранение…' : 'Сохранить табель' }}
       </BaseButton>
     </template>
@@ -203,6 +207,7 @@ watch(() => [props.open, props.companyId, props.employeeId, props.month], () => 
 .day-list{display:grid;gap:10px}
 .day-row{display:grid;gap:11px;padding:12px;border:1px solid var(--color-stroke);border-radius:8px;background:var(--color-surface-raised)}
 .day-row--off{background:var(--color-soft)}
+.future-note{display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:12px;color:var(--color-muted)}
 .day-row header{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
 .day-row header>div{display:grid;gap:2px}
 .day-row header strong{font-size:13px;text-transform:capitalize}

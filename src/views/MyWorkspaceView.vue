@@ -10,6 +10,7 @@ import ProtectedLeaveEvidencePanel from '../components/ProtectedLeaveEvidencePan
 import { useCompanyAccessStore } from '../stores/companyAccess'
 import { useUiPreferencesStore } from '../stores/uiPreferences'
 import { useLeaveWorkflowI18n } from '../i18n/leaveWorkflow'
+import { nextLeaveApprovalStage } from '../utils/leaveApprovalStage'
 import { useLeaveBalanceCopy } from '../i18n/leaveBalances'
 import { getOwnLeaveBalances, type LeaveBalanceRow } from '../api/leaveBalances'
 import { useUiFormatters } from '../composables/useUiFormatters'
@@ -214,6 +215,18 @@ function status(request: OwnRequest) {
           <article v-for="request in workspace.data.requests" :key="request.id">
             <strong>{{ request.leave_type_name }}</strong><p>{{ request.planned_started_on }} — {{ request.planned_ended_on }} · {{ request.planned_days }} · {{ status(request) }}</p>
             <p v-if="request.note">{{ request.note }}</p><p v-if="request.decision_comment">{{ t('decisionComment') }}: {{ request.decision_comment }}</p>
+            <div v-if="request.status === 'submitted'" class="own-approval-route">
+              <span>{{ t('nextApprovalStage') }}:
+                <strong>{{ nextLeaveApprovalStage(request, !!workspace.meta.manager_approval_required) === 'manager'
+                  ? t('managerStage') : t('hrStage') }}</strong>
+              </span>
+              <span v-if="request.assigned_manager_name">{{ t('assignedReviewer') }}:
+                <strong>{{ request.assigned_manager_name }}</strong></span>
+              <span v-else-if="workspace.meta.manager_approval_required" class="own-approval-route__warning">
+                {{ t('routeNotPinned') }}
+              </span>
+            </div>
+            <p v-if="request.manager_decision_comment">{{ t('managerStage') }}: {{ request.manager_decision_comment }}</p>
             <ProtectedLeaveEvidencePanel v-if="request.category && request.category !== 'ordinary'"
               :company-id="access.activeCompanyId" :request="request"
               :can-upload="!!workspace.meta.protected_evidence_uploads_enabled && workspace.meta.can_request"
@@ -365,6 +378,9 @@ function status(request: OwnRequest) {
 header,.actions{display:flex;align-items:center;justify-content:space-between;gap:var(--space-3);flex-wrap:wrap}
 h1,h2,p{overflow-wrap:anywhere}h2{font-size:var(--font-body-size)}
 article{padding:var(--space-4) 0;border-top:1px solid var(--color-stroke)}
+.own-approval-route{margin:8px 0;display:grid;align-items:start;gap:4px;padding:10px 12px;background:var(--color-soft);border:1px solid var(--color-stroke);border-radius:8px;font-size:12px;line-height:1.5;overflow-wrap:anywhere}
+.own-approval-route strong{font-weight:600}
+.own-approval-route__warning{color:var(--color-warning)}
 .actions{justify-content:flex-start}a{color:var(--color-primary)}
 
 .own-balances__header{display:flex;align-items:end;justify-content:space-between;gap:var(--space-3);flex-wrap:wrap}

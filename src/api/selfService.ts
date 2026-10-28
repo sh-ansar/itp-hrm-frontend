@@ -7,6 +7,10 @@ export interface OwnRequest {
   status: LeaveRequestStatus; revision: number; note: string | null; decision_comment: string | null
   category?: LeaveCategory; evidence_status?: 'pending' | 'verified' | 'rejected' | null
   evidence_revision?: number | null
+  manager_recommendation?: 'approved' | 'rejected' | null
+  manager_decision_comment?: string | null
+  /** Actual reviewer pinned when the server's manager snapshot workflow is enabled. */
+  assigned_manager_name?: string | null
 }
 export interface OwnLeave {
   id: string; leave_type_name: string; planned_started_on: string; planned_ended_on: string
@@ -18,7 +22,8 @@ export interface OwnWorkspace {
     requests: OwnRequest[]; leaves: OwnLeave[]; leave_types: { id: string; name: string; category: string }[]
   }
   meta: { can_request: boolean; requests_last_page: number; leaves_last_page: number
-    protected_evidence_uploads_enabled?: boolean; protected_evidence_required?: boolean }
+    protected_evidence_uploads_enabled?: boolean; protected_evidence_required?: boolean
+    manager_approval_required?: boolean }
 }
 export type OwnLeaveInput = Pick<OwnRequest, 'leave_type_id' | 'planned_started_on' | 'planned_ended_on' | 'note'>
 const base = (company: string) => `/companies/${company}/me`

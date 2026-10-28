@@ -1,14 +1,24 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import BaseButton from './ui/BaseButton.vue'
 import BaseFormField from './ui/BaseFormField.vue'
 import BaseNotice from './ui/BaseNotice.vue'
+import BaseSelectField from './ui/BaseSelectField.vue'
 import { createStaffingPlan, type StaffingPlanRecord } from '../api/staffing'
 
-const props = defineProps<{ companyId: string }>()
+const props = defineProps<{ companyId: string; plans?: StaffingPlanRecord[]; cloneSupported?: boolean }>()
 const emit = defineEmits<{ saved: [plan: StaffingPlanRecord]; cancelled: [] }>()
 
 const name = ref('')
+const sourcePlanId = ref('')
+const sourcePlans = computed(() => [
+  { id: '', name: 'Пустой черновик (без копирования)' },
+  ...(props.plans ?? []).map(plan => ({
+    id: plan.id,
+    name: plan.name + (plan.status === 'approved' ? ' · утверждено' : ' · черновик'),
+  })),
+])
+
 const validFrom = ref('')
 const validTo = ref('')
 const saving = ref(false)
@@ -31,6 +41,10 @@ async function submit() {
       name: name.value.trim(),
       valid_from: validFrom.value,
       valid_to: validTo.value || null,
+      ...(sourcePlanId.value ? {
+        source_plan_id: sourcePlanId.value,
+        source_plan_revision: props.plans?.find(plan => plan.id === sourcePlanId.value)?.revision,
+      } : {}),
     })
     emit('saved', response.data)
   } catch (cause) {
@@ -45,6 +59,13 @@ async function submit() {
   <form class="plan-form" @submit.prevent="submit">
     <BaseNotice v-if="error" tone="error">{{ error }}</BaseNotice>
     <BaseFormField v-model="name" label="Название версии" placeholder="Например: Штатное расписание 2027" :disabled="saving" required />
+    <BaseSelectField v-if="cloneSupported && (plans?.length ?? 0) > 0"
+      v-model="sourcePlanId" label="Взять за основу штатное расписание"
+      :options="sourcePlans" :disabled="saving" />
+    <p v-if="cloneSupported && sourcePlanId" class="hint">
+      Все позиции, количество ставок, оклады и валюты выбранной версии будут скопированы в новый черновик.
+      Исходная версия останется неизменной. После создания можно отредактировать ставки и отдельно утвердить новую версию.
+    </p>
     <div class="dates">
       <BaseFormField v-model="validFrom" label="Действует с" type="date" :disabled="saving" required />
       <BaseFormField v-model="validTo" label="Действует по" type="date" :disabled="saving" />

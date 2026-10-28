@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
-import BaseButton from './ui/BaseButton.vue'
+import { ChevronDown, ChevronLeft, ChevronRight } from 'lucide-vue-next'
 import BaseNotice from './ui/BaseNotice.vue'
 import { getProductionCalendar, type ProductionCalendarDay } from '../api/worktime'
 import { buildDemoCalendar } from '../mocks/timesheetDemo'
@@ -15,7 +15,29 @@ const props = defineProps<{
   demoMode: boolean
   view: CalendarPeriodView
 }>()
-const emit = defineEmits<{ view: [value: CalendarPeriodView]; selectMonth: [value: string] }>()
+const emit = defineEmits<{
+  view: [value: CalendarPeriodView]
+  selectMonth: [value: string]
+  navigate: [value: string]
+}>()
+const expandedMonths = ref<string[]>([])
+function toggleMonth(month: string) {
+  expandedMonths.value = expandedMonths.value.includes(month)
+    ? expandedMonths.value.filter(item => item !== month)
+    : [...expandedMonths.value, month]
+}
+function shiftPeriod(direction: -1 | 1) {
+  const [year, number] = props.month.split('-').map(Number)
+  const amount = props.view === 'year' ? 12 : props.view === 'quarter' ? 3 : 1
+  const date = new Date(Date.UTC(year!, number! - 1 + direction * amount, 1))
+  emit('navigate', date.getUTCFullYear() + '-' + String(date.getUTCMonth() + 1).padStart(2, '0'))
+}
+function monthSummary(block: MonthBlock): string {
+  const work = block.days.filter(day => day.type === 'workday' || day.type === 'shortened').length
+  const off = block.days.filter(day => day.type === 'weekend').length
+  const holidays = block.days.filter(day => day.type === 'holiday').length
+  return work + ' рабочих · ' + off + ' выходных · ' + holidays + ' праздников'
+}
 const blocks = ref<MonthBlock[]>([])
 const loading = ref(false)
 let generation = 0
@@ -50,6 +72,7 @@ function dayRows(month: string, records: Array<{ date: string; day_type: string;
 watch(() => [props.active, props.companyId, props.month, props.view], async () => {
   const run = ++generation
   blocks.value = []
+  expandedMonths.value = []
   if (!props.active || !props.companyId || props.view === 'month') { loading.value = false; return }
   const months = monthKeys(props.month, props.view)
   loading.value = true
@@ -82,14 +105,23 @@ const week = ['Пн','Вт','Ср','Чт','Пт','Сб','Вс']
 <template>
   <div class="calendar-period-overview">
     <div class="calendar-period-toolbar">
-      <div class="calendar-period-segments" role="group" aria-label="Период производственного календаря">
-        <BaseButton v-for="option in (['month','quarter','year'] as const)" :key="option"
-          :variant="view === option ? 'primary' : 'secondary'"
-          :aria-pressed="view === option" @click="emit('view', option)">
+      <div class="calendar-period-tabs" role="tablist" aria-label="Период производственного календаря">
+        <button v-for="option in (['month','quarter','year'] as const)" :key="option"
+          type="button" role="tab" class="calendar-period-tab"
+          :class="{ 'calendar-period-tab--active': view === option }" :aria-selected="view === option"
+          @click="emit('view', option)">
           {{ option === 'month' ? 'Месяц' : option === 'quarter' ? 'Квартал' : 'Год' }}
-        </BaseButton>
+        </button>
       </div>
-      <span v-if="view !== 'month'" class="calendar-period-title">{{ periodLabel }}</span>
+      <div class="calendar-period-nav" role="group" aria-label="Навигация по периодам">
+        <button type="button" aria-label="Предыдущий период" @click="shiftPeriod(-1)">
+          <ChevronLeft :size="18" aria-hidden="true" />
+        </button>
+        <strong>{{ periodLabel || month }}</strong>
+        <button type="button" aria-label="Следующий период" @click="shiftPeriod(1)">
+          <ChevronRight :size="18" aria-hidden="true" />
+        </button>
+      </div>
     </div>
     <template v-if="view !== 'month'">
       <p v-if="loading" role="status">Загрузка календаря за выбранный период…</p>
@@ -100,16 +132,24 @@ const week = ['Пн','Вт','Ср','Чт','Пт','Сб','Вс']
       <div class="calendar-period-grid" :class="{ 'calendar-period-grid--year': view === 'year' }">
         <article v-for="block in blocks" :key="block.month" class="calendar-period-month">
           <header>
-            <h3>{{ block.title }}</h3>
-            <BaseButton variant="secondary" @click="emit('selectMonth', block.month)">Открыть месяц</BaseButton>
+            <button type="button" class="calendar-month-toggle"
+              :aria-expanded="expandedMonths.includes(block.month)"
+              :aria-label="(expandedMonths.includes(block.month) ? 'Свернуть ' : 'Раскрыть ') + block.title"
+              @click="toggleMonth(block.month)">
+              <span><strong>{{ block.title }}</strong><small>{{ monthSummary(block) }}</small></span>
+              <ChevronDown :size="17" aria-hidden="true"
+                :class="{ 'calendar-month-chevron--up': expandedMonths.includes(block.month) }" />
+            </button>
           </header>
           <BaseNotice v-if="block.error" tone="error">{{ block.error }}</BaseNotice>
-          <div v-else class="calendar-period-days">
+          <div v-else-if="expandedMonths.includes(block.month)" class="calendar-period-days">
             <span v-for="name in week" :key="name" class="calendar-period-weekday">{{ name }}</span>
             <span v-for="gap in (block.days[0]?.weekday ?? 0)" :key="'empty-'+gap" aria-hidden="true"></span>
-            <span v-for="day in block.days" :key="day.date" :title="day.date + (day.label ? ' · '+day.label : '')"
+            <button v-for="day in block.days" :key="day.date" type="button"
+              :title="day.date + (day.label ? ' · '+day.label : '')"
               :aria-label="day.date + ': ' + (day.type === 'holiday' ? 'праздник' : day.type === 'weekend' ? 'выходной' : day.type === 'missing' ? 'не заполнено' : 'рабочий')"
-              class="calendar-period-day" :class="'calendar-period-day--'+day.type">{{ day.day }}</span>
+              class="calendar-period-day" :class="'calendar-period-day--'+day.type"
+              @click="emit('selectMonth', block.month)">{{ day.day }}</button>
           </div>
         </article>
       </div>
@@ -119,7 +159,22 @@ const week = ['Пн','Вт','Ср','Чт','Пт','Сб','Вс']
 <style scoped>
 .calendar-period-overview{display:grid;gap:16px}
 .calendar-period-toolbar{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
-.calendar-period-segments{display:flex;flex-wrap:wrap;gap:6px}
+.calendar-period-tabs{display:flex;gap:3px;align-items:center;flex-wrap:wrap;border-bottom:1px solid var(--color-stroke)}
+.calendar-period-tab{appearance:none;cursor:pointer;border:0;border-bottom:2px solid transparent;background:transparent;color:var(--color-muted);padding:9px 12px;font:inherit;font-size:13px}
+.calendar-period-tab--active{border-color:var(--color-primary);color:var(--color-primary);font-weight:600}
+.calendar-period-tab:focus-visible{outline:2px solid var(--color-primary);outline-offset:2px}
+.calendar-period-nav{display:flex;align-items:center;gap:8px}
+.calendar-period-nav strong{font-size:13px;min-width:110px;text-align:center}
+.calendar-period-nav button{display:grid;place-items:center;cursor:pointer;border:1px solid var(--color-stroke);background:var(--color-surface);color:var(--color-text);width:31px;height:31px;border-radius:7px}
+.calendar-period-nav button:hover{background:var(--color-soft)}
+.calendar-month-toggle{display:flex;align-items:center;justify-content:space-between;gap:8px;cursor:pointer;border:0;width:100%;text-align:start;background:transparent;padding:3px;color:var(--color-text)}
+.calendar-month-toggle span{display:grid;gap:4px}
+.calendar-month-toggle strong{text-transform:capitalize;font-size:13px;font-weight:600}
+.calendar-month-toggle small{font-size:11px;color:var(--color-muted)}
+.calendar-month-toggle svg{transition:transform .18s;flex:none}
+.calendar-month-chevron--up{transform:rotate(180deg)}
+.calendar-period-day{font:inherit;cursor:pointer;color:var(--color-text)}
+.calendar-period-day:hover{outline:2px solid var(--color-primary);outline-offset:1px}
 .calendar-period-title{font-weight:600}
 .calendar-period-stats{margin:0;color:var(--color-text-secondary);font-size:13px}
 .calendar-period-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,270px),1fr));gap:16px}
@@ -135,5 +190,5 @@ const week = ['Пн','Вт','Ср','Чт','Пт','Сб','Вс']
 .calendar-period-day--weekend{background:color-mix(in srgb,var(--color-error) 14%,var(--color-surface))}
 .calendar-period-day--holiday{background:color-mix(in srgb,var(--color-warning) 30%,var(--color-surface));font-weight:700}
 .calendar-period-day--missing{background:var(--color-surface);border-style:dashed}
-@media(max-width:600px){.calendar-period-grid{grid-template-columns:1fr}.calendar-period-month{padding:10px}}
+@media(max-width:600px){.calendar-period-toolbar{align-items:stretch}.calendar-period-nav{justify-content:space-between}.calendar-period-grid{grid-template-columns:1fr}.calendar-period-month{padding:10px}}
 </style>

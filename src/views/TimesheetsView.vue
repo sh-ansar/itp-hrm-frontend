@@ -12,6 +12,7 @@ import BulkTimesheetFillPanel from '../components/BulkTimesheetFillPanel.vue'
 import TimesheetPeriodReview from '../components/TimesheetPeriodReview.vue'
 import WorkScheduleEditor from '../components/WorkScheduleEditor.vue'
 import BaseDataTable from '../components/ui/BaseDataTable.vue'
+import BaseSelectionToolbar from '../components/ui/BaseSelectionToolbar.vue'
 import BaseStatusPill from '../components/ui/BaseStatusPill.vue'
 import BaseFormField from '../components/ui/BaseFormField.vue'
 import BaseLoadingState from '../components/ui/BaseLoadingState.vue'
@@ -25,6 +26,7 @@ import {
   getWorkSchedules,
   getWorktimeAbsences,
   getWorktimeTimesheet,
+  getEmployeeWorktimeMonth,
   type ProductionCalendarDay,
   type ProductionCalendarResponse,
   type WorkScheduleRow,
@@ -114,6 +116,68 @@ const calendarEditorOpen = ref(false)
 const calendarPeriodView = ref<'month' | 'quarter' | 'year'>('month')
 const timesheetEditorOpen = ref(false)
 const bulkTimesheetOpen = ref(false)
+const selectedTimesheetIds = ref<string[]>([])
+const timesheetPeriodView = ref<'month' | 'day'>('month')
+const selectedDay = ref(localTodayISO())
+type DayTotals = { planned_minutes:number|null;worked_minutes:number|null;absence_minutes:number|null;overtime_minutes:number|null }
+const dailyEntries = ref(new Map<string,DayTotals>())
+const dailyMonthlyCache = new Map<string, Map<string,DayTotals>>()
+const dailyLoading = ref(false)
+const dailyError = ref('')
+let dailyGeneration = 0
+async function loadDailyTimesheet() {
+  const current = ++dailyGeneration
+  dailyEntries.value = new Map()
+  dailyError.value = ''
+  if (timesheetPeriodView.value !== 'day' || !company.value || !productionTimesheet.value.length) return
+  if (selectedDay.value.slice(0,7) !== month.value) return
+  dailyLoading.value = true
+  const companyId = company.value
+  const monthKey = month.value
+  const requestedDay = selectedDay.value
+  try {
+    const fetched = new Map<string,DayTotals>()
+    for (let offset=0; offset<productionTimesheet.value.length; offset+=5) {
+      const batch = await Promise.allSettled(productionTimesheet.value.slice(offset,offset+5).map(async employee => {
+        const key = companyId + ':' + monthKey + ':' + employee.employee_id
+        let days = dailyMonthlyCache.get(key)
+        if (!days) {
+          const result = await getEmployeeWorktimeMonth(companyId,employee.employee_id,monthKey)
+          days = new Map(result.data.days.map(row => [row.date,{
+            planned_minutes:row.planned_minutes,worked_minutes:row.worked_minutes,
+            absence_minutes:row.absence_minutes,overtime_minutes:row.overtime_minutes,
+          }]))
+          dailyMonthlyCache.set(key,days)
+        }
+        return { employeeId:employee.employee_id, value:days.get(requestedDay) }
+      }))
+      if (current !== dailyGeneration || companyId !== company.value || monthKey !== month.value) return
+      for (const item of batch) {
+        if (item.status === 'fulfilled' && item.value.value) fetched.set(item.value.employeeId,item.value.value)
+        if (item.status === 'rejected') dailyError.value = 'Не все дневные данные доступны. Неподтверждённые записи отображаются пустыми.'
+      }
+    }
+    if (current === dailyGeneration) dailyEntries.value = fetched
+  } finally {
+    if (current === dailyGeneration) dailyLoading.value = false
+  }
+}
+const visibleTimesheetRows = computed<TimesheetViewRow[]>(() => {
+  if (timesheetPeriodView.value === 'month' || demoMode) return timesheetRows.value
+  return timesheetRows.value.map(row => {
+    const entry = dailyEntries.value.get(row.employee_id)
+    return {
+      ...row,
+      planned_hours: entry ? hoursFromMinutes(entry.planned_minutes) : null,
+      worked_hours: entry ? hoursFromMinutes(entry.worked_minutes) : null,
+      absence_hours: entry ? hoursFromMinutes(entry.absence_minutes) : null,
+      overtime_hours: entry ? hoursFromMinutes(entry.overtime_minutes) : null,
+      status: entry ? (entry.absence_minutes ? 'attention' : 'complete') : 'missing',
+    }
+  })
+})
+watch([timesheetPeriodView,selectedDay], () => { void loadDailyTimesheet() })
+
 const editingTimesheetEmployee = ref<TimesheetViewRow | null>(null)
 const scheduleEditorOpen = ref(false)
 const editingSchedule = ref<WorkScheduleRow | null>(null)
@@ -426,6 +490,7 @@ async function loadWorkspace() {
     if (timesheet.status === 'fulfilled') {
       productionTimesheet.value = timesheet.value.data
       productionTimesheetMeta.value = timesheet.value.meta
+      if (timesheetPeriodView.value === 'day') void loadDailyTimesheet()
     } else unavailable.push('табель')
 
     if (schedules.status === 'fulfilled') {
@@ -461,7 +526,12 @@ const canBulkFill = computed(() => !demoMode
   && periodEditable.value && !periodLocked.value)
 
 function bulkTimesheetSaved() {
+  dailyMonthlyCache.clear()
   void loadWorkspace()
+}
+function selectTimesheetView(value: 'month' | 'day') {
+  timesheetPeriodView.value = value
+  selectedTimesheetIds.value = []
 }
 
 function openTimesheetEditor(row: TimesheetViewRow) {
@@ -476,6 +546,7 @@ function closeTimesheetEditor() {
 }
 
 function timesheetUpdated() {
+  dailyMonthlyCache.clear()
   void loadWorkspace()
 }
 
@@ -499,6 +570,9 @@ function calendarUpdated() {
 }
 watch([company, month], () => {
   periodStatus.value = null
+  selectedTimesheetIds.value = []
+  dailyMonthlyCache.clear()
+  selectedDay.value = month.value + '-01'
   periodEditable.value = false
   calendarEditorOpen.value = false
   bulkTimesheetOpen.value = false
@@ -569,7 +643,7 @@ onMounted(loadCompanies)
 
       <TimesheetPeriodReview v-if="!demoMode && activeTab === 'timesheet' && productionTimesheetMeta?.worktime_writes_enabled"
         :company-id="company" :month="month" @status="periodStatus = $event" @editable="periodEditable = $event" />
-      <BaseCard v-if="activeTab === 'timesheet'" class="worktime-register">
+      <section v-if="activeTab === 'timesheet'" class="worktime-register worktime-register--flat">
         <div class="section-heading">
           <div>
             <h2>Табель учёта рабочего времени</h2>
@@ -578,12 +652,27 @@ onMounted(loadCompanies)
           <span>{{ employeeCount }} сотрудников</span>
         </div>
 
+        <div class="timesheet-table-toolbar">
+          <div class="timesheet-period-tabs" role="tablist" aria-label="Режим просмотра табеля">
+            <button type="button" role="tab" :aria-selected="timesheetPeriodView === 'month'"
+              :class="{ active:timesheetPeriodView==='month' }" @click="selectTimesheetView('month')">Месяц</button>
+            <button type="button" role="tab" :aria-selected="timesheetPeriodView === 'day'"
+              :class="{ active:timesheetPeriodView==='day' }" @click="selectTimesheetView('day')">День</button>
+          </div>
+          <BaseFormField v-if="timesheetPeriodView === 'day'" v-model="selectedDay" label="Дата" type="date"
+            :min="month + '-01'" :max="monthEnd(month)" />
+          <span v-if="dailyLoading" role="status">Загрузка записей дня…</span>
+          <span v-if="dailyError" role="status">{{ dailyError }}</span>
+        </div>
+        <BaseSelectionToolbar :count="selectedTimesheetIds.length" label="Выбрано сотрудников"
+          clear-label="Снять выделение" @clear="selectedTimesheetIds = []" />
         <div v-if="canBulkFill" class="worktime-bulk-toolbar">
           <BaseButton variant="secondary" type="button" @click="bulkTimesheetOpen = true">Массовое заполнение табеля</BaseButton>
           <span>С предпросмотром, без перезаписи уже введённых явок, отпусков и неявок</span>
         </div>
         <div class="worktime-desktop">
-          <BaseDataTable :rows="timesheetRows" :columns="timesheetColumns" row-key="employee_id"
+          <BaseDataTable v-model:selected-keys="selectedTimesheetIds" selectable
+            :rows="visibleTimesheetRows" :columns="timesheetColumns" row-key="employee_id"
             :loading="loading" caption="Табель учёта рабочего времени"
             empty-title="Табельных данных нет" empty-description="Для выбранного периода данные не найдены.">
             <template #cell-employee="{ row }">
@@ -614,7 +703,7 @@ onMounted(loadCompanies)
         </div>
 
         <div class="worktime-mobile">
-          <article v-for="row in timesheetRows" :key="row.employee_id" class="worktime-card">
+          <article v-for="row in visibleTimesheetRows" :key="row.employee_id" class="worktime-card">
             <header>
               <div>
                 <RouterLink :to="{ name:'employee-detail', params:{ company, employee:row.employee_id }, query:{ tab:'schedule' } }">
@@ -639,7 +728,7 @@ onMounted(loadCompanies)
             </BaseButton>
           </article>
         </div>
-      </BaseCard>
+      </section>
 
       <BaseCard v-else-if="activeTab === 'schedules'" class="worktime-register">
         <div class="section-heading">
@@ -689,7 +778,7 @@ onMounted(loadCompanies)
             <h2>Производственный календарь</h2>
             <p>{{ monthLabel }} · рабочие и выходные дни периода.</p>
           </div>
-          <BaseButton v-if="calendarPeriodView === 'month' && !demoMode && productionCalendarMeta?.can_edit_calendar" variant="secondary" :disabled="loading" @click="calendarEditorOpen = true">Редактировать календарь</BaseButton>
+          <BaseButton v-if="!demoMode && productionCalendarMeta?.can_edit_calendar" variant="secondary" :disabled="loading || calendarPeriodView !== 'month'" @click="calendarEditorOpen = true">Редактировать календарь</BaseButton>
           <span v-if="calendarPeriodView === 'month'">
             {{ workdayCount }} рабочих · {{ weekendCount }} выходных · {{ holidayCount }} праздничных
             <template v-if="missingCalendarCount"> · {{ missingCalendarCount }} без данных</template>
@@ -697,7 +786,7 @@ onMounted(loadCompanies)
         </div>
         <ProductionCalendarPeriodOverview :company-id="company" :month="month" :view="calendarPeriodView"
           :demo-mode="demoMode" :active="activeTab === 'calendar'"
-          @view="calendarPeriodView = $event" @select-month="month = $event; calendarPeriodView = 'month'" />
+          @view="calendarPeriodView = $event" @navigate="month = $event" @select-month="month = $event; calendarPeriodView = 'month'" />
         <BaseNotice v-if="calendarPeriodView === 'month' && !demoMode && productionCalendarMeta && !productionCalendarMeta.calendar_complete" tone="warning">
           Календарь заполнен частично: {{ productionCalendarMeta.recorded_days }} из {{ productionCalendarMeta.expected_days }} дней.
           Незагруженные даты не классифицируются автоматически.
@@ -783,7 +872,9 @@ onMounted(loadCompanies)
   <ProductionCalendarEditor :open="calendarEditorOpen" :company-id="company" :month="month"
     :days="productionCalendar" @close="calendarEditorOpen = false" @saved="calendarUpdated" @refresh="calendarUpdated" />
   <BulkTimesheetFillPanel :open="bulkTimesheetOpen" :company-id="company" :month="month"
-    :employees="timesheetRows.map(row => ({ employee_id: row.employee_id, full_name: row.full_name, department: row.department }))"
+    :initial-date="timesheetPeriodView === 'day' ? selectedDay : undefined"
+    :employees="timesheetRows.filter(row => !selectedTimesheetIds.length || selectedTimesheetIds.includes(row.employee_id))
+      .map(row => ({ employee_id: row.employee_id, full_name: row.full_name, department: row.department }))"
     @close="bulkTimesheetOpen = false" @saved="bulkTimesheetSaved" />
   <TimesheetEntryEditor v-if="editingTimesheetEmployee"
     :open="timesheetEditorOpen"
@@ -791,6 +882,7 @@ onMounted(loadCompanies)
     :employee-id="editingTimesheetEmployee.employee_id"
     :employee-name="editingTimesheetEmployee.full_name"
     :month="month"
+    :focus-date="timesheetPeriodView === 'day' ? selectedDay : undefined"
     @close="closeTimesheetEditor"
     @saved="timesheetUpdated" />
   <WorkScheduleEditor
@@ -802,6 +894,13 @@ onMounted(loadCompanies)
 </template>
 
 <style scoped>
+.worktime-register--flat{border:0;border-radius:0;padding:0;background:transparent;box-shadow:none;min-width:0}
+.timesheet-table-toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 12px}
+.timesheet-table-toolbar>span{font-size:12px;color:var(--color-muted)}
+.timesheet-period-tabs{display:flex;align-items:center;gap:3px;border-bottom:1px solid var(--color-stroke)}
+.timesheet-period-tabs button{border:0;border-bottom:2px solid transparent;background:transparent;color:var(--color-muted);padding:9px 14px;cursor:pointer;font:inherit;font-size:13px}
+.timesheet-period-tabs button.active{color:var(--color-primary);font-weight:600;border-color:var(--color-primary)}
+
 .worktime-bulk-toolbar{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin:0 0 14px}
 .worktime-bulk-toolbar span{font-size:12px;color:var(--color-muted)}
 .timesheets-page{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;min-width:0;max-width:100%;overflow-x:clip}

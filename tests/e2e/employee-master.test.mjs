@@ -48,14 +48,14 @@ test('HR creates and edits an employee master record from the redesigned UI', as
     await page.locator('.employee-page-heading h1').filter({ hasText: 'Новый Сотрудник Тестовый' }).waitFor()
 
     await page.getByRole('button', { name: 'Изменить карточку' }).click()
-    const editDialog = page.getByRole('dialog', { name: 'Основные данные сотрудника' })
+    const editDialog = page.locator('#employee-card-edit-form')
     await editDialog.waitFor()
     assert.equal(await editDialog.getByLabel('Табельный номер').inputValue(), 'E2E-NEW-01')
     assert.equal(await editDialog.getByLabel('Дата рождения').inputValue(), '1990-06-01')
     assert.equal(await editDialog.getByLabel('Email', { exact: true }).inputValue(), 'synthetic-master@example.test')
     assert.equal(await editDialog.getByLabel('Бригада', { exact: true }).inputValue(), 'Synthetic Team')
     await editDialog.getByLabel('Фамилия').fill('Обновлённый')
-    await editDialog.getByRole('button', { name: 'Сохранить карточку' }).click()
+    await page.getByRole('button', { name: 'Сохранить изменения' }).click()
 
     await page.locator('.employee-page-heading h1').filter({ hasText: 'Обновлённый Сотрудник Тестовый' }).waitFor()
 
@@ -64,7 +64,7 @@ test('HR creates and edits an employee master record from the redesigned UI', as
     await editDialog.waitFor()
     assert.equal(await editDialog.getByLabel('Телефон', { exact: true }).inputValue(), '+77770000000')
     await editDialog.getByLabel('Email', { exact: true }).fill('')
-    await editDialog.getByRole('button', { name: 'Сохранить карточку' }).click()
+    await page.getByRole('button', { name: 'Сохранить изменения' }).click()
     await editDialog.waitFor({ state: 'hidden' })
     await page.getByRole('button', { name: 'История изменений', exact: true }).click()
     await page.getByRole('cell', { name: 'Создана карточка сотрудника', exact: true }).waitFor()
@@ -74,7 +74,7 @@ test('HR creates and edits an employee master record from the redesigned UI', as
     await editDialog.waitFor()
     assert.equal(await editDialog.getByLabel('Email', { exact: true }).inputValue(), '')
     assert.equal(await editDialog.getByLabel('Телефон', { exact: true }).inputValue(), '+77770000000')
-    await editDialog.getByRole('button', { name: 'Отмена', exact: true }).click()
+    await page.getByRole('button', { name: 'Отменить', exact: true }).click()
 
     await page.goto('/employees')
     await page.getByRole('heading', { name: 'Реестр сотрудников' }).waitFor()

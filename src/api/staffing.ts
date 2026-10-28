@@ -31,6 +31,7 @@ export interface StaffingPlanListResponse {
   data: StaffingPlanRecord[]
   meta: {
     staffing_writes_enabled: boolean
+    clone_supported?: boolean
     current_page: number
     last_page: number
     per_page: number
@@ -51,6 +52,8 @@ export interface StaffingPlanPayload {
   name: string
   valid_from: string
   valid_to: string | null
+  source_plan_id?: string | null
+  source_plan_revision?: number | null
 }
 
 export interface StaffingLinePayload {

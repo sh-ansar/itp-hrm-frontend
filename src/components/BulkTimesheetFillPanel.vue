@@ -7,7 +7,7 @@ import BaseNotice from './ui/BaseNotice.vue'
 import { fillMissingTimesheetBulk, type BulkTimesheetFillResponse } from '../api/worktime'
 
 type Employee = { employee_id: string; full_name: string; department: string }
-const props = defineProps<{ open: boolean; companyId: string; month: string; employees: Employee[] }>()
+const props = defineProps<{ open: boolean; companyId: string; month: string; employees: Employee[]; initialDate?: string }>()
 const emit = defineEmits<{ close: []; saved: [] }>()
 const selected = ref<string[]>([])
 const search = ref('')
@@ -46,8 +46,8 @@ watch(() => [props.open, props.companyId, props.month], () => {
   if (!props.open) return
   selected.value = []
   search.value = ''
-  startDate.value = monthStart.value
-  endDate.value = monthEnd.value
+  startDate.value = props.initialDate?.startsWith(props.month + '-') ? props.initialDate : monthStart.value
+  endDate.value = props.initialDate?.startsWith(props.month + '-') ? props.initialDate : monthEnd.value
   preview.value = null
   created.value = null
   previewSignature.value = ''

@@ -32,6 +32,31 @@ const emit = defineEmits<{ close: []; saved: []; refresh: [] }>()
 const { t } = useWorkforceI18n()
 const drafts = ref<DraftDay[]>([])
 const selectedDate = ref('')
+const multiMode = ref(false)
+const selectedDates = ref<string[]>([])
+function clickDay(date: string) {
+  selectedDate.value = date
+  if (!multiMode.value) return
+  selectedDates.value = selectedDates.value.includes(date)
+    ? selectedDates.value.filter(value => value !== date)
+    : [...selectedDates.value, date]
+}
+function selectAllDisplayed() {
+  selectedDates.value = drafts.value.map(day => day.date)
+}
+function clearSelection() { selectedDates.value = [] }
+function applySelected() {
+  if (saving.value || !selectedDates.value.length
+    || (rangeIsWorking.value && (!Number.isInteger(Number(rangeMinutes.value))
+      || Number(rangeMinutes.value) < 1 || Number(rangeMinutes.value) > 1440))) return
+  for (const day of drafts.value) {
+    if (!selectedDates.value.includes(day.date)) continue
+    day.day_type = rangeType.value
+    day.planned_minutes = rangeIsWorking.value ? Number(rangeMinutes.value) : 0
+    day.label = rangeLabel.value.trim()
+  }
+  error.value = ''
+}
 const rangeFrom = ref('')
 const rangeTo = ref('')
 const rangeType = ref<ProductionCalendarDayType>('workday')
@@ -64,6 +89,8 @@ function createDrafts(): DraftDay[] {
 function resetDrafts() {
   drafts.value = createDrafts()
   selectedDate.value = drafts.value.find(day => day.day_type === 'missing')?.date ?? drafts.value[0]?.date ?? ''
+  multiMode.value = false
+  selectedDates.value = []
   rangeFrom.value = drafts.value[0]?.date ?? ''
   rangeTo.value = drafts.value.at(-1)?.date ?? ''
   rangeLabel.value = ''
@@ -205,7 +232,21 @@ async function save() {
         </div>
       </details>
 
-      <p class="calendar-editor-choose">{{ t('clickDay') }}</p>
+      <div class="calendar-selection-toolbar">
+        <p class="calendar-editor-choose">{{ multiMode ? 'Выберите несколько дней, затем тип и примените' : t('clickDay') }}</p>
+        <BaseButton variant="secondary" :aria-pressed="multiMode"
+          @click="multiMode = !multiMode; clearSelection()">
+          {{ multiMode ? 'Один день' : 'Выбрать несколько дат' }}
+        </BaseButton>
+      </div>
+      <div v-if="multiMode" class="calendar-multi-actions">
+        <span>Выбрано дат: <strong>{{ selectedDates.length }}</strong></span>
+        <BaseButton variant="secondary" :disabled="saving" @click="selectAllDisplayed">Все даты месяца</BaseButton>
+        <BaseButton variant="secondary" :disabled="saving || !selectedDates.length" @click="clearSelection">Снять выделение</BaseButton>
+        <BaseSelectField v-model="rangeType" label="Тип для выбранных" :options="rangeOptions" :disabled="saving" />
+        <BaseFormField v-model="rangeMinutes" label="Минуты" type="number" :disabled="saving || !rangeIsWorking" />
+        <BaseButton :disabled="saving || !selectedDates.length" @click="applySelected">Применить к выбранным</BaseButton>
+      </div>
       <div class="calendar-editor-legend" role="list" aria-label="Обозначения дней">
         <span role="listitem"><i class="editor-legend-key editor-legend-key--workday" aria-hidden="true" />{{ t('workday') }}</span>
         <span role="listitem"><i class="editor-legend-key editor-legend-key--weekend" aria-hidden="true" />{{ t('weekend') }}</span>
@@ -215,7 +256,7 @@ async function save() {
       <div class="calendar-editor-days" role="group" :aria-label="t('selected')">
         <button v-for="day in drafts" :key="day.date" type="button" class="calendar-editor-day"
           :class="{
-            selected: day.date === selectedDate,
+            selected: multiMode ? selectedDates.includes(day.date) : day.date === selectedDate,
             dirty: changed(day),
             workday: day.day_type === 'workday' || day.day_type === 'shortened',
             shortened: day.day_type === 'shortened',
@@ -223,15 +264,15 @@ async function save() {
             holiday: day.day_type === 'holiday',
             missing: day.day_type === 'missing',
           }"
-          :aria-pressed="day.date === selectedDate"
+          :aria-pressed="multiMode ? selectedDates.includes(day.date) : day.date === selectedDate"
           :aria-label="day.date + ' – ' + (day.day_type === 'missing' ? t('missing') : t(day.day_type))"
-          @click="selectedDate = day.date">
+          @click="clickDay(day.date)">
           <strong>{{ Number(day.date.slice(8)) }}</strong>
           <small>{{ day.day_type === 'missing' ? '—' : t(day.day_type) }}</small>
         </button>
       </div>
 
-      <div v-if="selectedDay" class="calendar-editor-details">
+      <div v-if="selectedDay && !multiMode" class="calendar-editor-details">
         <h3>{{ t('selected') }}: {{ selectedDay.date }}</h3>
         <label class="calendar-editor-field">
           <span>{{ t('dayType') }}</span>
@@ -266,6 +307,10 @@ async function save() {
 </template>
 
 <style scoped>
+.calendar-selection-toolbar{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.calendar-multi-actions{display:flex;gap:8px;align-items:end;flex-wrap:wrap}
+.calendar-multi-actions>span{font-size:12px;align-self:center}
+.calendar-multi-actions :deep(.base-field){max-width:210px}
 .calendar-editor-bulk{border:1px solid var(--color-stroke);border-radius:var(--radius-sm);padding:12px}
 .calendar-editor-bulk summary{cursor:pointer;font-weight:600;color:var(--color-text)}
 .calendar-editor-bulk-fields{display:grid;gap:12px;margin-top:12px;min-width:0}

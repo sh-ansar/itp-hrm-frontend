@@ -2,6 +2,7 @@
 import { onBeforeUnmount, ref, useId, watch } from 'vue'
 import BaseButton from './ui/BaseButton.vue'
 import BaseNotice from './ui/BaseNotice.vue'
+import BaseDialog from './ui/BaseDialog.vue'
 import { readEmployeePhoto, removeEmployeePhoto, uploadEmployeePhoto, validateEmployeePhoto } from '../api/employeePhoto'
 
 const props = defineProps<{ companyId: string; employeeId: string; revision: number; hasPhoto: boolean; canEdit: boolean; name: string; initials: string }>()
@@ -11,6 +12,7 @@ const imageUrl = ref('')
 const imageLoading = ref(false)
 const saving = ref(false)
 const dragging = ref(false)
+const photoViewerOpen = ref(false)
 const error = ref('')
 const input = ref<HTMLInputElement | null>(null)
 let request: AbortController | null = null
@@ -77,10 +79,14 @@ async function remove() {
     @dragover.prevent="dragging = canEdit && !saving" @dragleave="dragging = false" @drop.prevent="drop">
     <p class="photo-caption">Фото сотрудника</p>
     <div class="photo-row">
-      <div class="avatar" :aria-busy="imageLoading || saving">
+      <button type="button" class="avatar photo-preview-trigger"
+        :disabled="!imageUrl || imageLoading" :aria-busy="imageLoading || saving"
+        :title="imageUrl ? 'Посмотреть фотографию' : undefined"
+        :aria-label="imageUrl ? 'Посмотреть фотографию сотрудника' : 'Фото сотрудника не загружено'"
+        @click="photoViewerOpen = true">
         <img v-if="imageUrl" :src="imageUrl" :alt="'Фото: ' + name" />
         <span v-else :aria-label="imageLoading ? 'Загрузка фото' : 'Фото сотрудника не загружено'">{{ imageLoading ? '…' : initials }}</span>
-      </div>
+      </button>
       <div class="photo-actions">
         <template v-if="canEdit">
           <input :id="inputId" ref="input" class="photo-input" type="file" accept="image/jpeg,image/png,.jpg,.jpeg,.png"
@@ -93,6 +99,10 @@ async function remove() {
       </div>
     </div>
     <BaseNotice v-if="error" tone="error">{{ error }}</BaseNotice>
+    <BaseDialog :open="photoViewerOpen && !!imageUrl" :title="'Фото сотрудника: ' + name"
+      @close="photoViewerOpen = false">
+      <img v-if="imageUrl" :src="imageUrl" :alt="'Фото сотрудника: ' + name" class="photo-viewer" />
+    </BaseDialog>
   </div>
 </template>
 
@@ -115,6 +125,10 @@ async function remove() {
   color:var(--color-primary);font-size:21px;font-weight:600;
 }
 .avatar img{width:100%;height:100%;object-fit:cover;object-position:center}
+.photo-preview-trigger{padding:0;cursor:zoom-in;appearance:none;font:inherit}
+.photo-preview-trigger:disabled{cursor:default}
+.photo-preview-trigger:focus-visible{outline:2px solid var(--color-primary);outline-offset:3px}
+.photo-viewer{display:block;max-width:100%;max-height:min(78dvh,690px);width:auto;height:auto;object-fit:contain;margin:0 auto;border-radius:10px}
 .photo-actions{display:grid;gap:7px;min-width:0;flex:1;justify-items:start}
 .photo-actions p{margin:0;color:var(--color-muted);font-size:11px;line-height:16px}
 .photo-actions :deep(button){min-height:33px;padding:6px 10px;font-size:12px}

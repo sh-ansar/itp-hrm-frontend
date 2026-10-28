@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { publicAsset } from '../utils/publicAsset'
 import { useWorkspaceI18n } from '../composables/useWorkspaceI18n'
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onMounted, onBeforeUnmount, ref, watch } from 'vue'
 import { ChevronDown, LockKeyhole, Pencil, Plus } from 'lucide-vue-next'
-import { useRoute } from 'vue-router'
+import { onBeforeRouteLeave, useRoute } from 'vue-router'
 import EmployeeProfileSection from '../components/EmployeeProfileSection.vue'
 import EmployeePrivateProfileEditor from '../components/EmployeePrivateProfileEditor.vue'
 import EmployeePrivateRecordsManager from '../components/EmployeePrivateRecordsManager.vue'
@@ -27,6 +27,9 @@ import BaseDialog from '../components/ui/BaseDialog.vue'
 import BaseViewTabs from '../components/ui/BaseViewTabs.vue'
 import { getEmployee, listEmployeeContracts, type EmployeeAssignment, type EmployeeContract, type EmployeeDetail, type EmployeeIdentityDocument, type EmployeeReferenceProfile, type EmployeePrivateSection, type EmployeePrivateRecordSection, type ProfileEditRow, type ProfileSection } from '../api/personnel'
 import { localTodayISO } from '../utils/localDate'
+import { unionTenureDays, formatTenure, type TenurePeriod } from '../utils/employeeTenure'
+import { listEmployees } from '../api/personnel'
+import { selectDepartmentLeader } from '../utils/departmentLeader'
 import { useUiFormatters } from '../composables/useUiFormatters'
 
 const { tr } = useWorkspaceI18n()
@@ -44,7 +47,43 @@ const error = ref('')
 const editing = ref<{ section: ProfileSection; record: ProfileEditRow } | null>(null)
 const assignmentEditing = ref<EmployeeAssignment | null>(null)
 const assignmentTransitioning = ref<EmployeeAssignment | null>(null)
-const identityEditOpen = ref(false)
+const cardEditing = ref(false)
+const cardDirty = ref(false)
+const cardSaving = ref(false)
+function openCardEdit() {
+  if (!profile.value?.meta.employee_writes_enabled) return
+  cardDirty.value = false
+  cardEditing.value = true
+}
+function confirmDiscard(): boolean {
+  return !cardEditing.value || !cardDirty.value
+    || window.confirm('Есть несохранённые изменения. Выйти без сохранения?')
+}
+function cancelCardEdit() {
+  if (cardSaving.value || !confirmDiscard()) return
+  cardEditing.value = false
+  cardDirty.value = false
+}
+function cardSaved() {
+  cardDirty.value = false
+  cardEditing.value = false
+  void load()
+}
+function changeSection(value: string) {
+  if (!confirmDiscard()) return
+  cardDirty.value = false
+  cardEditing.value = false
+  activeSection.value = value
+}
+function warnUnload(event: BeforeUnloadEvent) {
+  if (!cardEditing.value || !cardDirty.value) return
+  event.preventDefault()
+  event.returnValue = ''
+}
+window.addEventListener('beforeunload', warnUnload)
+onBeforeUnmount(() => window.removeEventListener('beforeunload', warnUnload))
+onBeforeRouteLeave(() => confirmDiscard())
+
 const privateEditorSection = ref<EmployeePrivateSection | null>(null)
 const privateRecordsSection = ref<EmployeePrivateRecordSection | null>(null)
 const focusedIdentityId = ref<string | null>(null)
@@ -70,6 +109,8 @@ function closePrivateRecords() {
 const assignmentCreateOpen = ref(false)
 const profileCreateOpen = ref(false)
 const contracts = ref<EmployeeContract[]>([])
+const staffingManagerName = ref<string | null>(null)
+const staffingManagerPosition = ref<string | null>(null)
 const contractWritesEnabled = ref(false)
 const contractEditorOpen = ref(false)
 const editingContract = ref<EmployeeContract | null>(null)
@@ -193,7 +234,7 @@ const editableFieldGroups = computed<EmployeeFieldEditGroup[]>(() => [
 ])
 function openFieldEditor(group: EmployeeFieldEditGroup) {
   if (!editableFieldGroups.value.includes(group)) return
-  if (group === 'employee') identityEditOpen.value = true
+  if (group === 'employee') openCardEdit()
   else if (group === 'private-personal') privateEditorSection.value = 'personal'
   else if (group === 'private-military') privateEditorSection.value = 'military'
   else if (group === 'identity') privateRecordsSection.value = 'identity'
@@ -317,7 +358,9 @@ const workplaceFields = computed<EmployeeDisplayField[]>(() => [
 const teamFields = computed<EmployeeDisplayField[]>(() => [
   { label: 'Бригада / команда', value: reference.value?.organization?.brigade ?? profile.value?.data.work_team, editGroup: reference.value?.organization?.brigade ? undefined : 'employee' },
   { label: 'Бригадир', value: reference.value?.organization?.brigadier },
-  { label: 'Руководитель подразделения', value: reference.value?.organization?.department_manager },
+  { label: 'Руководитель по штатной должности', value: staffingManagerName.value
+    ?? reference.value?.organization?.department_manager },
+  { label: 'Должность руководителя', value: staffingManagerPosition.value },
   { label: 'Непосредственный руководитель', value: profile.value?.data.supervisor_name, wide: true, editGroup: 'employee' },
   { label: 'Статус закрепления', value: reference.value?.organization?.assignment_status },
   { label: 'Дата закрепления', value: formatDate(reference.value?.organization?.assignment_date) },
@@ -343,12 +386,38 @@ const contractFields = computed<EmployeeDisplayField[]>(() => [
   { label: 'Основание', value: currentContract.value?.basis_reference ?? reference.value?.employment.hire_basis ?? currentAssignment.value?.basis_reference ?? plannedAssignment.value?.basis_reference, wide: true, editGroup: 'contract' },
   { label: 'Вид занятости', value: currentContract.value ? employmentTypeLabel(currentContract.value.employment_type) : reference.value?.employment.employment_type, editGroup: 'contract' },
 ])
+const assignmentPeriods = computed(() => (profile.value?.assignments ?? []).map(row => ({
+  start: row.valid_from, end: row.valid_to,
+})))
+const contractPeriods = computed(() => contracts.value.map(row => ({ start: row.valid_from, end: row.valid_to })))
+const companyPeriods = computed<TenurePeriod[]>(() => contractPeriods.value.length
+  ? [...contractPeriods.value, ...assignmentPeriods.value]
+  : assignmentPeriods.value)
+const historicalExternalPeriods = computed<TenurePeriod[]>(() => (profile.value?.experience ?? [])
+  .filter(row => row.experience_type.trim().toLocaleLowerCase('ru-RU') !== 'special')
+  .map(row => ({ start: row.started_on, end: row.ended_on })))
+const documentedCompanyTenure = computed(() => unionTenureDays(companyPeriods.value, today))
+const documentedTotalTenure = computed(() =>
+  unionTenureDays([...companyPeriods.value,...historicalExternalPeriods.value], today))
+const currentPositionTenure = computed(() => unionTenureDays(
+  (profile.value?.assignments ?? []).filter(row =>
+    row.position_id === currentAssignment.value?.position_id)
+    .map(row => ({ start: row.valid_from, end: row.valid_to })), today))
+const currentDepartmentTenure = computed(() => unionTenureDays(
+  (profile.value?.assignments ?? []).filter(row =>
+    row.department_id === currentAssignment.value?.department_id)
+    .map(row => ({ start: row.valid_from, end: row.valid_to })), today))
 const seniorityFields = computed<EmployeeDisplayField[]>(() => [
-  { label: 'Общий стаж', value: reference.value?.employment.total_seniority },
-  { label: 'Стаж в компании', value: reference.value?.employment.company_seniority },
-  { label: 'Стаж в текущей должности', value: reference.value?.employment.position_seniority },
-  { label: 'Стаж на объекте', value: reference.value?.employment.site_seniority },
-  { label: 'Специальный стаж', value: reference.value?.employment.special_seniority },
+  { label: 'Общий стаж (по внесённой истории)', value: profile.value?.meta.assignments_truncated
+    ? 'История неполная' : formatTenure(documentedTotalTenure.value) },
+  { label: 'Стаж в компании', value: profile.value?.meta.assignments_truncated
+    ? 'История неполная' : formatTenure(documentedCompanyTenure.value) },
+  { label: 'Стаж в текущей должности', value: profile.value?.meta.assignments_truncated
+    ? 'История неполная' : formatTenure(currentPositionTenure.value) },
+  { label: 'Стаж в подразделении', value: profile.value?.meta.assignments_truncated
+    ? 'История неполная' : formatTenure(currentDepartmentTenure.value) },
+  { label: 'Стаж на объекте', value: reference.value?.employment.site_seniority ?? 'Нет истории объектов' },
+  { label: 'Специальный стаж', value: reference.value?.employment.special_seniority ?? 'Нет подтверждённых периодов' },
 ])
 const workingConditionFields = computed<EmployeeDisplayField[]>(() => [
   { label: 'Условия труда', value: reference.value?.working_conditions?.condition_type },
@@ -570,7 +639,8 @@ async function load() {
   editing.value = null
   assignmentEditing.value = null
   assignmentTransitioning.value = null
-  identityEditOpen.value = false
+  cardEditing.value = false
+  cardDirty.value = false
   privateEditorSection.value = null
   privateRecordsSection.value = null
   assignmentCreateOpen.value = false
@@ -578,6 +648,8 @@ async function load() {
   contractEditorOpen.value = false
   editingContract.value = null
   contracts.value = []
+  staffingManagerName.value = null
+  staffingManagerPosition.value = null
   contractWritesEnabled.value = false
   error.value = ''
   profile.value = null
@@ -596,6 +668,9 @@ async function load() {
       profile.value = result
       contracts.value = contractResult?.data ?? []
       contractWritesEnabled.value = contractResult?.meta.writes_enabled ?? false
+      const department = result.assignments.find(row =>
+        row.valid_from <= today && (row.valid_to === null || row.valid_to >= today))
+      if (department) void loadDepartmentManager(company, department.department_id, department.department_name, current)
       // Keep the tab across refreshes and honor older deep-link names.
       activeSection.value = normalizeProfileTab(route.query.tab ?? activeSection.value)
     }
@@ -603,6 +678,27 @@ async function load() {
     if (current === generation) error.value = cause instanceof Error ? cause.message : 'Не удалось открыть карточку сотрудника'
   } finally {
     if (current === generation) loading.value = false
+  }
+}
+
+async function loadDepartmentManager(company: string, departmentId: string, name: string, current: number) {
+  try {
+    // Current staffing occupants, not a textual supervisor field or a demo placeholder.
+    const first = await listEmployees(company, 1, '', 'active', 100)
+    if (current !== generation) return
+    const members = first.data.filter(row => row.current_department_id === departmentId)
+      .map(row => ({
+        id: row.id,
+        name: [row.last_name, row.first_name, row.middle_name].filter(Boolean).join(' '),
+        position: row.current_position_name ?? null,
+      }))
+    if (first.meta.last_page > 1) return // partial scope cannot prove uniqueness
+    const leader = selectDepartmentLeader(name, members)
+    if (!leader || current !== generation) return
+    staffingManagerName.value = leader.name
+    staffingManagerPosition.value = leader.position
+  } catch {
+    // No authority for a leader guess. The viewer still sees their own assignment.
   }
 }
 
@@ -646,22 +742,48 @@ onMounted(load)
         </RouterLink>
         <h1>{{ displayName }}</h1>
       </div>
-      <BaseButton v-if="profile?.meta.employee_writes_enabled" variant="secondary" @click="identityEditOpen = true">
-        <img :src="publicAsset('prototype-icons/Edit.svg')" class="employee-edit-icon" alt="" /> {{ tr('Изменить карточку') }}</BaseButton>
+      <div v-if="profile?.meta.employee_writes_enabled" class="employee-card-toolbar">
+        <template v-if="cardEditing">
+          <BaseButton variant="secondary" :disabled="cardSaving" @click="cancelCardEdit">{{ tr('Отменить') }}</BaseButton>
+          <BaseButton type="submit" form="employee-card-edit-form" :disabled="cardSaving">
+            {{ cardSaving ? tr('Сохранение…') : tr('Сохранить изменения') }}
+          </BaseButton>
+        </template>
+        <BaseButton v-else variant="secondary" @click="openCardEdit">
+          <Pencil :size="15" aria-hidden="true" /> {{ tr('Изменить карточку') }}
+        </BaseButton>
+      </div>
     </div>
 
     <BaseNotice v-if="error" tone="error">{{ error }}</BaseNotice>
     <BaseLoadingState v-if="loading" :label="tr('Загрузка карточки сотрудника')" />
 
     <template v-else-if="profile">
-      <div class="employee-identity">
+      <div v-if="cardEditing" class="employee-inline-editor" role="region" aria-label="Редактирование карточки сотрудника">
+        <div class="employee-inline-editor-heading">
+          <strong>Изменение личных и рабочих данных</strong>
+          <span>Измените нужные поля и фотографию. Сохранение — одной кнопкой сверху.</span>
+        </div>
+        <EmployeeRecordForm :key="profile.data.id + ':' + profile.data.revision"
+          form-id="employee-card-edit-form" :show-actions="false" :manage-photo="true"
+          :company-id="String(route.params.company)" :edit="profile.data"
+          @dirty="cardDirty = $event" @saving="cardSaving = $event"
+          @saved="cardSaved" @cancelled="cancelCardEdit" />
+      </div>
+      <div v-else class="employee-identity">
         <div class="identity-photo-section">
+          <div class="employee-view-photo-wrap">
           <EmployeePhoto v-if="profile.meta.extended_sections_visible"
             :company-id="String(route.params.company)" :employee-id="profile.data.id"
             :revision="profile.data.revision" :has-photo="!!profile.data.has_photo"
             :can-edit="false" :name="displayName" :initials="initials" @saved="load" />
           <div v-else class="avatar" :aria-label="tr('Карточка сотрудника')">{{ initials }}</div>
-
+          <BaseButton v-if="profile.meta.employee_writes_enabled" icon-only variant="secondary"
+            class="employee-view-photo-pencil" title="Изменить фотографию"
+            aria-label="Изменить фотографию" @click="openCardEdit">
+            <Pencil :size="15" aria-hidden="true" />
+          </BaseButton>
+          </div>
         </div>
         <div class="identity-fields">
           <div class="identity-fields-top">
@@ -713,7 +835,8 @@ onMounted(load)
         </div>
       </div>
 
-      <BaseViewTabs v-model="activeSection" :options="sectionTabs" :label="tr('Разделы карточки сотрудника')" />
+      <BaseViewTabs :model-value="activeSection" :options="sectionTabs"
+        :label="tr('Разделы карточки сотрудника')" @update:model-value="changeSection" />
       <div class="employee-field-legend" role="note">
         <span v-if="editableFieldGroups.length"><Pencil :size="13" aria-hidden="true" /> {{ tr('Поле можно изменить') }}</span>
         <span><LockKeyhole :size="13" aria-hidden="true" /> {{ tr('Информационные поля — только просмотр') }}</span>
@@ -1058,21 +1181,6 @@ onMounted(load)
         @saved="load" @cancelled="editing = null" />
     </BaseDialog>
 
-    <BaseDialog :open="identityEditOpen" :title="tr('Основные данные сотрудника')" @close="identityEditOpen = false">
-      <EmployeePhoto v-if="identityEditOpen && profile?.meta.employee_writes_enabled"
-        :company-id="String(route.params.company)" :employee-id="profile.data.id"
-        :revision="profile.data.revision" :has-photo="!!profile.data.has_photo"
-        :can-edit="true" :name="displayName" :initials="initials"
-        @saved="identityEditOpen = false; load()" />
-      <EmployeeRecordForm
-        v-if="identityEditOpen && profile?.meta.employee_writes_enabled"
-        :key="profile.data.id + ':' + profile.data.revision"
-        :company-id="String(route.params.company)"
-        :edit="profile.data"
-        @saved="identityEditOpen = false; load()"
-        @cancelled="identityEditOpen = false"
-      />
-    </BaseDialog>
     <EmployeePrivateProfileEditor v-if="profile && privateEditorSection !== null"
       :open="true" :company-id="String(route.params.company)" :employee-id="profile.data.id"
       :section="privateEditorSection" :profile="profile.private_profile"
@@ -1101,6 +1209,13 @@ onMounted(load)
 </template>
 
 <style scoped>
+.employee-card-toolbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.employee-inline-editor{border:1px solid var(--color-stroke);background:var(--color-surface);padding:18px;border-radius:var(--radius-md);display:grid;gap:16px}
+.employee-inline-editor-heading{display:grid;gap:4px}
+.employee-inline-editor-heading strong{font-size:14px;font-weight:600}
+.employee-inline-editor-heading span{font-size:12px;color:var(--color-muted)}
+.employee-view-photo-wrap{position:relative;display:inline-block}
+.employee-view-photo-pencil{position:absolute;right:-5px;bottom:0;z-index:1;min-width:30px;min-height:30px;border-radius:50%;background:var(--color-surface);box-shadow:var(--shadow-sm)}
 .employee-profile{
   display:grid;grid-template-columns:minmax(0,1fr);gap:12px;
   max-width:100%;min-width:0;scroll-behavior:smooth;
@@ -1194,8 +1309,8 @@ onMounted(load)
 .read-field>span{color:var(--color-muted);font-size:12px;line-height:17px;font-weight:500}
 .read-field-value{display:flex;align-items:center;gap:4px;min-height:34px;min-width:0;padding:3px 0}
 .read-field-value>strong{flex:1;min-width:0;color:var(--color-text);font-size:13px;line-height:19px;font-weight:500;overflow-wrap:anywhere}
-.read-field-value--editable{padding:2px 3px 2px 10px;background:var(--color-surface-raised);border:1px solid var(--color-stroke);border-radius:var(--radius-sm)}
-.read-field-value--editable>strong{font-weight:400}
+.read-field-value--editable{padding:3px 0;background:transparent;border:0;border-radius:0}
+.read-field-value--editable>strong{flex:0 1 auto;font-weight:500}
 .identity-field-edit{width:28px;min-width:28px;height:28px;min-height:28px;padding:0;background:transparent;border-color:transparent;box-shadow:none;color:var(--color-muted)}
 .identity-field-edit :deep(svg){width:14px;height:14px}
 .identity-field-edit:hover:not(:disabled){background:var(--color-accent-soft);color:var(--color-primary)}

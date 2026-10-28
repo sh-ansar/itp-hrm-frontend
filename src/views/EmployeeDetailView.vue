@@ -872,47 +872,22 @@ onMounted(load)
         </RouterLink>
         <h1>{{ displayName }}</h1>
       </div>
-      <div v-if="profile?.meta.employee_writes_enabled" class="employee-card-toolbar">
-        <template v-if="cardEditing">
-          <BaseButton variant="secondary" :disabled="cardSaving" @click="cancelCardEdit">{{ tr('Отменить') }}</BaseButton>
-          <BaseButton type="submit" form="employee-card-edit-form" :disabled="cardSaving">
-            {{ cardSaving ? tr('Сохранение…') : tr('Сохранить изменения') }}
-          </BaseButton>
-        </template>
-        <BaseButton v-else variant="secondary" @click="openCardEdit">
-          <Pencil :size="15" aria-hidden="true" /> {{ tr('Изменить карточку') }}
-        </BaseButton>
-      </div>
     </div>
 
     <BaseNotice v-if="error" tone="error">{{ error }}</BaseNotice>
     <BaseLoadingState v-if="loading" :label="tr('Загрузка карточки сотрудника')" />
 
     <template v-else-if="profile">
-      <div v-if="cardEditing" class="employee-inline-editor" role="region" aria-label="Редактирование карточки сотрудника">
-        <div class="employee-inline-editor-heading">
-          <strong>Изменение личных и рабочих данных</strong>
-          <span>Измените нужные поля и фотографию. Сохранение — одной кнопкой сверху.</span>
-        </div>
-        <EmployeeRecordForm :key="profile.data.id + ':' + profile.data.revision"
-          form-id="employee-card-edit-form" :show-actions="false" :manage-photo="true"
-          :company-id="String(route.params.company)" :edit="profile.data"
-          @dirty="cardDirty = $event" @saving="cardSaving = $event"
-          @saved="cardSaved" @cancelled="cancelCardEdit" />
-      </div>
-      <div v-else class="employee-identity">
+      <div class="employee-identity">
         <div class="identity-photo-section">
           <div class="employee-view-photo-wrap">
           <EmployeePhoto v-if="profile.meta.extended_sections_visible"
             :company-id="String(route.params.company)" :employee-id="profile.data.id"
             :revision="profile.data.revision" :has-photo="!!profile.data.has_photo"
-            :can-edit="false" :name="displayName" :initials="initials" @saved="load" />
+            :can-edit="Boolean(profile.meta.employee_writes_enabled)" compact-edit
+            :name="displayName" :initials="initials" @saved="load"
+            @dirty="cardDirty = $event" />
           <div v-else class="avatar" :aria-label="tr('Карточка сотрудника')">{{ initials }}</div>
-          <BaseButton v-if="profile.meta.employee_writes_enabled" icon-only variant="secondary"
-            class="employee-view-photo-pencil" title="Изменить фотографию"
-            aria-label="Изменить фотографию" @click="openCardEdit">
-            <Pencil :size="15" aria-hidden="true" />
-          </BaseButton>
           </div>
         </div>
         <div class="identity-fields">
@@ -920,53 +895,24 @@ onMounted(load)
             <span class="status-toggle" role="status" :class="{ 'status-toggle--inactive': !currentAssignment }">{{ currentAssignment ? tr('Карточка активна') : employmentStatus }}</span>
             <div class="personnel-id"><span>{{ tr('Табельный №') }}</span><strong>{{ profile.data.personnel_number }}</strong></div>
           </div>
-          <div class="identity-name-fields">
-            <div class="read-field" :data-field-state="profile.meta.employee_writes_enabled ? 'editable' : 'informative'">
-              <span>{{ tr('Фамилия') }}</span>
-              <div class="read-field-value" :class="{ 'read-field-value--editable': profile.meta.employee_writes_enabled }">
-                <strong>{{ profile.data.last_name }}</strong>
-                <BaseButton v-if="profile.meta.employee_writes_enabled" icon-only variant="secondary" class="identity-field-edit"
-                  :aria-label="tr('Изменить поле:') + ' ' + tr('Фамилия')" @click="openFieldEditor('employee')">
-                  <Pencil :size="14" aria-hidden="true"/>
-                </BaseButton>
-              </div>
-            </div>
-            <div class="read-field" :data-field-state="profile.meta.employee_writes_enabled ? 'editable' : 'informative'">
-              <span>{{ tr('Имя') }}</span>
-              <div class="read-field-value" :class="{ 'read-field-value--editable': profile.meta.employee_writes_enabled }">
-                <strong>{{ profile.data.first_name }}</strong>
-                <BaseButton v-if="profile.meta.employee_writes_enabled" icon-only variant="secondary" class="identity-field-edit"
-                  :aria-label="tr('Изменить поле:') + ' ' + tr('Имя')" @click="openFieldEditor('employee')">
-                  <Pencil :size="14" aria-hidden="true"/>
-                </BaseButton>
-              </div>
-            </div>
-            <div class="read-field" :data-field-state="profile.meta.employee_writes_enabled ? 'editable' : 'informative'">
-              <span>{{ tr('Отчество') }}</span>
-              <div class="read-field-value" :class="{ 'read-field-value--editable': profile.meta.employee_writes_enabled }">
-                <strong>{{ profile.data.middle_name ?? '—' }}</strong>
-                <BaseButton v-if="profile.meta.employee_writes_enabled" icon-only variant="secondary" class="identity-field-edit"
-                  :aria-label="tr('Изменить поле:') + ' ' + tr('Отчество')" @click="openFieldEditor('employee')">
-                  <Pencil :size="14" aria-hidden="true"/>
-                </BaseButton>
-              </div>
-            </div>
-            <div class="read-field" :data-field-state="profile.meta.employee_writes_enabled ? 'editable' : 'informative'">
-              <span>{{ tr('Дата рождения') }}</span>
-              <div class="read-field-value" :class="{ 'read-field-value--editable': profile.meta.employee_writes_enabled }">
-                <strong>{{ profile.meta.extended_sections_visible ? formatDate(profile.data.birth_date) : '—' }}</strong>
-                <BaseButton v-if="profile.meta.employee_writes_enabled" icon-only variant="secondary" class="identity-field-edit"
-                  :aria-label="tr('Изменить поле:') + ' ' + tr('Дата рождения')" @click="openFieldEditor('employee')">
-                  <Pencil :size="14" aria-hidden="true"/>
-                </BaseButton>
-              </div>
-            </div>
+          <div class="identity-short-facts" aria-label="Краткая информация о сотруднике">
+            <div><span>Подразделение</span><strong>{{ currentAssignment?.department_name ?? plannedAssignment?.department_name ?? '—' }}</strong></div>
+            <div><span>Должность</span><strong>{{ currentAssignment?.position_name ?? plannedAssignment?.position_name ?? '—' }}</strong></div>
+            <div><span>Email</span><strong>{{ profile.data.email ?? '—' }}</strong></div>
           </div>
+          <EmployeeDataGrid class="identity-name-grid" :fields="inlineFields(identityFields)"
+            :editable-groups="editableFieldGroups" :save-field="saveEmployeeField"
+            @edit="openFieldEditor" @dirty="cardDirty = $event" />
         </div>
       </div>
 
       <BaseViewTabs :model-value="activeSection" :options="sectionTabs"
         :label="tr('Разделы карточки сотрудника')" @update:model-value="changeSection" />
+      <div v-if="documentWritesEnabled && documentSection" class="employee-document-quick-action">
+        <BaseButton variant="secondary" @click="attachSection = documentSection">
+          <Plus :size="14" aria-hidden="true" /> Прикрепить документ к разделу
+        </BaseButton>
+      </div>
       <div class="employee-field-legend" role="note">
         <span v-if="editableFieldGroups.length"><Pencil :size="13" aria-hidden="true" /> {{ tr('Поле можно изменить') }}</span>
         <span><LockKeyhole :size="13" aria-hidden="true" /> {{ tr('Информационные поля — только просмотр') }}</span>
@@ -974,7 +920,8 @@ onMounted(load)
       <template v-if="activeSection === 'personal' && profile.meta.extended_sections_visible">
 
         <EmployeeProfileSection :title="tr('Контакты и адреса')">
-          <EmployeeDataGrid :fields="contactFields" :editable-groups="editableFieldGroups" @edit="openFieldEditor" />
+          <EmployeeDataGrid :fields="inlineFields(contactFields)" :editable-groups="editableFieldGroups"
+              :save-field="saveEmployeeField" @edit="openFieldEditor" @dirty="cardDirty = $event" />
           <EmployeeAddressBook v-if="hasNormalizedAddressStore"
             :company-id="String(route.params.company)" :employee-id="profile.data.id"
             :addresses="profile.private_profile?.addresses ?? []"
@@ -991,7 +938,8 @@ onMounted(load)
             </BaseButton>
             <div v-if="!hasNormalizedAddressStore || legacyContactsOpen" id="employee-legacy-contact-values"
               class="employee-legacy-contact-values">
-              <EmployeeDataGrid :fields="legacyContactFields" :editable-groups="editableFieldGroups" @edit="openFieldEditor" />
+              <EmployeeDataGrid :fields="inlineFields(legacyContactFields)" :editable-groups="editableFieldGroups"
+              :save-field="saveEmployeeField" @edit="openFieldEditor" @dirty="cardDirty = $event" />
             </div>
           </div>
         </EmployeeProfileSection>
@@ -1000,7 +948,8 @@ onMounted(load)
             <BaseButton variant="secondary" :disabled="Boolean(profile.meta.private_identities_truncated)"
               @click="openIdentityRecord()">{{ tr('Управлять документами') }}</BaseButton>
           </template>
-          <EmployeeDataGrid :fields="identityPersonFields" :editable-groups="editableFieldGroups" @edit="openFieldEditor" />
+          <EmployeeDataGrid :fields="inlineFields(identityPersonFields)" :editable-groups="editableFieldGroups"
+              :save-field="saveEmployeeField" @edit="openFieldEditor" @dirty="cardDirty = $event" />
           <div v-if="hasNormalizedIdentityStore" class="employee-identity-records">
             <div v-for="(document,index) in normalizedIdentities" :key="document.id" class="employee-identity-record">
               <div class="employee-identity-record-heading">
@@ -1026,45 +975,49 @@ onMounted(load)
           </BaseNotice>
         </EmployeeProfileSection>
         <EmployeeProfileSection :title="tr('Место рождения')">
-          <EmployeeDataGrid :fields="birthPlaceFields" :editable-groups="editableFieldGroups" @edit="openFieldEditor" />
+          <EmployeeDataGrid :fields="inlineFields(birthPlaceFields)" :editable-groups="editableFieldGroups"
+              :save-field="saveEmployeeField" @edit="openFieldEditor" @dirty="cardDirty = $event" />
         </EmployeeProfileSection>
         <EmployeeProfileSection :title="tr('Семейные данные')">
           <template v-if="profile.meta.private_profile_writes_enabled" #actions>
             <BaseButton variant="secondary" :disabled="Boolean(profile.meta.private_family_truncated)"
               @click="openFamilyEditor()">{{ tr('Изменить') }}</BaseButton>
           </template>
-          <EmployeeDataGrid :fields="maritalStatusFields" :editable-groups="editableFieldGroups" @edit="openFieldEditor" />
+          <EmployeeDataGrid :fields="inlineFields(maritalStatusFields)" :editable-groups="editableFieldGroups"
+              :save-field="saveEmployeeField" @edit="openFieldEditor" @dirty="cardDirty = $event" />
           <EmployeeFamilyList :members="profile.private_profile?.family ?? reference?.family ?? []"
             :writable="Boolean(profile.meta.private_profile_writes_enabled)"
             :truncated="Boolean(profile.meta.private_family_truncated)"
             @create="openFamilyEditor(null, true)" @edit="openFamilyEditor($event)" />
         </EmployeeProfileSection>
         <EmployeeProfileSection :title="tr('Воинский учёт')">
-          <template v-if="profile.meta.private_profile_writes_enabled" #actions>
-            <BaseButton variant="secondary" @click="privateEditorSection = 'military'">{{ tr('Изменить') }}</BaseButton>
-          </template>
-          <EmployeeDataGrid :fields="militaryFields" :editable-groups="editableFieldGroups" @edit="openFieldEditor" />
+
+          <EmployeeDataGrid :fields="inlineFields(militaryFields)" :editable-groups="editableFieldGroups"
+              :save-field="saveEmployeeField" @edit="openFieldEditor" @dirty="cardDirty = $event" />
         </EmployeeProfileSection>
         <EmployeeProfileSection :title="tr('Основные личные данные')">
-          <template v-if="profile.meta.private_profile_writes_enabled" #actions>
-            <BaseButton variant="secondary" @click="privateEditorSection = 'personal'">{{ tr('Изменить') }}</BaseButton>
-          </template>
-          <EmployeeDataGrid :fields="personalFields" :editable-groups="editableFieldGroups" @edit="openFieldEditor" />
+
+          <EmployeeDataGrid :fields="inlineFields(personalFields)" :editable-groups="editableFieldGroups"
+              :save-field="saveEmployeeField" @edit="openFieldEditor" @dirty="cardDirty = $event" />
         </EmployeeProfileSection>
       </template>
 
       <template v-if="activeSection === 'organization' && profile.meta.extended_sections_visible">
         <EmployeeProfileSection :title="tr('Подразделение и должность')">
-          <EmployeeDataGrid :fields="organizationPositionFields" :editable-groups="editableFieldGroups" @edit="openFieldEditor" />
+          <EmployeeDataGrid :fields="inlineFields(organizationPositionFields)" :editable-groups="editableFieldGroups"
+              :save-field="saveEmployeeField" @edit="openFieldEditor" @dirty="cardDirty = $event" />
         </EmployeeProfileSection>
         <EmployeeProfileSection :title="tr('Объект и место работы')">
-          <EmployeeDataGrid :fields="workplaceFields" :editable-groups="editableFieldGroups" @edit="openFieldEditor" />
+          <EmployeeDataGrid :fields="inlineFields(workplaceFields)" :editable-groups="editableFieldGroups"
+              :save-field="saveEmployeeField" @edit="openFieldEditor" @dirty="cardDirty = $event" />
         </EmployeeProfileSection>
         <EmployeeProfileSection :title="tr('Бригада и руководитель')">
-          <EmployeeDataGrid :fields="teamFields" :editable-groups="editableFieldGroups" @edit="openFieldEditor" />
+          <EmployeeDataGrid :fields="inlineFields(teamFields)" :editable-groups="editableFieldGroups"
+              :save-field="saveEmployeeField" @edit="openFieldEditor" @dirty="cardDirty = $event" />
         </EmployeeProfileSection>
         <EmployeeProfileSection :title="tr('Статус и штатная позиция')">
-          <EmployeeDataGrid :fields="staffingStatusFields" :editable-groups="editableFieldGroups" @edit="openFieldEditor" />
+          <EmployeeDataGrid :fields="inlineFields(staffingStatusFields)" :editable-groups="editableFieldGroups"
+              :save-field="saveEmployeeField" @edit="openFieldEditor" @dirty="cardDirty = $event" />
         </EmployeeProfileSection>
       </template>
       <div v-if="profile.meta.profile_writes_enabled && activeSection === 'development'" class="profile-toolbar">
@@ -1083,7 +1036,8 @@ onMounted(load)
               </BaseButton>
             </div>
           </template>
-          <EmployeeDataGrid :fields="contractFields" :editable-groups="editableFieldGroups" @edit="openFieldEditor" />
+          <EmployeeDataGrid :fields="inlineFields(contractFields)" :editable-groups="editableFieldGroups"
+              :save-field="saveEmployeeField" @edit="openFieldEditor" @dirty="cardDirty = $event" />
 
           <template v-if="profile.meta.extended_sections_visible">
             <h3 class="assignment-history-title">{{ tr('История трудовых договоров') }}</h3>
@@ -1106,7 +1060,8 @@ onMounted(load)
         </EmployeeProfileSection>
 
         <EmployeeProfileSection :title="tr('Стаж и трудовой опыт')">
-          <EmployeeDataGrid :fields="seniorityFields" :editable-groups="editableFieldGroups" @edit="openFieldEditor" />
+          <EmployeeDataGrid :fields="inlineFields(seniorityFields)" :editable-groups="editableFieldGroups"
+              :save-field="saveEmployeeField" @edit="openFieldEditor" @dirty="cardDirty = $event" />
           <h3 class="assignment-history-title">{{ tr('История назначений') }}</h3>
           <BaseDataTable density="compact" :columns="columns" :rows="profile.assignments" row-key="id"
             :caption="tr('Доступная история назначений')" :empty-title="tr('Назначений не найдено')"
@@ -1133,15 +1088,18 @@ onMounted(load)
         </EmployeeProfileSection>
 
         <EmployeeProfileSection :title="tr('Условия труда и персонифицированный учёт')">
-          <EmployeeDataGrid :fields="workingConditionFields" :editable-groups="editableFieldGroups" @edit="openFieldEditor" />
+          <EmployeeDataGrid :fields="inlineFields(workingConditionFields)" :editable-groups="editableFieldGroups"
+              :save-field="saveEmployeeField" @edit="openFieldEditor" @dirty="cardDirty = $event" />
         </EmployeeProfileSection>
 
         <EmployeeProfileSection :title="tr('Совмещение и дополнительные обязанности')">
-          <EmployeeDataGrid :fields="combinationFields" :editable-groups="editableFieldGroups" @edit="openFieldEditor" />
+          <EmployeeDataGrid :fields="inlineFields(combinationFields)" :editable-groups="editableFieldGroups"
+              :save-field="saveEmployeeField" @edit="openFieldEditor" @dirty="cardDirty = $event" />
         </EmployeeProfileSection>
 
         <EmployeeProfileSection :title="tr('Прекращение договора')">
-          <EmployeeDataGrid :fields="terminationFields" :editable-groups="editableFieldGroups" @edit="openFieldEditor" />
+          <EmployeeDataGrid :fields="inlineFields(terminationFields)" :editable-groups="editableFieldGroups"
+              :save-field="saveEmployeeField" @edit="openFieldEditor" @dirty="cardDirty = $event" />
         </EmployeeProfileSection>
       </template>
       <template v-if="profile.meta.extended_sections_visible">
@@ -1151,7 +1109,8 @@ onMounted(load)
 
         <template v-if="activeSection === 'payroll'">
           <EmployeeProfileSection :title="tr('Условия оплаты')">
-            <EmployeeDataGrid :fields="payConditionFields" :editable-groups="editableFieldGroups" @edit="openFieldEditor" />
+            <EmployeeDataGrid :fields="inlineFields(payConditionFields)" :editable-groups="editableFieldGroups"
+              :save-field="saveEmployeeField" @edit="openFieldEditor" @dirty="cardDirty = $event" />
           </EmployeeProfileSection>
 
           <EmployeeProfileSection :title="tr('Надбавки, компенсации и удержания')">
@@ -1165,7 +1124,8 @@ onMounted(load)
           </EmployeeProfileSection>
 
           <EmployeeProfileSection :title="tr('Расчётный лист')">
-            <EmployeeDataGrid :fields="payrollSummaryFields" :editable-groups="editableFieldGroups" @edit="openFieldEditor" />
+            <EmployeeDataGrid :fields="inlineFields(payrollSummaryFields)" :editable-groups="editableFieldGroups"
+              :save-field="saveEmployeeField" @edit="openFieldEditor" @dirty="cardDirty = $event" />
           </EmployeeProfileSection>
 
           <EmployeeProfileSection :title="tr('Динамика выплат и отработанных часов')">
@@ -1181,17 +1141,20 @@ onMounted(load)
           </EmployeeProfileSection>
 
           <EmployeeProfileSection :title="tr('Банковские и налоговые данные')">
-            <EmployeeDataGrid :fields="bankTaxFields" :editable-groups="editableFieldGroups" @edit="openFieldEditor" />
+            <EmployeeDataGrid :fields="inlineFields(bankTaxFields)" :editable-groups="editableFieldGroups"
+              :save-field="saveEmployeeField" @edit="openFieldEditor" @dirty="cardDirty = $event" />
           </EmployeeProfileSection>
         </template>
 
         <template v-if="activeSection === 'schedule'">
           <EmployeeProfileSection v-if="reference?.schedule" :title="tr('График работы')">
-            <EmployeeDataGrid :fields="scheduleFields" :editable-groups="editableFieldGroups" @edit="openFieldEditor" />
+            <EmployeeDataGrid :fields="inlineFields(scheduleFields)" :editable-groups="editableFieldGroups"
+              :save-field="saveEmployeeField" @edit="openFieldEditor" @dirty="cardDirty = $event" />
           </EmployeeProfileSection>
 
           <EmployeeProfileSection v-if="reference?.leave_summary || reference?.leave_limits?.length" :title="tr('Отпуска и лимиты отсутствий')">
-            <EmployeeDataGrid :fields="leaveSummaryFields" :editable-groups="editableFieldGroups" @edit="openFieldEditor" />
+            <EmployeeDataGrid :fields="inlineFields(leaveSummaryFields)" :editable-groups="editableFieldGroups"
+              :save-field="saveEmployeeField" @edit="openFieldEditor" @dirty="cardDirty = $event" />
             <h3 class="assignment-history-title">{{ tr('Лимиты и остатки') }}</h3>
             <BaseDataTable density="compact" :rows="reference?.leave_limits ?? []"
               :columns="leaveLimitColumns" row-key="id"
@@ -1202,7 +1165,8 @@ onMounted(load)
           </EmployeeProfileSection>
 
           <EmployeeProfileSection v-if="reference?.schedule" :title="tr('Табель за период')">
-            <EmployeeDataGrid :fields="currentTimesheetFields" :editable-groups="editableFieldGroups" @edit="openFieldEditor" />
+            <EmployeeDataGrid :fields="inlineFields(currentTimesheetFields)" :editable-groups="editableFieldGroups"
+              :save-field="saveEmployeeField" @edit="openFieldEditor" @dirty="cardDirty = $event" />
           </EmployeeProfileSection>
 
           <EmployeeProfileSection :title="tr('Явки, неявки и отсутствия')">
@@ -1216,9 +1180,11 @@ onMounted(load)
 
         <template v-if="activeSection === 'development'">
           <EmployeeProfileSection :title="tr('Кадровый резерв')">
-            <EmployeeDataGrid :fields="reserveSummaryFields" :editable-groups="editableFieldGroups" @edit="openFieldEditor" />
+            <EmployeeDataGrid :fields="inlineFields(reserveSummaryFields)" :editable-groups="editableFieldGroups"
+              :save-field="saveEmployeeField" @edit="openFieldEditor" @dirty="cardDirty = $event" />
             <h3 class="assignment-history-title">{{ tr('Параметры резерва') }}</h3>
-            <EmployeeDataGrid :fields="reserveDetailFields" :editable-groups="editableFieldGroups" @edit="openFieldEditor" />
+            <EmployeeDataGrid :fields="inlineFields(reserveDetailFields)" :editable-groups="editableFieldGroups"
+              :save-field="saveEmployeeField" @edit="openFieldEditor" @dirty="cardDirty = $event" />
             <h3 class="assignment-history-title">{{ tr('История кадрового резерва') }}</h3>
             <BaseDataTable density="compact" :rows="profile.reserve" row-key="id" :caption="tr('Кадровый резерв сотрудника')"
               :columns="[{key:'target_position',label:tr('Резервируемая должность')},{key:'reserve_level',label:tr('Уровень')},{key:'reserve_type',label:tr('Вид')},{key:'joined_year',label:tr('Год зачисления')},{key:'left_year',label:tr('Год исключения')}, ...(profile.meta.profile_writes_enabled ? [{key:'edit',label:tr('Действия')}] : [])]"
@@ -1275,7 +1241,19 @@ onMounted(load)
           <BaseNotice v-if="profile.meta.history_truncated" tone="info">{{ tr('Показаны последние') }} {{ fmt.number(profile.meta.history_limit ?? 100, 0) }} {{ tr('изменений.') }}</BaseNotice>
         </EmployeeProfileSection>
       </template>
+      <EmployeeSectionDocuments v-if="documentReadEnabled && documentSection && activeSection !== 'documents'"
+        :company-id="String(route.params.company)" :employee-id="profile.data.id"
+        :section="documentSection" />
     </template>
+
+    <BaseDialog :open="attachSection !== null" title="Прикрепить документ к сотруднику" @close="closeAttach">
+      <DocumentDraftForm v-if="profile && attachSection && !newDocumentId"
+        :company-id="String(route.params.company)" :initial-employee-id="profile.data.id"
+        :initial-section="attachSection" @saved="documentCreated" @cancelled="closeAttach" />
+      <DocumentUploadForm v-else-if="newDocumentRecord" :company-id="String(route.params.company)"
+        :document="newDocumentRecord" @saved="documentAttached" @cancelled="closeAttach" />
+      <BaseNotice v-else-if="attachmentError" tone="info">{{ attachmentError }}</BaseNotice>
+    </BaseDialog>
 
     <BaseDialog :open="assignmentCreateOpen" :title="tr('Новое назначение')" @close="assignmentCreateOpen = false">
       <EmployeeAssignmentCreateForm v-if="assignmentCreateOpen && profile?.meta.assignment_writes_enabled"
@@ -1339,13 +1317,15 @@ onMounted(load)
 </template>
 
 <style scoped>
-.employee-card-toolbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-.employee-inline-editor{border:1px solid var(--color-stroke);background:var(--color-surface);padding:18px;border-radius:var(--radius-md);display:grid;gap:16px}
-.employee-inline-editor-heading{display:grid;gap:4px}
-.employee-inline-editor-heading strong{font-size:14px;font-weight:600}
-.employee-inline-editor-heading span{font-size:12px;color:var(--color-muted)}
-.employee-view-photo-wrap{position:relative;display:inline-block}
-.employee-view-photo-pencil{position:absolute;right:-5px;bottom:0;z-index:1;min-width:30px;min-height:30px;border-radius:50%;background:var(--color-surface);box-shadow:var(--shadow-sm)}
+.employee-view-photo-wrap{position:relative;display:inline-block;max-width:100%}
+.employee-document-quick-action{display:flex;align-items:center;justify-content:flex-end;flex-wrap:wrap}
+.employee-document-quick-action :deep(button){font-size:12px;min-height:32px}
+.identity-short-facts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;padding-bottom:12px;border-bottom:1px solid var(--color-stroke)}
+.identity-short-facts>div{display:grid;min-width:0;gap:5px}
+.identity-short-facts span{font-size:11px;color:var(--color-muted)}
+.identity-short-facts strong{font-size:13px;font-weight:500;color:var(--color-text);overflow-wrap:anywhere}
+.identity-name-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:13px 16px}
+@media(max-width:650px){.identity-short-facts{grid-template-columns:1fr;gap:7px}.identity-name-grid{grid-template-columns:1fr}}
 .employee-profile{
   display:grid;grid-template-columns:minmax(0,1fr);gap:12px;
   max-width:100%;min-width:0;scroll-behavior:smooth;

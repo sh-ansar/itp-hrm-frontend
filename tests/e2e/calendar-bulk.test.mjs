@@ -50,6 +50,7 @@ test('admin edits selected calendar days inline across month and quarter and sav
     await monthTitle.waitFor()
     await page.getByRole('button', { name: 'Редактировать календарь', exact: true }).click()
     await editor.waitFor()
+    await editor.locator('.calendar-inline-month').first().waitFor()
     assert.equal(await editor.locator('.calendar-inline-month').count(), 3)
     for (const date of dates) {
       const day = editor.locator('[data-calendar-date="' + date + '"]')

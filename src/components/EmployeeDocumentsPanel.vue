@@ -40,6 +40,7 @@ const stored = ref<StoredDocument[]>([])
 const search = ref('')
 const tagFilter = ref('')
 const metadataTarget = ref<StoredDocument | null>(null)
+const metadataWritable = ref(false)
 const loading = ref(false)
 const loadError = ref('')
 const serverPage = ref(1)
@@ -58,10 +59,12 @@ async function reload() {
     stored.value = response.data.filter(row => row.employee_id === props.employeeId)
     serverPages.value = response.meta.last_page
     serverTotal.value = response.meta.total
+    metadataWritable.value = response.meta.document_writes_enabled
     selectedIds.value = []
   } catch {
     if (generation !== requestGeneration) return
     stored.value = []
+    metadataWritable.value = false
     loadError.value = tr('Не удалось загрузить документы сотрудника')
   } finally {
     if (generation === requestGeneration) loading.value = false
@@ -255,7 +258,7 @@ function statusTone(status: string): 'success' | 'warning' | 'danger' | 'info' {
       <template #cell-tags="{ row }">
         <div class="document-tags-cell">
           <span v-for="tag in (row.tags ?? [])" :key="tag" class="document-tag">{{ tag }}</span>
-          <BaseButton v-if="connected && row.stored_id && companyId" variant="secondary" size="sm"
+          <BaseButton v-if="connected && metadataWritable && row.stored_id && companyId" variant="secondary" size="sm"
             :aria-label="'Изменить теги: ' + row.title"
             @click="metadataTarget = stored.find(item => item.id === row.stored_id) ?? null">Изменить</BaseButton>
         </div>

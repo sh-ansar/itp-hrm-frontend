@@ -12,7 +12,7 @@ import { listPersonnelActions, type PersonnelActionRow } from '../api/personnelA
 const props = defineProps<{ companyId: string; orderApprovalsEnabled?: boolean; initialEmployeeId?: string; initialSection?: DocumentSection }>()
 const { orderCopy } = useOrderReviewCopy()
 const orderRequired = computed(() => !!props.orderApprovalsEnabled && type.value === 'order')
-const emit = defineEmits<{ saved: [documentId: string]; cancelled: [] }>()
+const emit = defineEmits<{ saved: [documentId: string, title?: string]; cancelled: [] }>()
 
 const employeeId = ref(props.initialEmployeeId ?? '')
 const sectionKey = ref<DocumentSection | ''>(props.initialSection ?? '')
@@ -77,7 +77,7 @@ async function save() {
       description: description.value.trim() || null,
       tags: tags.value.split(',').map(tag => tag.trim()).filter(Boolean),
     })
-    emit('saved', result.data.id)
+    emit('saved', result.data.id, title.value.trim())
   } catch (cause) {
     error.value = cause instanceof Error ? cause.message : 'Не удалось создать черновик'
   } finally {

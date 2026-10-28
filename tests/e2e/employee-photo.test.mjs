@@ -40,7 +40,9 @@ test('employee photo pencil stages the full-size image until save, supports canc
   await photoInput.setInputFiles({name:'replacement.png',mimeType:'image/png',buffer:pixel})
   assert.equal(uploads,uploadsAfterFirst)
   await page.locator('.photo-compact-save').getByRole('button',{name:'Сохранить'}).click()
+  await page.reload()
   await photo.waitFor()
+  await page.locator('.identity-photo-section input.photo-input').waitFor({state:'attached'})
 
   await photoInput.setInputFiles({name:'bad.svg',mimeType:'image/svg+xml',buffer:Buffer.from('<svg></svg>')})
   await page.locator('.identity-photo-section').getByText(/JPG или PNG/).waitFor()

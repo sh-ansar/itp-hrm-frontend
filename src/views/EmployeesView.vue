@@ -733,7 +733,8 @@ onMounted(() => {
           selectable :selection-label="tr('Выбрать сотрудника')" v-model:selected-keys="selectedIds"
           row-key="id" :caption="tr('Реестр сотрудников выбранной компании')" :loading="employeeLoading"
           :empty-title="activeTab === 'archive' ? tr('В архиве сотрудников нет') : tr('Сотрудники не найдены')"
-          :empty-description="search ? tr('Уточните поиск или сбросьте запрос.') : tr('Нет записей для выбранного фильтра.')">
+          :empty-description="search ? tr('Уточните поиск или сбросьте запрос.') : activeTab === 'archive'
+             ? tr('Сотрудник появляется здесь на следующий день после последнего дня работы. История кадровых действий сохраняется.') : tr('Нет записей для выбранного фильтра.')">
           <template #cell-full_name="{ row }">
             <div class="name-cell">
               <RouterLink :to="{ name: 'employee-detail', params: { company: selectedCompany, employee: row.id } }">{{ row.full_name }}</RouterLink>

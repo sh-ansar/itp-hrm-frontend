@@ -141,6 +141,7 @@ const workspaceCopy: Record<string, { kk: string; en: string }> = {
   "В архиве сотрудников нет": { kk: "Мұрағатта қызметкерлер жоқ", en: "No archived employees" },
   "Уточните поиск или сбросьте запрос.": { kk: "Іздеуді нақтылаңыз немесе тазалаңыз.", en: "Refine or clear your search." },
   "Нет записей для выбранного фильтра.": { kk: "Таңдалған сүзгі бойынша жазбалар жоқ.", en: "No records match the selected filter." },
+  "Сотрудник появляется здесь на следующий день после последнего дня работы. История кадровых действий сохраняется.": { kk: "Қызметкер соңғы жұмыс күнінен кейінгі күні осында көрінеді. Кадрлық әрекеттер тарихы сақталады.", en: "Employees appear here the day after their last working day. Personnel action history is preserved." },
   "Подразделение не назначено": { kk: "Бөлімше тағайындалмаған", en: "Department not assigned" },
   "Добавить сотрудника": { kk: "Қызметкер қосу", en: "Add employee" },
   "Открыть карточку": { kk: "Карточканы ашу", en: "Open profile" },

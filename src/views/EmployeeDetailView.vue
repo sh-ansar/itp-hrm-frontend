@@ -28,7 +28,7 @@ import { type DocumentRow, type DocumentSection, listDocuments } from '../api/do
 import EmployeeContractEditor from '../components/EmployeeContractEditor.vue'
 import BaseDialog from '../components/ui/BaseDialog.vue'
 import BaseViewTabs from '../components/ui/BaseViewTabs.vue'
-import { getEmployee, updateEmployee, saveEmployeePrivateSection, listEmployeeContracts, type EmployeeAssignment, type EmployeeContract, type EmployeeDetail, type EmployeeIdentityDocument, type EmployeeReferenceProfile, type EmployeePrivateSection, type EmployeePrivateRecordSection, type ProfileEditRow, type ProfileSection } from '../api/personnel'
+import { getEmployee, updateEmployee, saveEmployeePrivateSection, listEmployeeContracts, type EmployeeAssignment, type EmployeeContract, type EmployeeDetail, type EmployeeIdentityDocument, type EmployeeReferenceProfile, type EmployeePrivateSection, type EmployeePrivateWritePayload, type EmployeePrivateRecordSection, type ProfileEditRow, type ProfileSection } from '../api/personnel'
 import { localTodayISO } from '../utils/localDate'
 import { unionTenureDays, formatTenure, type TenurePeriod } from '../utils/employeeTenure'
 import { listEmployees } from '../api/personnel'
@@ -305,7 +305,7 @@ async function saveEmployeeField(editKey: string, value: string | null): Promise
     if (!source) throw new Error('Нет доступа к разделу личного дела')
     const keys = section === 'personal' ? personalKeys : militaryKeys
     if (!keys.includes(key)) throw new Error('Поле только для просмотра')
-    const payload: Record<string, string | number | null> = { revision: typeof source.revision === 'number' ? source.revision : null }
+    const payload: EmployeePrivateWritePayload = { revision: typeof source.revision === 'number' ? source.revision : null }
     for (const field of keys) {
       const existing = source[field]
       payload[field] = existing === null || existing === undefined ? null : String(existing)

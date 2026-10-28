@@ -6,6 +6,7 @@ import BaseFormField from './ui/BaseFormField.vue'
 import BaseLoadingState from './ui/BaseLoadingState.vue'
 import BaseNotice from './ui/BaseNotice.vue'
 import { getEmployeeTimesheet, putEmployeeTimesheet, type WorktimeDayEntry } from '../api/worktime'
+import { localTodayISO } from '../utils/localDate'
 
 const props = defineProps<{
   open: boolean
@@ -29,12 +30,27 @@ const saving = ref(false)
 const error = ref('')
 const success = ref('')
 const rows = ref<DraftDay[]>([])
+const originalRows = ref<DraftDay[]>([])
+const today = ref(localTodayISO())
+const futureDay = (row: DraftDay) => row.date > today.value
+const futureHasActual = (row: DraftDay) => futureDay(row) && [row.worked_hours, row.absence_hours, row.overtime_hours].some(value => value !== '')
+const clearFuture = (row: DraftDay) => {
+  if (!futureDay(row) || row.revision === null) return
+  row.worked_hours = ''
+  row.absence_hours = ''
+  row.overtime_hours = ''
+}
 
 const shownRows = computed(() => props.focusDate
   ? rows.value.filter(row => row.date === props.focusDate)
   : rows.value)
 const recordedCount = computed(() => shownRows.value.filter(row =>
   row.worked_hours !== '' || row.absence_hours !== '' || row.overtime_hours !== '').length)
+const changedRows = computed(() => shownRows.value.filter(row => {
+  const original = originalRows.value.find(item => item.date === row.date)
+  return original && (original.worked_hours !== row.worked_hours || original.absence_hours !== row.absence_hours || original.overtime_hours !== row.overtime_hours)
+}))
+const canFillByPlan = computed(() => shownRows.value.some(row => !futureDay(row)))
 
 function hours(minutes: number | null): string {
   if (minutes === null) return ''
@@ -74,12 +90,14 @@ async function load() {
   success.value = ''
   try {
     const response = await getEmployeeTimesheet(props.companyId, props.employeeId, props.month)
+    today.value = localTodayISO()
     rows.value = response.data.map(row => ({
       ...row,
       worked_hours: hours(row.worked_minutes),
       absence_hours: hours(row.absence_minutes),
       overtime_hours: hours(row.overtime_minutes),
     }))
+    originalRows.value = rows.value.map(row => ({ ...row }))
   } catch (cause) {
     rows.value = []
     error.value = cause instanceof Error ? cause.message : 'Не удалось загрузить табель сотрудника'

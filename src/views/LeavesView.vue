@@ -264,37 +264,37 @@ onMounted(loadCompanies)
       <LeaveBalancePanel v-if="canManageLeaves && balancesOpen" :company-id="company" />
 
       <div class="leaves-summary" aria-label="Сводка графика отпусков">
-        <BaseCard class="summary-card">
+        <BaseCard class="summary-card hrm-flat-panel">
           <UsersRound :size="19" aria-hidden="true" />
           <span>Сотрудники</span>
           <strong>{{ loading ? '…' : summary.employees }}</strong>
-          <small>уникальных сотрудников</small>
+          
         </BaseCard>
-        <BaseCard class="summary-card">
+        <BaseCard class="summary-card hrm-flat-panel">
           <CalendarDays :size="19" aria-hidden="true" />
           <span>Дни отпуска</span>
           <strong>{{ loading ? '…' : summary.days }}</strong>
-          <small>по всем записям</small>
+          
         </BaseCard>
-        <BaseCard class="summary-card">
+        <BaseCard class="summary-card hrm-flat-panel">
           <Clock3 :size="19" aria-hidden="true" />
           <span>В отпуске</span>
           <strong>{{ loading ? '…' : summary.ongoing }}</strong>
-          <small>на текущий период</small>
+          
         </BaseCard>
-        <BaseCard class="summary-card">
+        <BaseCard class="summary-card hrm-flat-panel">
           <TriangleAlert :size="19" aria-hidden="true" />
           <span>Перенесено</span>
           <strong>{{ loading ? '…' : summary.shifted }}</strong>
-          <small>отклонений от графика</small>
+          
         </BaseCard>
       </div>
 
-      <BaseCard v-if="activeTab === 'schedule'" class="leaves-register">
+      <BaseCard v-if="activeTab === 'schedule'" class="leaves-register hrm-flat-panel">
         <div class="section-heading">
           <div>
             <h2>График отпусков</h2>
-            <p>Плановые периоды и контроль исполнения по сотрудникам.</p>
+            
           </div>
           <span>{{ rows.length }} записей</span>
         </div>
@@ -345,9 +345,9 @@ onMounted(loadCompanies)
         </div>
       </BaseCard>
 
-      <BaseCard v-else-if="activeTab === 'months'" class="leaves-register">
+      <BaseCard v-else-if="activeTab === 'months'" class="leaves-register hrm-flat-panel">
         <div class="section-heading">
-          <div><h2>Распределение по месяцам</h2><p>Нагрузка графика отпусков в течение года.</p></div>
+          <div><h2>Распределение по месяцам</h2></div>
           <span>{{ year }} год</span>
         </div>
         <div class="month-bars">
@@ -366,9 +366,9 @@ onMounted(loadCompanies)
         </BaseDataTable>
       </BaseCard>
 
-      <BaseCard v-else class="leaves-register">
+      <BaseCard v-else class="leaves-register hrm-flat-panel">
         <div class="section-heading">
-          <div><h2>Категории отпусков</h2><p>Распределение графика по видам отпусков.</p></div>
+          <div><h2>Категории отпусков</h2></div>
           <span>{{ typeRows.length }} категории</span>
         </div>
         <BaseDataTable :rows="typeRows" :columns="typeColumns" row-key="type" :loading="loading"

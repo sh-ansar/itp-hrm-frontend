@@ -38,7 +38,9 @@ const dates = computed(() => {
 })
 const canPreview = computed(() => selected.value.length > 0 && selected.value.length <= 100 && dates.value.length > 0 && !busy.value)
 const canApply = computed(() => !busy.value && confirmed.value && !!preview.value
-  && previewSignature.value === signature.value && !preview.value.meta.period_locked && preview.value.data.candidate_count > 0)
+  && previewSignature.value === signature.value && !preview.value.meta.period_locked
+  && /^[a-f0-9]{64}$/.test(preview.value.meta.preview_token ?? '')
+  && preview.value.data.candidate_count > 0)
 
 watch(() => [props.open, props.companyId, props.month], () => {
   if (!props.open) return
@@ -70,7 +72,7 @@ async function run(apply: boolean) {
   try {
     const result = await fillMissingTimesheetBulk(props.companyId, {
       month: props.month, employee_ids: [...selected.value], dates: dates.value,
-      apply, ...(apply ? { confirm: true } : {}),
+      apply, ...(apply ? { confirm: true, preview_token: preview.value!.meta.preview_token } : {}),
     })
     if (before !== signature.value || !props.open) { error.value = 'Выбор изменился. Выполните проверку повторно.'; return }
     if (apply) {
@@ -85,7 +87,12 @@ async function run(apply: boolean) {
     }
   } catch (cause) {
     const status = (cause as { status?: number })?.status
-    error.value = status === 409 ? 'Период закрыт для изменений.'
+    if (status === 409) {
+      preview.value = null
+      previewSignature.value = ''
+      confirmed.value = false
+    }
+    error.value = status === 409 ? 'Данные изменились с момента проверки или период закрыт. Выполните проверку повторно.'
       : status === 422 ? 'Проверьте даты, сотрудников и календарь компании.'
       : 'Ошибка проверки или сохранения. Обновите данные и повторите.'
   } finally { busy.value = false }
@@ -131,6 +138,7 @@ async function run(apply: boolean) {
           <div><dt>Отпуск</dt><dd>{{ preview.data.approved_leave }}</dd></div>
           <div><dt>Неявка</dt><dd>{{ preview.data.recorded_absence }}</dd></div>
           <div><dt>Выходные и праздники</dt><dd>{{ preview.data.nonworking_date }}</dd></div>
+          <div><dt>Будущие даты (не отмечаются как явка)</dt><dd>{{ preview.data.future_date ?? 0 }}</dd></div>
         </dl>
         <label class="bulk-fill-confirm">
           <input v-model="confirmed" type="checkbox" :disabled="busy || preview.meta.period_locked || !preview.data.candidate_count" />

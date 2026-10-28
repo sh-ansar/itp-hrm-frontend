@@ -314,6 +314,8 @@ export interface BulkTimesheetFillRequest {
   dates: string[]
   apply: boolean
   confirm?: boolean
+  /** Preview snapshot from the immediately preceding read-only validation. */
+  preview_token?: string
 }
 
 export interface BulkTimesheetFillResponse {
@@ -324,6 +326,7 @@ export interface BulkTimesheetFillResponse {
     approved_leave: number
     recorded_absence: number
     nonworking_date: number
+    future_date?: number
   }
   meta: {
     month: string
@@ -332,6 +335,7 @@ export interface BulkTimesheetFillResponse {
     mode: 'preview' | 'applied'
     created_count: number
     period_locked: boolean
+    preview_token?: string
   }
 }
 
@@ -341,6 +345,9 @@ export function fillMissingTimesheetBulk(companyId: string, payload: BulkTimeshe
   if (payload.employee_ids.length < 1 || payload.employee_ids.length > 100
     || payload.dates.length < 1 || payload.dates.length > 31) throw new Error('Invalid bulk selection size')
   if (payload.employee_ids.some(id => !uuid.test(id))) throw new Error('Invalid employee ID')
+  if (payload.apply && (!payload.confirm || !/^[a-f0-9]{64}$/.test(payload.preview_token ?? ''))) {
+    throw new Error('A matching preview is required before applying attendance')
+  }
   return apiRequest<BulkTimesheetFillResponse>(`/companies/${companyId}/worktime/timesheet/bulk-fill`, {
     method: 'POST',
     body: JSON.stringify(payload),

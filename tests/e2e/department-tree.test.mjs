@@ -36,18 +36,26 @@ test('HR creates moves renames and deletes an unused department at mobile width'
 
     const createdRow = page.locator('.org-mobile-item').filter({ hasText: 'E2E Team' })
     await createdRow.waitFor()
-    assert.match(await createdRow.innerText(), /Visible Finance/)
+    // The compact mobile card shows hierarchy depth and the manager, not a redundant parent-name label.
+    assert.match(await createdRow.innerText(), /Уровень 2/)
 
     await createdRow.getByRole('button', { name: 'Изменить' }).click()
     const editDialog = page.getByRole('dialog', { name: 'Изменить подразделение' })
     await editDialog.waitFor()
+    assert.equal((await editDialog.getByLabel('Родительское подразделение').locator('option:checked').textContent())?.trim(),
+      'Visible Finance', 'New department must retain the actual selected parent')
     await editDialog.getByLabel('Название подразделения').fill('E2E Team Renamed')
     await editDialog.getByLabel('Родительское подразделение').selectOption({ label: 'Visible Finance Child' })
     await editDialog.getByRole('button', { name: 'Сохранить изменения' }).click()
 
     const renamedRow = page.locator('.org-mobile-item').filter({ hasText: 'E2E Team Renamed' })
     await renamedRow.waitFor()
-    assert.match(await renamedRow.innerText(), /Visible Finance Child/)
+    assert.match(await renamedRow.innerText(), /Уровень 3/)
+    await renamedRow.getByRole('button', { name: 'Изменить' }).click()
+    await editDialog.waitFor()
+    assert.equal((await editDialog.getByLabel('Родительское подразделение').locator('option:checked').textContent())?.trim(),
+      'Visible Finance Child', 'Moving the department must persist its new parent')
+    await editDialog.getByRole('button', { name: 'Отмена' }).click()
 
     await renamedRow.getByRole('button', { name: 'Удалить' }).click()
     const deleteDialog = page.getByRole('dialog', { name: 'Удалить подразделение' })

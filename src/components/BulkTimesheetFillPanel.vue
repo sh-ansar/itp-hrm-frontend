@@ -126,7 +126,7 @@ async function run(apply: boolean) {
         <BaseFormField v-model="startDate" label="С даты" type="date" :disabled="busy" />
         <BaseFormField v-model="endDate" label="По дату" type="date" :disabled="busy" />
       </div>
-      <p class="bulk-fill-hint">Сначала проверьте расчёт, затем подтвердите сохранение. Выходные, даты до трудоустройства, отпуска, неявки и уже заполненные дни пропускаются.</p>
+      <p class="bulk-fill-hint">Сначала проверьте расчёт, затем подтвердите сохранение. Выходные, даты до трудоустройства, отпуска, неявки и уже заполненные дни пропускаются. Для сменных и индивидуальных графиков автоматическая явка без подтверждённого плана по дням не создаётся.</p>
       <BaseNotice v-if="!canPreview && !busy && created === null" tone="info">
         Выберите сотрудников и корректный диапазон дат внутри месяца.
       </BaseNotice>
@@ -138,8 +138,10 @@ async function run(apply: boolean) {
           <div><dt>Отпуск</dt><dd>{{ preview.data.approved_leave }}</dd></div>
           <div><dt>Неявка</dt><dd>{{ preview.data.recorded_absence }}</dd></div>
           <div><dt>Выходные и праздники</dt><dd>{{ preview.data.nonworking_date }}</dd></div>
+          <div v-if="preview.data.unknown_shift_schedule"><dt>Без подтверждённого сменного плана</dt><dd>{{ preview.data.unknown_shift_schedule }}</dd></div>
           <div><dt>Будущие даты (не отмечаются как явка)</dt><dd>{{ preview.data.future_date ?? 0 }}</dd></div>
         </dl>
+        <BaseNotice v-if="preview.data.unknown_shift_schedule" tone="warning">Для {{ preview.data.unknown_shift_schedule }} сотрудникодней сменный или индивидуальный график не содержит проверенного подневного плана. Фактические часы не проставлены автоматически.</BaseNotice>
         <label class="bulk-fill-confirm">
           <input v-model="confirmed" type="checkbox" :disabled="busy || preview.meta.period_locked || !preview.data.candidate_count" />
           <span>Подтверждаю заполнение только отсутствующих явок</span>

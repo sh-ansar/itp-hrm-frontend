@@ -3,6 +3,7 @@ import { useWorkspaceI18n } from '../composables/useWorkspaceI18n'
 import { computed, ref, watch } from 'vue'
 import { ChevronDown, Users } from 'lucide-vue-next'
 import type { DepartmentTreeItem } from '../utils/departmentTree'
+import { selectDepartmentLeader } from '../utils/departmentLeader'
 import BaseButton from './ui/BaseButton.vue'
 defineOptions({ name: 'DepartmentTreeNode' })
 const { tr } = useWorkspaceI18n()
@@ -14,6 +15,7 @@ const expanded = ref(props.depth === 0 || props.expandAll)
 const allMembers = ref(false)
 watch(() => props.expandAll, value => { expanded.value = props.depth === 0 || value })
 const members = computed(() => props.node.members ?? [])
+const departmentLeader = computed(() => selectDepartmentLeader(props.node.name, members.value))
 function countMembers(node: DepartmentTreeItem): number {
   return (node.members?.length ?? 0) + node.children.reduce((sum, child) => sum + countMembers(child), 0)
 }
@@ -26,9 +28,14 @@ function initials(name: string) { return name.split(' ').slice(0,2).map(word=>wo
     <div class="tree-card" :class="{ 'tree-card--department': depth > 0 }">
       <div class="tree-copy">
         <strong><i v-if="depth > 0" class="department-dot" aria-hidden="true" />{{ node.name }}</strong>
-        <template v-if="depth === 0 && members.length">
-          <RouterLink class="root-person" :to="{ name:'employee-detail',params:{company:companyId,employee:members[0]!.id} }"><span class="person-avatar">{{ initials(members[0]!.name) }}</span>{{ members[0]!.name }}</RouterLink>
+        <template v-if="depth === 0 && departmentLeader">
+          <RouterLink class="root-person" :to="{ name:'employee-detail',params:{company:companyId,employee:departmentLeader.id} }"><span class="person-avatar">{{ initials(departmentLeader.name) }}</span>{{ departmentLeader.name }}</RouterLink>
         </template>
+        <RouterLink v-if="depth > 0 && departmentLeader" class="department-leader"
+          :to="{ name:'employee-detail', params:{company:companyId,employee:departmentLeader.id} }">
+          <span class="department-leader-caption">Руководитель по штатной должности</span>
+          <span class="department-leader-name">{{ departmentLeader.name }}</span>
+        </RouterLink>
         <span v-if="node.hiddenParent">{{ tr('Родитель вне доступного списка') }}</span>
         <span v-else class="department-count"><Users :size="15" /> {{ totalMembers }} {{ tr("сотрудников") }}<span v-if="node.children.length"> · {{ node.children.length }} {{ tr("подразделений") }}</span></span>
       </div>
@@ -56,6 +63,10 @@ function initials(name: string) { return name.split(' ').slice(0,2).map(word=>wo
 .tree-branch--green>.tree-card--department{background:color-mix(in srgb,var(--color-success) 12%,var(--color-surface));border-color:color-mix(in srgb,var(--color-success) 18%,var(--color-stroke))}
 .tree-copy{display:grid;gap:12px;min-width:0;flex:1}.tree-copy strong{font-size:15px;line-height:1.45;font-weight:500;overflow-wrap:normal;word-break:normal;hyphens:none}
 .department-dot{display:inline-block;width:10px;height:10px;margin-right:8px;background:var(--color-primary);border-radius:50%}.tree-branch--green .department-dot{background:var(--color-success)}
+.department-leader{display:grid;gap:3px;padding:9px 10px;background:var(--color-soft);border:1px solid var(--color-stroke);border-radius:var(--radius-sm);color:inherit;text-decoration:none}
+.department-leader-caption{font-size:11px;line-height:1.3;color:var(--color-muted)}
+.department-leader-name{font-size:12px;line-height:1.35;font-weight:500;overflow-wrap:anywhere}
+.department-leader:hover{text-decoration:underline}
 .department-count{display:flex;flex-wrap:wrap;align-items:center;gap:5px;color:var(--color-muted);font-size:13px;line-height:1.5}.department-count svg{color:var(--color-primary)}
 .tree-card :deep(.base-button){position:absolute;bottom:-10px;right:12px;width:24px;min-width:24px;height:24px;min-height:24px;border-radius:50%;padding:0;color:var(--color-muted)}
 .closed{transform:rotate(-90deg)}

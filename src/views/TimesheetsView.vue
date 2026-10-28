@@ -5,7 +5,7 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { CalendarDays, Clock3, TriangleAlert, UsersRound } from 'lucide-vue-next'
 import BaseCard from '../components/ui/BaseCard.vue'
 import BaseButton from '../components/ui/BaseButton.vue'
-import ProductionCalendarEditor from '../components/ProductionCalendarEditor.vue'
+import ProductionCalendarInlineEditor from '../components/ProductionCalendarInlineEditor.vue'
 import ProductionCalendarPeriodOverview from '../components/ProductionCalendarPeriodOverview.vue'
 import TimesheetEntryEditor from '../components/TimesheetEntryEditor.vue'
 import BulkTimesheetFillPanel from '../components/BulkTimesheetFillPanel.vue'
@@ -779,29 +779,30 @@ onMounted(loadCompanies)
             <h2>Производственный календарь</h2>
             <p>{{ monthLabel }} · рабочие и выходные дни периода.</p>
           </div>
-          <BaseButton v-if="!demoMode && productionCalendarMeta?.can_edit_calendar" variant="secondary" :disabled="loading || calendarPeriodView !== 'month'" @click="calendarEditorOpen = true">Редактировать календарь</BaseButton>
-          <span v-if="calendarPeriodView === 'month'">
-            {{ workdayCount }} рабочих · {{ weekendCount }} выходных · {{ holidayCount }} праздничных
-            <template v-if="missingCalendarCount"> · {{ missingCalendarCount }} без данных</template>
-          </span>
+          <BaseButton v-if="!demoMode && productionCalendarMeta?.can_edit_calendar && !calendarEditorOpen"
+            variant="secondary" :disabled="loading" @click="calendarEditorOpen = true">
+            Редактировать календарь
+          </BaseButton>
         </div>
-        <ProductionCalendarPeriodOverview :company-id="company" :month="month" :view="calendarPeriodView"
+        <ProductionCalendarPeriodOverview v-if="!calendarEditorOpen" :company-id="company" :month="month" :view="calendarPeriodView"
           :demo-mode="demoMode" :active="activeTab === 'calendar'"
           @view="calendarPeriodView = $event" @navigate="month = $event" @select-month="month = $event; calendarPeriodView = 'month'" />
+        <ProductionCalendarInlineEditor v-else :company-id="company" :month="month" :view="calendarPeriodView"
+          @cancel="calendarEditorOpen = false" @saved="calendarUpdated" />
         <BaseNotice v-if="calendarPeriodView === 'month' && !demoMode && productionCalendarMeta && !productionCalendarMeta.calendar_complete" tone="warning">
           Календарь заполнен частично: {{ productionCalendarMeta.recorded_days }} из {{ productionCalendarMeta.expected_days }} дней.
           Незагруженные даты не классифицируются автоматически.
         </BaseNotice>
-        <div v-if="calendarPeriodView === 'month'" class="calendar-legend" role="list" aria-label="Обозначения типов дней">
+        <div class="calendar-legend" role="list" aria-label="Обозначения типов дней">
           <span role="listitem"><i class="calendar-key calendar-key--workday" aria-hidden="true" /> Рабочие</span>
           <span role="listitem"><i class="calendar-key calendar-key--weekend" aria-hidden="true" /> Выходные</span>
           <span role="listitem"><i class="calendar-key calendar-key--holiday" aria-hidden="true" /> Праздничные</span>
           <span v-if="missingCalendarCount" role="listitem"><i class="calendar-key calendar-key--missing" aria-hidden="true" /> Не заполнены</span>
         </div>
-        <div v-if="calendarPeriodView === 'month'" class="calendar-weekdays" aria-hidden="true">
+        <div v-if="calendarPeriodView === 'month' && !calendarEditorOpen" class="calendar-weekdays" aria-hidden="true">
           <span v-for="label in ['Пн','Вт','Ср','Чт','Пт','Сб','Вс']" :key="label">{{ label }}</span>
         </div>
-        <div v-if="calendarPeriodView === 'month'" class="calendar-grid" :aria-label="'Производственный календарь: ' + monthLabel">
+        <div v-if="calendarPeriodView === 'month' && !calendarEditorOpen" class="calendar-grid" :aria-label="'Производственный календарь: ' + monthLabel">
           <span v-for="blank in calendarOffset" :key="'blank-' + blank" class="calendar-blank" aria-hidden="true" />
           <article v-for="day in calendarDays" :key="day.date" class="calendar-day"
             :aria-label="day.date + ' — ' + calendarTypeLabel(day)"
@@ -870,8 +871,6 @@ onMounted(loadCompanies)
       </BaseCard>
     </template>
   </section>
-  <ProductionCalendarEditor :open="calendarEditorOpen" :company-id="company" :month="month"
-    :days="productionCalendar" @close="calendarEditorOpen = false" @saved="calendarUpdated" @refresh="calendarUpdated" />
   <BulkTimesheetFillPanel :open="bulkTimesheetOpen" :company-id="company" :month="month"
     :initial-date="timesheetPeriodView === 'day' ? selectedDay : undefined"
     :employees="timesheetRows.filter(row => !selectedTimesheetIds.length || selectedTimesheetIds.includes(row.employee_id))

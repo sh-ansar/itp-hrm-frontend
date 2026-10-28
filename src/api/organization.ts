@@ -13,7 +13,14 @@ export interface CompanyRecord extends Record<string, unknown> {
   role_code?: CompanyRoleCode
   department_scopes?: CompanyDepartmentScope[]
 }
-export interface DepartmentRecord extends Record<string, unknown> { id: string; name: string; parent_id: string | null; revision: number }
+export interface DepartmentRecord extends Record<string, unknown> {
+  id: string
+  name: string
+  parent_id: string | null
+  revision: number
+  manager_employee_id?: string | null
+  manager_employee_name?: string | null
+}
 export interface PositionRecord extends Record<string, unknown> { id: string; name: string; revision: number }
 export interface PagedResponse<T> {
   data: T[]
@@ -83,12 +90,13 @@ export const deletePosition = (
 
 
 export interface DepartmentListResponse extends PagedResponse<DepartmentRecord> {
-  meta: PagedResponse<DepartmentRecord>['meta'] & { department_writes_enabled: boolean }
+  meta: PagedResponse<DepartmentRecord>['meta'] & { department_writes_enabled: boolean; manager_assignment_supported?: boolean }
 }
 
 export interface DepartmentPayload {
   name: string
   parent_id: string | null
+  manager_employee_id?: string | null
 }
 
 export const createDepartment = (companyId: string, payload: DepartmentPayload): Promise<{ data: DepartmentRecord }> => {

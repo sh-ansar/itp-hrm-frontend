@@ -96,7 +96,7 @@ test('admin links an account; employee saves, reloads, submits; admin approves; 
     await page.getByLabel('Окончание отпуска', { exact: false }).fill('2026-11-06')
     await page.getByRole('button', { name: 'Сохранить изменения', exact: true }).click()
     await page.getByRole('button', { name: 'Отправить на согласование', exact: true }).click()
-    await page.getByText(/На согласовании/).waitFor()
+    await page.getByText(/На согласовании/).first().waitFor()
     const own = await api(page, base + '/me/workspace')
     const request = own.body.data.requests[0]
     assert.equal(request.planned_days, 6)

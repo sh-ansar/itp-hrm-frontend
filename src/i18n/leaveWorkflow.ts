@@ -63,6 +63,16 @@ const ru = {
   reviewApprove: 'Согласовать заявку',
   reviewReject: 'Отклонить заявку',
   reviewConfirm: 'Согласовать',
+  nextApprovalStage: 'Следующий этап',
+  managerStage: 'Согласование руководителя',
+  hrStage: 'Решение отдела кадров',
+  assignedReviewer: 'Назначенный согласующий',
+  reviewerId: 'Пользователь №',
+  routeNotPinned: 'Согласующий не закреплён за заявкой',
+  evidenceStatus: 'Документ',
+  evidencePending: 'ожидает проверки',
+  evidenceVerified: 'проверен',
+  evidenceRejected: 'отклонён',
 }
 type CopyKey = keyof typeof ru
 const kk: Record<CopyKey, string> = {
@@ -101,6 +111,16 @@ const kk: Record<CopyKey, string> = {
   reviewApprove: 'Өтінімді келісу',
   reviewReject: 'Өтінімді қабылдамау',
   reviewConfirm: 'Келісу',
+  nextApprovalStage: 'Келесі кезең',
+  managerStage: 'Басшының келісімі',
+  hrStage: 'Кадр бөлімі шешімі',
+  assignedReviewer: 'Тағайындалған келісуші',
+  reviewerId: 'Пайдаланушы №',
+  routeNotPinned: 'Өтінішке келісуші бекітілмеген',
+  evidenceStatus: 'Құжат',
+  evidencePending: 'тексеруді күтуде',
+  evidenceVerified: 'тексерілген',
+  evidenceRejected: 'қабылданбаған',
 }
 const en: Record<CopyKey, string> = {
   title: 'Leave management', description: 'Plan, review and approve employees’ leave',
@@ -138,6 +158,16 @@ const en: Record<CopyKey, string> = {
   reviewApprove: 'Recommend this request',
   reviewReject: 'Reject this request',
   reviewConfirm: 'Recommend approval',
+  nextApprovalStage: 'Next step',
+  managerStage: 'Manager review',
+  hrStage: 'HR decision',
+  assignedReviewer: 'Assigned reviewer',
+  reviewerId: 'User #',
+  routeNotPinned: 'No specific reviewer is assigned to this request',
+  evidenceStatus: 'Document',
+  evidencePending: 'Pending verification',
+  evidenceVerified: 'Verified',
+  evidenceRejected: 'Rejected',
 }
 const ka: Record<CopyKey, string> = {
   title: 'შვებულებების მართვა', description: 'თანამშრომლების შვებულებების დაგეგმვა, შემოწმება და დამტკიცება',
@@ -175,6 +205,16 @@ const ka: Record<CopyKey, string> = {
   reviewApprove: 'განაცხადის შეთანხმება',
   reviewReject: 'განაცხადის უარყოფა',
   reviewConfirm: 'შეთანხმება',
+  nextApprovalStage: 'შემდეგი ეტაპი',
+  managerStage: 'ხელმძღვანელის თანხმობა',
+  hrStage: 'HR-ის გადაწყვეტილება',
+  assignedReviewer: 'დანიშნული შემთანხმებელი',
+  reviewerId: 'მომხმარებელი №',
+  routeNotPinned: 'განაცხადს შემთანხმებელი არ აქვს მინიჭებული',
+  evidenceStatus: 'დოკუმენტი',
+  evidencePending: 'ელოდება შემოწმებას',
+  evidenceVerified: 'შემოწმებულია',
+  evidenceRejected: 'უარყოფილია',
 }
 const messages: Record<UiLocale, Record<CopyKey, string>> = { ru, kk, en, ka }
 export function useLeaveWorkflowI18n() {

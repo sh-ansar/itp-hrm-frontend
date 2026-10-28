@@ -101,6 +101,10 @@ export interface LeaveRequestRecord {
   manager_reviewed_by_user_id?: number | null
   manager_reviewed_at?: string | null
   manager_decision_comment?: string | null
+  /** Present on API versions with manager routing snapshots. */
+  assigned_manager_user_id?: number | null
+  assigned_manager_name?: string | null
+  manager_department_id?: string | null
   last_name: string
   first_name: string
   middle_name: string | null

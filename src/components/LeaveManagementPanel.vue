@@ -11,6 +11,7 @@ import BasePagination from './ui/BasePagination.vue'
 import EmployeeLookupField from './EmployeeLookupField.vue'
 import ProtectedLeaveEvidencePanel from './ProtectedLeaveEvidencePanel.vue'
 import { useLeaveWorkflowI18n } from '../i18n/leaveWorkflow'
+import { nextLeaveApprovalStage } from '../utils/leaveApprovalStage'
 import { useLeaveReversalI18n } from '../i18n/leaveReversal'
 import { useLeaveCategoryI18n } from '../i18n/leaveCategory'
 import { useUiFormatters } from '../composables/useUiFormatters'
@@ -355,6 +356,27 @@ async function reverseApproved() {
             <strong>{{ [row.last_name, row.first_name, row.middle_name].filter(Boolean).join(' ') }}</strong>
             <p>{{ row.leave_type_name || t('leaveTypeHidden') }} · {{ fmt.date(row.planned_started_on) }} — {{ fmt.date(row.planned_ended_on) }}</p>
             <small>{{ t('plannedDays') }}: {{ fmt.number(row.planned_days, 0) }} · {{ t('status') }}: {{ statusLabel(row.status) }}</small>
+            <div v-if="row.status === 'submitted'" class="leave-management-stage" role="status">
+              <span>{{ t('nextApprovalStage') }}</span>
+              <strong>{{ nextLeaveApprovalStage(row, managerApprovalRequired) === 'manager'
+                ? t('managerStage') : t('hrStage') }}</strong>
+            </div>
+            <p v-if="managerApprovalRequired && row.assigned_manager_user_id" class="leave-management-route">
+              <span>{{ t('assignedReviewer') }}:</span>
+              <strong>{{ row.assigned_manager_name || (t('reviewerId') + ' ' + row.assigned_manager_user_id) }}</strong>
+            </p>
+            <p v-else-if="managerApprovalRequired && row.status === 'submitted'"
+              class="leave-management-route leave-management-route--missing">
+              {{ t('routeNotPinned') }}
+            </p>
+            <p v-if="row.note" class="leave-management-basis">
+              <span>{{ t('reason') }}:</span> {{ row.note }}
+            </p>
+            <p v-if="row.evidence_status" class="leave-management-route">
+              <span>{{ t('evidenceStatus') }}:</span>
+              {{ row.evidence_status === 'verified' ? t('evidenceVerified')
+                : row.evidence_status === 'rejected' ? t('evidenceRejected') : t('evidencePending') }}
+            </p>
             <p v-if="managerApprovalRequired && row.manager_recommendation" class="leave-management-comment">
               {{ t('managerRecommendation') }}:
               {{ row.manager_recommendation === 'approved' ? t('managerApproved') : t('managerRejected') }}
@@ -493,6 +515,12 @@ async function reverseApproved() {
 .leave-management-info p{font-size:12px;color:var(--color-muted);margin:4px 0}
 .leave-management-info small{font-size:11px;color:var(--color-text)}
 .leave-management-info .leave-management-comment{color:var(--color-warning)}
+.leave-management-stage{display:inline-flex;flex-wrap:wrap;align-items:center;gap:5px 9px;margin-top:9px;padding:6px 10px;border:1px solid var(--color-stroke);border-radius:7px;font-size:12px}
+.leave-management-stage span,.leave-management-route span,.leave-management-basis span{color:var(--color-muted)}
+.leave-management-stage strong,.leave-management-route strong{font-weight:600}
+.leave-management-info .leave-management-route,.leave-management-info .leave-management-basis{margin:7px 0 0;font-size:12px;overflow-wrap:anywhere}
+.leave-management-info .leave-management-route--missing{color:var(--color-warning)}
+.leave-management-info .leave-management-basis{max-width:66ch;white-space:pre-wrap}
 .leave-management-row-actions{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:5px}
 .leave-form{display:grid;gap:15px;min-width:0}
 .leave-textarea{display:grid;gap:6px;width:100%;font-size:12px;color:var(--color-text)}

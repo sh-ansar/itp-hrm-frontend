@@ -21,11 +21,13 @@ import BaseNotice from '../components/ui/BaseNotice.vue'
 import BaseLoadingState from '../components/ui/BaseLoadingState.vue'
 import EmployeeProfileCreateForm from '../components/EmployeeProfileCreateForm.vue'
 import EmployeeAssignmentCreateForm from '../components/EmployeeAssignmentCreateForm.vue'
-import EmployeeRecordForm from '../components/EmployeeRecordForm.vue'
+import DocumentDraftForm from '../components/DocumentDraftForm.vue'
+import DocumentUploadForm from '../components/DocumentUploadForm.vue'
+import { type DocumentRow, type DocumentSection, listDocuments } from '../api/documents'
 import EmployeeContractEditor from '../components/EmployeeContractEditor.vue'
 import BaseDialog from '../components/ui/BaseDialog.vue'
 import BaseViewTabs from '../components/ui/BaseViewTabs.vue'
-import { getEmployee, listEmployeeContracts, type EmployeeAssignment, type EmployeeContract, type EmployeeDetail, type EmployeeIdentityDocument, type EmployeeReferenceProfile, type EmployeePrivateSection, type EmployeePrivateRecordSection, type ProfileEditRow, type ProfileSection } from '../api/personnel'
+import { getEmployee, updateEmployee, saveEmployeePrivateSection, listEmployeeContracts, type EmployeeAssignment, type EmployeeContract, type EmployeeDetail, type EmployeeIdentityDocument, type EmployeeReferenceProfile, type EmployeePrivateSection, type EmployeePrivateRecordSection, type ProfileEditRow, type ProfileSection } from '../api/personnel'
 import { localTodayISO } from '../utils/localDate'
 import { unionTenureDays, formatTenure, type TenurePeriod } from '../utils/employeeTenure'
 import { listEmployees } from '../api/personnel'
@@ -48,45 +50,39 @@ const error = ref('')
 const editing = ref<{ section: ProfileSection; record: ProfileEditRow } | null>(null)
 const assignmentEditing = ref<EmployeeAssignment | null>(null)
 const assignmentTransitioning = ref<EmployeeAssignment | null>(null)
-const cardEditing = ref(false)
 const cardDirty = ref(false)
-const cardSaving = ref(false)
-function openCardEdit() {
-  if (!profile.value?.meta.employee_writes_enabled) return
-  cardDirty.value = false
-  cardSaving.value = false
-  cardEditing.value = true
-}
+const photoEditing = ref(false)
+const attachSection = ref<DocumentSection | null>(null)
+const newDocumentId = ref('')
+const newDocumentRecord = ref<DocumentRow | null>(null)
 function confirmDiscard(): boolean {
-  return !cardEditing.value || !cardDirty.value
-    || window.confirm('Есть несохранённые изменения. Выйти без сохранения?')
-}
-function cancelCardEdit() {
-  if (cardSaving.value || !confirmDiscard()) return
-  cardEditing.value = false
-  cardDirty.value = false
-  cardSaving.value = false
-}
-function cardSaved() {
-  cardDirty.value = false
-  cardSaving.value = false
-  cardEditing.value = false
-  void load()
+  return !cardDirty.value || window.confirm('Есть несохранённое изменение поля. Выйти без сохранения?')
 }
 function changeSection(value: string) {
   if (!confirmDiscard()) return
   cardDirty.value = false
-  cardEditing.value = false
   activeSection.value = value
 }
 function warnUnload(event: BeforeUnloadEvent) {
-  if (!cardEditing.value || !cardDirty.value) return
+  if (!cardDirty.value) return
   event.preventDefault()
   event.returnValue = ''
 }
 window.addEventListener('beforeunload', warnUnload)
 onBeforeUnmount(() => window.removeEventListener('beforeunload', warnUnload))
 onBeforeRouteLeave(() => confirmDiscard())
+async function documentCreated(id: string) {
+  // The PDF is uploaded in the same card instead of navigating to Documents.
+  newDocumentId.value = id
+  const result = await listDocuments(String(route.params.company), 1, '', profile.value?.data.id ?? '')
+  newDocumentRecord.value = result.data.find(row => row.id === id) ?? null
+}
+function closeAttach() {
+  attachSection.value = null
+  newDocumentId.value = ''
+  newDocumentRecord.value = null
+}
+function documentAttached() { closeAttach(); void load() }
 
 const privateEditorSection = ref<EmployeePrivateSection | null>(null)
 const privateRecordsSection = ref<EmployeePrivateRecordSection | null>(null)
@@ -236,10 +232,85 @@ const editableFieldGroups = computed<EmployeeFieldEditGroup[]>(() => [
     ? ['private-personal' as const, 'private-military' as const, 'identity' as const] : []),
   ...(contractWritesEnabled.value && currentContract.value ? ['contract' as const] : []),
 ])
+const employeeEditKeyByLabel: Record<string,string> = {
+  'Фамилия':'last_name', 'Имя':'first_name', 'Отчество':'middle_name',
+  'Дата рождения':'birth_date', 'Пол':'gender', 'Email':'email', 'Телефон':'phone',
+  'Табельный номер':'personnel_number', 'Адрес проживания':'address',
+  'Объект':'work_site', 'Рабочая зона':'work_zone', 'Бригада / команда':'work_team',
+  'Непосредственный руководитель':'supervisor_name',
+}
+const personalEditKeyByLabel: Record<string,string> = {
+  'ИИН':'iin', 'Логин':'login', 'Национальность':'nationality', 'Гражданство':'citizenship',
+  'Семейное положение':'marital_status', 'Адрес проживания':'residence_address',
+  'Адрес регистрации':'registration_address', 'Подъезд':'address_entrance',
+  'Этаж':'address_floor', 'Квартира':'address_apartment', 'Место рождения':'place_of_birth',
+  'Контактное лицо':'emergency_contact_name',
+  'Телефон контактного лица':'emergency_contact_phone',
+}
+const militaryEditKeyByLabel: Record<string,string> = {
+  'Статус воинского учёта':'status', 'Категория учёта':'category',
+  'Военный билет':'document_reference', 'Общий комментарий':'comment',
+}
+const personalKeys = ['login','iin','nationality','citizenship','marital_status',
+  'residence_address','registration_address','address_entrance','address_floor','address_apartment',
+  'place_of_birth','emergency_contact_name','emergency_contact_phone']
+const militaryKeys = ['status','category','document_reference','comment']
+function inlineFields(fields: EmployeeDisplayField[]): EmployeeDisplayField[] {
+  return fields.map(field => {
+    const group = field.editGroup
+    if (!group) return field
+    const map = group === 'employee' ? employeeEditKeyByLabel
+      : group === 'private-personal' ? personalEditKeyByLabel
+      : group === 'private-military' ? militaryEditKeyByLabel : {}
+    const key = map[field.label]
+    if (!key) return field
+    const source = group === 'employee' ? profile.value?.data
+      : group === 'private-personal' ? profile.value?.private_profile?.personal
+      : profile.value?.private_profile?.military
+    if (!source) return field
+    const raw = (source as unknown as Record<string, unknown>)[key]
+    return { ...field, editKey: group + ':' + key,
+      rawValue: raw == null ? '' : String(raw),
+      inputType: key === 'birth_date' ? 'date' : key === 'email' ? 'email'
+        : key === 'gender' ? 'select' : 'text',
+    }
+  })
+}
+async function saveEmployeeField(editKey: string, value: string | null): Promise<void> {
+  if (!profile.value) throw new Error('Карточка сотрудника не загружена')
+  const [group, key] = editKey.split(':')
+  const company = String(route.params.company)
+  const employee = profile.value.data
+  if (!key) throw new Error('Неизвестное поле')
+  if (group === 'employee') {
+    if (!Object.values(employeeEditKeyByLabel).includes(key)) throw new Error('Поле только для просмотра')
+    if ((key === 'personnel_number' || key === 'first_name' || key === 'last_name') && !value)
+      throw new Error('Обязательное поле не может быть пустым')
+    await updateEmployee(company, employee.id, employee.revision, {
+      personnel_number: employee.personnel_number, last_name: employee.last_name,
+      first_name: employee.first_name, middle_name: employee.middle_name,
+      [key]: value,
+    })
+  } else if (group === 'private-personal' || group === 'private-military') {
+    const section = group === 'private-personal' ? 'personal' : 'military'
+    const source = profile.value.private_profile?.[section] as Record<string, unknown> | undefined
+    if (!source) throw new Error('Нет доступа к разделу личного дела')
+    const keys = section === 'personal' ? personalKeys : militaryKeys
+    if (!keys.includes(key)) throw new Error('Поле только для просмотра')
+    const payload: Record<string, string | number | null> = { revision: typeof source.revision === 'number' ? source.revision : null }
+    for (const field of keys) {
+      const existing = source[field]
+      payload[field] = existing === null || existing === undefined ? null : String(existing)
+    }
+    payload[key] = value
+    await saveEmployeePrivateSection(company, employee.id, section, payload)
+  } else throw new Error('Поле только для просмотра')
+  cardDirty.value = false
+  await load()
+}
 function openFieldEditor(group: EmployeeFieldEditGroup) {
   if (!editableFieldGroups.value.includes(group)) return
-  if (group === 'employee') openCardEdit()
-  else if (group === 'private-personal') privateEditorSection.value = 'personal'
+  if (group === 'private-personal') privateEditorSection.value = 'personal'
   else if (group === 'private-military') privateEditorSection.value = 'military'
   else if (group === 'identity') privateRecordsSection.value = 'identity'
   else if (group === 'contract') openContractEditor(currentContract.value)

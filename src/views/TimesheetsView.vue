@@ -318,9 +318,6 @@ const calendarOffset = computed(() => {
   const weekday = new Date(first.date + 'T00:00:00Z').getUTCDay()
   return (weekday + 6) % 7
 })
-const workdayCount = computed(() => calendarDays.value.filter(day => ['workday', 'shortened'].includes(day.type)).length)
-const weekendCount = computed(() => calendarDays.value.filter(day => day.type === 'weekend').length)
-const holidayCount = computed(() => calendarDays.value.filter(day => day.type === 'holiday').length)
 const missingCalendarCount = computed(() => calendarDays.value.filter(day => day.type === 'missing').length)
 
 const timesheetColumns = [

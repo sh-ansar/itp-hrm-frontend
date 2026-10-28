@@ -45,6 +45,14 @@ test('HR specialist edits a daily timesheet through the real UI and data survive
     const drawer = page.getByRole('dialog', { name: 'Табель сотрудника' })
     await drawer.waitFor()
     await drawer.getByRole('button', { name: 'Заполнить по плану' }).click()
+    const currentDate = await page.evaluate(() => new Date().toISOString().slice(0, 10))
+    const futureDates = await drawer.locator('.day-row[data-date]').evaluateAll(nodes =>
+      nodes.map(n => n.getAttribute('data-date')).filter(date => date && date > new Date().toISOString().slice(0, 10)))
+    for (const date of futureDates) {
+      const day = drawer.locator('.day-row[data-date="' + date + '"]')
+      assert.equal(await day.getByLabel('Отработано, ч').isDisabled(), true)
+      assert.equal(await day.getByLabel('Отработано, ч').inputValue(), '')
+    }
 
     const targetDay = drawer.locator('.day-row').filter({ hasText: '15.10' })
     await targetDay.getByLabel('Отработано, ч').fill('6')
@@ -58,6 +66,11 @@ test('HR specialist edits a daily timesheet through the real UI and data survive
       drawer.getByRole('button', { name: 'Сохранить табель' }).click(),
     ])
     assert.equal(saveResponse.status(), 200)
+    const payload = saveResponse.request().postDataJSON()
+    assert.ok(payload.days.length > 0)
+    assert.ok(payload.days.every(day => day.date <= currentDate ||
+      [day.worked_minutes, day.absence_minutes, day.overtime_minutes].every(value => value === null || value === 0)),
+    'Future dates must never carry actual worked/absence/overtime minutes')
     await drawer.getByText('Табель сохранён.').waitFor()
 
     await drawer.locator('.drawer-footer').getByRole('button', { name: 'Закрыть', exact: true }).click()
@@ -85,7 +98,16 @@ test('HR specialist edits a daily timesheet through the real UI and data survive
       return { status: response.status, body: await response.json() }
     })
     assert.equal(api.status, 200)
-    assert.equal(api.body.data[0].worked_minutes, 10440)
+    const savedDaily = await page.evaluate(async () => {
+      const response = await fetch(
+        '/api/v1/companies/11111111-1111-4111-8111-111111111111/worktime/timesheet/77777777-7777-4777-8777-777777777777?month=2026-10',
+        { credentials: 'same-origin', headers: { Accept: 'application/json' } },
+      )
+      return { status: response.status, body: await response.json() }
+    })
+    assert.equal(savedDaily.status, 200)
+    assert.equal(api.body.data[0].worked_minutes,
+      savedDaily.body.data.reduce((sum, day) => sum + (day.worked_minutes ?? 0), 0))
     assert.equal(api.body.data[0].absence_minutes, 120)
     assert.equal(api.body.data[0].overtime_minutes, 60)
     assert.equal(api.body.data[0].status, 'attention')
@@ -100,7 +122,7 @@ test('HR specialist edits a daily timesheet through the real UI and data survive
       return { status: response.status, body: await response.json() }
     })
     assert.equal(employeeMonth.status, 200)
-    assert.equal(employeeMonth.body.data.summary.worked_minutes, 10440)
+    assert.equal(employeeMonth.body.data.summary.worked_minutes, api.body.data[0].worked_minutes)
     assert.equal(employeeMonth.body.data.summary.absence_minutes, 120)
     assert.equal(employeeMonth.body.data.summary.overtime_minutes, 60)
     assert.equal(employeeMonth.body.data.summary.lateness_minutes, null)

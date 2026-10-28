@@ -387,6 +387,7 @@ function statusLabel(row: TimesheetViewRow): string {
 function absenceStatusLabel(status: string): string {
   if (status === 'planned') return 'Запланировано'
   if (status === 'recorded') return 'Учтено'
+  if (status === 'historical') return 'Из кадровой истории'
   return status
 }
 
@@ -842,7 +843,7 @@ onMounted(loadCompanies)
             <template #cell-days="{ value }">{{ value }} дн.</template>
             <template #cell-hours="{ value }">{{ hoursLabel(value) }}<template v-if="typeof value === 'number'"> ч</template></template>
             <template #cell-status="{ row }">
-              <BaseStatusPill :tone="row.status === 'planned' ? 'info' : 'success'">
+              <BaseStatusPill :tone="row.status === 'planned' ? 'info' : row.status === 'historical' ? 'neutral' : 'success'">
                 {{ absenceStatusLabel(row.status) }}
               </BaseStatusPill>
             </template>
@@ -854,7 +855,7 @@ onMounted(loadCompanies)
               <RouterLink :to="{ name:'employee-detail', params:{ company, employee:row.employee_id }, query:{ tab:'schedule' } }">
                 {{ row.full_name }}
               </RouterLink>
-              <BaseStatusPill :tone="row.status === 'planned' ? 'info' : 'success'">
+              <BaseStatusPill :tone="row.status === 'planned' ? 'info' : row.status === 'historical' ? 'neutral' : 'success'">
                 {{ absenceStatusLabel(row.status) }}
               </BaseStatusPill>
             </header>

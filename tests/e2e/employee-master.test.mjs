@@ -67,6 +67,8 @@ test('HR creates and edits an employee master record from the redesigned UI', as
     assert.equal(await emailForm.getByLabel('Email').inputValue(), 'synthetic-master@example.test')
     await emailForm.getByLabel('Email').fill('')
     await emailForm.getByRole('button', { name: 'Сохранить', exact: true }).click()
+    // Do not navigate while the asynchronous revisioned save is still pending.
+    await emailForm.waitFor({ state: 'hidden' })
     await page.getByRole('button', { name: 'История изменений', exact: true }).click()
     await page.getByRole('cell', { name: 'Создана карточка сотрудника', exact: true }).waitFor()
     assert.equal(await page.getByRole('cell', { name: 'Изменены данные сотрудника', exact: true }).count(), 2)

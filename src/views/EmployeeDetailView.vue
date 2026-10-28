@@ -314,8 +314,15 @@ async function saveEmployeeField(editKey: string, value: string | null): Promise
     payload[key] = value
     await saveEmployeePrivateSection(company, employee.id, section, payload)
   } else throw new Error('Поле только для просмотра')
+  // Keep the displayed card and active tab mounted while refreshing the
+  // authoritative profile and audit trail. Full load() would temporarily
+  // unmount the entire editor and reset navigation during an inline save.
+  const refreshed = await getEmployee(company, employee.id)
+  if (String(route.params.company) === company
+      && String(route.params.employee) === employee.id) {
+    profile.value = refreshed
+  }
   cardDirty.value = false
-  await load()
 }
 function openFieldEditor(group: EmployeeFieldEditGroup) {
   if (!editableFieldGroups.value.includes(group)) return

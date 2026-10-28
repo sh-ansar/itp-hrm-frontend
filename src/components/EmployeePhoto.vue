@@ -143,6 +143,12 @@ async function remove() {
     <BaseDialog :open="photoViewerOpen && !!(imageUrl || pendingPreview)" :title="'Фото сотрудника: ' + name"
       @close="photoViewerOpen = false">
       <img v-if="pendingPreview || imageUrl" :src="pendingPreview || imageUrl" :alt="'Фото сотрудника: ' + name" class="photo-viewer" />
+      <div v-if="compactEdit && canEdit && hasPhoto && !pendingPhoto" class="photo-viewer-actions">
+        <BaseButton variant="secondary" :disabled="saving"
+          @click="window.confirm('Удалить фотографию сотрудника?') && remove()">
+          Удалить фотографию
+        </BaseButton>
+      </div>
     </BaseDialog>
   </div>
 </template>
@@ -169,6 +175,7 @@ async function remove() {
 .photo-preview-trigger{padding:0;cursor:zoom-in;appearance:none;font:inherit}
 .photo-preview-trigger:disabled{cursor:default}
 .photo-preview-trigger:focus-visible{outline:2px solid var(--color-primary);outline-offset:3px}
+.photo-viewer-actions{display:flex;justify-content:center;margin-top:12px}
 .photo-viewer{display:block;max-width:100%;max-height:min(78dvh,690px);width:auto;height:auto;object-fit:contain;margin:0 auto;border-radius:10px}
 .photo-actions{display:grid;gap:7px;min-width:0;flex:1;justify-items:start}
 .photo-compact-actions{position:absolute;right:0;bottom:0;display:grid;justify-items:end;gap:5px;z-index:1}

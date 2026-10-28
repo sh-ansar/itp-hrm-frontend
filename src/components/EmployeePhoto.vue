@@ -5,7 +5,7 @@ import BaseNotice from './ui/BaseNotice.vue'
 import BaseDialog from './ui/BaseDialog.vue'
 import { readEmployeePhoto, removeEmployeePhoto, uploadEmployeePhoto, validateEmployeePhoto } from '../api/employeePhoto'
 
-const props = defineProps<{ companyId: string; employeeId: string; revision: number; hasPhoto: boolean; canEdit: boolean; name: string; initials: string }>()
+const props = defineProps<{ companyId: string; employeeId: string; revision: number; hasPhoto: boolean; canEdit: boolean; name: string; initials: string; compactEdit?: boolean }>()
 const emit = defineEmits<{ saved: [] }>()
 const inputId = useId()
 const imageUrl = ref('')
@@ -15,6 +15,9 @@ const dragging = ref(false)
 const photoViewerOpen = ref(false)
 const error = ref('')
 const input = ref<HTMLInputElement | null>(null)
+const pendingPhoto = ref<File | null>(null)
+const pendingPreview = ref('')
+function resetPending() { if (pendingPreview.value) URL.revokeObjectURL(pendingPreview.value); pendingPreview.value = ''; pendingPhoto.value = null }
 let request: AbortController | null = null
 let generation = 0
 let displayedFor = ''
@@ -22,6 +25,7 @@ function clearImage() { if (imageUrl.value) URL.revokeObjectURL(imageUrl.value);
 watch(() => [props.companyId, props.employeeId, props.hasPhoto, props.revision], async () => {
   const current = ++generation
   request?.abort()
+  resetPending()
   const identity = props.companyId + ':' + props.employeeId
   // Keep the previous authorized photo visible while refreshing its revision.
   // Otherwise a replacement briefly shows an empty avatar and upload validation
@@ -50,12 +54,18 @@ watch(() => [props.companyId, props.employeeId, props.hasPhoto, props.revision],
     }
   } finally { clearTimeout(timeout); if (current === generation) imageLoading.value = false }
 }, { immediate: true })
-onBeforeUnmount(() => { generation++; request?.abort(); clearImage() })
+onBeforeUnmount(() => { generation++; request?.abort(); clearImage(); resetPending() })
 async function select(file?: File) {
   if (!file || saving.value || !props.canEdit) return
   error.value = ''
   try {
     validateEmployeePhoto(file)
+    if (props.compactEdit) {
+      resetPending()
+      pendingPhoto.value = file
+      pendingPreview.value = URL.createObjectURL(file)
+      return
+    }
     saving.value = true
     await uploadEmployeePhoto(props.companyId, props.employeeId, props.revision, file)
     emit('saved')
@@ -63,6 +73,19 @@ async function select(file?: File) {
   finally { saving.value = false; if (input.value) input.value.value = '' }
 }
 function choose(event: Event) { void select((event.target as HTMLInputElement).files?.[0]) }
+async function savePending() {
+  if (!pendingPhoto.value || saving.value || !props.canEdit) return
+  saving.value = true
+  error.value = ''
+  try {
+    validateEmployeePhoto(pendingPhoto.value)
+    await uploadEmployeePhoto(props.companyId, props.employeeId, props.revision, pendingPhoto.value)
+    resetPending()
+    emit('saved')
+  } catch (cause) {
+    error.value = cause instanceof Error ? cause.message : 'Не удалось загрузить фотографию'
+  } finally { saving.value = false }
+}
 function drop(event: DragEvent) { dragging.value = false; void select(event.dataTransfer?.files[0]) }
 async function remove() {
   if (saving.value || !props.canEdit) return
@@ -77,17 +100,27 @@ async function remove() {
 <template>
   <div class="employee-photo" :class="{ 'employee-photo--drag': dragging }"
     @dragover.prevent="dragging = canEdit && !saving" @dragleave="dragging = false" @drop.prevent="drop">
-    <p class="photo-caption">Фото сотрудника</p>
+    <p v-if="!compactEdit" class="photo-caption">Фото сотрудника</p>
     <div class="photo-row">
       <button type="button" class="avatar photo-preview-trigger"
-        :disabled="!imageUrl || imageLoading" :aria-busy="imageLoading || saving"
-        :title="imageUrl ? 'Посмотреть фотографию' : undefined"
-        :aria-label="imageUrl ? 'Посмотреть фотографию сотрудника' : 'Фото сотрудника не загружено'"
+        :disabled="!(pendingPreview || imageUrl) || imageLoading" :aria-busy="imageLoading || saving"
+        :title="pendingPreview || imageUrl ? 'Посмотреть фотографию' : undefined"
+        :aria-label="pendingPreview || imageUrl ? 'Посмотреть фотографию сотрудника' : 'Фото сотрудника не загружено'"
         @click="photoViewerOpen = true">
-        <img v-if="imageUrl" :src="imageUrl" :alt="'Фото: ' + name" />
+        <img v-if="pendingPreview || imageUrl" :src="pendingPreview || imageUrl" :alt="'Фото: ' + name" />
         <span v-else :aria-label="imageLoading ? 'Загрузка фото' : 'Фото сотрудника не загружено'">{{ imageLoading ? '…' : initials }}</span>
       </button>
-      <div class="photo-actions">
+      <div v-if="compactEdit && canEdit" class="photo-compact-actions">
+        <input :id="inputId" ref="input" class="photo-input" type="file" accept="image/jpeg,image/png,.jpg,.jpeg,.png"
+          aria-label="Выбрать фотографию" :disabled="saving" @change="choose" />
+        <BaseButton variant="secondary" icon-only type="button" class="photo-pencil" :disabled="saving"
+          aria-label="Изменить фотографию" title="Изменить фотографию" @click="input?.click()">✎</BaseButton>
+        <div v-if="pendingPhoto" class="photo-compact-save">
+          <BaseButton size="sm" :disabled="saving" @click="savePending">{{ saving ? 'Сохранение…' : 'Сохранить' }}</BaseButton>
+          <BaseButton size="sm" variant="secondary" :disabled="saving" @click="resetPending">Отмена</BaseButton>
+        </div>
+      </div>
+      <div v-else-if="!compactEdit" class="photo-actions">
         <template v-if="canEdit">
           <input :id="inputId" ref="input" class="photo-input" type="file" accept="image/jpeg,image/png,.jpg,.jpeg,.png"
             aria-label="Выбрать фото сотрудника" :disabled="saving" @change="choose" />
@@ -99,9 +132,9 @@ async function remove() {
       </div>
     </div>
     <BaseNotice v-if="error" tone="error">{{ error }}</BaseNotice>
-    <BaseDialog :open="photoViewerOpen && !!imageUrl" :title="'Фото сотрудника: ' + name"
+    <BaseDialog :open="photoViewerOpen && !!(imageUrl || pendingPreview)" :title="'Фото сотрудника: ' + name"
       @close="photoViewerOpen = false">
-      <img v-if="imageUrl" :src="imageUrl" :alt="'Фото сотрудника: ' + name" class="photo-viewer" />
+      <img v-if="pendingPreview || imageUrl" :src="pendingPreview || imageUrl" :alt="'Фото сотрудника: ' + name" class="photo-viewer" />
     </BaseDialog>
   </div>
 </template>
@@ -130,6 +163,15 @@ async function remove() {
 .photo-preview-trigger:focus-visible{outline:2px solid var(--color-primary);outline-offset:3px}
 .photo-viewer{display:block;max-width:100%;max-height:min(78dvh,690px);width:auto;height:auto;object-fit:contain;margin:0 auto;border-radius:10px}
 .photo-actions{display:grid;gap:7px;min-width:0;flex:1;justify-items:start}
+.photo-compact-actions{position:absolute;right:0;bottom:0;display:grid;justify-items:end;gap:5px;z-index:1}
+.photo-compact-actions .photo-pencil{min-width:30px;min-height:30px;padding:0;border-radius:50%;background:var(--color-surface);box-shadow:var(--shadow-sm);font-size:20px;line-height:1}
+.photo-compact-save{display:flex;align-items:center;gap:5px;flex-wrap:wrap;background:var(--color-surface);padding:5px;border-radius:var(--radius-sm);box-shadow:var(--shadow-sm)}
+.employee-photo{position:relative}
+.employee-photo:has(.photo-compact-actions) .photo-row{display:block}
+.employee-photo:has(.photo-compact-actions) .avatar{width:150px;height:160px;aspect-ratio:auto;border-radius:10px;overflow:hidden}
+.employee-photo:has(.photo-compact-actions) .avatar img{object-fit:contain;object-position:center}
+.employee-photo:has(.photo-compact-actions) .photo-compact-actions{right:-6px;bottom:-6px}
+@media(max-width:600px){.employee-photo:has(.photo-compact-actions) .avatar{width:135px;height:145px}}
 .photo-actions p{margin:0;color:var(--color-muted);font-size:11px;line-height:16px}
 .photo-actions :deep(button){min-height:33px;padding:6px 10px;font-size:12px}
 .photo-input{

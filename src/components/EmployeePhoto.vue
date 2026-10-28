@@ -95,11 +95,12 @@ async function savePending() {
   } finally { saving.value = false }
 }
 function drop(event: DragEvent) { dragging.value = false; void select(event.dataTransfer?.files[0]) }
+function confirmRemove() { if (window.confirm('Удалить фотографию сотрудника?')) void remove() }
 async function remove() {
   if (saving.value || !props.canEdit) return
   saving.value = true
   error.value = ''
-  try { await removeEmployeePhoto(props.companyId, props.employeeId, props.revision); emit('saved') }
+  try { await removeEmployeePhoto(props.companyId, props.employeeId, props.revision); photoViewerOpen.value = false; emit('saved') }
   catch (cause) { error.value = cause instanceof Error ? cause.message : 'Не удалось удалить фото' }
   finally { saving.value = false }
 }
@@ -145,7 +146,7 @@ async function remove() {
       <img v-if="pendingPreview || imageUrl" :src="pendingPreview || imageUrl" :alt="'Фото сотрудника: ' + name" class="photo-viewer" />
       <div v-if="compactEdit && canEdit && hasPhoto && !pendingPhoto" class="photo-viewer-actions">
         <BaseButton variant="secondary" :disabled="saving"
-          @click="window.confirm('Удалить фотографию сотрудника?') && remove()">
+          @click="confirmRemove">
           Удалить фотографию
         </BaseButton>
       </div>

@@ -36,6 +36,7 @@ import {
   setEmployeeDocumentVisibility,
   type DocumentRow,
   type DocumentType,
+  type DocumentSection,
 } from '../api/documents'
 
 const { tr } = useWorkspaceI18n()
@@ -78,7 +79,7 @@ const statusOptions = computed(() => [
 const employeeFilter = ref('')
 const searchText = ref('')
 const tagText = ref('')
-const sectionFilter = ref('')
+const sectionFilter = ref<DocumentSection | ''>('')
 const metadataTarget = ref<DocumentRow | null>(null)
 const createOpen = ref(false)
 const uploadTarget = ref<DocumentRow | null>(null)

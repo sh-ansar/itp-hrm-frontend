@@ -9,13 +9,17 @@ import { createEmployee, updateEmployee, type EmployeeRecord } from '../api/pers
 import { readEmployeePhoto, removeEmployeePhoto, uploadEmployeePhoto, validateEmployeePhoto } from '../api/employeePhoto'
 import { Pencil } from 'lucide-vue-next'
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   companyId: string
   edit?: EmployeeRecord | null
   showActions?: boolean
   managePhoto?: boolean
   formId?: string
-}>()
+}>(), {
+  // The normal create flow retains its own Save/Cancel controls. Only the
+  // inline employee-card editor deliberately hides them in favor of the header.
+  showActions: true,
+})
 
 const emit = defineEmits<{ saved: [employee: EmployeeRecord]; cancelled: []; dirty: [value: boolean]; saving: [value: boolean] }>()
 

@@ -53,6 +53,7 @@ const cardSaving = ref(false)
 function openCardEdit() {
   if (!profile.value?.meta.employee_writes_enabled) return
   cardDirty.value = false
+  cardSaving.value = false
   cardEditing.value = true
 }
 function confirmDiscard(): boolean {
@@ -63,9 +64,11 @@ function cancelCardEdit() {
   if (cardSaving.value || !confirmDiscard()) return
   cardEditing.value = false
   cardDirty.value = false
+  cardSaving.value = false
 }
 function cardSaved() {
   cardDirty.value = false
+  cardSaving.value = false
   cardEditing.value = false
   void load()
 }

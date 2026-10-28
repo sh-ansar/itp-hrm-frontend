@@ -107,21 +107,19 @@ async function load() {
 }
 
 function fillByPlan() {
-  rows.value = rows.value.map(row => ({
-    ...row,
-    worked_hours: props.focusDate && row.date !== props.focusDate ? row.worked_hours : row.planned_minutes > 0 ? hours(row.planned_minutes) : '0',
-    absence_hours: props.focusDate && row.date !== props.focusDate ? row.absence_hours : '0',
-    overtime_hours: props.focusDate && row.date !== props.focusDate ? row.overtime_hours : '0',
-  }))
+  rows.value = rows.value.map(row => {
+    if (futureDay(row) || (props.focusDate && row.date !== props.focusDate)) return row
+    return { ...row, worked_hours: row.planned_minutes > 0 ? hours(row.planned_minutes) : '0', absence_hours: '0', overtime_hours: '0' }
+  })
 }
 
 async function save() {
-  if (saving.value || !shownRows.value.length) return
+  if (saving.value || !changedRows.value.length) return
   saving.value = true
   error.value = ''
   success.value = ''
   try {
-    await putEmployeeTimesheet(props.companyId, props.employeeId, props.month, shownRows.value.map(row => ({
+    await putEmployeeTimesheet(props.companyId, props.employeeId, props.month, changedRows.value.map(row => ({
       date: row.date,
       worked_minutes: minutes(row.worked_hours),
       absence_minutes: minutes(row.absence_hours),

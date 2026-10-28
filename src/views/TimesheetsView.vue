@@ -654,10 +654,10 @@ onMounted(loadCompanies)
 
         <div class="timesheet-table-toolbar">
           <div class="timesheet-period-tabs" role="tablist" aria-label="Режим просмотра табеля">
-            <button type="button" role="tab" :aria-selected="timesheetPeriodView === 'month'"
-              :class="{ active:timesheetPeriodView==='month' }" @click="selectTimesheetView('month')">Месяц</button>
-            <button type="button" role="tab" :aria-selected="timesheetPeriodView === 'day'"
-              :class="{ active:timesheetPeriodView==='day' }" @click="selectTimesheetView('day')">День</button>
+            <BaseButton variant="secondary" type="button" role="tab" :aria-selected="timesheetPeriodView === 'month'"
+              :class="{ active:timesheetPeriodView==='month' }" @click="selectTimesheetView('month')">Месяц</BaseButton>
+            <BaseButton variant="secondary" type="button" role="tab" :aria-selected="timesheetPeriodView === 'day'"
+              :class="{ active:timesheetPeriodView==='day' }" @click="selectTimesheetView('day')">День</BaseButton>
           </div>
           <BaseFormField v-if="timesheetPeriodView === 'day'" v-model="selectedDay" label="Дата" type="date"
             :min="month + '-01'" :max="monthEnd(month)" />

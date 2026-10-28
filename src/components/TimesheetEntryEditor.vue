@@ -165,7 +165,7 @@ watch(() => [props.open, props.companyId, props.employeeId, props.month], () => 
         </BaseNotice>
 
         <div v-else class="day-list">
-          <article v-for="row in shownRows" :key="row.date" class="day-row"
+          <article v-for="row in shownRows" :key="row.date" :data-date="row.date" class="day-row"
             :class="{ 'day-row--off': row.planned_minutes === 0 }">
             <header>
               <div>

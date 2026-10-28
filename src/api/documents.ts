@@ -26,6 +26,9 @@ export interface DocumentRow extends Record<string, unknown> {
   document_number: string | null
   title: string
   issued_on: string | null
+  description?: string | null
+  tags?: string[]
+  section_key?: DocumentSection | null
   status: string
   revision: number
   created_by_user_id?: number | null
@@ -54,6 +57,15 @@ export interface DocumentListResponse {
     can_review_orders?: boolean
   }
 }
+export type DocumentSection = 'personal' | 'organization' | 'employment' | 'schedule' | 'development' | 'documents'
+export const documentSections: { id: DocumentSection; name: string }[] = [
+  { id: 'personal', name: 'Личные данные' },
+  { id: 'organization', name: 'Организация и должность' },
+  { id: 'employment', name: 'Трудовые данные' },
+  { id: 'schedule', name: 'Графики и табель' },
+  { id: 'development', name: 'Обучение и награды' },
+  { id: 'documents', name: 'Документы' },
+]
 export interface DocumentDraft {
   employee_id: string
   personnel_action_id?: string | null
@@ -61,6 +73,9 @@ export interface DocumentDraft {
   document_number: string | null
   title: string
   issued_on: string | null
+  description?: string | null
+  tags?: string[]
+  section_key?: DocumentSection | null
 }
 export interface DocumentCreated {
   data: { id: string; employee_id: string; document_type: DocumentType; status: 'draft'; revision: number }
@@ -76,6 +91,7 @@ export function listDocuments(
   documentType: DocumentType | '' = '',
   employeeId = '',
   status: 'draft' | 'submitted' | 'approved' | 'rejected' | '' = '',
+  filters: { search?: string; tag?: string; section_key?: DocumentSection } = {},
 ): Promise<DocumentListResponse> {
   validateId(companyId)
   if (!Number.isSafeInteger(page) || page < 1) throw new Error('Некорректная страница')
@@ -85,6 +101,9 @@ export function listDocuments(
   if (documentType) params.set('document_type', documentType)
   if (employeeId) params.set('employee_id', employeeId)
   if (status) params.set('status', status)
+  if (filters.search?.trim()) params.set('search', filters.search.trim().slice(0, 120))
+  if (filters.tag?.trim()) params.set('tag', filters.tag.trim().slice(0, 40))
+  if (filters.section_key) params.set('section_key', filters.section_key)
   return apiRequest<DocumentListResponse>(`/companies/${companyId}/documents?${params.toString()}`)
 }
 
@@ -187,5 +206,17 @@ export function setEmployeeDocumentVisibility(
   return apiRequest(`/companies/${companyId}/documents/${documentId}/employee-access`, {
     method: 'PUT',
     body: JSON.stringify({ revision, employee_visible: employeeVisible }),
+  })
+}
+
+/** Revision-checked metadata changes cannot modify file visibility or PDF bytes. */
+export function updateDocumentMetadata(companyId: string, documentId: string, revision: number,
+  metadata: { title?: string; description?: string | null; tags?: string[]; section_key?: DocumentSection | null },
+): Promise<{ data: Pick<DocumentRow, 'id' | 'title' | 'description' | 'tags' | 'section_key' | 'revision'> }> {
+  validateId(companyId)
+  validateId(documentId)
+  if (!Number.isInteger(revision) || revision < 1) throw new Error('Обновите реестр документов')
+  return apiRequest('/companies/' + companyId + '/documents/' + documentId + '/metadata', {
+    method: 'PUT', body: JSON.stringify({ revision, ...metadata }),
   })
 }

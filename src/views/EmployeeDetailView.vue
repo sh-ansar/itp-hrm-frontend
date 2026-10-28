@@ -928,19 +928,10 @@ onMounted(load)
             :writable="Boolean(profile.meta.private_address_writes_enabled)"
             :truncated="Boolean(profile.meta.private_addresses_truncated)"
             @changed="load" />
-          <div v-if="hasLegacyContactValues" class="employee-legacy-contact-section">
-            <BaseButton v-if="hasNormalizedAddressStore" variant="secondary"
-              class="employee-legacy-contact-trigger" :aria-expanded="legacyContactsOpen"
-              aria-controls="employee-legacy-contact-values"
-              @click="legacyContactsOpen = !legacyContactsOpen">
-              <ChevronDown :size="15" aria-hidden="true" :class="{ 'legacy-chevron-open': legacyContactsOpen }" />
-              {{ tr('Дополнительные контакты и прежние адреса') }}
-            </BaseButton>
-            <div v-if="!hasNormalizedAddressStore || legacyContactsOpen" id="employee-legacy-contact-values"
-              class="employee-legacy-contact-values">
-              <EmployeeDataGrid :fields="inlineFields(legacyContactFields)" :editable-groups="editableFieldGroups"
+          <div v-if="hasLegacyContactValues || profile.meta.private_profile_writes_enabled || profile.meta.employee_writes_enabled"
+            class="employee-legacy-contact-section">
+            <EmployeeDataGrid :fields="inlineFields(legacyContactFields)" :editable-groups="editableFieldGroups"
               :save-field="saveEmployeeField" @edit="openFieldEditor" @dirty="cardDirty = $event" />
-            </div>
           </div>
         </EmployeeProfileSection>
         <EmployeeProfileSection :title="tr('Документы, удостоверяющие личность')">

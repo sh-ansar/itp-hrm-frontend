@@ -9,6 +9,7 @@ import EmployeePrivateProfileEditor from '../components/EmployeePrivateProfileEd
 import EmployeePrivateRecordsManager from '../components/EmployeePrivateRecordsManager.vue'
 import EmployeePhoto from '../components/EmployeePhoto.vue'
 import EmployeeDocumentsPanel from '../components/EmployeeDocumentsPanel.vue'
+import EmployeeSectionDocuments from '../components/EmployeeSectionDocuments.vue'
 import EmployeeDataGrid from '../components/EmployeeDataGrid.vue'
 import EmployeeMonthWorktime from '../components/EmployeeMonthWorktime.vue'
 import EmployeeTimesheetHistory from '../components/EmployeeTimesheetHistory.vue'
@@ -37,7 +38,7 @@ import { useUiFormatters } from '../composables/useUiFormatters'
 
 const { tr } = useWorkspaceI18n()
 
-type EmployeeDisplayField = { label: string; value: string | number | null | undefined; wide?: boolean; muted?: boolean; editGroup?: EmployeeFieldEditGroup }
+type EmployeeDisplayField = { label: string; value: string | number | null | undefined; wide?: boolean; muted?: boolean; editGroup?: EmployeeFieldEditGroup; editKey?: string; rawValue?: string | null; inputType?: 'text' | 'email' | 'date' | 'select' }
 
 const route = useRoute()
 const fmt = useUiFormatters()
@@ -51,7 +52,12 @@ const editing = ref<{ section: ProfileSection; record: ProfileEditRow } | null>(
 const assignmentEditing = ref<EmployeeAssignment | null>(null)
 const assignmentTransitioning = ref<EmployeeAssignment | null>(null)
 const cardDirty = ref(false)
-const photoEditing = ref(false)
+const documentWritesEnabled = ref(false)
+const documentReadEnabled = ref(false)
+const attachmentError = ref('')
+const documentSection = computed<DocumentSection | null>(() =>
+  ['personal','organization','employment','schedule','development','documents'].includes(activeSection.value)
+    ? activeSection.value as DocumentSection : null)
 const attachSection = ref<DocumentSection | null>(null)
 const newDocumentId = ref('')
 const newDocumentRecord = ref<DocumentRow | null>(null)
@@ -76,11 +82,13 @@ async function documentCreated(id: string) {
   newDocumentId.value = id
   const result = await listDocuments(String(route.params.company), 1, '', profile.value?.data.id ?? '')
   newDocumentRecord.value = result.data.find(row => row.id === id) ?? null
+  if (!newDocumentRecord.value) attachmentError.value = 'Черновик создан. Откройте реестр документов, чтобы прикрепить PDF.'
 }
 function closeAttach() {
   attachSection.value = null
   newDocumentId.value = ''
   newDocumentRecord.value = null
+  attachmentError.value = ''
 }
 function documentAttached() { closeAttach(); void load() }
 
@@ -338,6 +346,12 @@ const personalFields = computed<EmployeeDisplayField[]>(() => [
   { label: 'Табельный номер', value: profile.value?.data.personnel_number, editGroup: 'employee' },
 ])
 // The ZIP puts login, email and telephone on one row, followed by repeatable addresses.
+const identityFields = computed<EmployeeDisplayField[]>(() => [
+  { label: 'Фамилия', value: profile.value?.data.last_name, editGroup: 'employee' },
+  { label: 'Имя', value: profile.value?.data.first_name, editGroup: 'employee' },
+  { label: 'Отчество', value: profile.value?.data.middle_name, editGroup: 'employee' },
+  { label: 'Дата рождения', value: formatDate(profile.value?.data.birth_date), editGroup: 'employee' },
+])
 const contactFields = computed<EmployeeDisplayField[]>(() => [
   { label: 'Логин', value: reference.value?.personal.login, editGroup: 'private-personal' },
   { label: 'Email', value: profile.value?.data.email, editGroup: 'employee' },
@@ -714,8 +728,9 @@ async function load() {
   editing.value = null
   assignmentEditing.value = null
   assignmentTransitioning.value = null
-  cardEditing.value = false
   cardDirty.value = false
+  documentWritesEnabled.value = false
+  documentReadEnabled.value = false
   privateEditorSection.value = null
   privateRecordsSection.value = null
   assignmentCreateOpen.value = false
@@ -741,6 +756,15 @@ async function load() {
     }
     if (current === generation) {
       profile.value = result
+      if (result.meta.extended_sections_visible) {
+        void listDocuments(company, 1, '', employee).then(documents => {
+          if (current !== generation) return
+          documentReadEnabled.value = true
+          documentWritesEnabled.value = documents.meta.document_writes_enabled
+        }).catch(() => {
+          if (current === generation) { documentReadEnabled.value = false; documentWritesEnabled.value = false }
+        })
+      }
       contracts.value = contractResult?.data ?? []
       contractWritesEnabled.value = contractResult?.meta.writes_enabled ?? false
       const department = result.assignments.find(row =>

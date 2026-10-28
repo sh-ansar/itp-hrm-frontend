@@ -254,7 +254,7 @@ function status(request: OwnRequest) {
             <h2>{{ balanceT('mine') }}</h2>
             <BaseSelectField v-model="balanceYear" :label="balanceT('year')" :options="balanceYearOptions" />
           </header>
-          <BaseNotice tone="info">{{ balanceT('noAuto') }}</BaseNotice>
+          
           <BaseNotice v-if="balanceError" tone="error">{{ balanceError }}</BaseNotice>
           <BaseButton v-if="balanceError" variant="secondary" @click="loadOwnBalances">{{ balanceT('retry') }}</BaseButton>
           <p v-if="balanceLoading" role="status">{{ balanceT('loading') }}</p>
@@ -378,7 +378,7 @@ function status(request: OwnRequest) {
 header,.actions{display:flex;align-items:center;justify-content:space-between;gap:var(--space-3);flex-wrap:wrap}
 h1,h2,p{overflow-wrap:anywhere}h2{font-size:var(--font-body-size)}
 article{padding:var(--space-4) 0;border-top:1px solid var(--color-stroke)}
-.own-approval-route{margin:8px 0;display:grid;align-items:start;gap:4px;padding:10px 12px;background:var(--color-soft);border:1px solid var(--color-stroke);border-radius:8px;font-size:12px;line-height:1.5;overflow-wrap:anywhere}
+.own-approval-route{margin:8px 0;display:grid;align-items:start;gap:4px;padding:10px 12px;background:transparent;border:0;border-left:2px solid var(--color-stroke);border-radius:0;font-size:12px;line-height:1.5;overflow-wrap:anywhere}
 .own-approval-route strong{font-weight:600}
 .own-approval-route__warning{color:var(--color-warning)}
 .actions{justify-content:flex-start}a{color:var(--color-primary)}
@@ -391,7 +391,7 @@ article{padding:var(--space-4) 0;border-top:1px solid var(--color-stroke)}
 .own-balances__type>header{display:flex;align-items:center;justify-content:space-between;gap:var(--space-2);flex-wrap:wrap}
 .own-balances__type>header span,.own-balances__reference{font-size:var(--font-caption-size);color:var(--color-muted)}
 .own-balances__figures{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--space-3);margin:0}
-.own-balances__figures div{display:grid;gap:var(--space-1);min-width:0;padding:var(--space-3);background:var(--color-soft);border-radius:var(--radius-sm)}
+.own-balances__figures div{display:grid;gap:var(--space-1);min-width:0;padding:var(--space-3);background:transparent;border-bottom:1px solid var(--color-stroke);border-radius:0}
 .own-balances__figures dt{font-size:var(--font-caption-size);color:var(--color-muted)}
 .own-balances__figures dd{margin:0;font-weight:650;overflow-wrap:anywhere}
 .own-balances__available{border:1px solid var(--color-stroke)}

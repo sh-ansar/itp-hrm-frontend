@@ -22,33 +22,37 @@ test('HR saves personal and military data in Laravel from a mobile employee prof
 
     await page.goto('/employees/11111111-1111-4111-8111-111111111111/77777777-7777-4777-8777-777777777777')
     await page.getByRole('heading', { name: 'Основные личные данные' }).waitFor()
-    await page.locator('.employee-profile-section').filter({ has: page.getByRole('heading', { name: 'Основные личные данные', exact: true }) }).getByRole('button', { name: 'Изменить', exact: true }).click()
-    const personal = page.getByRole('dialog', { name: 'Личные данные и контакты' })
-    await personal.waitFor()
-    await personal.getByLabel('Гражданство').fill('GE')
-    await personal.getByLabel('Место рождения').fill('Synthetic City')
-    await personal.getByLabel('Адрес регистрации').fill('Synthetic Address')
-    await personal.getByRole('button', { name: 'Сохранить изменения' }).click()
-    await personal.waitFor({ state: 'hidden' })
+    async function editField(sectionTitle, fieldName, nextValue) {
+      const section = page.locator('.employee-profile-section').filter({
+        has: page.getByRole('heading', { name: sectionTitle, exact: true }),
+      })
+      const field = section.locator('.employee-data-field').filter({
+        has: page.locator('.employee-data-label').getByText(fieldName, { exact: true }),
+      })
+      await field.getByRole('button', { name: 'Изменить поле: ' + fieldName }).click()
+      const editor = field.locator('form.employee-inline-field-form')
+      await editor.waitFor()
+      assert.equal(await editor.locator('input,select').count(), 1)
+      await editor.getByLabel(fieldName, { exact: true }).fill(nextValue)
+      await editor.getByRole('button', { name: 'Сохранить', exact: true }).click()
+      await field.getByText(nextValue, { exact: true }).waitFor()
+    }
+
+    await editField('Основные личные данные', 'Гражданство', 'GE')
+    await editField('Место рождения', 'Место рождения', 'Synthetic City')
+    await editField('Контакты и адреса', 'Адрес регистрации', 'Synthetic Address')
+    assert.equal(await page.getByRole('dialog', { name: 'Личные данные и контакты' }).count(), 0)
 
     await page.reload()
     await page.getByRole('heading', { name: 'Основные личные данные' }).waitFor()
-    await page.locator('.employee-profile-section').filter({ has: page.getByRole('heading', { name: 'Основные личные данные', exact: true }) }).getByRole('button', { name: 'Изменить', exact: true }).click()
-    await personal.waitFor()
-    assert.equal(await personal.getByLabel('Место рождения').inputValue(), 'Synthetic City')
-    await personal.getByRole('button', { name: 'Закрыть', exact: true }).last().click()
-    await personal.waitFor({ state: 'hidden' })
-
-    await page.locator('.employee-profile-section').filter({ has: page.getByRole('heading', { name: 'Воинский учёт', exact: true }) }).getByRole('button', { name: 'Изменить', exact: true }).click()
-    const military = page.getByRole('dialog', { name: 'Воинский учёт' })
-    await military.getByLabel('Статус воинского учёта').fill('liable')
-    await military.getByLabel('Категория воинского учёта').fill('reserve')
-    await military.getByLabel('Реквизиты военного документа').fill('SYNTHETIC-REF')
-    await military.getByRole('button', { name: 'Сохранить изменения' }).click()
-    await military.waitFor({ state: 'hidden' })
+    await page.getByText('Synthetic City', { exact: true }).waitFor()
+    await page.getByText('Synthetic Address', { exact: true }).waitFor()
+    await editField('Воинский учёт', 'Статус воинского учёта', 'liable')
+    await editField('Воинский учёт', 'Категория учёта', 'reserve')
+    await editField('Воинский учёт', 'Военный билет', 'SYNTHETIC-REF')
     await page.reload()
     await page.getByRole('heading', { name: 'Воинский учёт' }).waitFor()
-    assert.equal(await page.getByText('SYNTHETIC-REF', { exact: true }).count(), 1)
+    await page.getByText('SYNTHETIC-REF', { exact: true }).waitFor()
     assert.deepEqual(errors, [])
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1), false)
   } finally {

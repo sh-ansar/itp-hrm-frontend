@@ -16,6 +16,8 @@ import BaseLoadingState from '../components/ui/BaseLoadingState.vue'
 import BaseNotice from '../components/ui/BaseNotice.vue'
 import BasePagination from '../components/ui/BasePagination.vue'
 import BaseSelectField from '../components/ui/BaseSelectField.vue'
+import BaseFormField from '../components/ui/BaseFormField.vue'
+import DocumentMetadataForm from '../components/DocumentMetadataForm.vue'
 import BaseViewTabs from '../components/ui/BaseViewTabs.vue'
 import DocumentMobileList from '../components/DocumentMobileList.vue'
 import EmployeeLookupField from '../components/EmployeeLookupField.vue'
@@ -29,10 +31,12 @@ import {
   documentFileUrl,
   documentTypeLabel,
   documentTypes,
+  documentSections,
   listDocuments,
   setEmployeeDocumentVisibility,
   type DocumentRow,
   type DocumentType,
+  type DocumentSection,
 } from '../api/documents'
 
 const { tr } = useWorkspaceI18n()
@@ -73,6 +77,10 @@ const statusOptions = computed(() => [
     .map(status => ({ id: status, name: orderCopy.value[status] })),
 ])
 const employeeFilter = ref('')
+const searchText = ref('')
+const tagText = ref('')
+const sectionFilter = ref<DocumentSection | ''>('')
+const metadataTarget = ref<DocumentRow | null>(null)
 const createOpen = ref(false)
 const uploadTarget = ref<DocumentRow | null>(null)
 const shareTarget = ref<DocumentRow | null>(null)
@@ -93,6 +101,7 @@ const columns = computed(() => [
   { key: 'issued_on', label: 'Дата' },
   { key: 'document_type', label: 'Вид' },
   { key: 'title', label: 'Документ' },
+  { key: 'metadata', label: 'Теги' },
   { key: 'employee', label: 'Сотрудник' },
   { key: 'relation', label: 'Связь' },
   { key: 'status', label: 'Статус' },
@@ -153,6 +162,7 @@ async function loadDocuments() {
       typeFilter.value === 'all' ? '' : typeFilter.value as DocumentType,
       employeeFilter.value,
       typeFilter.value === 'order' && statusFilter.value !== 'all' ? statusFilter.value : '',
+      { search: searchText.value, tag: tagText.value, section_key: sectionFilter.value || undefined },
     )
     if (current !== generation) return
     rows.value = result.data
@@ -233,14 +243,17 @@ watch(company, () => {
   typeFilter.value = queryType()
   statusFilter.value = typeFilter.value === 'order' ? queryStatus() : 'all'
   employeeFilter.value = ''
+  searchText.value = ''
+  tagText.value = ''
+  sectionFilter.value = ''
   createOpen.value = false
   uploadTarget.value = null
   shareTarget.value = null
   shareError.value = ''
   success.value = ''
 })
-watch([company, page, typeFilter, employeeFilter, statusFilter], loadDocuments)
-watch([typeFilter, employeeFilter, statusFilter], () => { page.value = 1 })
+watch([company, page, typeFilter, employeeFilter, statusFilter, searchText, tagText, sectionFilter], loadDocuments)
+watch([typeFilter, employeeFilter, statusFilter, searchText, tagText, sectionFilter], () => { page.value = 1 })
 watch(typeFilter, value => { if (value !== 'order') statusFilter.value = 'all' })
 watch(() => [route.query.type, route.query.status], () => {
   typeFilter.value = queryType()
@@ -276,7 +289,10 @@ onMounted(loadCompanies)
 
       <BaseViewTabs v-model="typeFilter" :options="typeTabs" :label="tr('Виды кадровых документов')" />
 
-      <div class="documents-filter-row">
+      <div class="documents-filter-row" role="search" aria-label="Единые фильтры реестра документов">
+        <BaseFormField v-model="searchText" label="Поиск документов" placeholder="Название, описание или тег" />
+        <BaseFormField v-model="tagText" label="Тег" placeholder="Например: грамота" />
+        <BaseSelectField v-model="sectionFilter" label="Раздел карточки" :options="[{ id: '', name: 'Все разделы' }, ...documentSections]" />
         <EmployeeLookupField v-if="company" :key="company" v-model="employeeFilter" :company-id="company" allow-all compact />
         <BaseSelectField v-if="orderApprovalsEnabled && typeFilter === 'order'"
           v-model="statusFilter" label="Статус приказа" :options="statusOptions" />
@@ -324,6 +340,16 @@ onMounted(loadCompanies)
               <div class="document-name">
                 <strong>{{ row.title }}</strong>
                 <span>№ {{ row.document_number || tr('без номера') }}</span>
+                <span v-if="row.description" class="document-description">{{ row.description }}</span>
+              </div>
+            </template>
+            <template #cell-metadata="{ row }">
+              <div class="document-tag-cell">
+                <span v-for="tag in (row.tags ?? [])" :key="tag" class="document-tag">{{ tag }}</span>
+                <BaseButton v-if="writesEnabled" variant="secondary" size="sm"
+                  :aria-label="'Теги и описание: ' + row.title" @click="metadataTarget = row">
+                  Изменить
+                </BaseButton>
               </div>
             </template>
             <template #cell-employee="{ row }">
@@ -392,6 +418,12 @@ onMounted(loadCompanies)
         :order-approvals-enabled="orderApprovalsEnabled"
         @saved="documentSaved" @cancelled="createOpen = false" />
     </BaseDialog>
+    <BaseDialog :open="metadataTarget !== null" title="Описание и теги документа"
+      @close="metadataTarget = null">
+      <DocumentMetadataForm v-if="metadataTarget" :key="metadataTarget.id + ':' + metadataTarget.revision"
+        :company-id="company" :document="metadataTarget" @cancelled="metadataTarget = null"
+        @saved="metadataTarget = null; loadDocuments()" />
+    </BaseDialog>
     <BaseDialog :open="uploadTarget !== null" :title="tr('Прикрепить PDF')" @close="uploadTarget = null">
       <DocumentUploadForm v-if="uploadTarget" :key="uploadTarget.id + ':' + uploadTarget.revision"
         :company-id="company" :document="uploadTarget" @saved="fileSaved" @cancelled="uploadTarget = null" />
@@ -433,6 +465,7 @@ onMounted(loadCompanies)
 .documents-heading-controls :deep(.base-select-field){width:220px;max-width:220px}
 .documents-filter-row{display:flex;align-items:end;justify-content:flex-start;gap:var(--space-3);flex-wrap:wrap;min-width:0}
 .documents-filter-row :deep(.base-select-field){width:210px;max-width:100%}
+.documents-filter-row :deep(.base-field){min-width:180px;max-width:260px}
 .documents-filter-row :deep(.lookup){flex:1;max-width:850px;min-width:0}
 .documents-filter-row :deep(.lookup .base-select-field){width:100%}
 .summary-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
@@ -447,6 +480,8 @@ onMounted(loadCompanies)
 .register-heading p{margin:4px 0 0;color:var(--color-muted);font-size:11px}
 .register-heading>span{color:var(--color-muted);font-size:11px}
 .document-name,.employee-name{display:grid;gap:3px;min-width:0;overflow-wrap:anywhere}
+.document-description{color:var(--color-muted);font-size:11px;line-height:1.4}
+.document-tag-cell{display:flex;align-items:center;gap:5px;flex-wrap:wrap}.document-tag{border:1px solid var(--color-stroke);border-radius:5px;padding:2px 6px;font-size:11px;color:var(--color-text)}
 .document-name strong,.employee-name a{color:var(--color-text);font-size:13px;font-weight:600}
 .employee-name a:hover{color:var(--color-primary)}
 .document-name span,.employee-name span{font-size:11px;color:var(--color-muted)}

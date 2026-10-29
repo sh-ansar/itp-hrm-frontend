@@ -47,34 +47,42 @@ test('HR creates and edits an employee master record from the redesigned UI', as
     await page.locator('.employee-page-heading h1').waitFor()
     await page.locator('.employee-page-heading h1').filter({ hasText: 'Новый Сотрудник Тестовый' }).waitFor()
 
-    await page.getByRole('button', { name: 'Изменить карточку' }).click()
-    const editDialog = page.locator('#employee-card-edit-form')
-    await editDialog.waitFor()
-    assert.equal(await editDialog.getByLabel('Табельный номер').inputValue(), 'E2E-NEW-01')
-    assert.equal(await editDialog.getByLabel('Дата рождения').inputValue(), '1990-06-01')
-    assert.equal(await editDialog.getByLabel('Email', { exact: true }).inputValue(), 'synthetic-master@example.test')
-    assert.equal(await editDialog.getByLabel('Бригада', { exact: true }).inputValue(), 'Synthetic Team')
-    await editDialog.getByLabel('Фамилия').fill('Обновлённый')
-    await page.getByRole('button', { name: 'Сохранить изменения' }).click()
-
+    assert.equal(await page.getByRole('button', { name: 'Изменить карточку' }).count(), 0)
+    const surname = page.locator('.identity-name-grid .employee-data-field').filter({ hasText: 'Фамилия' })
+    await surname.getByRole('button', { name: 'Изменить поле: Фамилия' }).click()
+    const form = surname.locator('form.employee-inline-field-form')
+    assert.equal(await form.getByLabel('Фамилия').inputValue(), 'Новый')
+    assert.equal(await form.locator('input').count(), 1)
+    await form.getByLabel('Фамилия').fill('Обновлённый')
+    await form.getByRole('button', { name: 'Сохранить', exact: true }).click()
     await page.locator('.employee-page-heading h1').filter({ hasText: 'Обновлённый Сотрудник Тестовый' }).waitFor()
 
     await page.reload()
-    await page.getByRole('button', { name: 'Изменить карточку' }).click()
-    await editDialog.waitFor()
-    assert.equal(await editDialog.getByLabel('Телефон', { exact: true }).inputValue(), '+77770000000')
-    await editDialog.getByLabel('Email', { exact: true }).fill('')
-    await page.getByRole('button', { name: 'Сохранить изменения' }).click()
-    await editDialog.waitFor({ state: 'hidden' })
+    const email = page.locator('.employee-data-field').filter({
+      has: page.locator('.employee-data-label').getByText('Email', { exact: true }),
+    }).first()
+    await email.waitFor()
+    await email.getByRole('button', { name: 'Изменить поле: Email' }).click()
+    const emailForm = email.locator('form.employee-inline-field-form')
+    assert.equal(await emailForm.getByLabel('Email').inputValue(), 'synthetic-master@example.test')
+    await emailForm.getByLabel('Email').fill('')
+    await emailForm.getByRole('button', { name: 'Сохранить', exact: true }).click()
+    // Do not navigate while the asynchronous revisioned save is still pending.
+    await emailForm.waitFor({ state: 'hidden' })
     await page.getByRole('button', { name: 'История изменений', exact: true }).click()
     await page.getByRole('cell', { name: 'Создана карточка сотрудника', exact: true }).waitFor()
     assert.equal(await page.getByRole('cell', { name: 'Изменены данные сотрудника', exact: true }).count(), 2)
     await page.getByRole('button', { name: 'Личные данные', exact: true }).click()
-    await page.getByRole('button', { name: 'Изменить карточку' }).click()
-    await editDialog.waitFor()
-    assert.equal(await editDialog.getByLabel('Email', { exact: true }).inputValue(), '')
-    assert.equal(await editDialog.getByLabel('Телефон', { exact: true }).inputValue(), '+77770000000')
-    await page.getByRole('button', { name: 'Отменить', exact: true }).click()
+    const currentEmail = page.locator('.employee-data-field').filter({
+      has: page.locator('.employee-data-label').getByText('Email', { exact: true }),
+    }).first()
+    await currentEmail.waitFor()
+    assert.match(await currentEmail.innerText(), /—/)
+    const phone = page.locator('.employee-data-field').filter({
+      has: page.locator('.employee-data-label').getByText('Телефон', { exact: true }),
+    }).first()
+    assert.match(await phone.innerText(), /77770000000/)
+    assert.match(await page.locator('.identity-short-facts').innerText(), /Email/)
 
     await page.goto('/employees')
     await page.getByRole('heading', { name: 'Реестр сотрудников' }).waitFor()

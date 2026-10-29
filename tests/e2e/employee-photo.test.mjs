@@ -6,64 +6,62 @@ before(async()=>{browser=await chromium.launch({headless:true})})
 after(async()=>{await browser?.close()})
 const pixel=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAACAAAAAwCAIAAAD/zu84AAAAMklEQVR4nO3NMQEAMAjAsLEH/xf2kIIJ+FIBTWT1u+yf3gEAAAAAAAAAAAAAAAAAAMsNnL0B3qg0SJcAAAAASUVORK5CYII=','base64')
 
-test('protected employee photo persists, replaces, rejects invalid files and removes on mobile',async()=>{
+test('employee photo pencil stages the full-size image until save, supports cancel and private removal on mobile',async()=>{
  const context=await browser.newContext({baseURL:'http://127.0.0.1:5173',viewport:{width:375,height:900}})
- const page=await context.newPage();const failures=[];page.on('pageerror',error=>failures.push(error.message))
+ const page=await context.newPage()
+ const failures=[]
+ page.on('pageerror',error=>failures.push(error.message))
+ let uploads=0
+ page.on('request',request=>{
+  if(request.method()==='POST' && /\/employees\/[^/]+\/photo$/.test(request.url()))uploads++
+ })
  try{
-  await page.goto('/login');await page.getByLabel('Электронная почта').fill('synthetic-e2e@example.test');await page.getByLabel('Пароль').fill('SyntheticE2E-Only!2026');await page.getByRole('button',{name:'Войти'}).click();await page.getByRole('heading',{name:'Главная',level:1}).waitFor()
+  await page.goto('/login')
+  await page.getByLabel('Электронная почта').fill('synthetic-e2e@example.test')
+  await page.getByLabel('Пароль').fill('SyntheticE2E-Only!2026')
+  await page.getByRole('button',{name:'Войти'}).click()
+  await page.getByRole('heading',{name:'Главная',level:1}).waitFor()
   await page.goto('/employees/11111111-1111-4111-8111-111111111111/77777777-7777-4777-8777-777777777777')
-  assert.equal(await page.locator('.gender-options').count(),0)
-  assert.equal(await page.locator('.identity-photo-section input.photo-input').count(),0)
-  const openPhotoEditor=async()=>{
-    await page.getByRole('button',{name:'Изменить карточку',exact:true}).click()
-    const form=page.locator('#employee-card-edit-form')
-    await form.waitFor()
-    const input=form.locator('input.photo-choice-input')
-    await input.waitFor({state:'attached'})
-    return {form,input}
-  }
-  let editor=await openPhotoEditor()
-  await editor.input.setInputFiles({name:'synthetic.png',mimeType:'image/png',buffer:pixel})
-  // Photo is a staged draft, not a network mutation until the shared Save click.
-  assert.equal(await page.locator('.identity-photo-section .avatar img').count(),0)
-  await page.getByRole('button',{name:'Сохранить изменения',exact:true}).click()
+  const photoInput=page.locator('.identity-photo-section input.photo-input')
+  await photoInput.waitFor({state:'attached'})
+  assert.equal(await page.getByRole('button',{name:'Изменить карточку'}).count(),0)
+  await photoInput.setInputFiles({name:'synthetic.png',mimeType:'image/png',buffer:pixel})
   const photo=page.locator('.identity-photo-section .avatar img')
+  await photo.waitFor()
+  assert.equal(uploads,0,'Staged photo must not upload without an explicit Save')
+  await page.locator('.photo-compact-save').getByRole('button',{name:'Сохранить'}).click()
   await photo.waitFor()
   await photo.evaluate(img=>img.decode())
   assert.equal(await photo.evaluate(img=>img.naturalWidth>0),true)
+  assert.equal(await photo.evaluate(img=>getComputedStyle(img).objectFit),'contain')
   await page.reload()
   await photo.waitFor()
-
-  editor=await openPhotoEditor()
-  await editor.input.setInputFiles({name:'replaced.png',mimeType:'image/png',buffer:pixel})
-  await page.getByRole('button',{name:'Сохранить изменения',exact:true}).click()
+  const uploadsAfterFirst=uploads
+  await photoInput.setInputFiles({name:'replacement.png',mimeType:'image/png',buffer:pixel})
+  assert.equal(uploads,uploadsAfterFirst)
+  await page.locator('.photo-compact-save').getByRole('button',{name:'Сохранить'}).click()
+  await page.reload()
   await photo.waitFor()
+  await page.locator('.identity-photo-section input.photo-input').waitFor({state:'attached'})
 
-  editor=await openPhotoEditor()
-  await editor.input.setInputFiles({name:'bad.svg',mimeType:'image/svg+xml',buffer:Buffer.from('<svg></svg>')})
-  await editor.form.getByText(/Выберите JPG или PNG/).waitFor()
-  // Deleting is also staged until the common Save button.
-  await editor.form.getByRole('button',{name:'Удалить фотографию после сохранения'}).click()
-  assert.equal(await page.locator('.identity-photo-section .avatar img').count(),0)
-  await page.getByRole('button',{name:'Сохранить изменения',exact:true}).click()
+  await photoInput.setInputFiles({name:'bad.svg',mimeType:'image/svg+xml',buffer:Buffer.from('<svg></svg>')})
+  await page.locator('.identity-photo-section').getByText(/JPG или PNG/).waitFor()
+  await photoInput.setInputFiles({name:'discard.png',mimeType:'image/png',buffer:pixel})
+  page.once('dialog',async dialog=>{assert.match(dialog.message(),/несохранённ/);await dialog.dismiss()})
+  await page.getByRole('navigation',{name:'Разделы карточки сотрудника'})
+    .getByRole('button',{name:'История изменений'}).click()
+  assert.equal(await page.locator('.photo-compact-save').count(),1)
+  await page.locator('.photo-compact-save').getByRole('button',{name:'Отмена'}).click()
+  assert.equal(await page.locator('.photo-compact-save').count(),0)
+  await page.locator('.identity-photo-section .photo-preview-trigger').click()
+  const viewer=page.getByRole('dialog',{name:/Фото сотрудника:/})
+  await viewer.waitFor()
+  page.once('dialog',async dialog=>{await dialog.accept()})
+  await viewer.getByRole('button',{name:'Удалить фотографию'}).click()
   await page.reload()
   assert.equal(await photo.count(),0)
-
-  // Changing a field must trigger the unsaved guard on tab switching.
-  editor=await openPhotoEditor()
-  // The required-field marker is part of the label text, so match the field semantically.
-  await editor.form.getByLabel('Имя').fill('Synthetic unsaved name')
-  page.once('dialog',async dialog=>{assert.match(dialog.message(),/несохранённые/);await dialog.dismiss()})
-  await page.locator('.view-tab').last().click()
-  assert.equal(await editor.form.count(),1)
-  page.once('dialog',async dialog=>{await dialog.accept()})
-  await page.getByRole('button',{name:'Отменить',exact:true}).click()
-  assert.equal(await editor.form.count(),0)
-  await page.locator('.view-tab').last().click()
-  await page.locator('table tbody tr').first().waitFor()
-  assert.deepEqual(failures,[])
   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth+1),false)
-
+  assert.deepEqual(failures,[])
  }finally{await context.close()}
 })
 

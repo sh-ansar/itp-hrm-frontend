@@ -26,16 +26,10 @@ test('ZIP personal tab: contact order, accessible legacy addresses and normalize
         .locator('.employee-data-label').allTextContents(), ['Логин', 'Email', 'Телефон'],
         'ZIP contact header groups login, email and phone')
       assert.equal(await contacts.locator('.employee-address-book .employee-address-row').count(), 1)
-      const legacy = contacts.getByRole('button', { name: 'Дополнительные контакты и прежние адреса' })
-      assert.equal(await legacy.getAttribute('aria-expanded'), 'false')
-      assert.equal(await contacts.locator('#employee-legacy-contact-values .employee-data-field').count(), 0)
-      await legacy.click()
-      assert.equal(await legacy.getAttribute('aria-expanded'), 'true')
-      const oldAddresses = contacts.locator('#employee-legacy-contact-values')
+      assert.equal(await contacts.getByRole('button', { name: 'Дополнительные контакты и прежние адреса' }).count(), 0)
+      const oldAddresses = contacts.locator('.employee-legacy-contact-section')
       await oldAddresses.getByText('Адрес проживания', { exact: true }).waitFor()
       assert.ok(await oldAddresses.getByText('Адрес регистрации', { exact: true }).count() > 0)
-      await legacy.click()
-      assert.equal(await legacy.getAttribute('aria-expanded'), 'false')
 
       const documentSection = page.locator('.employee-profile-section').filter({
         has: page.getByRole('heading', { name: 'Документы, удостоверяющие личность', exact: true }),

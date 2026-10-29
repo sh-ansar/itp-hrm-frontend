@@ -61,13 +61,9 @@ test('ZIP contacts: add, edit, select primary and archive actual address rows wi
       assert.equal(await book.locator('.employee-address-row').count(), 1)
       assert.equal(await book.locator('.employee-address-primary').count(), 0,
         'Archiving a primary never silently selects another one')
-      // Legacy address strings are preserved in an explicit disclosure, rather
-      // than masquerading as additional normalized address-book rows.
-      const previousAddresses = page.getByRole('button', {
-        name: 'Дополнительные контакты и прежние адреса',
-      })
-      await previousAddresses.click()
-      const legacy = page.locator('#employee-legacy-contact-values .employee-data-field').filter({
+      // Legacy strings remain directly accessible, without the removed disclosure,
+      // and never become normalized address-book rows.
+      const legacy = page.locator('.employee-legacy-contact-section .employee-data-field').filter({
         has: page.locator('.employee-data-label').getByText('Адрес проживания', { exact: true }),
       })
       assert.equal(await legacy.count(), 1, 'Legacy personal address remains accessible after archive')

@@ -77,7 +77,7 @@ test('schedule separates approved plan and actual; HR confirms unused vacation a
     await page.getByRole('combobox', { name: 'Год', exact: true }).selectOption('2025')
     const schedule = page.getByRole('table', { name: 'График отпусков по образцу Мин и Сол' })
     const record = schedule.getByRole('row').filter({ hasText: 'E2E-001' })
-    await record.getByText('Факт не подтверждён').waitFor()
+    await record.getByText('Факт не подтверждён', { exact: true }).first().waitFor()
     await record.getByRole('button', { name: /Подтвердить факт отпуска:/ }).click()
     const dialog = page.getByRole('dialog', { name: 'Подтверждение факта отпуска' })
     await dialog.getByRole('combobox', { name: 'Результат проверки' }).selectOption('not_taken')

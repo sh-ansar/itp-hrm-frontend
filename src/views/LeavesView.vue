@@ -15,6 +15,7 @@ import BasePagination from '../components/ui/BasePagination.vue'
 import LeaveManagementPanel from '../components/LeaveManagementPanel.vue'
 import LeaveBalanceRegistryPanel from '../components/LeaveBalanceRegistryPanel.vue'
 import LeaveCategoriesPanel from '../components/LeaveCategoriesPanel.vue'
+import LeaveActualReviewDialog from '../components/LeaveActualReviewDialog.vue'
 import { listCompanies, type CompanyRecord } from '../api/organization'
 import { listEmployees, type EmployeeRecord } from '../api/personnel'
 import { getLeaves, type LeaveResponse, type LeaveRow } from '../api/leaves'
@@ -40,6 +41,7 @@ const tab = ref<Tab>('schedule')
 const search = ref('')
 const department = ref('')
 const status = ref('all')
+const actualReviewTarget = ref<LeaveRow | null>(null)
 const page = ref(1)
 const employees = ref<EmployeeRecord[]>([])
 const productionLeaves = ref<LeaveRow[]>([])
@@ -72,6 +74,7 @@ const statuses = [
   { id: 'shifted', name: 'Перенесён' },
   { id: 'no-plan', name: 'Без утверждённого плана' },
   { id: 'unverified', name: 'Факт не подтверждён' },
+  { id: 'not_taken', name: 'Не использован' },
 ]
 const selectedCompany = computed(() => companies.value.find(item => item.id === company.value))
 const isHr = computed(() => access.companies.some(row =>
@@ -145,15 +148,16 @@ const scheduleRows = computed<ScheduleRow[]>(() => {
   const today = localTodayISO()
   return [...roster.values()].map(employee => {
     const periods = (grouped.get(employee.id) ?? []).map(leave => {
-      const actualUnknown = !leave.actual_started_on && leave.planned_ended_on < today
+      const notTaken = leave.actual_review_state === 'not_taken'
       const confirmed = !!leave.actual_started_on && !!leave.actual_ended_on
         && leave.actual_ended_on <= today && leave.actual_days !== null
+      const actualUnknown = !notTaken && !confirmed && leave.planned_ended_on < today
       return {
         id: leave.id, type: leave.leave_type_name,
         planned: period(leave.planned_started_on,leave.planned_ended_on),
-        actual: confirmed ? period(leave.actual_started_on,leave.actual_ended_on)
+        actual: notTaken ? 'Не использован' : confirmed ? period(leave.actual_started_on,leave.actual_ended_on)
           : actualUnknown ? 'Не подтверждён' : '—',
-        plannedDays: leave.planned_days, actualDays: confirmed ? leave.actual_days : null,
+        plannedDays: leave.planned_days, actualDays: notTaken ? 0 : confirmed ? leave.actual_days : null,
         actualUnknown, shifted: leave.schedule_state === 'shifted', status: leave.status,
       }
     })
@@ -165,7 +169,7 @@ const scheduleRows = computed<ScheduleRow[]>(() => {
     const missing = periods.some(p => p.actualUnknown)
     const confirmed = periods.filter(p => p.actualDays !== null)
     const hasShift = periods.some(p => p.shifted)
-    const status = !periods.length ? 'no-plan' : hasShift ? 'shifted'
+    const status = !periods.length ? 'no-plan' : periods.every(p => p.status === 'not_taken') ? 'not_taken' : hasShift ? 'shifted'
       : missing ? 'unverified' : periods.some(p => p.status === 'ongoing') ? 'ongoing'
         : periods.every(p => p.status === 'completed') ? 'completed' : 'planned'
     return {
@@ -393,6 +397,14 @@ function exportCsv() {
             <div v-if="row.periods.length" class="leave-intervals">
               <span v-for="item in row.periods" :key="item.id">
                 <strong>{{ item.plannedDays }} дн.</strong> · {{ item.planned }}
+                <button v-if="isHr && canManage && !demoMode &&
+                  productionLeaves.some(record => record.id === item.id &&
+                    (record.planned_ended_on < localTodayISO() || !!record.actual_started_on))"
+                  type="button" class="leave-actual-edit"
+                  :aria-label="'Подтвердить факт отпуска: ' + row.full_name"
+                  @click="actualReviewTarget = productionLeaves.find(record => record.id === item.id) ?? null">
+                  Подтвердить факт
+                </button>
               </span>
             </div>
             <span v-else>Не запланирован</span>
@@ -422,6 +434,9 @@ function exportCsv() {
           :page-size="25" :page-sizes="[25]" :loading="loading"
           caption="Страницы графика отпусков"
           @previous="page--" @next="page++" @select-page="page = $event" />
+        <LeaveActualReviewDialog v-if="actualReviewTarget" :record="actualReviewTarget"
+          :company-id="company" @close="actualReviewTarget = null"
+          @saved="actualReviewTarget = null; loadWorkspace()" />
         <div class="leave-footnote">
           <CalendarDays :size="16" aria-hidden="true" />
           График использует утверждённые периоды. Указанные в старом Excel значения не импортировались в кадровые остатки.
@@ -473,6 +488,7 @@ function exportCsv() {
 .leave-intervals span{font-size:11px;line-height:1.45;color:var(--color-text)}
 .leave-intervals strong{font-weight:650}
 .leave-unknown{color:var(--color-warning);font-size:11px}
+.leave-actual-edit{border:0;background:transparent;padding:2px 0;color:var(--color-primary);font:inherit;font-size:11px;text-decoration:underline;text-underline-offset:3px;cursor:pointer;justify-self:start}
 .leave-footnote{display:flex;align-items:start;gap:9px;color:var(--color-muted);font-size:11px;line-height:1.55}
 .leave-footnote svg{flex:none;color:var(--color-primary)}
 @media(max-width:1160px){.leave-filters{grid-template-columns:repeat(3,minmax(0,1fr))}.leave-filters>div:first-child{grid-column:span 2}}

@@ -88,6 +88,7 @@ export interface WorktimeTimesheetResponse {
       overtime_minutes: number | null
     }
     worktime_writes_enabled: boolean
+    period_locked?: boolean
     worktime_bulk_fill_enabled?: boolean
     worktime_matrix_enabled?: boolean
     current_page: number

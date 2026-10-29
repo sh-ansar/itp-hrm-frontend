@@ -36,7 +36,7 @@ jobs:
       HRM_DOCUMENT_WRITES_ENABLED: ${{ matrix.mode == 'write-enabled' && 'true' || 'false' }}
       HRM_ORDER_APPROVALS_ENABLED: ${{ matrix.mode == 'write-enabled' && 'true' || 'false' }}
       HRM_WORKTIME_WRITES_ENABLED: ${{ matrix.mode == 'write-enabled' && 'true' || 'false' }}
-      HRM_WORKTIME_PERIOD_APPROVALS_ENABLED: ${{ matrix.mode == 'write-enabled' && 'true' || 'false' }}
+      HRM_WORKTIME_PERIOD_APPROVALS_ENABLED: 'false' # HR directly records attendance
       HRM_BONUS_WRITES_ENABLED: ${{ matrix.mode == 'write-enabled' && 'true' || 'false' }}
       HRM_LEAVE_WRITES_ENABLED: ${{ matrix.mode == 'write-enabled' && 'true' || 'false' }}
       HRM_PROTECTED_LEAVE_EVIDENCE_ENABLED: ${{ matrix.mode == 'write-enabled' && 'true' || 'false' }}
@@ -59,7 +59,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: sh-ansar/itp-hrm-backend
-          ref: 5367837fc8fdb3f4f1a9af92991cd722091959e1
+          ref: 4eb74d49650a04221bb663893bd0809209d144a4
           path: backend
           persist-credentials: false
       - name: Set up PHP and SQLite

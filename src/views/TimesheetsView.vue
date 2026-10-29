@@ -9,7 +9,6 @@ import ProductionCalendarInlineEditor from '../components/ProductionCalendarInli
 import ProductionCalendarPeriodOverview from '../components/ProductionCalendarPeriodOverview.vue'
 import TimesheetEntryEditor from '../components/TimesheetEntryEditor.vue'
 import BulkTimesheetFillPanel from '../components/BulkTimesheetFillPanel.vue'
-import TimesheetPeriodReview from '../components/TimesheetPeriodReview.vue'
 import WorkScheduleEditor from '../components/WorkScheduleEditor.vue'
 import ScheduleCyclePlannerPanel from '../components/ScheduleCyclePlannerPanel.vue'
 import WorktimeMatrixPanel from '../components/WorktimeMatrixPanel.vue'
@@ -36,7 +35,6 @@ import {
   type WorktimeAbsenceRow,
   type WorktimeTimesheetResponse,
   type WorktimeTimesheetRow,
-  type WorktimePeriodStatus,
 } from '../api/worktime'
 import { localTodayISO } from '../utils/localDate'
 import {
@@ -109,9 +107,10 @@ const productionSchedules = ref<WorkScheduleRow[]>([])
 const productionCalendar = ref<ProductionCalendarDay[]>([])
 const productionAbsences = ref<WorktimeAbsenceRow[]>([])
 const productionTimesheetMeta = ref<WorktimeTimesheetResponse['meta'] | null>(null)
-const periodStatus = ref<WorktimePeriodStatus | null>(null)
-const periodEditable = ref(false)
-const periodLocked = computed(() => periodStatus.value === 'submitted' || periodStatus.value === 'approved')
+// The HR saves attendance directly. Legacy closed months remain read-only.
+const periodLocked = computed(() => productionTimesheetMeta.value?.period_locked === true)
+const periodEditable = computed(() => productionTimesheetMeta.value?.worktime_writes_enabled === true
+  && !periodLocked.value)
 const productionCalendarMeta = ref<ProductionCalendarResponse['meta'] | null>(null)
 const productionScheduleMeta = ref<WorkScheduleResponse['meta'] | null>(null)
 const calendarEditorOpen = ref(false)
@@ -598,11 +597,9 @@ function calendarUpdated() {
   void loadWorkspace()
 }
 watch([company, month], () => {
-  periodStatus.value = null
   selectedTimesheetIds.value = []
   dailyMonthlyCache.clear()
   selectedDay.value = month.value + '-01'
-  periodEditable.value = false
   calendarEditorOpen.value = false
   cyclePlannerOpen.value = false
   bulkTimesheetOpen.value = false
@@ -671,8 +668,9 @@ onMounted(loadCompanies)
         </BaseCard>
       </div>
 
-      <TimesheetPeriodReview v-if="!demoMode && activeTab === 'timesheet' && productionTimesheetMeta?.worktime_writes_enabled"
-        :company-id="company" :month="month" @status="periodStatus = $event" @editable="periodEditable = $event" />
+      <BaseNotice v-if="!demoMode && activeTab === 'timesheet' && periodLocked" tone="warning">
+        Этот исторический табельный период закрыт. Исправление записей недоступно.
+      </BaseNotice>
       <section v-if="activeTab === 'timesheet'" class="worktime-register worktime-register--flat hrm-flat-panel">
         <div class="section-heading">
           <div>

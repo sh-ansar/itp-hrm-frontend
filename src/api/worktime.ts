@@ -527,6 +527,7 @@ export interface BulkWorktimePlanResponse {
     overlapping_leave: number
     overlapping_absence: number
     existing_plans: number
+    existing_assignments: number
     new_days: number
     blocking_count: number
     sample: { employee_id: string; date: string; planned_minutes: number; day_kind: 'work' | 'rest' }[]

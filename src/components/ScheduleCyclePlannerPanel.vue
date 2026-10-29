@@ -361,6 +361,7 @@ watch(() => [props.open, props.companyId], () => {
             <div v-if="previewMetrics.overlapping_leave"><span>Пересечение с отпуском</span><strong>{{ previewMetrics.overlapping_leave }}</strong></div>
             <div v-if="previewMetrics.overlapping_absence"><span>Пересечение с отсутствием</span><strong>{{ previewMetrics.overlapping_absence }}</strong></div>
             <div v-if="previewMetrics.existing_plans"><span>Уже назначенные дни</span><strong>{{ previewMetrics.existing_plans }}</strong></div>
+            <div v-if="previewMetrics.existing_assignments"><span>Уже действует график сотрудников</span><strong>{{ previewMetrics.existing_assignments }}</strong></div>
           </div>
           <BaseNotice v-if="!preview?.meta.can_apply" tone="warning">
             Обнаружены конфликты: {{ previewMetrics.blocking_count }}. Исправьте их перед сохранением.

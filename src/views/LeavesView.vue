@@ -397,14 +397,14 @@ function exportCsv() {
             <div v-if="row.periods.length" class="leave-intervals">
               <span v-for="item in row.periods" :key="item.id">
                 <strong>{{ item.plannedDays }} дн.</strong> · {{ item.planned }}
-                <button v-if="isHr && canManage && !demoMode &&
+                <BaseButton v-if="isHr && canManage && !demoMode &&
                   productionLeaves.some(record => record.id === item.id &&
                     (record.planned_ended_on < localTodayISO() || !!record.actual_started_on))"
-                  type="button" class="leave-actual-edit"
+                  variant="secondary" size="sm" class="leave-actual-edit"
                   :aria-label="'Подтвердить факт отпуска: ' + row.full_name"
                   @click="actualReviewTarget = productionLeaves.find(record => record.id === item.id) ?? null">
                   Подтвердить факт
-                </button>
+                </BaseButton>
               </span>
             </div>
             <span v-else>Не запланирован</span>

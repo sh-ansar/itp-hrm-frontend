@@ -924,7 +924,7 @@ onMounted(load)
           </div>
           <EmployeeDataGrid class="identity-name-grid" :fields="inlineFields(identityFields)"
             :editable-groups="editableFieldGroups" :save-field="saveEmployeeField"
-            @edit="openFieldEditor" @dirty="cardDirty = $event" />
+            @edit="openFieldEditor" @dirty="(active, key) => updateFieldDirty(active, key)" />
         </div>
       </div>
 
@@ -943,7 +943,7 @@ onMounted(load)
 
         <EmployeeProfileSection :title="tr('Контакты и адреса')">
           <EmployeeDataGrid :fields="inlineFields(contactFields)" :editable-groups="editableFieldGroups"
-              :save-field="saveEmployeeField" @edit="openFieldEditor" @dirty="cardDirty = $event" />
+              :save-field="saveEmployeeField" @edit="openFieldEditor" @dirty="(active, key) => updateFieldDirty(active, key)" />
           <EmployeeAddressBook v-if="hasNormalizedAddressStore"
             :company-id="String(route.params.company)" :employee-id="profile.data.id"
             :addresses="profile.private_profile?.addresses ?? []"
@@ -953,7 +953,7 @@ onMounted(load)
           <div v-if="hasLegacyContactValues || profile.meta.private_profile_writes_enabled || profile.meta.employee_writes_enabled"
             class="employee-legacy-contact-section">
             <EmployeeDataGrid :fields="inlineFields(legacyContactFields)" :editable-groups="editableFieldGroups"
-              :save-field="saveEmployeeField" @edit="openFieldEditor" @dirty="cardDirty = $event" />
+              :save-field="saveEmployeeField" @edit="openFieldEditor" @dirty="(active, key) => updateFieldDirty(active, key)" />
           </div>
         </EmployeeProfileSection>
         <EmployeeProfileSection :title="tr('Документы, удостоверяющие личность')">
@@ -962,7 +962,7 @@ onMounted(load)
               @click="openIdentityRecord()">{{ tr('Управлять документами') }}</BaseButton>
           </template>
           <EmployeeDataGrid :fields="inlineFields(identityPersonFields)" :editable-groups="editableFieldGroups"
-              :save-field="saveEmployeeField" @edit="openFieldEditor" @dirty="cardDirty = $event" />
+              :save-field="saveEmployeeField" @edit="openFieldEditor" @dirty="(active, key) => updateFieldDirty(active, key)" />
           <div v-if="hasNormalizedIdentityStore" class="employee-identity-records">
             <div v-for="(document,index) in normalizedIdentities" :key="document.id" class="employee-identity-record">
               <div class="employee-identity-record-heading">
@@ -989,7 +989,7 @@ onMounted(load)
         </EmployeeProfileSection>
         <EmployeeProfileSection :title="tr('Место рождения')">
           <EmployeeDataGrid :fields="inlineFields(birthPlaceFields)" :editable-groups="editableFieldGroups"
-              :save-field="saveEmployeeField" @edit="openFieldEditor" @dirty="cardDirty = $event" />
+              :save-field="saveEmployeeField" @edit="openFieldEditor" @dirty="(active, key) => updateFieldDirty(active, key)" />
         </EmployeeProfileSection>
         <EmployeeProfileSection :title="tr('Семейные данные')">
           <template v-if="profile.meta.private_profile_writes_enabled" #actions>
@@ -997,7 +997,7 @@ onMounted(load)
               @click="openFamilyEditor()">{{ tr('Изменить') }}</BaseButton>
           </template>
           <EmployeeDataGrid :fields="inlineFields(maritalStatusFields)" :editable-groups="editableFieldGroups"
-              :save-field="saveEmployeeField" @edit="openFieldEditor" @dirty="cardDirty = $event" />
+              :save-field="saveEmployeeField" @edit="openFieldEditor" @dirty="(active, key) => updateFieldDirty(active, key)" />
           <EmployeeFamilyList :members="profile.private_profile?.family ?? reference?.family ?? []"
             :writable="Boolean(profile.meta.private_profile_writes_enabled)"
             :truncated="Boolean(profile.meta.private_family_truncated)"
@@ -1006,31 +1006,31 @@ onMounted(load)
         <EmployeeProfileSection :title="tr('Воинский учёт')">
 
           <EmployeeDataGrid :fields="inlineFields(militaryFields)" :editable-groups="editableFieldGroups"
-              :save-field="saveEmployeeField" @edit="openFieldEditor" @dirty="cardDirty = $event" />
+              :save-field="saveEmployeeField" @edit="openFieldEditor" @dirty="(active, key) => updateFieldDirty(active, key)" />
         </EmployeeProfileSection>
         <EmployeeProfileSection :title="tr('Основные личные данные')">
 
           <EmployeeDataGrid :fields="inlineFields(personalFields)" :editable-groups="editableFieldGroups"
-              :save-field="saveEmployeeField" @edit="openFieldEditor" @dirty="cardDirty = $event" />
+              :save-field="saveEmployeeField" @edit="openFieldEditor" @dirty="(active, key) => updateFieldDirty(active, key)" />
         </EmployeeProfileSection>
       </template>
 
       <template v-if="activeSection === 'organization' && profile.meta.extended_sections_visible">
         <EmployeeProfileSection :title="tr('Подразделение и должность')">
           <EmployeeDataGrid :fields="inlineFields(organizationPositionFields)" :editable-groups="editableFieldGroups"
-              :save-field="saveEmployeeField" @edit="openFieldEditor" @dirty="cardDirty = $event" />
+              :save-field="saveEmployeeField" @edit="openFieldEditor" @dirty="(active, key) => updateFieldDirty(active, key)" />
         </EmployeeProfileSection>
         <EmployeeProfileSection :title="tr('Объект и место работы')">
           <EmployeeDataGrid :fields="inlineFields(workplaceFields)" :editable-groups="editableFieldGroups"
-              :save-field="saveEmployeeField" @edit="openFieldEditor" @dirty="cardDirty = $event" />
+              :save-field="saveEmployeeField" @edit="openFieldEditor" @dirty="(active, key) => updateFieldDirty(active, key)" />
         </EmployeeProfileSection>
         <EmployeeProfileSection :title="tr('Бригада и руководитель')">
           <EmployeeDataGrid :fields="inlineFields(teamFields)" :editable-groups="editableFieldGroups"
-              :save-field="saveEmployeeField" @edit="openFieldEditor" @dirty="cardDirty = $event" />
+              :save-field="saveEmployeeField" @edit="openFieldEditor" @dirty="(active, key) => updateFieldDirty(active, key)" />
         </EmployeeProfileSection>
         <EmployeeProfileSection :title="tr('Статус и штатная позиция')">
           <EmployeeDataGrid :fields="inlineFields(staffingStatusFields)" :editable-groups="editableFieldGroups"
-              :save-field="saveEmployeeField" @edit="openFieldEditor" @dirty="cardDirty = $event" />
+              :save-field="saveEmployeeField" @edit="openFieldEditor" @dirty="(active, key) => updateFieldDirty(active, key)" />
         </EmployeeProfileSection>
       </template>
       <div v-if="profile.meta.profile_writes_enabled && activeSection === 'development'" class="profile-toolbar">
@@ -1050,7 +1050,7 @@ onMounted(load)
             </div>
           </template>
           <EmployeeDataGrid :fields="inlineFields(contractFields)" :editable-groups="editableFieldGroups"
-              :save-field="saveEmployeeField" @edit="openFieldEditor" @dirty="cardDirty = $event" />
+              :save-field="saveEmployeeField" @edit="openFieldEditor" @dirty="(active, key) => updateFieldDirty(active, key)" />
 
           <template v-if="profile.meta.extended_sections_visible">
             <h3 class="assignment-history-title">{{ tr('История трудовых договоров') }}</h3>
@@ -1074,7 +1074,7 @@ onMounted(load)
 
         <EmployeeProfileSection :title="tr('Стаж и трудовой опыт')">
           <EmployeeDataGrid :fields="inlineFields(seniorityFields)" :editable-groups="editableFieldGroups"
-              :save-field="saveEmployeeField" @edit="openFieldEditor" @dirty="cardDirty = $event" />
+              :save-field="saveEmployeeField" @edit="openFieldEditor" @dirty="(active, key) => updateFieldDirty(active, key)" />
           <h3 class="assignment-history-title">{{ tr('История назначений') }}</h3>
           <BaseDataTable density="compact" :columns="columns" :rows="profile.assignments" row-key="id"
             :caption="tr('Доступная история назначений')" :empty-title="tr('Назначений не найдено')"
@@ -1102,17 +1102,17 @@ onMounted(load)
 
         <EmployeeProfileSection :title="tr('Условия труда и персонифицированный учёт')">
           <EmployeeDataGrid :fields="inlineFields(workingConditionFields)" :editable-groups="editableFieldGroups"
-              :save-field="saveEmployeeField" @edit="openFieldEditor" @dirty="cardDirty = $event" />
+              :save-field="saveEmployeeField" @edit="openFieldEditor" @dirty="(active, key) => updateFieldDirty(active, key)" />
         </EmployeeProfileSection>
 
         <EmployeeProfileSection :title="tr('Совмещение и дополнительные обязанности')">
           <EmployeeDataGrid :fields="inlineFields(combinationFields)" :editable-groups="editableFieldGroups"
-              :save-field="saveEmployeeField" @edit="openFieldEditor" @dirty="cardDirty = $event" />
+              :save-field="saveEmployeeField" @edit="openFieldEditor" @dirty="(active, key) => updateFieldDirty(active, key)" />
         </EmployeeProfileSection>
 
         <EmployeeProfileSection :title="tr('Прекращение договора')">
           <EmployeeDataGrid :fields="inlineFields(terminationFields)" :editable-groups="editableFieldGroups"
-              :save-field="saveEmployeeField" @edit="openFieldEditor" @dirty="cardDirty = $event" />
+              :save-field="saveEmployeeField" @edit="openFieldEditor" @dirty="(active, key) => updateFieldDirty(active, key)" />
         </EmployeeProfileSection>
       </template>
       <template v-if="profile.meta.extended_sections_visible">
@@ -1123,7 +1123,7 @@ onMounted(load)
         <template v-if="activeSection === 'payroll'">
           <EmployeeProfileSection :title="tr('Условия оплаты')">
             <EmployeeDataGrid :fields="inlineFields(payConditionFields)" :editable-groups="editableFieldGroups"
-              :save-field="saveEmployeeField" @edit="openFieldEditor" @dirty="cardDirty = $event" />
+              :save-field="saveEmployeeField" @edit="openFieldEditor" @dirty="(active, key) => updateFieldDirty(active, key)" />
           </EmployeeProfileSection>
 
           <EmployeeProfileSection :title="tr('Надбавки, компенсации и удержания')">
@@ -1138,7 +1138,7 @@ onMounted(load)
 
           <EmployeeProfileSection :title="tr('Расчётный лист')">
             <EmployeeDataGrid :fields="inlineFields(payrollSummaryFields)" :editable-groups="editableFieldGroups"
-              :save-field="saveEmployeeField" @edit="openFieldEditor" @dirty="cardDirty = $event" />
+              :save-field="saveEmployeeField" @edit="openFieldEditor" @dirty="(active, key) => updateFieldDirty(active, key)" />
           </EmployeeProfileSection>
 
           <EmployeeProfileSection :title="tr('Динамика выплат и отработанных часов')">
@@ -1155,19 +1155,19 @@ onMounted(load)
 
           <EmployeeProfileSection :title="tr('Банковские и налоговые данные')">
             <EmployeeDataGrid :fields="inlineFields(bankTaxFields)" :editable-groups="editableFieldGroups"
-              :save-field="saveEmployeeField" @edit="openFieldEditor" @dirty="cardDirty = $event" />
+              :save-field="saveEmployeeField" @edit="openFieldEditor" @dirty="(active, key) => updateFieldDirty(active, key)" />
           </EmployeeProfileSection>
         </template>
 
         <template v-if="activeSection === 'schedule'">
           <EmployeeProfileSection v-if="reference?.schedule" :title="tr('График работы')">
             <EmployeeDataGrid :fields="inlineFields(scheduleFields)" :editable-groups="editableFieldGroups"
-              :save-field="saveEmployeeField" @edit="openFieldEditor" @dirty="cardDirty = $event" />
+              :save-field="saveEmployeeField" @edit="openFieldEditor" @dirty="(active, key) => updateFieldDirty(active, key)" />
           </EmployeeProfileSection>
 
           <EmployeeProfileSection v-if="reference?.leave_summary || reference?.leave_limits?.length" :title="tr('Отпуска и лимиты отсутствий')">
             <EmployeeDataGrid :fields="inlineFields(leaveSummaryFields)" :editable-groups="editableFieldGroups"
-              :save-field="saveEmployeeField" @edit="openFieldEditor" @dirty="cardDirty = $event" />
+              :save-field="saveEmployeeField" @edit="openFieldEditor" @dirty="(active, key) => updateFieldDirty(active, key)" />
             <h3 class="assignment-history-title">{{ tr('Лимиты и остатки') }}</h3>
             <BaseDataTable density="compact" :rows="reference?.leave_limits ?? []"
               :columns="leaveLimitColumns" row-key="id"
@@ -1179,7 +1179,7 @@ onMounted(load)
 
           <EmployeeProfileSection v-if="reference?.schedule" :title="tr('Табель за период')">
             <EmployeeDataGrid :fields="inlineFields(currentTimesheetFields)" :editable-groups="editableFieldGroups"
-              :save-field="saveEmployeeField" @edit="openFieldEditor" @dirty="cardDirty = $event" />
+              :save-field="saveEmployeeField" @edit="openFieldEditor" @dirty="(active, key) => updateFieldDirty(active, key)" />
           </EmployeeProfileSection>
 
           <EmployeeProfileSection :title="tr('Явки, неявки и отсутствия')">
@@ -1194,10 +1194,10 @@ onMounted(load)
         <template v-if="activeSection === 'development'">
           <EmployeeProfileSection :title="tr('Кадровый резерв')">
             <EmployeeDataGrid :fields="inlineFields(reserveSummaryFields)" :editable-groups="editableFieldGroups"
-              :save-field="saveEmployeeField" @edit="openFieldEditor" @dirty="cardDirty = $event" />
+              :save-field="saveEmployeeField" @edit="openFieldEditor" @dirty="(active, key) => updateFieldDirty(active, key)" />
             <h3 class="assignment-history-title">{{ tr('Параметры резерва') }}</h3>
             <EmployeeDataGrid :fields="inlineFields(reserveDetailFields)" :editable-groups="editableFieldGroups"
-              :save-field="saveEmployeeField" @edit="openFieldEditor" @dirty="cardDirty = $event" />
+              :save-field="saveEmployeeField" @edit="openFieldEditor" @dirty="(active, key) => updateFieldDirty(active, key)" />
             <h3 class="assignment-history-title">{{ tr('История кадрового резерва') }}</h3>
             <BaseDataTable density="compact" :rows="profile.reserve" row-key="id" :caption="tr('Кадровый резерв сотрудника')"
               :columns="[{key:'target_position',label:tr('Резервируемая должность')},{key:'reserve_level',label:tr('Уровень')},{key:'reserve_type',label:tr('Вид')},{key:'joined_year',label:tr('Год зачисления')},{key:'left_year',label:tr('Год исключения')}, ...(profile.meta.profile_writes_enabled ? [{key:'edit',label:tr('Действия')}] : [])]"

@@ -686,7 +686,7 @@ onMounted(loadCompanies)
           <div class="timesheet-period-tabs" role="tablist" aria-label="Режим просмотра табеля">
             <BaseButton variant="secondary" type="button" role="tab" :aria-selected="timesheetPeriodView === 'month'"
               :class="{ active:timesheetPeriodView==='month' }" @click="selectTimesheetView('month')">Месяц</BaseButton>
-            <BaseButton v-if="!demoMode" variant="secondary" type="button" role="tab"
+            <BaseButton v-if="!demoMode && productionTimesheetMeta?.worktime_matrix_enabled" variant="secondary" type="button" role="tab"
               :aria-selected="timesheetPeriodView === 'matrix'"
               :class="{ active: timesheetPeriodView === 'matrix' }" @click="selectTimesheetView('matrix')">Матрица</BaseButton>
             <BaseButton variant="secondary" type="button" role="tab" :aria-selected="timesheetPeriodView === 'day'"

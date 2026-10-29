@@ -89,6 +89,7 @@ export interface WorktimeTimesheetResponse {
     }
     worktime_writes_enabled: boolean
     worktime_bulk_fill_enabled?: boolean
+    worktime_matrix_enabled?: boolean
     current_page: number
     last_page: number
     per_page: number

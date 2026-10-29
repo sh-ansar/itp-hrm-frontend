@@ -77,6 +77,9 @@ test('HR directly enters and corrects attendance; no approval controls, manager 
       assert.equal(corrected.body.data.find(item => item.date === day.date).worked_minutes, 420)
 
       await hr.reload()
+      // The grid loads asynchronously after navigation; do not assert before hydration.
+      await hr.getByRole('row').filter({ hasText: 'Synthetic Employee' })
+        .getByRole('button', { name: 'Заполнить', exact: true }).waitFor()
       assert.equal(await hr.getByRole('row').filter({ hasText: 'Synthetic Employee' })
         .getByRole('button', { name: 'Заполнить', exact: true }).count(), 1)
       assert.equal((await api(hr, root + '/periods?month=2026-10')).status, 404,

@@ -20,7 +20,7 @@ let generation = 0
 interface BalanceViewRow extends Record<string, unknown> {
   key: string; employee_id: string; full_name: string; personnel_number: string
   department: string; position: string; leave_type: string; grant: number | null
-  carried: number | null; adjusted: number | null; approved: number | null
+  carried: number | null; adjusted: number | null; approved: number | null; overrun: number | null
   actual: number | null; unspent: number | null; available: number | null
   unverifiable: number; state: string; balance: VerifiedLeaveBalanceRow
 }
@@ -31,6 +31,7 @@ const columns = [
   { key: 'grant', label: 'Начислено', minWidth: 105 },
   { key: 'carried', label: 'Перенесено', minWidth: 110 },
   { key: 'approved', label: 'Одобрено (план)', minWidth: 132 },
+  { key: 'overrun', label: 'Факт сверх плана', minWidth: 130 },
   { key: 'actual', label: 'Фактически', minWidth: 120 },
   { key: 'unspent', label: 'Не использовано', minWidth: 128 },
   { key: 'available', label: 'Свободно для заявок', minWidth: 150 },
@@ -49,6 +50,7 @@ const rows = computed<BalanceViewRow[]>(() => items.value.flatMap(employee =>
     carried: balance.carried_days,
     adjusted: balance.adjustment_days,
     approved: balance.booked_days,
+    overrun: balance.actual_over_plan_days ?? null,
     actual: balance.actual_verified_days,
     unspent: balance.unspent_entitlement_days,
     available: balance.available_days,
@@ -97,10 +99,11 @@ watch(page, () => { void load() })
     <BaseNotice tone="info">
       Неподтверждённый фактический отпуск не считается использованным и не превращается в ноль.
       «Свободно для заявок» учитывает уже одобренный план; «Не использовано» — только подтверждённый факт.
+      Фактические дни сверх утверждённого плана дополнительно уменьшают свободный фонд.
       Перенос между годами проводится с основанием и историей, без автоматического списания.
     </BaseNotice>
     <BaseDataTable :rows="rows" :columns="columns" row-key="key" :loading="loading"
-      :min-table-width="1320" caption="Реестр остатков отпусков"
+      :min-table-width="1450" caption="Реестр остатков отпусков"
       empty-title="Остатки не найдены"
       empty-description="Проверьте фильтры и начисления. Незаполненный баланс не приравнивается к 24 дням.">
       <template #cell-full_name="{ row }">
@@ -114,6 +117,7 @@ watch(page, () => { void load() })
       <template #cell-grant="{ row }">{{ format(row.grant) }}</template>
       <template #cell-carried="{ row }">{{ format(row.carried) }}</template>
       <template #cell-approved="{ row }">{{ format(row.approved) }}</template>
+      <template #cell-overrun="{ row }">{{ format(row.overrun) }}</template>
       <template #cell-actual="{ row }">
         <span :title="row.unverifiable ? 'Нет подтверждения фактического использования' : undefined">
           {{ row.unverifiable ? 'Не подтверждён' : format(row.actual) }}

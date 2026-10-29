@@ -47,14 +47,23 @@ test('schedule separates approved plan and actual; HR confirms unused vacation a
       granted_days: 24, reason: 'Reviewed synthetic annual entitlement 2025',
     })
     assert.equal(grant.status, 201, JSON.stringify(grant.data))
-    const created = await api(page, base + '/leave-requests', 'POST', {
+    // Self-approval is forbidden: HR creates/submits, another admin approves.
+    const hrContext = await browser.newContext({ baseURL: origin, viewport: { width: 1280, height: 800 } })
+    const hrPage = await hrContext.newPage()
+    await hrPage.goto('/login')
+    await hrPage.getByLabel('Электронная почта').fill('synthetic-e2e@example.test')
+    await hrPage.getByLabel('Пароль').fill('SyntheticE2E-Only!2026')
+    await hrPage.getByRole('button', { name: 'Войти', exact: true }).click()
+    await hrPage.waitForURL(url => !url.pathname.endsWith('/login'))
+    const created = await api(hrPage, base + '/leave-requests', 'POST', {
       employee_id: employee, leave_type_id: type,
       planned_started_on: '2025-08-01', planned_ended_on: '2025-08-14', note: null,
     })
     assert.equal(created.status, 201, JSON.stringify(created.data))
     const requestId = created.data.data.id
-    const submitted = await api(page, base + '/leave-requests/' + requestId + '/submit', 'POST', { revision: 1 })
+    const submitted = await api(hrPage, base + '/leave-requests/' + requestId + '/submit', 'POST', { revision: 1 })
     assert.equal(submitted.status, 200, JSON.stringify(submitted.data))
+    await hrContext.close()
     const decision = await api(page, base + '/leave-requests/' + requestId + '/decision', 'POST', {
       revision: 2, decision: 'approved', comment: 'Approved synthetic planned vacation',
     })

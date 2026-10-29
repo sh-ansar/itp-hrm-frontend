@@ -2,7 +2,7 @@ import { apiRequest } from './client'
 
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
-export type LeaveStatus = 'planned' | 'ongoing' | 'completed'
+export type LeaveStatus = 'planned' | 'ongoing' | 'completed' | 'not_taken'
 export type LeaveScheduleState = 'on_schedule' | 'shifted'
 
 export interface LeaveRow extends Record<string, unknown> {
@@ -25,6 +25,7 @@ export interface LeaveRow extends Record<string, unknown> {
   actual_started_on: string | null
   actual_ended_on: string | null
   actual_days: number | null
+  actual_review_state?: 'taken' | 'not_taken' | null
   started_on: string
   ended_on: string
   days: number
@@ -168,10 +169,20 @@ export function createLeaveType(companyId: string, data: LeaveTypeInput): Promis
   return apiRequest(companyPath(companyId) + '/leave-types', { method: 'POST', body: JSON.stringify(data) })
 }
 export function getLeaveRequests(companyId: string, page = 1,
-  status?: LeaveRequestStatus): Promise<LeaveRequestsResponse> {
+  status?: LeaveRequestStatus, filters: { year?: number; q?: string; departmentId?: string } = {}): Promise<LeaveRequestsResponse> {
   if (!Number.isSafeInteger(page) || page < 1) throw new Error('Некорректная страница')
   const params = new URLSearchParams({ page: String(page) })
   if (status) params.set('status', status)
+  if (filters.year) {
+    if (!Number.isSafeInteger(filters.year) || filters.year < 2000 || filters.year > 2100)
+      throw new Error('Некорректный год')
+    params.set('year', String(filters.year))
+  }
+  if (filters.q?.trim()) params.set('q', filters.q.trim().slice(0, 120))
+  if (filters.departmentId) {
+    if (!uuid.test(filters.departmentId)) throw new Error('Некорректное подразделение')
+    params.set('department_id', filters.departmentId)
+  }
   return apiRequest(companyPath(companyId) + '/leave-requests?' + params.toString())
 }
 export function createLeaveRequest(companyId: string, data: LeavePlanInput): Promise<{ data: LeaveRequestRecord }> {
@@ -222,5 +233,18 @@ export function reverseApprovedLeave(companyId: string, requestId: string, revis
   : Promise<{ data: Pick<LeaveRequestRecord, 'id' | 'status' | 'revision' | 'reversed_at' | 'reversal_reason'> }> {
   return apiRequest(requestPath(companyId, requestId) + '/reverse-approved', {
     method: 'POST', body: JSON.stringify({ revision, reason: reason.trim() }),
+  })
+}
+
+/** Reviewed HR outcome is separate from an approved plan; checks server revision. */
+export function reviewLeaveActual(companyId: string, leaveId: string, revision: number,
+  review: { state: 'taken' | 'not_taken'; actual_started_on?: string | null;
+    actual_ended_on?: string | null; reason: string },
+): Promise<{ data: { id: string; revision: number; actual_review_state: 'taken' | 'not_taken';
+  actual_started_on: string | null; actual_ended_on: string | null; actual_days: number } }> {
+  if (!uuid.test(leaveId) || !Number.isSafeInteger(revision) || revision < 1)
+    throw new Error('Обновите выбранную запись графика отпусков')
+  return apiRequest(companyPath(companyId) + '/leaves/' + leaveId + '/actual', {
+    method: 'PUT', body: JSON.stringify({ revision, ...review }),
   })
 }

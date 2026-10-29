@@ -25,7 +25,7 @@ import {
   type LeaveCategory, type LeaveTypeInput,
 } from '../api/leaves'
 
-const props = defineProps<{ companyId: string }>()
+const props = defineProps<{ companyId: string; year?: number; search?: string; departmentId?: string; showCategoryAction?: boolean }>()
 const emit = defineEmits<{ published: [] }>()
 const { t } = useLeaveWorkflowI18n()
 const { ct } = useLeaveCategoryI18n()
@@ -113,7 +113,8 @@ async function load() {
       managerOnly
         ? Promise.resolve<LeaveTypesResponse>({ data: [], meta: { can_manage_leave_types: false } })
         : getLeaveTypes(props.companyId),
-      getLeaveRequests(props.companyId, page.value),
+      getLeaveRequests(props.companyId, page.value, undefined,
+        { year: props.year, q: props.search, departmentId: props.departmentId }),
     ])
     if (current !== loadGeneration) return
     types.value = kinds.data
@@ -140,7 +141,8 @@ async function load() {
     if (current === loadGeneration) loading.value = false
   }
 }
-watch(() => props.companyId, () => {
+watch(() => [props.companyId, props.year, props.search, props.departmentId], () => {
+  page.value = 1
   page.value = 1
   editorOpen.value = false
   typeOpen.value = false
@@ -334,7 +336,7 @@ async function reverseApproved() {
         <p>{{ t('description') }}</p>
       </div>
       <div class="leave-management-actions">
-        <BaseButton v-if="canManageTypes" variant="secondary" :disabled="loading || busy"
+        <BaseButton v-if="canManageTypes && showCategoryAction !== false" variant="secondary" :disabled="loading || busy"
           @click="typeOpen = true"><Plus :size="16" /> {{ t('newType') }}</BaseButton>
         <BaseButton v-if="canManageRequests" :disabled="loading || busy || !types.length"
           @click="openCreate"><Plus :size="16" /> {{ t('newRequest') }}</BaseButton>

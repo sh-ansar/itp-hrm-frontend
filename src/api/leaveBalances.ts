@@ -20,6 +20,7 @@ export interface LeaveBalanceRow {
   carried_days: number | null
   adjustment_days: number | null
   booked_days: number | null
+  actual_over_plan_days?: number | null
   pending_days: number | null
   available_days: number | null
   closing_available_days: number | null
@@ -29,6 +30,38 @@ export interface LeaveBalanceRow {
   carry_from_period_id: string | null
   closed_at: string | null
 }
+export interface VerifiedLeaveBalanceRow extends LeaveBalanceRow {
+  /** Confirmed actual use; null means a historical booking has no verified actual. */
+  actual_verified_days: number | null
+  actual_unverified_records: number
+  /** Entitlement less verified use, NOT the same as available days for new bookings. */
+  unspent_entitlement_days: number | null
+}
+export interface LeaveBalanceRegistryItem extends Record<string, unknown> {
+  employee_id: string
+  personnel_number: string
+  last_name: string
+  first_name: string
+  middle_name: string | null
+  department_name: string | null
+  position_name: string | null
+  balances: VerifiedLeaveBalanceRow[]
+}
+export interface LeaveBalanceRegistryResponse {
+  data: LeaveBalanceRegistryItem[]
+  meta: { year: number; total: number; current_page: number; last_page: number;
+    can_manage: boolean; enforcement_enabled: boolean }
+}
+export function getLeaveBalanceRegistry(company: string, year: number, page = 1,
+  search = '', departmentId = ''): Promise<LeaveBalanceRegistryResponse> {
+  assertYear(year)
+  if (!Number.isSafeInteger(page) || page < 1) throw new Error('Некорректная страница')
+  const params = new URLSearchParams({ year: String(year), page: String(page), per_page: '20' })
+  if (search.trim()) params.set('q', search.trim().slice(0, 120))
+  if (departmentId) { assertId(departmentId); params.set('department_id', departmentId) }
+  return apiRequest<LeaveBalanceRegistryResponse>(`${path(company)}/registry?${params.toString()}`, { cache: 'no-store' })
+}
+
 export interface LeaveBalanceResponse {
   data: LeaveBalanceRow[]
   meta: { year: number; can_manage: boolean; enforcement_enabled: boolean }

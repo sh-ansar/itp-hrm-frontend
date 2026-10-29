@@ -114,6 +114,7 @@ export interface WorkScheduleResponse {
     total: number
     worktime_writes_enabled: boolean
     can_manage_schedules?: boolean
+    can_plan_schedules?: boolean
   }
 }
 
@@ -453,4 +454,132 @@ export function transitionWorktimePeriod(
     method: 'POST',
     body: JSON.stringify({ month, revision, action, reason: reason?.trim() ?? null }),
   })
+}
+
+/** Year-long, version-pinned planning (not actual attendance). */
+export interface WorkScheduleTemplate {
+  id: string
+  code: string
+  name: string
+  schedule_type: string
+  revision: number
+}
+export interface WorkScheduleCycleDay {
+  minutes: number
+  shift_code: string | null
+}
+export interface WorkSchedulePattern {
+  id: string
+  schedule_id: string
+  version: number
+  calendar_policy: 'company' | 'cycle'
+  days: WorkScheduleCycleDay[]
+}
+export interface WorkScheduleTemplateList {
+  data: WorkScheduleTemplate[]
+  meta: { can_edit_patterns: boolean }
+}
+export function listWorkScheduleTemplates(companyId: string): Promise<WorkScheduleTemplateList> {
+  assertCompany(companyId)
+  return apiRequest(`/companies/${companyId}/worktime/schedule-templates`)
+}
+export function getWorkSchedulePattern(companyId: string, scheduleId: string): Promise<{
+  data: WorkSchedulePattern | null
+  meta: { schedule_revision: number; can_edit: boolean }
+}> {
+  assertCompany(companyId)
+  if (!uuid.test(scheduleId)) throw new Error('Некорректный график')
+  return apiRequest(`/companies/${companyId}/worktime/schedules/${scheduleId}/pattern`)
+}
+export function saveWorkSchedulePattern(
+  companyId: string, scheduleId: string, revision: number,
+  calendarPolicy: WorkSchedulePattern['calendar_policy'], days: WorkScheduleCycleDay[],
+): Promise<{ data: WorkSchedulePattern }> {
+  assertCompany(companyId)
+  if (!uuid.test(scheduleId)) throw new Error('Некорректный график')
+  return apiRequest(`/companies/${companyId}/worktime/schedules/${scheduleId}/pattern`, {
+    method: 'PUT',
+    body: JSON.stringify({ revision, calendar_policy: calendarPolicy, days }),
+  })
+}
+export interface BulkWorktimePlanRequest {
+  employee_ids: string[]
+  from: string
+  to: string
+  schedule_revision: number
+  cycle_offset: number
+  replace_future_plans: boolean
+  apply: boolean
+  confirm?: boolean
+  preview_token?: string
+}
+export interface BulkWorktimePlanResponse {
+  data: {
+    employee_count: number
+    date_count: number
+    planned_workdays: number
+    planned_rest_days: number
+    planned_minutes: number
+    missing_calendar: number
+    outside_employment: number
+    locked_days: number
+    recorded_actual: number
+    overlapping_leave: number
+    overlapping_absence: number
+    existing_plans: number
+    existing_assignments: number
+    new_days: number
+    blocking_count: number
+    sample: { employee_id: string; date: string; planned_minutes: number; day_kind: 'work' | 'rest' }[]
+  }
+  meta: {
+    mode: 'preview' | 'applied'
+    preview_token: string
+    pattern_version: number
+    schedule_revision: number
+    can_apply: boolean
+  }
+}
+export function bulkPlanWorkSchedule(
+  companyId: string, scheduleId: string, payload: BulkWorktimePlanRequest,
+): Promise<BulkWorktimePlanResponse> {
+  assertCompany(companyId)
+  if (!uuid.test(scheduleId)) throw new Error('Некорректный график')
+  assertDate(payload.from)
+  assertDate(payload.to)
+  if (payload.employee_ids.length < 1 || payload.employee_ids.length > 200) {
+    throw new Error('Выберите от 1 до 200 сотрудников')
+  }
+  if (payload.employee_ids.some(id => !uuid.test(id))) throw new Error('Некорректные сотрудники')
+  if (payload.apply && (!payload.confirm || !/^[a-f0-9]{64}$/.test(payload.preview_token ?? ''))) {
+    throw new Error('Требуется предварительная проверка и подтверждение')
+  }
+  return apiRequest(`/companies/${companyId}/worktime/schedules/${scheduleId}/bulk-plan`, {
+    method: 'POST', body: JSON.stringify(payload),
+  })
+}
+export interface WorktimePlannedDay {
+  id: string
+  employee_id: string
+  work_date: string
+  planned_minutes: number
+  day_kind: 'work' | 'rest'
+  shift_code: string | null
+  source: string
+  revision: number
+  schedule_name: string
+  pattern_version: number
+}
+export function listWorktimePlannedDays(
+  companyId: string, employeeIds: string[], from: string, to: string, page = 1,
+): Promise<{ data: WorktimePlannedDay[]; meta: { total: number; current_page: number; last_page: number } }> {
+  assertCompany(companyId)
+  if (!employeeIds.length || employeeIds.length > 200 || employeeIds.some(id => !uuid.test(id))) {
+    throw new Error('Некорректная выборка сотрудников')
+  }
+  assertDate(from)
+  assertDate(to)
+  const params = new URLSearchParams({ from, to, page: String(page), per_page: '500' })
+  employeeIds.forEach(id => params.append('employee_ids[]', id))
+  return apiRequest(`/companies/${companyId}/worktime/plans?${params.toString()}`)
 }

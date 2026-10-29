@@ -23,7 +23,7 @@ const props = withDefaults(defineProps<{
   editableGroups?: EmployeeFieldEditGroup[]
   saveField?: (key: string, value: string | null) => Promise<void>
 }>(), { editableGroups: () => [] })
-const emit = defineEmits<{ edit: [group: EmployeeFieldEditGroup]; dirty: [active: boolean] }>()
+const emit = defineEmits<{ edit: [group: EmployeeFieldEditGroup]; dirty: [active: boolean, fieldKey: string] }>()
 const activeKey = ref('')
 const draft = ref('')
 const original = ref('')
@@ -46,17 +46,20 @@ function begin(field: EmployeeDisplayField) {
     return
   }
   if (dirty.value && !window.confirm('Есть несохранённое изменение поля. Отменить его?')) return
+  const previousKey = activeKey.value
+  if (previousKey) emit('dirty', false, previousKey)
   activeKey.value = field.editKey
   original.value = field.rawValue ?? (field.value === '—' ? '' : String(field.value ?? ''))
   draft.value = original.value
-  emit('dirty', false)
+  emit('dirty', false, activeKey.value)
   error.value = ''
 }
 function cancel() {
   if (busy.value) return
+  const key = activeKey.value
   activeKey.value = ''
   draft.value = ''
-  emit('dirty', false)
+  emit('dirty', false, key)
   error.value = ''
 }
 async function save() {
@@ -65,9 +68,10 @@ async function save() {
   busy.value = true
   error.value = ''
   try {
-    await props.saveField(activeKey.value, draft.value.trim() || null)
+    const key = activeKey.value
+    await props.saveField(key, draft.value.trim() || null)
     activeKey.value = ''
-    emit('dirty', false)
+    emit('dirty', false, key)
   } catch (cause) {
     error.value = cause instanceof Error ? cause.message : 'Не удалось сохранить поле'
   } finally { busy.value = false }
@@ -83,14 +87,14 @@ async function save() {
       <form v-if="field.editKey && activeKey === field.editKey" class="employee-inline-field-form"
         @submit.prevent="save">
         <select v-if="field.inputType === 'select'" v-model="draft" :disabled="busy"
-          @change="emit('dirty', dirty)"
+          @change="emit('dirty', dirty, activeKey)"
           :aria-label="tr(field.label)">
           <option value="">Не указано</option>
           <option value="male">Мужчина</option>
           <option value="female">Женщина</option>
         </select>
         <input v-else v-model="draft" :type="field.inputType || 'text'" :disabled="busy"
-          :aria-label="tr(field.label)" @input="emit('dirty', dirty)" />
+          :aria-label="tr(field.label)" @input="emit('dirty', dirty, activeKey)" />
         <div class="employee-inline-field-actions">
           <BaseButton size="sm" type="submit" :disabled="busy || !dirty">
             {{ busy ? tr('Сохранение…') : tr('Сохранить') }}

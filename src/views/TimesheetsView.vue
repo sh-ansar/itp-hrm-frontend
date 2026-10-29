@@ -11,6 +11,7 @@ import TimesheetEntryEditor from '../components/TimesheetEntryEditor.vue'
 import BulkTimesheetFillPanel from '../components/BulkTimesheetFillPanel.vue'
 import TimesheetPeriodReview from '../components/TimesheetPeriodReview.vue'
 import WorkScheduleEditor from '../components/WorkScheduleEditor.vue'
+import ScheduleCyclePlannerPanel from '../components/ScheduleCyclePlannerPanel.vue'
 import BaseDataTable from '../components/ui/BaseDataTable.vue'
 import BaseSelectionToolbar from '../components/ui/BaseSelectionToolbar.vue'
 import BaseStatusPill from '../components/ui/BaseStatusPill.vue'
@@ -180,6 +181,8 @@ watch([timesheetPeriodView,selectedDay], () => { void loadDailyTimesheet() })
 
 const editingTimesheetEmployee = ref<TimesheetViewRow | null>(null)
 const scheduleEditorOpen = ref(false)
+const cyclePlannerOpen = ref(false)
+const cyclePlannerScheduleId = ref<string | undefined>(undefined)
 const editingSchedule = ref<WorkScheduleRow | null>(null)
 const loadingCompanies = ref(false)
 const loading = ref(false)
@@ -486,8 +489,22 @@ async function loadWorkspace() {
 
     const unavailable: string[] = []
     if (timesheet.status === 'fulfilled') {
-      productionTimesheet.value = timesheet.value.data
+      // A single API page is 100 people; do not silently omit department staff
+      // from selection when the company already has more than 100 employees.
+      const allRows = [...timesheet.value.data]
+      const maxPages = Math.min(timesheet.value.meta.last_page, 20)
+      for (let page = 2; page <= maxPages; page += 4) {
+        const indexes = Array.from({ length: Math.min(4, maxPages - page + 1) },
+          (_, index) => page + index)
+        const more = await Promise.all(indexes.map(p => getWorktimeTimesheet(companyId, month.value, p)))
+        if (current !== generation) return
+        for (const result of more) allRows.push(...result.data)
+      }
+      productionTimesheet.value = allRows
       productionTimesheetMeta.value = timesheet.value.meta
+      if (timesheet.value.meta.last_page > maxPages) {
+        warning.value = 'Загружена только часть реестра сотрудников. Для полного выбора используйте серверный поиск.'
+      }
       if (timesheetPeriodView.value === 'day') void loadDailyTimesheet()
     } else unavailable.push('табель')
 
@@ -548,6 +565,14 @@ function timesheetUpdated() {
   void loadWorkspace()
 }
 
+function openCyclePlanner(row?: ScheduleViewRow) {
+  cyclePlannerScheduleId.value = row?.id
+  cyclePlannerOpen.value = true
+}
+function cyclePlanUpdated() {
+  dailyMonthlyCache.clear()
+  void loadWorkspace()
+}
 function openScheduleEditor(row?: ScheduleViewRow) {
   editingSchedule.value = row?.source ?? null
   scheduleEditorOpen.value = true
@@ -573,6 +598,7 @@ watch([company, month], () => {
   selectedDay.value = month.value + '-01'
   periodEditable.value = false
   calendarEditorOpen.value = false
+  cyclePlannerOpen.value = false
   bulkTimesheetOpen.value = false
   closeTimesheetEditor()
   closeScheduleEditor()
@@ -735,6 +761,8 @@ onMounted(loadCompanies)
             
           </div>
           <div class="section-actions">
+            <BaseButton v-if="!demoMode && productionScheduleMeta?.can_plan_schedules"
+              type="button" @click="openCyclePlanner()">Назначить график</BaseButton>
             <BaseButton v-if="!demoMode && productionScheduleMeta?.can_manage_schedules"
               type="button" @click="openScheduleEditor()">Новый график</BaseButton>
             <span>{{ scheduleRows.length }} графика</span>
@@ -746,10 +774,13 @@ onMounted(loadCompanies)
             empty-title="Графики не найдены" empty-description="Для выбранной компании графики отсутствуют.">
             <template #cell-week_hours="{ value }">{{ hoursLabel(value) }}<template v-if="typeof value === 'number'"> ч</template></template>
             <template #cell-actions="{ row }">
-              <BaseButton v-if="!demoMode && productionScheduleMeta?.can_manage_schedules"
-                variant="secondary" type="button" @click="openScheduleEditor(row)">
-                Управление
-              </BaseButton>
+              <div v-if="!demoMode && (productionScheduleMeta?.can_plan_schedules || productionScheduleMeta?.can_manage_schedules)"
+                class="schedule-row-actions">
+                <BaseButton v-if="!demoMode && productionScheduleMeta?.can_plan_schedules"
+                  variant="secondary" type="button" @click="openCyclePlanner(row)">Назначить</BaseButton>
+                <BaseButton v-if="!demoMode && productionScheduleMeta?.can_manage_schedules"
+                  variant="secondary" type="button" @click="openScheduleEditor(row)">Управление</BaseButton>
+              </div>
               <span v-else>—</span>
             </template>
           </BaseDataTable>
@@ -762,10 +793,12 @@ onMounted(loadCompanies)
               <div><dt>Неделя</dt><dd>{{ hoursLabel(row.week_hours) }}<template v-if="row.week_hours !== null"> ч</template></dd></div>
               <div><dt>Сотрудники</dt><dd>{{ row.employees }}</dd></div>
             </dl>
-            <BaseButton v-if="!demoMode && productionScheduleMeta?.can_manage_schedules"
-              variant="secondary" type="button" @click="openScheduleEditor(row)">
-              Управление графиком
-            </BaseButton>
+            <div class="schedule-row-actions">
+              <BaseButton v-if="!demoMode && productionScheduleMeta?.can_plan_schedules"
+                variant="secondary" type="button" @click="openCyclePlanner(row)">Назначить</BaseButton>
+              <BaseButton v-if="!demoMode && productionScheduleMeta?.can_manage_schedules"
+                variant="secondary" type="button" @click="openScheduleEditor(row)">Управление графиком</BaseButton>
+            </div>
           </article>
         </div>
       </BaseCard>
@@ -882,6 +915,12 @@ onMounted(loadCompanies)
     :focus-date="timesheetPeriodView === 'day' ? selectedDay : undefined"
     @close="closeTimesheetEditor"
     @saved="timesheetUpdated" />
+  <ScheduleCyclePlannerPanel :open="cyclePlannerOpen" :company-id="company"
+    :initial-schedule-id="cyclePlannerScheduleId"
+    :employees="timesheetRows.map(row => ({
+      employee_id: row.employee_id, full_name: row.full_name, department: row.department,
+    }))"
+    @close="cyclePlannerOpen = false" @saved="cyclePlanUpdated" />
   <WorkScheduleEditor
     :open="scheduleEditorOpen"
     :company-id="company"
@@ -891,6 +930,7 @@ onMounted(loadCompanies)
 </template>
 
 <style scoped>
+.schedule-row-actions{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
 .worktime-register--flat{border:0;border-radius:0;padding:0;background:transparent;box-shadow:none;min-width:0}
 .timesheet-table-toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 12px}
 .timesheet-table-toolbar>span{font-size:12px;color:var(--color-muted)}

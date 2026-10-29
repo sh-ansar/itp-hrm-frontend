@@ -169,7 +169,7 @@ export function createLeaveType(companyId: string, data: LeaveTypeInput): Promis
   return apiRequest(companyPath(companyId) + '/leave-types', { method: 'POST', body: JSON.stringify(data) })
 }
 export function getLeaveRequests(companyId: string, page = 1,
-  status?: LeaveRequestStatus, filters: { year?: number; q?: string } = {}): Promise<LeaveRequestsResponse> {
+  status?: LeaveRequestStatus, filters: { year?: number; q?: string; departmentId?: string } = {}): Promise<LeaveRequestsResponse> {
   if (!Number.isSafeInteger(page) || page < 1) throw new Error('Некорректная страница')
   const params = new URLSearchParams({ page: String(page) })
   if (status) params.set('status', status)
@@ -179,6 +179,10 @@ export function getLeaveRequests(companyId: string, page = 1,
     params.set('year', String(filters.year))
   }
   if (filters.q?.trim()) params.set('q', filters.q.trim().slice(0, 120))
+  if (filters.departmentId) {
+    if (!uuid.test(filters.departmentId)) throw new Error('Некорректное подразделение')
+    params.set('department_id', filters.departmentId)
+  }
   return apiRequest(companyPath(companyId) + '/leave-requests?' + params.toString())
 }
 export function createLeaveRequest(companyId: string, data: LeavePlanInput): Promise<{ data: LeaveRequestRecord }> {

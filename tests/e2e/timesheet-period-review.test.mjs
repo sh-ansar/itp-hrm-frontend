@@ -11,8 +11,13 @@ async function login(page, email, password) {
   await page.goto('/login')
   await page.getByLabel('Электронная почта').fill(email)
   await page.getByLabel('Пароль', { exact: true }).fill(password)
-  await page.getByRole('button', { name: 'Войти', exact: true }).click()
-  await page.getByRole('heading', { name: 'Главная', exact: true }).waitFor()
+  const [loginResponse] = await Promise.all([
+    page.waitForResponse(r => r.url().endsWith('/auth/login') && r.request().method() === 'POST'),
+    page.getByRole('button', { name: 'Войти', exact: true }).click(),
+  ])
+  assert.equal(loginResponse.status(), 200)
+  // A user's configured start screen need not be the dashboard.
+  await page.waitForURL(url => !url.pathname.endsWith('/login'))
   await page.goto('/timesheets')
   await page.locator('input[type=month]').fill('2026-10')
 }

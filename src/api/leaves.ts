@@ -2,7 +2,7 @@ import { apiRequest } from './client'
 
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
-export type LeaveStatus = 'planned' | 'ongoing' | 'completed'
+export type LeaveStatus = 'planned' | 'ongoing' | 'completed' | 'not_taken'
 export type LeaveScheduleState = 'on_schedule' | 'shifted'
 
 export interface LeaveRow extends Record<string, unknown> {
@@ -25,6 +25,7 @@ export interface LeaveRow extends Record<string, unknown> {
   actual_started_on: string | null
   actual_ended_on: string | null
   actual_days: number | null
+  actual_review_state?: 'taken' | 'not_taken' | null
   started_on: string
   ended_on: string
   days: number
@@ -228,5 +229,18 @@ export function reverseApprovedLeave(companyId: string, requestId: string, revis
   : Promise<{ data: Pick<LeaveRequestRecord, 'id' | 'status' | 'revision' | 'reversed_at' | 'reversal_reason'> }> {
   return apiRequest(requestPath(companyId, requestId) + '/reverse-approved', {
     method: 'POST', body: JSON.stringify({ revision, reason: reason.trim() }),
+  })
+}
+
+/** Reviewed HR outcome is separate from an approved plan; checks server revision. */
+export function reviewLeaveActual(companyId: string, leaveId: string, revision: number,
+  review: { state: 'taken' | 'not_taken'; actual_started_on?: string | null;
+    actual_ended_on?: string | null; reason: string },
+): Promise<{ data: { id: string; revision: number; actual_review_state: 'taken' | 'not_taken';
+  actual_started_on: string | null; actual_ended_on: string | null; actual_days: number } }> {
+  if (!uuid.test(leaveId) || !Number.isSafeInteger(revision) || revision < 1)
+    throw new Error('Обновите выбранную запись графика отпусков')
+  return apiRequest(companyPath(companyId) + '/leaves/' + leaveId + '/actual', {
+    method: 'PUT', body: JSON.stringify({ revision, ...review }),
   })
 }

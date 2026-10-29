@@ -77,9 +77,9 @@ function closeMobile() { if (props.mobileOpen) emit('update:mobileOpen', false) 
       </RouterLink>
     </nav>
     <a class="sidebar-foot" href="https://platform.itpmining.kz/" aria-label="ITP Portal" title="ITP Portal">
-      <img class="sidebar-foot-logo sidebar-foot-logo--light" :src="publicAsset('brand/itp-portal-light.png')"
+      <img class="sidebar-foot-logo sidebar-foot-logo--light" :src="publicAsset('brand/itp-portal-light-v2.png')"
         alt="" aria-hidden="true" width="120" height="31" />
-      <img class="sidebar-foot-logo sidebar-foot-logo--dark" :src="publicAsset('brand/itp-portal-dark.png')"
+      <img class="sidebar-foot-logo sidebar-foot-logo--dark" :src="publicAsset('brand/itp-portal-dark-v2.png')"
         alt="" aria-hidden="true" width="120" height="31" />
       <img class="sidebar-foot-compact" :src="publicAsset('brand/itp-mark.svg')"
         alt="" aria-hidden="true" width="33" height="25" />

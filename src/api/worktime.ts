@@ -88,7 +88,9 @@ export interface WorktimeTimesheetResponse {
       overtime_minutes: number | null
     }
     worktime_writes_enabled: boolean
+    period_locked?: boolean
     worktime_bulk_fill_enabled?: boolean
+    worktime_matrix_enabled?: boolean
     current_page: number
     last_page: number
     per_page: number
@@ -582,4 +584,128 @@ export function listWorktimePlannedDays(
   const params = new URLSearchParams({ from, to, page: String(page), per_page: '500' })
   employeeIds.forEach(id => params.append('employee_ids[]', id))
   return apiRequest(`/companies/${companyId}/worktime/plans?${params.toString()}`)
+}
+
+/** Worktime matrix: a read-only planned/actual projection until explicitly bulk-edited. */
+export type WorktimeMatrixState = 'recorded' | 'leave' | 'absence' | 'rest'
+  | 'missing' | 'future' | 'unknown_shift' | 'unconfigured'
+export interface WorktimeMatrixDay {
+  date: string
+  day_type: string
+  label: string | null
+  locked: boolean
+}
+export interface WorktimeMatrixCell {
+  date: string
+  planned_minutes: number | null
+  worked_minutes: number | null
+  absence_minutes: number | null
+  overtime_minutes: number | null
+  shift_code: string | null
+  revision: number | null
+  state: WorktimeMatrixState
+  locked: boolean
+  editable: boolean
+}
+export interface WorktimeMatrixRow {
+  employee_id: string
+  personnel_number: string
+  full_name: string
+  department_name: string | null
+  department_id: string | null
+  position_name: string | null
+  schedule_name: string | null
+  summary: { planned_minutes: number; worked_minutes: number | null; recorded_days: number; missing_days: number }
+  days: WorktimeMatrixCell[]
+}
+export interface WorktimeMatrixResponse {
+  data: { dates: WorktimeMatrixDay[]; rows: WorktimeMatrixRow[] }
+  meta: {
+    from: string
+    to: string
+    group_by: 'department' | 'schedule' | 'none'
+    can_edit: boolean
+    calendar_complete: boolean
+    current_page: number
+    last_page: number
+    per_page: number
+    total: number
+    manager_scope_policy: string
+    filters: {
+      departments: { id: string; name: string }[]
+      schedules: { id: string; name: string }[]
+    }
+  }
+}
+export interface WorktimeMatrixFilters {
+  from: string
+  to: string
+  q?: string
+  department_id?: string
+  schedule_id?: string
+  status?: 'all' | 'recorded' | 'unrecorded'
+  group_by?: 'department' | 'schedule' | 'none'
+  page?: number
+  per_page?: number
+}
+export function getWorktimeMatrix(companyId: string, filters: WorktimeMatrixFilters): Promise<WorktimeMatrixResponse> {
+  assertCompany(companyId)
+  assertDate(filters.from)
+  assertDate(filters.to)
+  const p = new URLSearchParams({ from: filters.from, to: filters.to })
+  for (const name of ['q', 'department_id', 'schedule_id', 'status', 'group_by'] as const) {
+    if (filters[name]) p.set(name, String(filters[name]))
+  }
+  p.set('page', String(filters.page ?? 1))
+  p.set('per_page', String(filters.per_page ?? 30))
+  return apiRequest(`/companies/${companyId}/worktime/matrix?${p.toString()}`)
+}
+export interface WorktimeMatrixBulkInput {
+  cells: { employee_id: string; date: string }[]
+  operation: 'fill_missing' | 'set_worked'
+  worked_minutes?: number
+  overwrite_existing?: boolean
+  apply: boolean
+  confirm?: boolean
+  preview_token?: string
+}
+export interface WorktimeMatrixBulkResponse {
+  data: {
+    candidate_count: number
+    new_entries: number
+    updates: number
+    skipped_recorded: number
+    skipped_leave: number
+    skipped_absence: number
+    skipped_nonworking: number
+    skipped_future: number
+    missing_calendar: number
+    outside_employment: number
+    ambiguous_employment: number
+    unknown_shift: number
+    locked_cells: number
+    existing_requires_overwrite: number
+    protected_actual: number
+    blocking_count: number
+  }
+  meta: { mode: 'preview' | 'applied'; from: string; to: string;
+    preview_token: string; can_apply: boolean }
+}
+export function bulkEditWorktimeMatrix(companyId: string, payload: WorktimeMatrixBulkInput): Promise<WorktimeMatrixBulkResponse> {
+  assertCompany(companyId)
+  if (payload.cells.length < 1 || payload.cells.length > 2500
+    || payload.cells.some(cell => !uuid.test(cell.employee_id) || !datePattern.test(cell.date))) {
+    throw new Error('Выберите корректные ячейки табеля (не более 2500).')
+  }
+  if (payload.operation === 'set_worked' && (!Number.isInteger(payload.worked_minutes)
+    || (payload.worked_minutes ?? -1) < 0 || (payload.worked_minutes ?? 1441) > 1440)) {
+    throw new Error('Укажите от 0 до 24 часов.')
+  }
+  if (payload.apply && (!payload.confirm || !/^[a-f0-9]{64}$/.test(payload.preview_token ?? ''))) {
+    throw new Error('Перед изменением табеля выполните проверку и подтверждение.')
+  }
+  return apiRequest(`/companies/${companyId}/worktime/matrix/bulk-edit`, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
 }

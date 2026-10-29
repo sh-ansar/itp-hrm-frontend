@@ -9,9 +9,9 @@ import ProductionCalendarInlineEditor from '../components/ProductionCalendarInli
 import ProductionCalendarPeriodOverview from '../components/ProductionCalendarPeriodOverview.vue'
 import TimesheetEntryEditor from '../components/TimesheetEntryEditor.vue'
 import BulkTimesheetFillPanel from '../components/BulkTimesheetFillPanel.vue'
-import TimesheetPeriodReview from '../components/TimesheetPeriodReview.vue'
 import WorkScheduleEditor from '../components/WorkScheduleEditor.vue'
 import ScheduleCyclePlannerPanel from '../components/ScheduleCyclePlannerPanel.vue'
+import WorktimeMatrixPanel from '../components/WorktimeMatrixPanel.vue'
 import BaseDataTable from '../components/ui/BaseDataTable.vue'
 import BaseSelectionToolbar from '../components/ui/BaseSelectionToolbar.vue'
 import BaseStatusPill from '../components/ui/BaseStatusPill.vue'
@@ -35,7 +35,6 @@ import {
   type WorktimeAbsenceRow,
   type WorktimeTimesheetResponse,
   type WorktimeTimesheetRow,
-  type WorktimePeriodStatus,
 } from '../api/worktime'
 import { localTodayISO } from '../utils/localDate'
 import {
@@ -108,9 +107,10 @@ const productionSchedules = ref<WorkScheduleRow[]>([])
 const productionCalendar = ref<ProductionCalendarDay[]>([])
 const productionAbsences = ref<WorktimeAbsenceRow[]>([])
 const productionTimesheetMeta = ref<WorktimeTimesheetResponse['meta'] | null>(null)
-const periodStatus = ref<WorktimePeriodStatus | null>(null)
-const periodEditable = ref(false)
-const periodLocked = computed(() => periodStatus.value === 'submitted' || periodStatus.value === 'approved')
+// The HR saves attendance directly. Legacy closed months remain read-only.
+const periodLocked = computed(() => productionTimesheetMeta.value?.period_locked === true)
+const periodEditable = computed(() => productionTimesheetMeta.value?.worktime_writes_enabled === true
+  && !periodLocked.value)
 const productionCalendarMeta = ref<ProductionCalendarResponse['meta'] | null>(null)
 const productionScheduleMeta = ref<WorkScheduleResponse['meta'] | null>(null)
 const calendarEditorOpen = ref(false)
@@ -118,7 +118,7 @@ const calendarPeriodView = ref<'month' | 'quarter' | 'year'>('month')
 const timesheetEditorOpen = ref(false)
 const bulkTimesheetOpen = ref(false)
 const selectedTimesheetIds = ref<string[]>([])
-const timesheetPeriodView = ref<'month' | 'day'>('month')
+const timesheetPeriodView = ref<'month' | 'day' | 'matrix'>('month')
 const selectedDay = ref(localTodayISO())
 type DayTotals = { planned_minutes:number|null;worked_minutes:number|null;absence_minutes:number|null;overtime_minutes:number|null }
 const dailyEntries = ref(new Map<string,DayTotals>())
@@ -544,7 +544,7 @@ function bulkTimesheetSaved() {
   dailyMonthlyCache.clear()
   void loadWorkspace()
 }
-function selectTimesheetView(value: 'month' | 'day') {
+function selectTimesheetView(value: 'month' | 'day' | 'matrix') {
   timesheetPeriodView.value = value
   selectedTimesheetIds.value = []
 }
@@ -569,6 +569,11 @@ function openCyclePlanner(row?: ScheduleViewRow) {
   cyclePlannerScheduleId.value = row?.id
   cyclePlannerOpen.value = true
 }
+function matrixUpdated() {
+  dailyMonthlyCache.clear()
+  selectedTimesheetIds.value = []
+  void loadWorkspace()
+}
 function cyclePlanUpdated() {
   dailyMonthlyCache.clear()
   void loadWorkspace()
@@ -592,11 +597,9 @@ function calendarUpdated() {
   void loadWorkspace()
 }
 watch([company, month], () => {
-  periodStatus.value = null
   selectedTimesheetIds.value = []
   dailyMonthlyCache.clear()
   selectedDay.value = month.value + '-01'
-  periodEditable.value = false
   calendarEditorOpen.value = false
   cyclePlannerOpen.value = false
   bulkTimesheetOpen.value = false
@@ -665,8 +668,9 @@ onMounted(loadCompanies)
         </BaseCard>
       </div>
 
-      <TimesheetPeriodReview v-if="!demoMode && activeTab === 'timesheet' && productionTimesheetMeta?.worktime_writes_enabled"
-        :company-id="company" :month="month" @status="periodStatus = $event" @editable="periodEditable = $event" />
+      <BaseNotice v-if="!demoMode && activeTab === 'timesheet' && periodLocked" tone="warning">
+        Этот исторический табельный период закрыт. Исправление записей недоступно.
+      </BaseNotice>
       <section v-if="activeTab === 'timesheet'" class="worktime-register worktime-register--flat hrm-flat-panel">
         <div class="section-heading">
           <div>
@@ -680,6 +684,9 @@ onMounted(loadCompanies)
           <div class="timesheet-period-tabs" role="tablist" aria-label="Режим просмотра табеля">
             <BaseButton variant="secondary" type="button" role="tab" :aria-selected="timesheetPeriodView === 'month'"
               :class="{ active:timesheetPeriodView==='month' }" @click="selectTimesheetView('month')">Месяц</BaseButton>
+            <BaseButton v-if="!demoMode && productionTimesheetMeta?.worktime_matrix_enabled" variant="secondary" type="button" role="tab"
+              :aria-selected="timesheetPeriodView === 'matrix'"
+              :class="{ active: timesheetPeriodView === 'matrix' }" @click="selectTimesheetView('matrix')">Матрица</BaseButton>
             <BaseButton variant="secondary" type="button" role="tab" :aria-selected="timesheetPeriodView === 'day'"
               :class="{ active:timesheetPeriodView==='day' }" @click="selectTimesheetView('day')">День</BaseButton>
           </div>
@@ -688,13 +695,15 @@ onMounted(loadCompanies)
           <span v-if="dailyLoading" role="status">Загрузка записей дня…</span>
           <span v-if="dailyError" role="status">{{ dailyError }}</span>
         </div>
-        <BaseSelectionToolbar :count="selectedTimesheetIds.length" label="Выбрано сотрудников"
+        <WorktimeMatrixPanel v-if="!demoMode && timesheetPeriodView === 'matrix'"
+          :company-id="company" :month="month" @updated="matrixUpdated" />
+        <BaseSelectionToolbar v-if="timesheetPeriodView !== 'matrix'" :count="selectedTimesheetIds.length" label="Выбрано сотрудников"
           clear-label="Снять выделение" @clear="selectedTimesheetIds = []" />
-        <div v-if="canBulkFill" class="worktime-bulk-toolbar">
+        <div v-if="canBulkFill && timesheetPeriodView !== 'matrix'" class="worktime-bulk-toolbar">
           <BaseButton variant="secondary" type="button" @click="bulkTimesheetOpen = true">Массовое заполнение табеля</BaseButton>
           <span>С предпросмотром, без перезаписи уже введённых явок, отпусков и неявок</span>
         </div>
-        <div class="worktime-desktop">
+        <div v-if="timesheetPeriodView !== 'matrix'" class="worktime-desktop">
           <BaseDataTable v-model:selected-keys="selectedTimesheetIds" selectable
             :rows="visibleTimesheetRows" :columns="timesheetColumns" row-key="employee_id"
             :loading="loading" caption="Табель учёта рабочего времени"
@@ -726,7 +735,7 @@ onMounted(loadCompanies)
           </BaseDataTable>
         </div>
 
-        <div class="worktime-mobile">
+        <div v-if="timesheetPeriodView !== 'matrix'" class="worktime-mobile">
           <article v-for="row in visibleTimesheetRows" :key="row.employee_id" class="worktime-card">
             <header>
               <div>

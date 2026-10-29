@@ -4,6 +4,7 @@ import { Pencil } from 'lucide-vue-next'
 import BaseButton from './ui/BaseButton.vue'
 import BaseNotice from './ui/BaseNotice.vue'
 import BaseDialog from './ui/BaseDialog.vue'
+import EmployeePhotoCropEditor from './EmployeePhotoCropEditor.vue'
 import { readEmployeePhoto, removeEmployeePhoto, uploadEmployeePhoto, validateEmployeePhoto } from '../api/employeePhoto'
 
 const props = defineProps<{ companyId: string; employeeId: string; revision: number; hasPhoto: boolean; canEdit: boolean; name: string; initials: string; compactEdit?: boolean }>()
@@ -17,6 +18,7 @@ const photoViewerOpen = ref(false)
 const error = ref('')
 const input = ref<HTMLInputElement | null>(null)
 const pendingPhoto = ref<File | null>(null)
+const cropFile = ref<File | null>(null)
 const pendingPreview = ref('')
 function resetPending() {
   const hadPending = !!pendingPhoto.value
@@ -33,6 +35,7 @@ watch(() => [props.companyId, props.employeeId, props.hasPhoto, props.revision],
   const current = ++generation
   request?.abort()
   resetPending()
+  if (cropFile.value) { cropFile.value = null; emit('dirty', false) }
   const identity = props.companyId + ':' + props.employeeId
   // Keep the previous authorized photo visible while refreshing its revision.
   // Otherwise a replacement briefly shows an empty avatar and upload validation
@@ -61,37 +64,39 @@ watch(() => [props.companyId, props.employeeId, props.hasPhoto, props.revision],
     }
   } finally { clearTimeout(timeout); if (current === generation) imageLoading.value = false }
 }, { immediate: true })
-onBeforeUnmount(() => { generation++; request?.abort(); clearImage(); resetPending() })
+onBeforeUnmount(() => { generation++; request?.abort(); clearImage(); resetPending(); cropFile.value = null })
+function closeCrop() {
+  if (saving.value) return
+  cropFile.value = null
+  emit('dirty', false)
+  error.value = ''
+}
 async function select(file?: File) {
   if (!file || saving.value || !props.canEdit) return
   error.value = ''
   try {
     validateEmployeePhoto(file)
-    if (props.compactEdit) {
-      resetPending()
-      pendingPhoto.value = file
-      pendingPreview.value = URL.createObjectURL(file)
-      emit('dirty', true)
-      return
-    }
-    saving.value = true
-    await uploadEmployeePhoto(props.companyId, props.employeeId, props.revision, file)
-    emit('saved')
-  } catch (cause) { error.value = cause instanceof Error ? cause.message : 'Не удалось сохранить фото' }
-  finally { saving.value = false; if (input.value) input.value.value = '' }
+    cropFile.value = file
+    emit('dirty', true)
+  } catch (cause) {
+    error.value = cause instanceof Error ? cause.message : 'Не удалось открыть фото'
+  } finally {
+    if (input.value) input.value.value = ''
+  }
 }
 function choose(event: Event) { void select((event.target as HTMLInputElement).files?.[0]) }
-async function savePending() {
-  if (!pendingPhoto.value || saving.value || !props.canEdit) return
+async function saveCrop(file: File) {
+  if (!cropFile.value || saving.value || !props.canEdit) return
   saving.value = true
   error.value = ''
   try {
-    validateEmployeePhoto(pendingPhoto.value)
-    await uploadEmployeePhoto(props.companyId, props.employeeId, props.revision, pendingPhoto.value)
-    resetPending()
+    validateEmployeePhoto(file)
+    await uploadEmployeePhoto(props.companyId, props.employeeId, props.revision, file)
+    cropFile.value = null
+    emit('dirty', false)
     emit('saved')
   } catch (cause) {
-    error.value = cause instanceof Error ? cause.message : 'Не удалось загрузить фотографию'
+    error.value = cause instanceof Error ? cause.message : 'Не удалось сохранить кадр'
   } finally { saving.value = false }
 }
 function drop(event: DragEvent) { dragging.value = false; void select(event.dataTransfer?.files[0]) }
@@ -124,10 +129,7 @@ async function remove() {
           aria-label="Выбрать фотографию" :disabled="saving" @change="choose" />
         <BaseButton variant="secondary" icon-only type="button" class="photo-pencil" :disabled="saving"
           aria-label="Изменить фотографию" title="Изменить фотографию" @click="input?.click()"><Pencil :size="15" aria-hidden="true" /></BaseButton>
-        <div v-if="pendingPhoto" class="photo-compact-save">
-          <BaseButton size="sm" :disabled="saving" @click="savePending">{{ saving ? 'Сохранение…' : 'Сохранить' }}</BaseButton>
-          <BaseButton size="sm" variant="secondary" :disabled="saving" @click="resetPending">Отмена</BaseButton>
-        </div>
+
       </div>
       <div v-else-if="!compactEdit" class="photo-actions">
         <template v-if="canEdit">
@@ -140,7 +142,9 @@ async function remove() {
         <p v-else-if="!hasPhoto">Фото не загружено</p>
       </div>
     </div>
-    <BaseNotice v-if="error" tone="error">{{ error }}</BaseNotice>
+    <EmployeePhotoCropEditor v-if="cropFile" :file="cropFile" :saving="saving" :error="error"
+      @save="saveCrop" @cancel="closeCrop" />
+    <BaseNotice v-if="error && !cropFile" tone="error">{{ error }}</BaseNotice>
     <BaseDialog :open="photoViewerOpen && !!(imageUrl || pendingPreview)" :title="'Фото сотрудника: ' + name"
       @close="photoViewerOpen = false">
       <img v-if="pendingPreview || imageUrl" :src="pendingPreview || imageUrl" :alt="'Фото сотрудника: ' + name" class="photo-viewer" />
@@ -181,7 +185,7 @@ async function remove() {
 .photo-actions{display:grid;gap:7px;min-width:0;flex:1;justify-items:start}
 .photo-compact-actions{position:absolute;right:0;bottom:0;display:grid;justify-items:end;gap:5px;z-index:1}
 .photo-compact-actions .photo-pencil{min-width:30px;min-height:30px;padding:0;border-radius:50%;background:var(--color-surface);box-shadow:var(--shadow-sm);font-size:20px;line-height:1}
-.photo-compact-save{display:flex;align-items:center;gap:5px;flex-wrap:wrap;background:var(--color-surface);padding:5px;border-radius:var(--radius-sm);box-shadow:var(--shadow-sm)}
+
 .employee-photo{position:relative}
 .employee-photo:has(.photo-compact-actions) .photo-row{display:block}
 .employee-photo:has(.photo-compact-actions) .avatar{width:150px;height:160px;aspect-ratio:auto;border-radius:10px;overflow:hidden}

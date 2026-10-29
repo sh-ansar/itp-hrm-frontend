@@ -51,7 +51,16 @@ const error = ref('')
 const editing = ref<{ section: ProfileSection; record: ProfileEditRow } | null>(null)
 const assignmentEditing = ref<EmployeeAssignment | null>(null)
 const assignmentTransitioning = ref<EmployeeAssignment | null>(null)
-const cardDirty = ref(false)
+const photoDirty = ref(false)
+const fieldDirtyKeys = ref<Set<string>>(new Set())
+const cardDirty = computed(() => photoDirty.value || fieldDirtyKeys.value.size > 0)
+const photoReset = ref(0)
+function updateFieldDirty(active: boolean, key: string) {
+  const keys = new Set(fieldDirtyKeys.value)
+  if (active && key) keys.add(key)
+  else if (key) keys.delete(key)
+  fieldDirtyKeys.value = keys
+}
 const documentWritesEnabled = ref(false)
 const documentReadEnabled = ref(false)
 const attachmentError = ref('')
@@ -66,7 +75,11 @@ function confirmDiscard(): boolean {
 }
 function changeSection(value: string) {
   if (!confirmDiscard()) return
-  cardDirty.value = false
+  if (cardDirty.value) {
+    fieldDirtyKeys.value = new Set()
+    photoDirty.value = false
+    photoReset.value++
+  }
   activeSection.value = value
 }
 function warnUnload(event: BeforeUnloadEvent) {
@@ -322,8 +335,8 @@ async function saveEmployeeField(editKey: string, value: string | null): Promise
       && String(route.params.employee) === employee.id) {
     profile.value = refreshed
   }
-  cardDirty.value = false
 }
+
 function openFieldEditor(group: EmployeeFieldEditGroup) {
   if (!editableFieldGroups.value.includes(group)) return
   if (group === 'private-personal') privateEditorSection.value = 'personal'
@@ -736,7 +749,8 @@ async function load() {
   editing.value = null
   assignmentEditing.value = null
   assignmentTransitioning.value = null
-  cardDirty.value = false
+  fieldDirtyKeys.value = new Set()
+  photoDirty.value = false
   documentWritesEnabled.value = false
   documentReadEnabled.value = false
   privateEditorSection.value = null
@@ -889,12 +903,12 @@ onMounted(load)
       <div class="employee-identity">
         <div class="identity-photo-section">
           <div class="employee-view-photo-wrap">
-          <EmployeePhoto v-if="profile.meta.extended_sections_visible"
+          <EmployeePhoto v-if="profile.meta.extended_sections_visible" :key="profile.data.id + ':' + photoReset"
             :company-id="String(route.params.company)" :employee-id="profile.data.id"
             :revision="profile.data.revision" :has-photo="!!profile.data.has_photo"
             :can-edit="Boolean(profile.meta.employee_writes_enabled)" compact-edit
             :name="displayName" :initials="initials" @saved="load"
-            @dirty="cardDirty = $event" />
+            @dirty="photoDirty = $event" />
           <div v-else class="avatar" :aria-label="tr('Карточка сотрудника')">{{ initials }}</div>
           </div>
         </div>

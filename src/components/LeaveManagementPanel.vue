@@ -25,7 +25,7 @@ import {
   type LeaveCategory, type LeaveTypeInput,
 } from '../api/leaves'
 
-const props = defineProps<{ companyId: string; year?: number; search?: string; showCategoryAction?: boolean }>()
+const props = defineProps<{ companyId: string; year?: number; search?: string; departmentId?: string; showCategoryAction?: boolean }>()
 const emit = defineEmits<{ published: [] }>()
 const { t } = useLeaveWorkflowI18n()
 const { ct } = useLeaveCategoryI18n()
@@ -114,7 +114,7 @@ async function load() {
         ? Promise.resolve<LeaveTypesResponse>({ data: [], meta: { can_manage_leave_types: false } })
         : getLeaveTypes(props.companyId),
       getLeaveRequests(props.companyId, page.value, undefined,
-        { year: props.year, q: props.search }),
+        { year: props.year, q: props.search, departmentId: props.departmentId }),
     ])
     if (current !== loadGeneration) return
     types.value = kinds.data
@@ -141,7 +141,7 @@ async function load() {
     if (current === loadGeneration) loading.value = false
   }
 }
-watch(() => [props.companyId, props.year, props.search], () => {
+watch(() => [props.companyId, props.year, props.search, props.departmentId], () => {
   page.value = 1
   page.value = 1
   editorOpen.value = false

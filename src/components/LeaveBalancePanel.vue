@@ -13,10 +13,11 @@ import {
   type LeaveBalanceRow,
 } from '../api/leaveBalances'
 
-const props = defineProps<{ companyId: string }>()
+const props = defineProps<{ companyId: string; initialEmployeeId?: string; initialYear?: number }>()
+const emit = defineEmits<{ changed: [] }>()
 const { balanceT: t } = useLeaveBalanceCopy()
-const employeeId = ref('')
-const selectedYear = ref(String(new Date().getFullYear()))
+const employeeId = ref(props.initialEmployeeId ?? '')
+const selectedYear = ref(String(props.initialYear ?? new Date().getFullYear()))
 const yearNow = new Date().getFullYear()
 const years = Array.from({ length: 9 }, (_, index) => {
   const value = String(yearNow - 5 + index)
@@ -80,7 +81,8 @@ async function load(): Promise<void> {
   }
 }
 watch(() => props.companyId, () => {
-  employeeId.value = ''
+  employeeId.value = props.initialEmployeeId ?? ''
+  selectedYear.value = String(props.initialYear ?? new Date().getFullYear())
   editing.value = null
   void load()
 })
@@ -134,6 +136,7 @@ async function save(): Promise<void> {
     editing.value = null
     success.value = t('success')
     await load()
+    emit('changed')
   } catch (cause) {
     formError.value = cause instanceof Error ? cause.message : t('failed')
   } finally {

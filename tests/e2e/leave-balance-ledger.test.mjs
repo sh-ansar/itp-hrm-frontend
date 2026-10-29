@@ -67,7 +67,8 @@ test('admin UI grants, corrects, carries year; employee-scoped API cannot be for
 
     await page.goto('/leaves')
     await page.getByRole('button', { name: 'Остатки отпусков', exact: true }).click()
-    await page.getByLabel('Поиск сотрудника').fill('E2E-001')
+    await page.getByRole('search', { name: 'Поиск и фильтры отпусков' })
+      .getByRole('textbox', { name: 'Поиск сотрудника' }).fill('E2E-001')
     const registry = page.locator('.leave-balance-register')
     const registerRow = registry.getByRole('row').filter({ hasText: 'E2E-001' })
       .filter({ hasText: 'E2E annual allowance' })

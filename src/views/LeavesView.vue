@@ -32,7 +32,6 @@ const tabs = [
 ]
 const demoMode = import.meta.env.VITE_DEMO_MODE === 'true'
 const access = useCompanyAccessStore()
-void access.refresh()
 const companies = ref<CompanyRecord[]>([])
 const company = ref('')
 const { preferCompany } = useActiveCompanySelection(company)
@@ -219,7 +218,12 @@ const stats = computed(() => ({
 }))
 function groupDepartment(row: ScheduleRow) { return row.department }
 function setTab(value: string) {
-  if (tabs.some(item => item.id === value)) tab.value = value as Tab
+  if (!tabs.some(item => item.id === value) || tab.value === value) return
+  search.value = ''
+  department.value = ''
+  status.value = 'all'
+  page.value = 1
+  tab.value = value as Tab
 }
 async function loadCompanies() {
   loadingCompanies.value = true
@@ -301,7 +305,7 @@ async function loadWorkspace() {
 }
 watch([company, year], () => { page.value = 1; search.value = ''; department.value = ''; status.value = 'all'; void loadWorkspace() })
 watch([search, department, status], () => { page.value = 1 })
-onMounted(loadCompanies)
+onMounted(async () => { await access.refresh(); await loadCompanies() })
 
 function safeCsv(value: unknown): string {
   let text = String(value ?? '')
@@ -354,11 +358,11 @@ function exportCsv() {
       <BaseViewTabs :model-value="tab" :options="tabs" label="Разделы отпусков"
         @update:model-value="setTab" />
       <div class="leave-filters" role="search" aria-label="Поиск и фильтры отпусков">
-        <BaseFormField v-model="search" label="Поиск сотрудника"
-          placeholder="ФИО или табельный номер" />
+        <BaseFormField v-model="search" :label="tab === 'types' ? 'Поиск категории' : 'Поиск сотрудника'"
+          :placeholder="tab === 'types' ? 'Название или код' : 'ФИО или табельный номер'" />
         <BaseSelectField v-model="company" label="Компания" :options="companies" />
-        <BaseSelectField v-model="year" label="Год" :options="years" />
-        <BaseSelectField v-model="department" label="Подразделение" :options="departments" />
+        <BaseSelectField v-if="tab !== 'types'" v-model="year" label="Год" :options="years" />
+        <BaseSelectField v-if="tab !== 'types'" v-model="department" label="Подразделение" :options="departments" />
         <BaseSelectField v-if="tab === 'schedule'" v-model="status" label="Статус" :options="statuses" />
       </div>
 
@@ -449,7 +453,7 @@ function exportCsv() {
         Книга отпускных остатков доступна кадровым ролям. Сотрудник видит свои остатки в личном кабинете.
       </BaseNotice>
       <LeaveManagementPanel v-else-if="tab === 'management' && canManage"
-        :company-id="company" :year="Number(year)" :search="search"
+        :company-id="company" :year="Number(year)" :search="search" :department-id="department"
         :show-category-action="false" @published="loadWorkspace" />
       <BaseNotice v-else-if="tab === 'management'" tone="info">
         Управление заявлениями доступно HR и назначенным руководителям в пределах их полномочий.

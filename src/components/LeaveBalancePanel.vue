@@ -181,6 +181,9 @@ async function save(): Promise<void> {
           <div><dt>{{ t('carry') }}</dt><dd>{{ readable(row.carried_days) }}</dd></div>
           <div><dt>{{ t('adjust') }}</dt><dd>{{ readable(row.adjustment_days) }}</dd></div>
           <div><dt>{{ t('booked') }}</dt><dd>{{ readable(row.booked_days) }}</dd></div>
+          <div v-if="row.actual_over_plan_days && row.actual_over_plan_days > 0">
+            <dt>Факт сверх плана</dt><dd>{{ readable(row.actual_over_plan_days) }}</dd>
+          </div>
           <div><dt>{{ t('pending') }}</dt><dd>{{ readable(row.pending_days) }}</dd></div>
           <div class="leave-balances__available">
             <dt>{{ t('available') }}</dt><dd>{{ readable(row.available_days) }}</dd>

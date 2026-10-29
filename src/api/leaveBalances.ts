@@ -20,6 +20,7 @@ export interface LeaveBalanceRow {
   carried_days: number | null
   adjustment_days: number | null
   booked_days: number | null
+  actual_over_plan_days?: number | null
   pending_days: number | null
   available_days: number | null
   closing_available_days: number | null

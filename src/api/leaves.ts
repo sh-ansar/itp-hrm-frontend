@@ -168,6 +168,19 @@ export function getLeaveTypes(companyId: string): Promise<LeaveTypesResponse> {
 export function createLeaveType(companyId: string, data: LeaveTypeInput): Promise<{ data: LeaveTypeRecord }> {
   return apiRequest(companyPath(companyId) + '/leave-types', { method: 'POST', body: JSON.stringify(data) })
 }
+export function updateLeaveType(companyId: string, typeId: string, input: {
+  revision: number
+  name: string
+  annual_days: number | null
+  balance_method: 'calendar_days' | 'working_days'
+  reason: string
+}): Promise<{ data: LeaveTypeRecord }> {
+  if (!uuid.test(typeId) || !Number.isSafeInteger(input.revision) || input.revision < 1)
+    throw new Error('Обновите категорию отпуска перед редактированием')
+  return apiRequest(companyPath(companyId) + '/leave-types/' + typeId, {
+    method: 'PUT', body: JSON.stringify(input),
+  })
+}
 export function getLeaveRequests(companyId: string, page = 1,
   status?: LeaveRequestStatus, filters: { year?: number; q?: string; departmentId?: string } = {}): Promise<LeaveRequestsResponse> {
   if (!Number.isSafeInteger(page) || page < 1) throw new Error('Некорректная страница')

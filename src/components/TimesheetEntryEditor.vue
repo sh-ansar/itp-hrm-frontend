@@ -35,6 +35,15 @@ const rows = ref<DraftDay[]>([])
 const originalRows = ref<DraftDay[]>([])
 const today = ref(localTodayISO())
 const futureDay = (row: DraftDay) => row.date > today.value
+const outsideEmployment = (row: DraftDay) => row.employment_state === 'outside'
+const canClearOutside = (row: DraftDay) => outsideEmployment(row) && row.revision !== null
+  && [row.worked_hours, row.absence_hours, row.overtime_hours].some(value => value !== '')
+const clearOutside = (row: DraftDay) => {
+  if (!canClearOutside(row)) return
+  row.worked_hours = ''
+  row.absence_hours = ''
+  row.overtime_hours = ''
+}
 const futureHasActual = (row: DraftDay) => futureDay(row) && [row.worked_hours, row.absence_hours, row.overtime_hours].some(value => value !== '')
 const clearFuture = (row: DraftDay) => {
   if (!futureDay(row) || row.revision === null) return
@@ -52,7 +61,8 @@ const changedRows = computed(() => shownRows.value.filter(row => {
   const original = originalRows.value.find(item => item.date === row.date)
   return original && (original.worked_hours !== row.worked_hours || original.absence_hours !== row.absence_hours || original.overtime_hours !== row.overtime_hours)
 }))
-const canFillByPlan = computed(() => shownRows.value.some(row => !futureDay(row)))
+const canFillByPlan = computed(() => shownRows.value.some(row =>
+  !futureDay(row) && !outsideEmployment(row) && !row.medical_leave_state))
 
 function hours(minutes: number | null): string {
   if (minutes === null) return ''
@@ -110,7 +120,7 @@ async function load() {
 
 function fillByPlan() {
   rows.value = rows.value.map(row => {
-    if (futureDay(row) || row.medical_leave_state || (props.focusDate && row.date !== props.focusDate)) return row
+    if (futureDay(row) || outsideEmployment(row) || row.medical_leave_state || (props.focusDate && row.date !== props.focusDate)) return row
     return { ...row, worked_hours: row.planned_minutes > 0 ? hours(row.planned_minutes) : '0', absence_hours: '0', overtime_hours: '0' }
   })
 }
@@ -181,12 +191,18 @@ watch(() => [props.open, props.companyId, props.employeeId, props.month], () => 
               <span>Будущие даты доступны только для планирования; фактические часы вводятся после наступления даты.</span>
               <BaseButton v-if="futureHasActual(row)" type="button" variant="secondary" :disabled="saving" @click="clearFuture(row)">Очистить преждевременные часы</BaseButton>
             </div>
+            <BaseNotice v-if="outsideEmployment(row)" tone="info">
+              {{ tr('Вне периода трудоустройства. На эту дату нет рабочего плана и ввод фактической явки закрыт.') }}
+              <BaseButton v-if="canClearOutside(row)" variant="secondary" type="button" :disabled="saving" @click="clearOutside(row)">
+                {{ tr('Очистить ошибочные часы') }}
+              </BaseButton>
+            </BaseNotice>
             <BaseNotice v-if="row.medical_leave_state" tone="info">{{ tr('Период больничного ведётся отдельно. Отметьте фактическую неявку по подтверждённым дням; автоматического начисления часов нет.') }}</BaseNotice>
             <div class="day-fields">
-              <BaseFormField v-model="row.worked_hours" label="Отработано, ч" type="number" :disabled="saving || futureDay(row)" />
+              <BaseFormField v-model="row.worked_hours" label="Отработано, ч" type="number" :disabled="saving || futureDay(row) || outsideEmployment(row)" />
               <BaseFormField v-model="row.absence_hours" label="Неявка, ч" type="number"
-                :disabled="saving || futureDay(row) || row.planned_minutes === 0" />
-              <BaseFormField v-model="row.overtime_hours" label="Сверхурочно, ч" type="number" :disabled="saving || futureDay(row)" />
+                :disabled="saving || futureDay(row) || outsideEmployment(row) || row.planned_minutes === 0" />
+              <BaseFormField v-model="row.overtime_hours" label="Сверхурочно, ч" type="number" :disabled="saving || futureDay(row) || outsideEmployment(row)" />
             </div>
           </article>
         </div>

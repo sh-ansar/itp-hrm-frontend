@@ -72,7 +72,7 @@ test('schedule separates approved plan and actual; HR confirms unused vacation a
     const tabs = page.getByRole('navigation', { name: 'Разделы отпусков' })
     await tabs.getByRole('button', { name: 'Категории отпусков' }).waitFor()
     assert.deepEqual(await tabs.getByRole('button').allTextContents(), [
-      'График отпусков', 'Остатки отпусков', 'Управление отпусками', 'Категории отпусков',
+      'График отпусков', 'Остатки отпусков', 'Управление отпусками', 'Больничные', 'Категории отпусков',
     ])
     await page.getByRole('combobox', { name: 'Год', exact: true }).selectOption('2025')
     const schedule = page.getByRole('table', { name: 'График отпусков по образцу Мин и Сол' })

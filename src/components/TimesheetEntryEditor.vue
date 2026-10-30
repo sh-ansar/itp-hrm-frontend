@@ -7,7 +7,9 @@ import BaseLoadingState from './ui/BaseLoadingState.vue'
 import BaseNotice from './ui/BaseNotice.vue'
 import { getEmployeeTimesheet, putEmployeeTimesheet, type WorktimeDayEntry } from '../api/worktime'
 import { localTodayISO } from '../utils/localDate'
+import { useWorkspaceI18n } from '../composables/useWorkspaceI18n'
 
+const { tr } = useWorkspaceI18n()
 const props = defineProps<{
   open: boolean
   companyId: string
@@ -171,7 +173,7 @@ watch(() => [props.open, props.companyId, props.employeeId, props.month], () => 
               <div>
                 <strong>{{ dayLabel(row) }}</strong>
                 <span>{{ typeLabel(row) }}</span>
-                <span v-if="row.medical_leave_state" class="medical-day-note">Больничный · {{ row.medical_leave_state === 'confirmed' ? 'факт подтверждён' : 'по утверждённому плану' }}</span>
+                <span v-if="row.medical_leave_state" class="medical-day-note">{{ tr('Больничный') }} · {{ row.medical_leave_state === 'confirmed' ? tr('факт подтверждён') : tr('по утверждённому плану') }}</span>
               </div>
               <small>План: {{ Math.round((row.planned_minutes / 60) * 100) / 100 }} ч</small>
             </header>
@@ -179,7 +181,7 @@ watch(() => [props.open, props.companyId, props.employeeId, props.month], () => 
               <span>Будущие даты доступны только для планирования; фактические часы вводятся после наступления даты.</span>
               <BaseButton v-if="futureHasActual(row)" type="button" variant="secondary" :disabled="saving" @click="clearFuture(row)">Очистить преждевременные часы</BaseButton>
             </div>
-            <BaseNotice v-if="row.medical_leave_state" tone="info">Период больничного ведётся отдельно. Отметьте фактическую неявку по подтверждённым дням; автоматического начисления часов нет.</BaseNotice>
+            <BaseNotice v-if="row.medical_leave_state" tone="info">{{ tr('Период больничного ведётся отдельно. Отметьте фактическую неявку по подтверждённым дням; автоматического начисления часов нет.') }}</BaseNotice>
             <div class="day-fields">
               <BaseFormField v-model="row.worked_hours" label="Отработано, ч" type="number" :disabled="saving || futureDay(row)" />
               <BaseFormField v-model="row.absence_hours" label="Неявка, ч" type="number"

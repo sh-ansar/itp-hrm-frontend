@@ -16,6 +16,7 @@ import { useLeaveReversalI18n } from '../i18n/leaveReversal'
 import { useLeaveCategoryI18n } from '../i18n/leaveCategory'
 import { useUiFormatters } from '../composables/useUiFormatters'
 import { useCompanyAccessStore } from '../stores/companyAccess'
+import { useUiPreferencesStore } from '../stores/uiPreferences'
 import { useSessionStore } from '../stores/session'
 import { ApiError } from '../api/client'
 import {
@@ -28,6 +29,45 @@ import {
 const props = defineProps<{ companyId: string; year?: number; search?: string; departmentId?: string; showCategoryAction?: boolean; medicalOnly?: boolean }>()
 const emit = defineEmits<{ published: [] }>()
 const { t } = useLeaveWorkflowI18n()
+const ui = useUiPreferencesStore()
+const sickCopy = computed(() => ({
+  ru: {
+    title: 'Больничные', description: 'Оформление, проверка справки и кадровое подтверждение',
+    type: 'Больничный', create: 'Оформить больничный',
+    edit: 'Изменить больничный', new: 'Новый больничный',
+    info: 'Больничный оформляется по медицинскому документу. Диагноз в заявке указывать не нужно. Подтверждённый больничный не расходует ежегодный отпуск и не проставляет фактические часы автоматически.',
+    blocked: 'Загрузка справок пока отключена. Для подтверждения больничного требуется включить защищённые медицинские документы.',
+    noType: 'Для этой компании не настроен медицинский вид отпуска.',
+    help: 'Укажите период нетрудоспособности по справке. После сохранения загрузите PDF в карточке заявления; диагноз здесь не требуется.',
+  },
+  kk: {
+    title: 'Ауру парақтары', description: 'Рәсімдеу, анықтаманы тексеру және кадрлық растау',
+    type: 'Ауру парағы', create: 'Ауру парағын рәсімдеу',
+    edit: 'Ауру парағын өзгерту', new: 'Жаңа ауру парағы',
+    info: 'Ауру парағы медициналық құжат бойынша рәсімделеді. Диагнозды көрсетпеңіз. Расталған ауру парағы жылдық демалысты азайтпайды және нақты сағаттарды автоматты толтырмайды.',
+    blocked: 'Медициналық анықтамаларды жүктеу өшірілген. Растау үшін қорғалған құжаттар мүмкіндігін қосыңыз.',
+    noType: 'Бұл компанияда медициналық демалыс түрі бапталмаған.',
+    help: 'Анықтамадағы еңбекке жарамсыздық мерзімін енгізіңіз. Сақтағаннан кейін PDF тіркеңіз; диагноз қажет емес.',
+  },
+  en: {
+    title: 'Sick leave', description: 'Requests, certificates and HR confirmation',
+    type: 'Sick leave', create: 'Record sick leave',
+    edit: 'Edit sick leave', new: 'New sick leave',
+    info: 'Sick leave requires a medical document. Do not enter a diagnosis. Confirmed sick leave does not deduct annual leave or automatically fill attendance hours.',
+    blocked: 'Medical certificate upload is disabled. Enable secure documents before confirming sick leave.',
+    noType: 'This company has no medical leave category configured.',
+    help: 'Enter the period from the medical certificate. After saving, attach a PDF to the request; no diagnosis is needed.',
+  },
+  ka: {
+    title: 'საავადმყოფო ფურცლები', description: 'გაფორმება, სამედიცინო ცნობის შემოწმება და HR დადასტურება',
+    type: 'საავადმყოფო ფურცელი', create: 'საავადმყოფო ფურცლის გაფორმება',
+    edit: 'საავადმყოფო ფურცლის შეცვლა', new: 'ახალი საავადმყოფო ფურცელი',
+    info: 'საავადმყოფო ფურცელი ფორმდება სამედიცინო დოკუმენტის საფუძველზე. დიაგნოზის მითითება საჭირო არ არის. დადასტურებული პერიოდი არ აკლდება წლიურ შვებულებას და ფაქტობრივ საათებს ავტომატურად არ ავსებს.',
+    blocked: 'სამედიცინო ცნობების ატვირთვა გამორთულია. დასადასტურებლად ჩართეთ დაცული დოკუმენტები.',
+    noType: 'ამ კომპანიაში სამედიცინო შვებულების ტიპი არ არის დაყენებული.',
+    help: 'მიუთითეთ შრომისუუნარობის პერიოდი ცნობის მიხედვით. შენახვის შემდეგ მიამაგრეთ PDF; დიაგნოზი საჭირო არ არის.',
+  },
+}[ui.locale]))
 const { ct } = useLeaveCategoryI18n()
 const reversalCopy = useLeaveReversalI18n()
 const canReverse = ref(false)
@@ -76,7 +116,7 @@ let loadGeneration = 0
 
 const typeOptions = computed(() => types.value
   .filter(item => !props.medicalOnly || item.category === 'medical')
-  .map(item => ({ id: item.id, name: props.medicalOnly ? 'Больничный' : item.name })))
+  .map(item => ({ id: item.id, name: props.medicalOnly ? sickCopy.value.type : item.name })))
 const selectedEmployeeName = computed(() => editing.value
   ? [editing.value.last_name, editing.value.first_name, editing.value.middle_name].filter(Boolean).join(' ')
   : '')
@@ -337,24 +377,24 @@ async function reverseApproved() {
   <BaseCard class="leave-management">
     <div class="leave-management-heading">
       <div>
-        <h2>{{ medicalOnly ? 'Больничные' : t('title') }}</h2>
-        <p>{{ medicalOnly ? 'Оформление, проверка справки и кадровое подтверждение' : t('description') }}</p>
+        <h2>{{ medicalOnly ? sickCopy.title : t('title') }}</h2>
+        <p>{{ medicalOnly ? sickCopy.description : t('description') }}</p>
       </div>
       <div class="leave-management-actions">
         <BaseButton v-if="canManageTypes && showCategoryAction !== false" variant="secondary" :disabled="loading || busy"
           @click="typeOpen = true"><Plus :size="16" /> {{ t('newType') }}</BaseButton>
         <BaseButton v-if="canManageRequests" :disabled="loading || busy || !typeOptions.length"
-          @click="openCreate"><Plus :size="16" /> {{ medicalOnly ? 'Оформить больничный' : t('newRequest') }}</BaseButton>
+          @click="openCreate"><Plus :size="16" /> {{ medicalOnly ? sickCopy.create : t('newRequest') }}</BaseButton>
         <BaseButton variant="secondary" :disabled="loading || busy" @click="load">
           <RefreshCw :size="16" /> {{ t('refresh') }}</BaseButton>
       </div>
     </div>
     <BaseNotice v-if="error" tone="error">{{ error }}</BaseNotice>
     <BaseNotice v-if="info" tone="success">{{ info }}</BaseNotice>
-    <BaseNotice v-if="medicalOnly" tone="info">Больничный оформляется по медицинскому документу. Диагноз в заявке указывать не нужно. Подтверждённый больничный не расходует ежегодный отпуск и не проставляет фактические часы автоматически.</BaseNotice>
-    <BaseNotice v-if="medicalOnly && !evidenceUploadsEnabled && !loading" tone="warning">Загрузка справок пока отключена. Для подтверждения больничного требуется включить защищённые медицинские документы.</BaseNotice>
+    <BaseNotice v-if="medicalOnly" tone="info">{{ sickCopy.info }}</BaseNotice>
+    <BaseNotice v-if="medicalOnly && !evidenceUploadsEnabled && !loading" tone="warning">{{ sickCopy.blocked }}</BaseNotice>
     <p v-if="!medicalOnly" class="leave-management-help">{{ t('help') }}</p>
-    <BaseNotice v-if="canManageRequests && !typeOptions.length && !loading" tone="info">{{ medicalOnly ? 'Для этой компании не настроен медицинский вид отпуска.' : t('noTypes') }}</BaseNotice>
+    <BaseNotice v-if="canManageRequests && !typeOptions.length && !loading" tone="info">{{ medicalOnly ? sickCopy.noType : t('noTypes') }}</BaseNotice>
     <div v-if="loading" class="leave-management-help">{{ t('saving') }}</div>
     <template v-else>
       <h3>{{ t('requests') }} ({{ total }})</h3>
@@ -363,7 +403,7 @@ async function reverseApproved() {
         <article v-for="row in requests" :key="row.id" class="leave-management-row">
           <div class="leave-management-info">
             <strong>{{ [row.last_name, row.first_name, row.middle_name].filter(Boolean).join(' ') }}</strong>
-            <p>{{ medicalOnly ? 'Больничный' : (row.leave_type_name || t('leaveTypeHidden')) }} · {{ fmt.date(row.planned_started_on) }} — {{ fmt.date(row.planned_ended_on) }}</p>
+            <p>{{ medicalOnly ? sickCopy.type : (row.leave_type_name || t('leaveTypeHidden')) }} · {{ fmt.date(row.planned_started_on) }} — {{ fmt.date(row.planned_ended_on) }}</p>
             <small>{{ t('plannedDays') }}: {{ fmt.number(row.planned_days, 0) }} · {{ t('status') }}: {{ statusLabel(row.status) }}</small>
             <div v-if="row.status === 'submitted'" class="leave-management-stage" role="status">
               <span>{{ t('nextApprovalStage') }}</span>
@@ -440,7 +480,7 @@ async function reverseApproved() {
     </template>
   </BaseDrawer>
 
-  <BaseDrawer :open="editorOpen" :title="medicalOnly ? (editing ? 'Изменить больничный' : 'Новый больничный') : (editing ? t('edit') : t('newRequest'))"
+  <BaseDrawer :open="editorOpen" :title="medicalOnly ? (editing ? sickCopy.edit : sickCopy.new) : (editing ? t('edit') : t('newRequest'))"
     :description="t('approvedHint')" :close-label="t('close')" @close="closeEditor">
     <form id="leave-request-editor" class="leave-form" @submit.prevent="savePlan">
       <div v-if="editing" class="leave-existing-employee"><strong>{{ t('employee') }}</strong><span>{{ selectedEmployeeName }}</span></div>
@@ -449,7 +489,7 @@ async function reverseApproved() {
       <BaseFormField v-model="startedOn" type="date" :label="t('start')" required :disabled="busy" />
       <BaseFormField v-model="endedOn" type="date" :label="t('end')" required :disabled="busy" />
       <label v-if="!medicalOnly" class="leave-textarea"><span>{{ t('reason') }}</span><textarea v-model="note" rows="3" maxlength="2000" :disabled="busy" :placeholder="t('optional')" /></label>
-      <BaseNotice v-else tone="info">Укажите период нетрудоспособности по справке. После сохранения загрузите PDF в карточке заявления; диагноз здесь не требуется.</BaseNotice>
+      <BaseNotice v-else tone="info">{{ sickCopy.help }}</BaseNotice>
       <BaseNotice v-if="error" tone="error">{{ error }}</BaseNotice>
       <p class="leave-management-help">{{ t('help') }}</p>
     </form>

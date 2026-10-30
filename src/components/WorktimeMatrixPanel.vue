@@ -142,6 +142,7 @@ function formatHours(minutes: number | null): string {
   return minutes === null ? '—' : (Math.round(minutes / 60 * 100) / 100).toLocaleString('ru-RU')
 }
 function cellText(cell: WorktimeMatrixCell): string {
+  if (cell.state === 'outside_employment') return '—'
   if (cell.state === 'leave') return 'ОТ'
   if (cell.state === 'absence') return 'Н'
   if (cell.state === 'unknown_shift' || cell.state === 'unconfigured') return '?'
@@ -154,7 +155,7 @@ function cellTitle(cell: WorktimeMatrixCell): string {
   const statusText = {
     recorded: 'Зарегистрировано', leave: 'Отпуск', absence: 'Отсутствие', rest: 'Выходной',
     missing: 'Нет фактических часов', future: 'Будущий день', unknown_shift: 'Не подтверждён сменный план',
-    unconfigured: 'Нет производственного календаря',
+    unconfigured: 'Нет производственного календаря', outside_employment: 'Вне периода трудоустройства',
   }[cell.state]
   return [cell.date, statusText, 'План: ' + formatHours(cell.planned_minutes) + ' ч',
     'Факт: ' + formatHours(cell.worked_minutes) + ' ч',

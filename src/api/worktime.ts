@@ -263,6 +263,7 @@ export interface WorktimeDayEntry {
   overtime_minutes: number | null
   revision: number | null
   medical_leave_state?: 'planned' | 'confirmed' | null
+  employment_state?: 'employed' | 'outside' | null
 }
 
 export interface WorktimeDayEntryResponse {
@@ -589,7 +590,7 @@ export function listWorktimePlannedDays(
 
 /** Worktime matrix: a read-only planned/actual projection until explicitly bulk-edited. */
 export type WorktimeMatrixState = 'recorded' | 'leave' | 'absence' | 'rest'
-  | 'missing' | 'future' | 'unknown_shift' | 'unconfigured'
+  | 'missing' | 'future' | 'unknown_shift' | 'unconfigured' | 'outside_employment'
 export interface WorktimeMatrixDay {
   date: string
   day_type: string

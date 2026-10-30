@@ -6,6 +6,8 @@ import { useUiPreferencesStore } from '../stores/uiPreferences'
  * Business data returned by the API is never translated here.
  */
 const workspaceCopy: Record<string, { kk: string; en: string }> = {
+  'Вне периода трудоустройства. На эту дату нет рабочего плана и ввод фактической явки закрыт.': { kk: 'Еңбек қатынастары мерзімінен тыс. Бұл күнге жұмыс жоспары жоқ және нақты қатысу сағаттарын енгізуге болмайды.', en: 'Outside the employment period. There is no work plan for this date and actual attendance cannot be entered.' },
+  'Очистить ошибочные часы': { kk: 'Қате сағаттарды тазарту', en: 'Clear incorrect hours' },
   'Больничные': { kk: 'Ауру парақтары', en: 'Sick leave' },
   'Больничный': { kk: 'Ауру парағы', en: 'Sick leave' },
   'факт подтверждён': { kk: 'нақтысы расталды', en: 'actual confirmed' },

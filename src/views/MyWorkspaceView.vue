@@ -28,7 +28,15 @@ const copy = computed(() => ({
   en: ['My workspace', 'My leave', 'My requests', 'Request leave', 'Your account is not linked to an employee. Contact your company administrator.', 'Settings', 'No leave records', 'Company', 'Previous', 'Next'],
   ka: ['ჩემი კაბინეტი', 'ჩემი შვებულებები', 'ჩემი მოთხოვნები', 'მოთხოვნის გაგზავნა', 'ანგარიში თანამშრომელთან არ არის დაკავშირებული. მიმართეთ კომპანიის ადმინისტრატორს.', 'პარამეტრები', 'შვებულებები არ არის', 'კომპანია', 'წინა', 'შემდეგი'],
 }[ui.locale]))
+const sickCopy = computed(() => ({
+  ru:{button:'Подать больничный',title:'Больничный',note:'Укажите даты по медицинской справке. Диагноз в заявке писать не нужно. PDF прикрепляется после сохранения.',timesheet:'Больничный'},
+  kk:{button:'Ауру парағын беру',title:'Ауру парағы',note:'Медициналық анықтамадағы күндерді енгізіңіз. Диагнозды жазбаңыз. PDF сақтағаннан кейін тіркеледі.',timesheet:'Ауру парағы'},
+  en:{button:'Report sick leave',title:'Sick leave',note:'Enter the dates from your medical certificate. Do not include a diagnosis. Attach the PDF after saving.',timesheet:'Sick leave'},
+  ka:{button:'საავადმყოფო ფურცელი',title:'საავადმყოფო ფურცელი',note:'მიუთითეთ სამედიცინო ცნობის თარიღები, დიაგნოზის გარეშე. PDF მიამაგრეთ შენახვის შემდეგ.',timesheet:'ბიულეტენი'},
+}[ui.locale]))
 const workspace = ref<OwnWorkspace | null>(null)
+const medicalTypeId = computed(() => workspace.value?.data.leave_types.find(item => item.category === 'medical')?.id ?? '')
+const sickMode = ref(false)
 const loading = ref(false), busy = ref(false), error = ref(''), success = ref('')
 const open = ref(false), editing = ref<OwnRequest>()
 const type = ref(''), start = ref(''), end = ref(''), note = ref('')
@@ -173,8 +181,9 @@ watch(ownDocumentsPage, () => void loadOwnDocuments())
 watch([() => workspace.value?.data.employee?.id, () => access.activeCompanyId, balanceYear],
   () => void loadOwnBalances(), { immediate: true })
 
-function edit(request?: OwnRequest) {
-  editing.value = request; type.value = request?.leave_type_id ?? ''
+function edit(request?: OwnRequest, medical = false) {
+  sickMode.value = medical || request?.category === 'medical'
+  editing.value = request; type.value = request?.leave_type_id ?? (medical ? medicalTypeId.value : '')
   start.value = request?.planned_started_on ?? ''; end.value = request?.planned_ended_on ?? ''; note.value = request?.note ?? ''
   error.value = ''; success.value = ''; open.value = true
 }
@@ -209,7 +218,7 @@ function status(request: OwnRequest) {
         <BaseCard><h2>{{ workspace.data.employee.last_name }} {{ workspace.data.employee.first_name }} {{ workspace.data.employee.middle_name }}</h2>
           <p>{{ workspace.data.employee.personnel_number }} · {{ access.active?.company_name }}</p></BaseCard>
         <BaseCard>
-          <header><h2>{{ copy[2] }}</h2><BaseButton v-if="workspace.meta.can_request" :disabled="busy || !workspace.data.leave_types.length" @click="edit()">{{ copy[3] }}</BaseButton></header>
+          <header><h2>{{ copy[2] }}</h2><div class="actions"><BaseButton v-if="workspace.meta.can_request && medicalTypeId" variant="secondary" :disabled="busy" @click="edit(undefined, true)">{{ sickCopy.button }}</BaseButton><BaseButton v-if="workspace.meta.can_request" :disabled="busy || !workspace.data.leave_types.length" @click="edit()">{{ copy[3] }}</BaseButton></div></header>
           <BaseNotice v-if="workspace.meta.can_request && !workspace.data.leave_types.length">{{ t('noTypes') }}</BaseNotice>
           <p v-if="!workspace.data.requests.length">{{ t('noRequests') }}</p>
           <article v-for="request in workspace.data.requests" :key="request.id">
@@ -230,7 +239,7 @@ function status(request: OwnRequest) {
             <ProtectedLeaveEvidencePanel v-if="request.category && request.category !== 'ordinary'"
               :company-id="access.activeCompanyId" :request="request"
               :can-upload="!!workspace.meta.protected_evidence_uploads_enabled && workspace.meta.can_request"
-              :can-review="false" :required="!!workspace.meta.protected_evidence_required" @changed="load" />
+              :can-review="false" :required="!!workspace.meta.protected_evidence_required || (request.category === 'medical' && !!workspace.meta.medical_evidence_required)" @changed="load" />
             <div v-if="workspace.meta.can_request" class="actions">
               <BaseButton v-if="request.status === 'draft' && !request.evidence_status" variant="secondary" :disabled="busy" @click="edit(request)">{{ t('edit') }}</BaseButton>
               <BaseButton v-if="request.status === 'draft'" :disabled="busy" @click="perform(() => transitionOwnLeave(access.activeCompanyId, request, 'submit'))">{{ t('submit') }}</BaseButton>
@@ -345,7 +354,7 @@ function status(request: OwnRequest) {
                   <tbody>
                     <tr v-for="day in timesheetDays" :key="day.date">
                       <td>{{ day.date }}</td>
-                      <td>{{ timesheetDayLabel(day.day_type) }}<span v-if="day.label"> · {{ day.label }}</span></td>
+                      <td>{{ timesheetDayLabel(day.day_type) }}<span v-if="day.label"> · {{ day.label }}</span><span v-if="day.medical_leave_state"> · {{ sickCopy.timesheet }}</span></td>
                       <td>{{ hours(day.planned_minutes) }}</td>
                       <td>{{ hours(day.worked_minutes) }}</td>
                       <td>{{ hours(day.absence_minutes) }}</td>
@@ -359,13 +368,14 @@ function status(request: OwnRequest) {
         </BaseCard>
       </template>
     </template>
-    <BaseDrawer :open="open" :title="copy[3] ?? ''" @close="!busy && (open = false)">
+    <BaseDrawer :open="open" :title="sickMode ? sickCopy.title : (copy[3] ?? '')" @close="!busy && (open = false)">
       <form id="own-leave-form" class="own-form" @submit.prevent="save">
         <BaseNotice v-if="error" tone="error">{{ error }}</BaseNotice>
-        <BaseSelectField v-model="type" :label="t('type')" :options="workspace?.data.leave_types ?? []" :required="true" :disabled="busy" :placeholder="t('type')" />
+        <BaseSelectField v-if="!sickMode" v-model="type" :label="t('type')" :options="workspace?.data.leave_types ?? []" :required="true" :disabled="busy" :placeholder="t('type')" />
+        <BaseNotice v-if="sickMode" tone="info">{{ sickCopy.note }}</BaseNotice>
         <BaseFormField v-model="start" :label="t('start')" type="date" required :disabled="busy" />
         <BaseFormField v-model="end" :label="t('end')" type="date" required :disabled="busy" />
-        <BaseFormField v-model="note" :label="t('reason')" :disabled="busy" />
+        <BaseFormField v-if="!sickMode" v-model="note" :label="t('reason')" :disabled="busy" />
         <p>{{ t('help') }}</p>
       </form>
       <template #footer><BaseButton variant="secondary" :disabled="busy" @click="open = false">{{ t('close') }}</BaseButton>

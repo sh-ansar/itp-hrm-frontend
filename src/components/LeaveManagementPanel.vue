@@ -25,7 +25,7 @@ import {
   type LeaveCategory, type LeaveTypeInput,
 } from '../api/leaves'
 
-const props = defineProps<{ companyId: string; year?: number; search?: string; departmentId?: string; showCategoryAction?: boolean }>()
+const props = defineProps<{ companyId: string; year?: number; search?: string; departmentId?: string; showCategoryAction?: boolean; medicalOnly?: boolean }>()
 const emit = defineEmits<{ published: [] }>()
 const { t } = useLeaveWorkflowI18n()
 const { ct } = useLeaveCategoryI18n()
@@ -71,9 +71,12 @@ const category = ref<LeaveCategory>('ordinary')
 const supportsProtectedTypes = ref(false)
 const evidenceUploadsEnabled = ref(false)
 const evidenceRequired = ref(false)
+const medicalEvidenceRequired = ref(false)
 let loadGeneration = 0
 
-const typeOptions = computed(() => types.value.map(item => ({ id: item.id, name: item.name })))
+const typeOptions = computed(() => types.value
+  .filter(item => !props.medicalOnly || item.category === 'medical')
+  .map(item => ({ id: item.id, name: props.medicalOnly ? 'Больничный' : item.name })))
 const selectedEmployeeName = computed(() => editing.value
   ? [editing.value.last_name, editing.value.first_name, editing.value.middle_name].filter(Boolean).join(' ')
   : '')
@@ -114,7 +117,8 @@ async function load() {
         ? Promise.resolve<LeaveTypesResponse>({ data: [], meta: { can_manage_leave_types: false } })
         : getLeaveTypes(props.companyId),
       getLeaveRequests(props.companyId, page.value, undefined,
-        { year: props.year, q: props.search, departmentId: props.departmentId }),
+        { year: props.year, q: props.search, departmentId: props.departmentId,
+          category: props.medicalOnly ? 'medical' : undefined }),
     ])
     if (current !== loadGeneration) return
     types.value = kinds.data
@@ -123,7 +127,7 @@ async function load() {
       item => kinds.meta.supported_categories?.includes(item as LeaveCategory),
     )
     requests.value = records.data
-    canManageTypes.value = kinds.meta.can_manage_leave_types
+    canManageTypes.value = kinds.meta.can_manage_leave_types && !props.medicalOnly
     canReverse.value = records.meta.can_reverse_approved_leave === true
     canApprove.value = records.meta.can_approve_leave_requests
     canManageRequests.value = records.meta.can_manage_leave_requests ?? !managerOnly
@@ -131,6 +135,7 @@ async function load() {
     managerApprovalRequired.value = records.meta.manager_approval_required ?? false
     evidenceUploadsEnabled.value = records.meta.protected_evidence_uploads_enabled ?? false
     evidenceRequired.value = records.meta.protected_evidence_required ?? false
+    medicalEvidenceRequired.value = records.meta.medical_evidence_required ?? false
     page.value = records.meta.current_page
     lastPage.value = records.meta.last_page
     total.value = records.meta.total
@@ -158,7 +163,7 @@ watch(() => [props.companyId, props.year, props.search, props.departmentId], () 
 function openCreate() {
   editing.value = null
   employeeId.value = ''
-  leaveTypeId.value = types.value[0]?.id ?? ''
+  leaveTypeId.value = typeOptions.value[0]?.id ?? ''
   startedOn.value = ''
   endedOn.value = ''
   note.value = ''
@@ -332,22 +337,24 @@ async function reverseApproved() {
   <BaseCard class="leave-management">
     <div class="leave-management-heading">
       <div>
-        <h2>{{ t('title') }}</h2>
-        <p>{{ t('description') }}</p>
+        <h2>{{ medicalOnly ? 'Больничные' : t('title') }}</h2>
+        <p>{{ medicalOnly ? 'Оформление, проверка справки и кадровое подтверждение' : t('description') }}</p>
       </div>
       <div class="leave-management-actions">
         <BaseButton v-if="canManageTypes && showCategoryAction !== false" variant="secondary" :disabled="loading || busy"
           @click="typeOpen = true"><Plus :size="16" /> {{ t('newType') }}</BaseButton>
-        <BaseButton v-if="canManageRequests" :disabled="loading || busy || !types.length"
-          @click="openCreate"><Plus :size="16" /> {{ t('newRequest') }}</BaseButton>
+        <BaseButton v-if="canManageRequests" :disabled="loading || busy || !typeOptions.length"
+          @click="openCreate"><Plus :size="16" /> {{ medicalOnly ? 'Оформить больничный' : t('newRequest') }}</BaseButton>
         <BaseButton variant="secondary" :disabled="loading || busy" @click="load">
           <RefreshCw :size="16" /> {{ t('refresh') }}</BaseButton>
       </div>
     </div>
     <BaseNotice v-if="error" tone="error">{{ error }}</BaseNotice>
     <BaseNotice v-if="info" tone="success">{{ info }}</BaseNotice>
-    <p class="leave-management-help">{{ t('help') }}</p>
-    <BaseNotice v-if="canManageRequests && !types.length && !loading" tone="info">{{ t('noTypes') }}</BaseNotice>
+    <BaseNotice v-if="medicalOnly" tone="info">Больничный оформляется по медицинскому документу. Диагноз в заявке указывать не нужно. Подтверждённый больничный не расходует ежегодный отпуск и не проставляет фактические часы автоматически.</BaseNotice>
+    <BaseNotice v-if="medicalOnly && !evidenceUploadsEnabled && !loading" tone="warning">Загрузка справок пока отключена. Для подтверждения больничного требуется включить защищённые медицинские документы.</BaseNotice>
+    <p v-if="!medicalOnly" class="leave-management-help">{{ t('help') }}</p>
+    <BaseNotice v-if="canManageRequests && !typeOptions.length && !loading" tone="info">{{ medicalOnly ? 'Для этой компании не настроен медицинский вид отпуска.' : t('noTypes') }}</BaseNotice>
     <div v-if="loading" class="leave-management-help">{{ t('saving') }}</div>
     <template v-else>
       <h3>{{ t('requests') }} ({{ total }})</h3>
@@ -356,7 +363,7 @@ async function reverseApproved() {
         <article v-for="row in requests" :key="row.id" class="leave-management-row">
           <div class="leave-management-info">
             <strong>{{ [row.last_name, row.first_name, row.middle_name].filter(Boolean).join(' ') }}</strong>
-            <p>{{ row.leave_type_name || t('leaveTypeHidden') }} · {{ fmt.date(row.planned_started_on) }} — {{ fmt.date(row.planned_ended_on) }}</p>
+            <p>{{ medicalOnly ? 'Больничный' : (row.leave_type_name || t('leaveTypeHidden')) }} · {{ fmt.date(row.planned_started_on) }} — {{ fmt.date(row.planned_ended_on) }}</p>
             <small>{{ t('plannedDays') }}: {{ fmt.number(row.planned_days, 0) }} · {{ t('status') }}: {{ statusLabel(row.status) }}</small>
             <div v-if="row.status === 'submitted'" class="leave-management-stage" role="status">
               <span>{{ t('nextApprovalStage') }}</span>
@@ -388,7 +395,7 @@ async function reverseApproved() {
             <p v-if="row.decision_comment" class="leave-management-comment">{{ row.decision_comment }}</p>
             <ProtectedLeaveEvidencePanel v-if="row.category && row.category !== 'ordinary'"
               :company-id="companyId" :request="row" :can-upload="evidenceUploadsEnabled"
-              :can-review="evidenceUploadsEnabled" :required="evidenceRequired" @changed="load" />
+              :can-review="evidenceUploadsEnabled" :required="evidenceRequired || (row.category === 'medical' && medicalEvidenceRequired)" @changed="load" />
           </div>
           <div class="leave-management-row-actions">
             <BaseButton v-if="canReverse && row.status === 'approved'" variant="secondary" :disabled="busy || loading"
@@ -433,15 +440,16 @@ async function reverseApproved() {
     </template>
   </BaseDrawer>
 
-  <BaseDrawer :open="editorOpen" :title="editing ? t('edit') : t('newRequest')"
+  <BaseDrawer :open="editorOpen" :title="medicalOnly ? (editing ? 'Изменить больничный' : 'Новый больничный') : (editing ? t('edit') : t('newRequest'))"
     :description="t('approvedHint')" :close-label="t('close')" @close="closeEditor">
     <form id="leave-request-editor" class="leave-form" @submit.prevent="savePlan">
       <div v-if="editing" class="leave-existing-employee"><strong>{{ t('employee') }}</strong><span>{{ selectedEmployeeName }}</span></div>
       <EmployeeLookupField v-else v-model="employeeId" :company-id="companyId" required :disabled="busy" />
-      <BaseSelectField v-model="leaveTypeId" :label="t('type')" :options="typeOptions" required :disabled="busy" />
+      <BaseSelectField v-if="!medicalOnly" v-model="leaveTypeId" :label="t('type')" :options="typeOptions" required :disabled="busy" />
       <BaseFormField v-model="startedOn" type="date" :label="t('start')" required :disabled="busy" />
       <BaseFormField v-model="endedOn" type="date" :label="t('end')" required :disabled="busy" />
-      <label class="leave-textarea"><span>{{ t('reason') }}</span><textarea v-model="note" rows="3" maxlength="2000" :disabled="busy" :placeholder="t('optional')" /></label>
+      <label v-if="!medicalOnly" class="leave-textarea"><span>{{ t('reason') }}</span><textarea v-model="note" rows="3" maxlength="2000" :disabled="busy" :placeholder="t('optional')" /></label>
+      <BaseNotice v-else tone="info">Укажите период нетрудоспособности по справке. После сохранения загрузите PDF в карточке заявления; диагноз здесь не требуется.</BaseNotice>
       <BaseNotice v-if="error" tone="error">{{ error }}</BaseNotice>
       <p class="leave-management-help">{{ t('help') }}</p>
     </form>

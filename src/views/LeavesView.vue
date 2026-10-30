@@ -23,11 +23,12 @@ import { getLeaveBalanceRegistry, type LeaveBalanceRegistryItem } from '../api/l
 import { localTodayISO } from '../utils/localDate'
 import { buildDemoLeaves } from '../mocks/leavesDemo'
 
-type Tab = 'schedule' | 'balances' | 'management' | 'types'
+type Tab = 'schedule' | 'balances' | 'management' | 'sick' | 'types'
 const tabs = [
   { id: 'schedule', label: 'График отпусков' },
   { id: 'balances', label: 'Остатки отпусков' },
   { id: 'management', label: 'Управление отпусками' },
+  { id: 'sick', label: 'Больничные' },
   { id: 'types', label: 'Категории отпусков' },
 ]
 const demoMode = import.meta.env.VITE_DEMO_MODE === 'true'
@@ -458,6 +459,10 @@ function exportCsv() {
       <BaseNotice v-else-if="tab === 'management'" tone="info">
         Управление заявлениями доступно HR и назначенным руководителям в пределах их полномочий.
       </BaseNotice>
+      <LeaveManagementPanel v-else-if="tab === 'sick' && isHr && !demoMode"
+        :company-id="company" :year="Number(year)" :search="search" :department-id="department"
+        :show-category-action="false" :medical-only="true" @published="loadWorkspace" />
+      <BaseNotice v-else-if="tab === 'sick'" tone="info">Больничные и проверка медицинских документов доступны кадровым ролям.</BaseNotice>
       <LeaveCategoriesPanel v-else-if="tab === 'types' && isHr && !demoMode"
         :company-id="company" :search="search" />
       <BaseNotice v-else-if="tab === 'types'" tone="info">

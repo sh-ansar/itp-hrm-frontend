@@ -137,6 +137,7 @@ export interface LeaveRequestsResponse {
     can_manage_leave_requests?: boolean
     protected_evidence_uploads_enabled?: boolean
     protected_evidence_required?: boolean
+    medical_evidence_required?: boolean
   }
 }
 export interface LeavePlanInput {
@@ -182,10 +183,11 @@ export function updateLeaveType(companyId: string, typeId: string, input: {
   })
 }
 export function getLeaveRequests(companyId: string, page = 1,
-  status?: LeaveRequestStatus, filters: { year?: number; q?: string; departmentId?: string } = {}): Promise<LeaveRequestsResponse> {
+  status?: LeaveRequestStatus, filters: { year?: number; q?: string; departmentId?: string; category?: LeaveCategory } = {}): Promise<LeaveRequestsResponse> {
   if (!Number.isSafeInteger(page) || page < 1) throw new Error('Некорректная страница')
   const params = new URLSearchParams({ page: String(page) })
   if (status) params.set('status', status)
+  if (filters.category) params.set('category', filters.category)
   if (filters.year) {
     if (!Number.isSafeInteger(filters.year) || filters.year < 2000 || filters.year > 2100)
       throw new Error('Некорректный год')

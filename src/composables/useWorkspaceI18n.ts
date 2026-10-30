@@ -6,6 +6,12 @@ import { useUiPreferencesStore } from '../stores/uiPreferences'
  * Business data returned by the API is never translated here.
  */
 const workspaceCopy: Record<string, { kk: string; en: string }> = {
+  'Больничные': { kk: 'Ауру парақтары', en: 'Sick leave' },
+  'Больничный': { kk: 'Ауру парағы', en: 'Sick leave' },
+  'факт подтверждён': { kk: 'нақтысы расталды', en: 'actual confirmed' },
+  'по утверждённому плану': { kk: 'бекітілген жоспар бойынша', en: 'approved plan' },
+  'Период больничного ведётся отдельно. Отметьте фактическую неявку по подтверждённым дням; автоматического начисления часов нет.': { kk: 'Ауру парағы бөлек жүргізіледі. Расталған күндер бойынша нақты келмеуді белгілеңіз; сағаттар автоматты есептелмейді.', en: 'Sick leave is managed separately. Record actual absence for verified days; hours are never added automatically.' },
+  'Больничные и проверка медицинских документов доступны кадровым ролям.': { kk: 'Ауру парақтары және медициналық құжаттарды тексеру кадрлық рөлдерге қолжетімді.', en: 'Sick leave and medical document review are available to HR roles.' },
   "Добавить должность": { kk: "Лауазым қосу", en: "Add position" },
   "Должности": { kk: "Лауазымдар", en: "Positions" },
   "Справочник компании": { kk: "Компания анықтамалығы", en: "Company directory" },

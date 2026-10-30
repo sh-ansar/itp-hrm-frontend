@@ -22,7 +22,9 @@ export interface OwnWorkspace {
     requests: OwnRequest[]; leaves: OwnLeave[]; leave_types: { id: string; name: string; category: string }[]
   }
   meta: { can_request: boolean; requests_last_page: number; leaves_last_page: number
-    protected_evidence_uploads_enabled?: boolean; protected_evidence_required?: boolean
+    protected_evidence_uploads_enabled?: boolean
+    protected_evidence_required?: boolean
+    medical_evidence_required?: boolean
     manager_approval_required?: boolean }
 }
 export type OwnLeaveInput = Pick<OwnRequest, 'leave_type_id' | 'planned_started_on' | 'planned_ended_on' | 'note'>
@@ -59,6 +61,7 @@ export interface OwnTimesheetDay {
   absence_minutes: number | null
   overtime_minutes: number | null
   revision: number | null
+  medical_leave_state?: 'planned' | 'confirmed' | null
 }
 export function getOwnTimesheet(company: string, month: string) {
   return apiRequest<{ data: OwnTimesheetDay[]; meta: { month: string; can_edit: false } }>(

@@ -7,7 +7,9 @@ import BaseLoadingState from './ui/BaseLoadingState.vue'
 import BaseNotice from './ui/BaseNotice.vue'
 import { getEmployeeTimesheet, putEmployeeTimesheet, type WorktimeDayEntry } from '../api/worktime'
 import { localTodayISO } from '../utils/localDate'
+import { useWorkspaceI18n } from '../composables/useWorkspaceI18n'
 
+const { tr } = useWorkspaceI18n()
 const props = defineProps<{
   open: boolean
   companyId: string
@@ -108,7 +110,7 @@ async function load() {
 
 function fillByPlan() {
   rows.value = rows.value.map(row => {
-    if (futureDay(row) || (props.focusDate && row.date !== props.focusDate)) return row
+    if (futureDay(row) || row.medical_leave_state || (props.focusDate && row.date !== props.focusDate)) return row
     return { ...row, worked_hours: row.planned_minutes > 0 ? hours(row.planned_minutes) : '0', absence_hours: '0', overtime_hours: '0' }
   })
 }
@@ -171,6 +173,7 @@ watch(() => [props.open, props.companyId, props.employeeId, props.month], () => 
               <div>
                 <strong>{{ dayLabel(row) }}</strong>
                 <span>{{ typeLabel(row) }}</span>
+                <span v-if="row.medical_leave_state" class="medical-day-note">{{ tr('Больничный') }} · {{ row.medical_leave_state === 'confirmed' ? tr('факт подтверждён') : tr('по утверждённому плану') }}</span>
               </div>
               <small>План: {{ Math.round((row.planned_minutes / 60) * 100) / 100 }} ч</small>
             </header>
@@ -178,6 +181,7 @@ watch(() => [props.open, props.companyId, props.employeeId, props.month], () => 
               <span>Будущие даты доступны только для планирования; фактические часы вводятся после наступления даты.</span>
               <BaseButton v-if="futureHasActual(row)" type="button" variant="secondary" :disabled="saving" @click="clearFuture(row)">Очистить преждевременные часы</BaseButton>
             </div>
+            <BaseNotice v-if="row.medical_leave_state" tone="info">{{ tr('Период больничного ведётся отдельно. Отметьте фактическую неявку по подтверждённым дням; автоматического начисления часов нет.') }}</BaseNotice>
             <div class="day-fields">
               <BaseFormField v-model="row.worked_hours" label="Отработано, ч" type="number" :disabled="saving || futureDay(row)" />
               <BaseFormField v-model="row.absence_hours" label="Неявка, ч" type="number"
@@ -213,5 +217,6 @@ watch(() => [props.open, props.companyId, props.employeeId, props.month], () => 
 .day-row header strong{font-size:13px;text-transform:capitalize}
 .day-row header span,.day-row header small{font-size:11px;color:var(--color-muted)}
 .day-fields{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.day-row header .medical-day-note{color:var(--color-text);font-weight:500}
 @media(max-width:520px){.day-fields{grid-template-columns:1fr}.editor-toolbar :deep(.base-button){width:100%}}
 </style>

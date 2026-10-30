@@ -262,6 +262,7 @@ export interface WorktimeDayEntry {
   absence_minutes: number | null
   overtime_minutes: number | null
   revision: number | null
+  medical_leave_state?: 'planned' | 'confirmed' | null
 }
 
 export interface WorktimeDayEntryResponse {

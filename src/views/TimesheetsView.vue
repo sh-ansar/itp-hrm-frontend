@@ -1,8 +1,11 @@
 <script setup lang="ts">
 import { publicAsset } from '../utils/publicAsset'
 import { useActiveCompanySelection } from '../composables/useActiveCompanySelection'
+import { useWorkspaceI18n } from '../composables/useWorkspaceI18n'
+import { useUiPreferencesStore } from '../stores/uiPreferences'
+import { buildMonthlyTimesheetPrintHtml } from '../utils/monthlyTimesheetPrint'
 import { computed, onMounted, ref, watch } from 'vue'
-import { CalendarDays, Clock3, TriangleAlert, UsersRound } from 'lucide-vue-next'
+import { CalendarDays, Clock3, TriangleAlert, UsersRound, Printer } from 'lucide-vue-next'
 import BaseCard from '../components/ui/BaseCard.vue'
 import BaseButton from '../components/ui/BaseButton.vue'
 import ProductionCalendarInlineEditor from '../components/ProductionCalendarInlineEditor.vue'
@@ -28,6 +31,7 @@ import {
   getWorktimeAbsences,
   getWorktimeTimesheet,
   getEmployeeWorktimeMonth,
+  getWorktimeMatrix,
   type ProductionCalendarDay,
   type ProductionCalendarResponse,
   type WorkScheduleRow,
@@ -96,6 +100,10 @@ interface CalendarViewDay {
 }
 
 const demoMode = import.meta.env.VITE_DEMO_MODE === 'true'
+const ui = useUiPreferencesStore()
+const { tr } = useWorkspaceI18n()
+const printBusy = ref(false)
+const printError = ref('')
 const companies = ref<CompanyRecord[]>([])
 const company = ref('')
 const { preferCompany } = useActiveCompanySelection(company)
@@ -427,6 +435,46 @@ function monthEnd(value: string): string {
   return monthDateStrings(value).at(-1) ?? localTodayISO()
 }
 
+async function printMonthlyTimesheet() {
+  if (!company.value || !productionTimesheetMeta.value?.worktime_matrix_enabled || loading.value || printBusy.value) return
+  const report = window.open('', '_blank')
+  if (!report) { printError.value = tr('Разрешите всплывающие окна для просмотра печатной формы.'); return }
+  report.document.open()
+  report.document.write('<!doctype html><html><meta charset="utf-8"><body style="font:14px Arial;padding:24px">Формирование табеля…</body></html>')
+  report.document.close()
+  printBusy.value = true
+  printError.value = ''
+  const id = company.value
+  const selectedMonth = month.value
+  const from = selectedMonth + '-01'
+  const to = monthEnd(selectedMonth)
+  const name = companies.value.find(item => item.id === id)?.name || ''
+  try {
+    const first = await getWorktimeMatrix(id, { from, to, group_by:'department',page:1,per_page:30 })
+    const rows = [...first.data.rows]
+    const pageCount = first.meta.last_page
+    for (let start = 2; start <= pageCount; start += 4) {
+      const pages = await Promise.all(Array.from({ length:Math.min(4,pageCount-start+1) },(_,i)=>
+        getWorktimeMatrix(id,{from,to,group_by:'department',page:start+i,per_page:30})))
+      for (const page of pages) {
+        if (page.meta.total !== first.meta.total || page.data.dates.some((day,i)=>day.date!==first.data.dates[i]?.date))
+          throw new Error('Табель изменился во время загрузки. Повторите формирование.')
+        rows.push(...page.data.rows)
+      }
+    }
+    if (rows.length !== first.meta.total) throw new Error('Загружены не все сотрудники. Печать отменена.')
+    const html = buildMonthlyTimesheetPrintHtml({ companyName:name,month:selectedMonth,dates:first.data.dates,rows,locale:ui.locale })
+    if (report.closed) return
+    report.document.open(); report.document.write(html); report.document.close()
+    report.document.getElementById('print-now')?.addEventListener('click',()=>report.print())
+    report.document.getElementById('close-report')?.addEventListener('click',()=>report.close())
+    report.focus()
+  } catch (cause) {
+    printError.value = cause instanceof Error ? cause.message : tr('Не удалось сформировать печатную форму.')
+    if (!report.closed) report.document.body.textContent = printError.value
+  } finally { printBusy.value = false }
+}
+
 function resetProductionData() {
   productionTimesheet.value = []
   productionSchedules.value = []
@@ -692,9 +740,14 @@ onMounted(loadCompanies)
           </div>
           <BaseFormField v-if="timesheetPeriodView === 'day'" v-model="selectedDay" label="Дата" type="date"
             :min="month + '-01'" :max="monthEnd(month)" />
+          <BaseButton v-if="!demoMode && productionTimesheetMeta?.worktime_matrix_enabled" variant="secondary" type="button"
+            :disabled="printBusy || loading" @click="printMonthlyTimesheet">
+            <Printer :size="16" aria-hidden="true" /> {{ printBusy ? tr('Формирование…') : tr('Печать месяца') }}
+          </BaseButton>
           <span v-if="dailyLoading" role="status">Загрузка записей дня…</span>
           <span v-if="dailyError" role="status">{{ dailyError }}</span>
         </div>
+        <BaseNotice v-if="printError" tone="warning">{{ printError }}</BaseNotice>
         <WorktimeMatrixPanel v-if="!demoMode && timesheetPeriodView === 'matrix'"
           :company-id="company" :month="month" @updated="matrixUpdated" />
         <BaseSelectionToolbar v-if="timesheetPeriodView !== 'matrix'" :count="selectedTimesheetIds.length" label="Выбрано сотрудников"

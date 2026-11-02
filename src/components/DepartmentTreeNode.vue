@@ -3,19 +3,24 @@ import { useWorkspaceI18n } from '../composables/useWorkspaceI18n'
 import { computed, ref, watch } from 'vue'
 import { ChevronDown, Users } from 'lucide-vue-next'
 import type { DepartmentTreeItem } from '../utils/departmentTree'
+import type { StaffingPlanLine } from '../api/staffing'
 import { selectDepartmentLeader } from '../utils/departmentLeader'
 import BaseButton from './ui/BaseButton.vue'
 defineOptions({ name: 'DepartmentTreeNode' })
 const { tr } = useWorkspaceI18n()
 
-const props = withDefaults(defineProps<{ node: DepartmentTreeItem; depth?: number; companyId: string; expandAll?: boolean; tone?: number }>(), { depth: 0, expandAll: true, tone: 0 })
+const props = withDefaults(defineProps<{ node: DepartmentTreeItem; depth?: number; companyId: string; expandAll?: boolean; tone?: number; mode?: 'employees' | 'staffing'; staffingLines?: StaffingPlanLine[]; showVacancies?: boolean }>(), { depth: 0, expandAll: true, tone: 0, mode: 'employees', staffingLines: () => [], showVacancies: false })
 // Keep the first department tier visible beneath the company anchor.
 // The expand-all control only opens deeper branches.
 const expanded = ref(props.depth === 0 || props.expandAll)
 const allMembers = ref(false)
 watch(() => props.expandAll, value => { expanded.value = props.depth === 0 || value })
 const members = computed(() => props.node.members ?? [])
+const positions = computed(() => props.staffingLines.filter(line => line.department_id === props.node.id))
+const vacancyPositions = computed(() => positions.value.filter(line => Number(line.vacant_units) > 0))
+const directUnits = computed(() => positions.value.reduce((sum, line) => sum + Number(line.planned_units || 0), 0))
 const departmentLeader = computed(() => {
+  if (props.mode === 'staffing') return null
   if (Object.prototype.hasOwnProperty.call(props.node, 'manager_employee_id')) {
     const id = props.node.manager_employee_id
     if (!id) return null
@@ -47,21 +52,37 @@ function initials(name: string) { return name.split(' ').slice(0,2).map(word=>wo
         <span v-if="Object.prototype.hasOwnProperty.call(node, 'manager_employee_id') && !departmentLeader"
           class="department-leader-unset">Руководитель не назначен</span>
         <span v-if="node.hiddenParent">{{ tr('Родитель вне доступного списка') }}</span>
+        <span v-else-if="mode === 'staffing'" class="department-count"><Users :size="15" /> {{ tr('Ставок') }}: {{ directUnits }}<span v-if="node.children.length"> · {{ node.children.length }} {{ tr('подразделений') }}</span></span>
         <span v-else class="department-count"><Users :size="15" /> {{ totalMembers }} {{ tr("сотрудников") }}<span v-if="node.children.length"> · {{ node.children.length }} {{ tr("подразделений") }}</span></span>
       </div>
-      <BaseButton v-if="node.children.length || members.length" icon-only variant="secondary"
+      <BaseButton v-if="node.children.length || members.length || (mode === 'staffing' && positions.length) || (showVacancies && vacancyPositions.length)" icon-only variant="secondary"
         :aria-label="expanded ? tr('Свернуть ') + node.name : tr('Развернуть ') + node.name" :aria-expanded="expanded" @click="expanded = !expanded">
         <ChevronDown :size="16" :class="{ closed: !expanded }" />
       </BaseButton>
     </div>
-    <div v-if="expanded && depth > 0 && members.length" class="tree-members">
+    <div v-if="expanded && mode === 'employees' && depth > 0 && members.length" class="tree-members">
       <RouterLink v-for="member in visibleMembers" :key="member.id" class="person-card" :to="{name:'employee-detail',params:{company:companyId,employee:member.id}}">
         <strong>{{ member.position || tr('Сотрудник') }}</strong><div class="person-row"><span class="person-avatar">{{ initials(member.name) }}</span><span>{{ member.name }}</span></div>
       </RouterLink>
       <BaseButton v-if="members.length > 3" variant="secondary" @click="allMembers = !allMembers">{{ allMembers ? tr('Свернуть сотрудников') : tr('Ещё ') + (members.length - 3) }}</BaseButton>
     </div>
+    <div v-if="expanded && mode === 'staffing' && positions.length" class="tree-members staffing-position-list">
+      <div v-for="line in positions" :key="line.id" class="staffing-position-card">
+        <strong>{{ line.position_name }}</strong>
+        <span>{{ tr('Ставок') }}: {{ line.planned_units }} · {{ tr('Занято') }}: {{ line.occupied_units }}</span>
+        <span v-if="Number(line.vacant_units) > 0" class="staffing-vacancy-count">{{ tr('Вакантно') }}: {{ line.vacant_units }}</span>
+        <span v-if="Number(line.overstaffed_units) > 0" class="staffing-vacancy-count">{{ tr('Сверх штата') }}: {{ line.overstaffed_units }}</span>
+      </div>
+    </div>
+    <div v-if="expanded && mode === 'employees' && showVacancies && vacancyPositions.length" class="tree-members staffing-position-list" aria-label="Вакантные позиции">
+      <div class="staffing-vacancy-title">{{ tr('Вакантные позиции') }}</div>
+      <div v-for="line in vacancyPositions" :key="line.id" class="staffing-position-card">
+        <strong>{{ line.position_name }}</strong>
+        <span class="staffing-vacancy-count">{{ tr('Вакантно') }}: {{ line.vacant_units }}</span>
+      </div>
+    </div>
     <div v-if="expanded && node.children.length" class="tree-children">
-      <DepartmentTreeNode v-for="(child,index) in node.children" :key="child.id" :node="child" :depth="depth + 1" :company-id="companyId" :expand-all="expandAll" :tone="depth === 0 ? index : tone" />
+      <DepartmentTreeNode v-for="(child,index) in node.children" :key="child.id" :node="child" :depth="depth + 1" :company-id="companyId" :expand-all="expandAll" :tone="depth === 0 ? index : tone" :mode="mode" :staffing-lines="staffingLines" :show-vacancies="showVacancies" />
     </div>
   </div>
 </template>
@@ -92,4 +113,6 @@ function initials(name: string) { return name.split(' ').slice(0,2).map(word=>wo
 .tree-branch--level-0>.tree-children::before{content:'';position:absolute;top:14px;left:160px;right:160px;height:1px;background:var(--color-primary-stroke)}
 .tree-branch--level-0>.tree-children>.tree-branch{width:max-content;min-width:320px;flex:0 0 auto}
 .tree-branch--level-0>.tree-children>.tree-branch::before{content:'';position:absolute;top:-24px;left:160px;width:1px;height:24px;background:var(--branch-color)}
+.staffing-position-list{gap:8px}.staffing-position-card{position:relative;display:grid;gap:5px;width:290px;padding:11px 12px;border:1px solid var(--color-stroke);border-radius:var(--radius-md);background:var(--color-surface);box-shadow:var(--shadow-card)}
+.staffing-position-card strong{font-size:13px;font-weight:600;line-height:1.4}.staffing-position-card span{font-size:11px;color:var(--color-muted)}.staffing-position-card .staffing-vacancy-count{color:var(--color-warning)}.staffing-vacancy-title{font-size:12px;font-weight:600;color:var(--color-warning)}
 </style>

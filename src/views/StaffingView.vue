@@ -16,6 +16,10 @@ import BaseNotice from '../components/ui/BaseNotice.vue'
 import BaseSelectField from '../components/ui/BaseSelectField.vue'
 import BaseColumnPicker from '../components/ui/BaseColumnPicker.vue'
 import BasePagination from '../components/ui/BasePagination.vue'
+import BaseViewTabs from '../components/ui/BaseViewTabs.vue'
+import OrgChartViewport from '../components/OrgChartViewport.vue'
+import DepartmentTreeNode from '../components/DepartmentTreeNode.vue'
+import { buildDepartmentForest, type DepartmentTreeItem } from '../utils/departmentTree'
 import OrgStaffingNav from '../components/OrgStaffingNav.vue'
 import StaffingLineForm from '../components/StaffingLineForm.vue'
 import StaffingMobileList from '../components/StaffingMobileList.vue'
@@ -24,7 +28,7 @@ import { localTodayISO } from '../utils/localDate'
 import { downloadCsv } from '../utils/exportCsv'
 import { useUiFormatters } from '../composables/useUiFormatters'
 import { preferredStaffingPlan } from '../utils/staffingPlanChoice'
-import { listCompanies, type CompanyRecord } from '../api/organization'
+import { listCompanies, listDepartments, type CompanyRecord, type DepartmentRecord } from '../api/organization'
 import {
   approveStaffingPlan,
   listStaffingHistory,
@@ -102,6 +106,13 @@ const occupancyFilterOptions = [
   { id: 'overstaffed', name: 'Сверх штата' },
 ]
 const grouped = ref(false)
+const layoutMode = ref<'table'|'diagram'>('table')
+const layoutOptions = [{ id:'table', label:'Таблица' },{ id:'diagram', label:'Схема' }]
+const structureDepartments = ref<DepartmentRecord[]>([])
+const structureLoading = ref(false)
+const structureError = ref('')
+const structurePartial = ref(false)
+let structureRequest = 0
 const selectedLineIds = ref<string[]>([])
 const selectedHistoryIds = ref<string[]>([])
 
@@ -138,6 +149,42 @@ const mobileLines = computed(() => grouped.value
   ? [...filteredLines.value].sort((a, b) => a.department_name.localeCompare(b.department_name, 'ru') || a.position_name.localeCompare(b.position_name, 'ru'))
   : filteredLines.value)
 const groupLines = (row: StaffingPlanLine): string => row.department_name || 'Без подразделения'
+const staffingForest = computed(() => {
+  const forest = buildDepartmentForest(structureDepartments.value)
+  const isFiltered = activeView.value === 'vacant' || !!searchLines.value.trim() || occupancyFilter.value !== 'all'
+  if (!isFiltered) return forest
+  const ids = new Set(filteredLines.value.map(line => line.department_id))
+  function visit(node: DepartmentTreeItem): DepartmentTreeItem | null {
+    const children = node.children.map(visit).filter((child): child is DepartmentTreeItem => child !== null)
+    return ids.has(node.id) || children.length > 0 ? { ...node, children } : null
+  }
+  return forest.map(visit).filter((node): node is DepartmentTreeItem => node !== null)
+})
+async function loadStructure() {
+  const current = ++structureRequest
+  const id = company.value
+  structureDepartments.value = []
+  structureError.value = ''
+  structurePartial.value = false
+  if (!id || layoutMode.value !== 'diagram' || activeView.value === 'changes') return
+  structureLoading.value = true
+  try {
+    const first = await listDepartments(id, 1)
+    const departments = [...first.data]
+    const limit = Math.min(first.meta.last_page, 100)
+    for (let start = 2; start <= limit; start += 4) {
+      const indices = Array.from({ length: Math.min(4, limit - start + 1) }, (_, i) => start + i)
+      const pages = await Promise.all(indices.map(p => listDepartments(id, p)))
+      if (current !== structureRequest || id !== company.value) return
+      for (const page of pages) departments.push(...page.data)
+    }
+    if (current !== structureRequest || id !== company.value) return
+    structureDepartments.value = departments
+    structurePartial.value = first.meta.last_page > limit
+  } catch (cause) {
+    if (current === structureRequest) structureError.value = cause instanceof Error ? cause.message : 'Не удалось загрузить структуру подразделений'
+  } finally { if (current === structureRequest) structureLoading.value = false }
+}
 
 const planOptions = computed(() => plans.value.map(item => ({
   id: item.id,
@@ -335,6 +382,7 @@ watch(activeView, value => {
 })
 
 watch([company, activeView, historyPage], () => { loadHistory() })
+watch([company, layoutMode, activeView], () => { void loadStructure() })
 // Do not carry selection into another company, plan, date, page or tab.
 watch([company, activeView, historyPage, selectedPlanId, asOf], clearSelectedRows)
 
@@ -493,15 +541,16 @@ onMounted(refreshCompanies)
             :placeholder="tr('Подразделение или должность')" />
           <BaseSelectField v-model="occupancyFilter" :label="tr('Фильтр занятости')"
             :options="occupancyFilterOptions.map(item => ({ ...item, name: tr(item.name) }))" />
-          <BaseButton variant="secondary" @click="grouped = !grouped">
+          <BaseViewTabs v-model="layoutMode" :options="layoutOptions.map(item => ({ ...item, label: tr(item.label) }))" :label="tr('Представление штатного расписания')" />
+          <BaseButton v-if="layoutMode === 'table'" variant="secondary" @click="grouped = !grouped">
             <FolderTree :size="16" /> {{ grouped ? tr('Без группировки') : tr('Группировка') }}
           </BaseButton>
-          <BaseColumnPicker v-model="shownColumns" :columns="optionalLineColumns" />
+          <BaseColumnPicker v-if="layoutMode === 'table'" v-model="shownColumns" :columns="optionalLineColumns" />
         </div>
         
-        <BaseSelectionToolbar :count="selectedLineRows.length" :label="tr('Выбрано на странице:')" :clear-label="tr('Снять выделение')" @clear="clearSelectedRows" />
+        <BaseSelectionToolbar v-if="layoutMode === 'table'" :count="selectedLineRows.length" :label="tr('Выбрано на странице:')" :clear-label="tr('Снять выделение')" @clear="clearSelectedRows" />
 
-        <div class="staffing-desktop-table">
+        <div v-if="layoutMode === 'table'" class="staffing-desktop-table">
           <BaseDataTable
           v-model:selected-keys="selectedLineIds"
           selectable
@@ -529,10 +578,27 @@ onMounted(refreshCompanies)
           </template>
           </BaseDataTable>
         </div>
-        <div class="staffing-mobile-only">
+        <div v-if="layoutMode === 'table'" class="staffing-mobile-only">
           <StaffingMobileList :rows="mobileLines" :can-edit="canEdit" :grouped="grouped"
             :filtered="!!searchLines.trim() || occupancyFilter !== 'all'" :vacant-only="activeView === 'vacant'"
             @edit="editLine" />
+        </div>
+        <div v-if="layoutMode === 'diagram'" class="staffing-diagram">
+          <BaseNotice v-if="structureError" tone="error">{{ structureError }}</BaseNotice>
+          <BaseNotice v-if="structurePartial" tone="warning">{{ tr('Структура частично загружена. Проверьте доступ к подразделениям.') }}</BaseNotice>
+          <OrgChartViewport :key="company + ':' + selectedPlanId" >
+            <BaseLoadingState v-if="structureLoading" :label="tr('Загрузка схемы штатного расписания')" />
+            <div v-else-if="staffingForest.length" class="organization-chart staffing-diagram-chart">
+              <div class="staffing-chart-company">
+                <strong>{{ companies.find(item => item.id === company)?.name || tr('Компания') }}</strong>
+                <span>{{ tr('Ставок') }}: {{ formatUnits(totals.planned) }} · {{ tr('Занято') }}: {{ formatUnits(totals.occupied) }} · {{ tr('Вакантно') }}: {{ formatUnits(totals.vacant) }}</span>
+              </div>
+              <div class="staffing-diagram-branches">
+                <DepartmentTreeNode v-for="node in staffingForest" :key="node.id" :node="node" :company-id="company" mode="staffing" :staffing-lines="filteredLines" :expand-all="true" />
+              </div>
+            </div>
+            <p v-else class="staffing-diagram-empty">{{ tr('По выбранным фильтрам штатные позиции не найдены.') }}</p>
+          </OrgChartViewport>
         </div>
       </BaseCard>
     </template>
@@ -669,4 +735,5 @@ onMounted(refreshCompanies)
   .plan-header .snapshot-row :deep(.field){max-width:205px;width:205px}
   .plan-header .snapshot-row :deep(button){flex:0 0 auto;white-space:nowrap}
 }
+.staffing-diagram{margin-top:15px;display:grid;gap:10px;min-width:0}.staffing-diagram-chart{display:grid;justify-items:center;gap:34px;width:max-content;min-width:0;padding:6px 12px 16px}.staffing-chart-company{display:grid;justify-items:center;gap:7px;min-width:280px;padding:16px 20px;border:1px solid var(--color-stroke);border-radius:var(--radius-md);background:var(--color-surface);box-shadow:var(--shadow-card)}.staffing-chart-company strong{font-size:15px}.staffing-chart-company span{font-size:12px;color:var(--color-muted)}.staffing-diagram-branches{display:flex;align-items:flex-start;gap:44px;width:max-content}.staffing-diagram-branches :deep(.tree-branch){flex:none}.staffing-diagram-empty{font-size:13px;padding:22px;color:var(--color-muted)}
 </style>

@@ -19,6 +19,12 @@ import { getOwnWorkspace, getOwnTimesheet, getOwnDocuments, ownDocumentFileUrl, 
 const access = useCompanyAccessStore()
 const ui = useUiPreferencesStore()
 const { t } = useLeaveWorkflowI18n()
+const hrDecisionLabel = computed(() => ({
+  ru: 'Комментарий HR',
+  kk: 'HR түсініктемесі',
+  en: 'HR comment',
+  ka: 'HR კომენტარი',
+}[ui.locale]))
 const { balanceT } = useLeaveBalanceCopy()
 const fmt = useUiFormatters()
 const connectedDocuments = import.meta.env.VITE_ENABLE_BROWSER_LOGIN === 'true' && import.meta.env.VITE_DEMO_MODE !== 'true'
@@ -223,7 +229,7 @@ function status(request: OwnRequest) {
           <p v-if="!workspace.data.requests.length">{{ t('noRequests') }}</p>
           <article v-for="request in workspace.data.requests" :key="request.id">
             <strong>{{ request.leave_type_name }}</strong><p>{{ request.planned_started_on }} — {{ request.planned_ended_on }} · {{ request.planned_days }} · {{ status(request) }}</p>
-            <p v-if="request.note">{{ request.note }}</p><p v-if="request.decision_comment">{{ t('decisionComment') }}: {{ request.decision_comment }}</p>
+            <p v-if="request.note">{{ request.note }}</p><p v-if="request.decision_comment">{{ request.status === 'rejected' ? t('decisionComment') : hrDecisionLabel }}: {{ request.decision_comment }}</p>
             <div v-if="request.status === 'submitted'" class="own-approval-route">
               <span>{{ t('nextApprovalStage') }}:
                 <strong>{{ nextLeaveApprovalStage(request, !!workspace.meta.manager_approval_required) === 'manager'

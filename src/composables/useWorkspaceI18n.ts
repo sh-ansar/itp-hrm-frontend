@@ -6,6 +6,16 @@ import { useUiPreferencesStore } from '../stores/uiPreferences'
  * Business data returned by the API is never translated here.
  */
 const workspaceCopy: Record<string, { kk: string; en: string }> = {
+  "Показывать вакантные позиции": { kk: "Бос орындарды көрсету", en: "Show vacant positions" },
+  "Вакансии доступны по утверждённому штатному расписанию": { kk: "Бос орындар бекітілген штат кестесінде көрсетіледі", en: "Vacancies are available in the approved staffing plan" },
+  "Представление штатного расписания": { kk: "Штат кестесінің көрінісі", en: "Staffing plan view" },
+  "Структура частично загружена. Проверьте доступ к подразделениям.": { kk: "Құрылым толық жүктелмеді. Бөлімшелерге қолжетімділікті тексеріңіз.", en: "Structure was partially loaded. Check department access." },
+  "Загрузка схемы штатного расписания": { kk: "Штат кестесінің сызбасы жүктелуде", en: "Loading staffing plan chart" },
+  "По выбранным фильтрам штатные позиции не найдены.": { kk: "Таңдалған сүзгілер бойынша штаттық орындар табылмады.", en: "No staffing positions match the selected filters." },
+  "Печать месяца": { kk: "Айлық табельді басып шығару", en: "Print month" },
+  "Формирование…": { kk: "Құрастырылуда…", en: "Preparing…" },
+  "Разрешите всплывающие окна для просмотра печатной формы.": { kk: "Басып шығару үшін қалқымалы терезелерге рұқсат беріңіз.", en: "Allow pop-ups to open the print preview." },
+  "Не удалось сформировать печатную форму.": { kk: "Басып шығару нысанын жасау мүмкін болмады.", en: "Could not prepare the print form." },
   'Вне периода трудоустройства. На эту дату нет рабочего плана и ввод фактической явки закрыт.': { kk: 'Еңбек қатынастары мерзімінен тыс. Бұл күнге жұмыс жоспары жоқ және нақты қатысу сағаттарын енгізуге болмайды.', en: 'Outside the employment period. There is no work plan for this date and actual attendance cannot be entered.' },
   'Очистить ошибочные часы': { kk: 'Қате сағаттарды тазарту', en: 'Clear incorrect hours' },
   'Больничные': { kk: 'Ауру парақтары', en: 'Sick leave' },

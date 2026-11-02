@@ -23,7 +23,7 @@ import BaseColumnPicker from '../components/ui/BaseColumnPicker.vue'
 import DepartmentTreeNode from '../components/DepartmentTreeNode.vue'
 import EmployeeRecordForm from '../components/EmployeeRecordForm.vue'
 import { listEmployees, type EmployeeRecord } from '../api/personnel'
-import { getStaffingPlan, listStaffingPlans } from '../api/staffing'
+import { getStaffingPlan, listStaffingPlans, type StaffingPlanLine } from '../api/staffing'
 import { downloadCsv } from '../utils/exportCsv'
 import { preferredApprovedStaffingPlan } from '../utils/staffingPlanChoice'
 import { localTodayISO } from '../utils/localDate'
@@ -147,6 +147,8 @@ async function loadTableManagers() {
 
 // Show the root's direct reports by default, while keeping deeper levels collapsed.
 const expandedLevels = ref(false)
+const showVacancies = ref(false)
+const vacancyLines = ref<StaffingPlanLine[]>([])
 const diagramDepartments = ref<DepartmentRecord[]>([])
 const diagramLoading = ref(false)
 const diagramError = ref('')
@@ -294,6 +296,7 @@ async function loadOrgMetrics() {
   const current = ++orgMetricGeneration
   const companyId = selectedCompany.value
   orgMetrics.value = { employees: null, planned: null, occupied: null, vacant: null }
+  vacancyLines.value = []
   employeeWritesEnabled.value = false
   if (!companyId) return
 
@@ -318,6 +321,7 @@ async function loadOrgMetrics() {
     orgMetrics.value.planned = detail.lines.reduce((sum, line) => sum + Number(line.planned_units || 0), 0)
     orgMetrics.value.occupied = detail.lines.reduce((sum, line) => sum + Number(line.occupied_units || 0), 0)
     orgMetrics.value.vacant = detail.lines.reduce((sum, line) => sum + Number(line.vacant_units || 0), 0)
+    vacancyLines.value = detail.lines
   } catch {
     // Organization remains usable when staffing detail is unavailable.
   }
@@ -492,9 +496,11 @@ onMounted(loadCompanies)
         <BaseSearchField v-model="searchQuery" class="structure-search" :label="tr('Поиск подразделений')" />
         <BaseColumnPicker v-if="viewMode === 'table'" v-model="shownOrgColumns" :columns="extraColumns" :title="tr('Колонки')" />
         <label v-if="viewMode === 'diagram'" class="expand-levels"><input v-model="expandedLevels" type="checkbox" /> {{ tr('Раскрыть нижестоящий уровень') }}</label>
+        <label v-if="viewMode === 'diagram'" class="expand-levels"><input v-model="showVacancies" type="checkbox" /> {{ tr('Показывать вакантные позиции') }}</label>
       </div>
       <BaseNotice v-if="viewMode === 'table' && total > departments.length" tone="info">
         {{ tr('Показана текущая страница. Невидимые подразделения и родительские связи не раскрываются.') }}</BaseNotice>
+      <BaseNotice v-if="viewMode === 'diagram' && showVacancies && orgMetrics.planned === null" tone="info">{{ tr('Вакансии доступны по утверждённому штатному расписанию') }}</BaseNotice>
       <BaseNotice v-if="viewMode === 'diagram' && diagramError" tone="error">{{ diagramError }}</BaseNotice>
       <BaseNotice v-if="viewMode === 'diagram' && diagramPartial" tone="warning">
         {{ tr('Схема слишком велика: показаны первые') }} {{ fmt.number(diagramDepartments.length, 0) }} {{ tr('подразделений из доступных') }} {{ fmt.number(total, 0) }}.
@@ -516,7 +522,7 @@ onMounted(loadCompanies)
           </div>
           <div class="chart-branches" :class="{ 'chart-branches--multi': visibleDepartmentForest.length > 1 }">
             <DepartmentTreeNode v-for="node in visibleDepartmentForest" :key="node.id + ':' + searchQuery" :node="node" :company-id="selectedCompany"
-              :expand-all="expandedLevels || searchQuery.trim().length > 0" />
+              :expand-all="expandedLevels || showVacancies || searchQuery.trim().length > 0" :staffing-lines="vacancyLines" :show-vacancies="showVacancies" />
           </div>
         </div>
         <p v-else class="diagram-empty">{{ searchQuery.trim() ? tr('Подразделения по запросу не найдены.') : tr('Подразделений для отображения пока нет.') }}</p>

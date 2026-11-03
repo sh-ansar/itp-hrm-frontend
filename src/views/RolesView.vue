@@ -189,25 +189,38 @@ async function loadCompanies() {
   }
 }
 
+let membershipLoadSequence = 0
 async function loadMemberships() {
-  if (!company.value) return
+  const requestedCompany = company.value
+  if (!requestedCompany) return
+  const sequence = ++membershipLoadSequence
   loading.value = true
   error.value = ''
   try {
-    const response = await listMemberships(company.value, { per_page: 100 })
-    memberships.value = response.data
-    roleCatalog.value = response.roles
-    audit.value = response.audit
+    // The API limits each page to 100 users. Load all pages before applying
+    // client-side role/status/search filters or computing company-wide totals.
+    const first = await listMemberships(requestedCompany, { page: 1, per_page: 100 })
+    const allMemberships = [...first.data]
+    for (let page = 2; page <= first.meta.last_page; page++) {
+      if (sequence !== membershipLoadSequence || requestedCompany !== company.value) return
+      const next = await listMemberships(requestedCompany, { page, per_page: 100 })
+      allMemberships.push(...next.data)
+    }
+    if (sequence !== membershipLoadSequence || requestedCompany !== company.value) return
+    memberships.value = allMemberships
+    roleCatalog.value = first.roles
+    audit.value = first.audit
     if (!roleCatalog.value.some(role => role.code === selectedRoleForMatrix.value)) {
       selectedRoleForMatrix.value = roleCatalog.value[0]?.code ?? 'company_admin'
     }
   } catch (cause) {
+    if (sequence !== membershipLoadSequence || requestedCompany !== company.value) return
     memberships.value = []
     roleCatalog.value = []
     audit.value = []
     error.value = cause instanceof Error ? cause.message : 'Не удалось загрузить роли и доступы'
   } finally {
-    loading.value = false
+    if (sequence === membershipLoadSequence && requestedCompany === company.value) loading.value = false
   }
 }
 

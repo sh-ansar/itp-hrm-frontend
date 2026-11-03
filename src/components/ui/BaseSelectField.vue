@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { useId } from 'vue'
+import { publicAsset } from '../../utils/publicAsset'
 import { useWorkspaceI18n } from '../../composables/useWorkspaceI18n'
 const { tr } = useWorkspaceI18n()
 // Translate only well-known UI choice IDs; keep company, person and other API values verbatim.
@@ -29,6 +30,7 @@ const id = useId()
         <option v-if="placeholder" value="" disabled>{{ tr(placeholder) }}</option>
         <option v-for="option in options" :key="option.id" :value="option.id">{{ optionLabel(option) }}</option>
       </select>
+      <img class="base-select-chevron" :src="publicAsset('prototype-icons/Expand-Arrow.svg')" alt="" aria-hidden="true" />
     </div>
   </div>
 </template>
@@ -45,6 +47,7 @@ select{appearance:none;-webkit-appearance:none;-moz-appearance:none;
 }
 select:focus-visible{outline:2px solid var(--color-primary);outline-offset:1px;border-color:var(--color-stroke-strong)}
 select:disabled{cursor:not-allowed;opacity:.6}
+.base-select-chevron{position:absolute;right:9px;top:50%;width:22px;height:22px;transform:translateY(-50%);pointer-events:none;user-select:none}
 .base-select-control:has(select:disabled) .base-select-chevron{opacity:.5}
 .sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
 </style>

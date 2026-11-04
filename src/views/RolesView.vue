@@ -183,10 +183,10 @@ async function loadMemberships() {
     const templatesResponse = enabled ? await listCompanyRoleTemplates(requestedCompany) : null
     if (requestedCompany !== company.value) return
     memberships.value = rows
-    roleCatalog.value = first.roles
+    roleCatalog.value = Array.isArray(first.roles) ? first.roles : []
     templates.value = templatesResponse?.data ?? []
     customRolesEnabled.value = enabled
-    audit.value = first.audit
+    audit.value = Array.isArray(first.audit) ? first.audit : []
   } catch (cause) {
     if (requestedCompany !== company.value) return
     memberships.value = []

@@ -32,6 +32,23 @@ test('employee card pencils edit only the selected field and leave computed fiel
       await editor.getByRole('button', { name: 'Отмена' }).click()
       await editor.waitFor({ state: 'hidden' })
 
+      // The top identity grid stays mounted when switching tabs. Accepting
+      // 'discard unsaved changes' must reset its inline draft, not only the
+      // parent dirty marker. Reopening the field must show persisted data.
+      await surname.getByRole('button', { name: 'Изменить поле: Фамилия' }).click()
+      const surnameInput = surname.locator('form.employee-inline-field-form input')
+      const initialSurname = await surnameInput.inputValue()
+      await surnameInput.fill(initialSurname + ' UNSAVED')
+      page.once('dialog', async dialog => {
+        assert.match(dialog.message(), /несохранённ/)
+        await dialog.accept()
+      })
+      await nav.getByRole('button', { name: 'Организационные данные' }).click()
+      await nav.getByRole('button', { name: 'Личные данные' }).click()
+      await surname.getByRole('button', { name: 'Изменить поле: Фамилия' }).click()
+      assert.equal(await surname.locator('form.employee-inline-field-form input').inputValue(), initialSurname)
+      await surname.locator('form').getByRole('button', { name: 'Отмена' }).click()
+
       const age = page.locator('.employee-data-field').filter({
         has: page.locator('.employee-data-label').getByText('Возраст', { exact: true }),
       })

@@ -55,6 +55,7 @@ const photoDirty = ref(false)
 const fieldDirtyKeys = ref<Set<string>>(new Set())
 const cardDirty = computed(() => photoDirty.value || fieldDirtyKeys.value.size > 0)
 const photoReset = ref(0)
+const fieldEditReset = ref(0)
 function updateFieldDirty(active: boolean, key: string) {
   const keys = new Set(fieldDirtyKeys.value)
   if (active && key) keys.add(key)
@@ -79,6 +80,7 @@ function changeSection(value: string) {
     fieldDirtyKeys.value = new Set()
     photoDirty.value = false
     photoReset.value++
+    fieldEditReset.value++
   }
   activeSection.value = value
 }
@@ -922,7 +924,7 @@ onMounted(load)
             <div><span>Должность</span><strong>{{ currentAssignment?.position_name ?? plannedAssignment?.position_name ?? '—' }}</strong></div>
             <div><span>Email</span><strong>{{ profile.data.email ?? '—' }}</strong></div>
           </div>
-          <EmployeeDataGrid class="identity-name-grid" :fields="inlineFields(identityFields)"
+          <EmployeeDataGrid :key="fieldEditReset" class="identity-name-grid" :fields="inlineFields(identityFields)"
             :editable-groups="editableFieldGroups" :save-field="saveEmployeeField"
             @edit="openFieldEditor" @dirty="(active, key) => updateFieldDirty(active, key)" />
         </div>

@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
-import { ShieldCheck } from 'lucide-vue-next'
 import { publicAsset } from '../utils/publicAsset'
 import BaseActionDropdown from '../components/ui/BaseActionDropdown.vue'
 import BaseButton from '../components/ui/BaseButton.vue'
@@ -17,14 +16,17 @@ import BaseRegistryMetricCard from '../components/ui/BaseRegistryMetricCard.vue'
 import BaseSelectField from '../components/ui/BaseSelectField.vue'
 import BaseStatusPill from '../components/ui/BaseStatusPill.vue'
 import BaseViewTabs from '../components/ui/BaseViewTabs.vue'
+import CompanyRoleMatrixEditor from '../components/CompanyRoleMatrixEditor.vue'
 import { listCompanies, listDepartments, type CompanyRecord, type DepartmentRecord } from '../api/organization'
 import {
   listMemberships,
+  listCompanyRoleTemplates,
   revokeMembership,
   saveMembership,
   type MembershipRecord,
   type RoleAuditRecord,
   type RoleCatalogRecord,
+  type CustomRoleTemplate,
   type SystemRoleCode,
 } from '../api/roles'
 
@@ -36,37 +38,6 @@ const roleLabels: Record<SystemRoleCode, string> = {
   department_manager: 'Руководитель подразделения',
   employee: 'Сотрудник',
 }
-const roleDescriptions: Record<SystemRoleCode, string> = {
-  company_admin: 'Полный административный доступ компании',
-  hr_specialist: 'Кадровый реестр, штатка и кадровые процессы',
-  department_manager: 'Доступ в пределах назначенных подразделений',
-  employee: 'Базовый пользовательский доступ',
-}
-const capabilityLabels: Record<string, string> = {
-  'overview.view': 'Главная',
-  'employees.view': 'Сотрудники',
-  'employees.extended_view': 'Расширенные данные сотрудников',
-  'organization.view': 'Оргструктура',
-  'staffing.view': 'Штатное расписание',
-  'personnel_actions.view': 'Кадровые процессы',
-  'worktime.view': 'Графики и табель',
-  'leaves.view': 'Отпуска',
-  'documents.view': 'Документы',
-  'directories.view': 'Справочники',
-  'development.view': 'Развитие',
-  'reports.view': 'Отчёты',
-  'settings.view': 'Настройки',
-  'roles.interface': 'Роли и права',
-  'employees.write': 'Изменение сотрудников',
-  'staffing.write': 'Изменение штатки',
-  'documents.write': 'Изменение документов',
-  'worktime.calendar.edit': 'Редактирование календаря',
-  'leave.requests.manage': 'Управление отпусками',
-  'leave.requests.approve': 'Согласование отпусков',
-  'leave.types.manage': 'Типы отпусков',
-  'roles.assign': 'Назначение ролей',
-}
-
 const tabs = [
   { id: 'assignments', label: 'Назначение ролей' },
   { id: 'permissions', label: 'Права ролей' },
@@ -77,6 +48,8 @@ const companies = ref<CompanyRecord[]>([])
 const company = ref('')
 const memberships = ref<MembershipRecord[]>([])
 const roleCatalog = ref<RoleCatalogRecord[]>([])
+const templates = ref<CustomRoleTemplate[]>([])
+const customRolesEnabled = ref(false)
 const audit = ref<RoleAuditRecord[]>([])
 const departments = ref<DepartmentRecord[]>([])
 const loading = ref(false)
@@ -87,17 +60,21 @@ const activeTab = ref('assignments')
 const search = ref('')
 const roleFilter = ref('all')
 const statusFilter = ref('all')
-const selectedRoleForMatrix = ref<SystemRoleCode>('company_admin')
 const editorOpen = ref(false)
 const linkUser = ref<MembershipRecord | null>(null)
 const editingUser = ref<MembershipRecord | null>(null)
-const roleDraft = ref<Exclude<SystemRoleCode, 'company_admin'>>('employee')
+const roleDraft = ref('employee')
+const selectedTemplateDraft = computed(() => roleDraft.value.startsWith('custom:')
+  ? templates.value.find(item => item.id === roleDraft.value.slice('custom:'.length)) : undefined)
+const resolvedDraftRole = computed<Exclude<SystemRoleCode, 'company_admin'>>(() => selectedTemplateDraft.value?.base_role
+  ?? roleDraft.value as Exclude<SystemRoleCode, 'company_admin'>)
 const departmentDraft = ref<string[]>([])
 
 const selectedCompany = computed(() => companies.value.find(item => item.id === company.value))
 const roleOptions = computed(() => [
   { id: 'all', name: 'Все роли' },
   ...roleCatalog.value.map(role => ({ id: role.code, name: roleLabels[role.code] })),
+  ...templates.value.filter(role => role.status === 'active').map(role => ({ id: 'custom:' + role.id, name: role.name })),
 ])
 const statusOptions = [
   { id: 'all', name: 'Все статусы' },
@@ -107,25 +84,30 @@ const statusOptions = [
 const assignableRoles = computed(() => roleCatalog.value
   .filter(role => role.assignable)
   .map(role => ({ id: role.code, name: roleLabels[role.code] })))
-const matrixRoleOptions = computed(() => roleCatalog.value
-  .map(role => ({ id: role.code, name: roleLabels[role.code] })))
-
+const assignableRolesWithCustom = computed(() => [
+  ...assignableRoles.value,
+  ...templates.value.filter(role => role.status === 'active').map(role => ({
+    id: 'custom:' + role.id,
+    name: role.name + ' · ' + roleLabels[role.base_role],
+  })),
+])
 const filteredMemberships = computed(() => memberships.value.filter(row => {
   const q = search.value.trim().toLowerCase()
   const matchesSearch = !q || [row.name, row.email].some(value => value?.toLowerCase().includes(q))
-  const matchesRole = roleFilter.value === 'all' || row.role_code === roleFilter.value
+  const matchesRole = roleFilter.value === 'all'
+    || (roleFilter.value.startsWith('custom:') ? row.custom_role_id === roleFilter.value.slice(7) : row.role_code === roleFilter.value)
   const normalizedStatus = row.status === 'active' ? 'active' : 'inactive'
   const matchesStatus = statusFilter.value === 'all' || normalizedStatus === statusFilter.value
   return matchesSearch && matchesRole && matchesStatus
 }).map(row => ({
   ...row,
-  role_label: roleLabels[row.role_code],
+  role_label: row.custom_role_name ?? roleLabels[row.role_code],
   scope_label: row.department_scopes.map(scope => scope.name).join(', ') || '—',
 })))
 
 const activeFilterChips = computed(() => [
   ...(search.value ? [{ id: 'search', label: 'Поиск: ' + search.value }] : []),
-  ...(roleFilter.value !== 'all' ? [{ id: 'role', label: 'Роль: ' + (roleLabels[roleFilter.value as SystemRoleCode] ?? roleFilter.value) }] : []),
+  ...(roleFilter.value !== 'all' ? [{ id: 'role', label: 'Роль: ' + (roleOptions.value.find(role => role.id === roleFilter.value)?.name ?? roleFilter.value) }] : []),
   ...(statusFilter.value !== 'all' ? [{ id: 'status', label: 'Статус: ' + (statusFilter.value === 'active' ? 'Активный' : 'Неактивный') }] : []),
 ])
 
@@ -138,26 +120,19 @@ const assignmentColumns = [
   { key: 'actions', label: 'Действия' },
 ]
 
-const selectedCatalogRole = computed(() => roleCatalog.value.find(role => role.code === selectedRoleForMatrix.value))
-const capabilityRows = computed(() => Object.entries(selectedCatalogRole.value?.capabilities ?? {})
-  .map(([code, enabled]) => ({
-    code,
-    module: capabilityLabels[code] ?? code,
-    enabled,
-  })))
-const matrixColumns = [
-  { key: 'module', label: 'Право' },
-  { key: 'enabled', label: 'Доступ' },
-]
-
 const logRows = computed(() => audit.value.map(row => ({
   ...row,
   created_label: new Date(row.created_at).toLocaleString('ru-RU'),
-  action_label: row.action === 'company.role_granted' ? 'Роль назначена'
-    : row.action === 'company.role_changed' ? 'Роль изменена'
-      : 'Роль отозвана',
+  action_label: ({
+    'company.role_granted': 'Роль назначена',
+    'company.role_changed': 'Роль изменена',
+    'company.role_revoked': 'Роль отозвана',
+    'company.role_template_created': 'Роль создана',
+    'company.role_template_updated': 'Матрица изменена',
+    'company.role_template_deleted': 'Роль удалена',
+  } as Record<string, string>)[row.action] ?? row.action,
   actor_label: row.actor || 'Система',
-  subject_label: row.subject || 'Пользователь',
+  subject_label: row.subject || 'Роль компании',
 })))
 const logColumns = [
   { key: 'created_label', label: 'Дата и время' },
@@ -191,23 +166,37 @@ async function loadCompanies() {
 
 async function loadMemberships() {
   if (!company.value) return
+  const requestedCompany = company.value
   loading.value = true
   error.value = ''
   try {
-    const response = await listMemberships(company.value, { per_page: 100 })
-    memberships.value = response.data
-    roleCatalog.value = response.roles
-    audit.value = response.audit
-    if (!roleCatalog.value.some(role => role.code === selectedRoleForMatrix.value)) {
-      selectedRoleForMatrix.value = roleCatalog.value[0]?.code ?? 'company_admin'
+    const first = await listMemberships(requestedCompany, { per_page: 100 })
+    const rows = [...first.data]
+    // The membership API is paginated; a company with 100+ people must be
+    // shown in full. Every page is still separately tenant-authorized.
+    if (first.meta.last_page > 100) throw new Error('Слишком большой список ролей. Уточните фильтры.')
+    for (let page = 2; page <= first.meta.last_page; page++) {
+      const response = await listMemberships(requestedCompany, { page, per_page: 100 })
+      rows.push(...response.data)
     }
+    const enabled = first.meta.custom_role_templates_enabled === true
+    const templatesResponse = enabled ? await listCompanyRoleTemplates(requestedCompany) : null
+    if (requestedCompany !== company.value) return
+    memberships.value = rows
+    roleCatalog.value = Array.isArray(first.roles) ? first.roles : []
+    templates.value = templatesResponse?.data ?? []
+    customRolesEnabled.value = enabled
+    audit.value = Array.isArray(first.audit) ? first.audit : []
   } catch (cause) {
+    if (requestedCompany !== company.value) return
     memberships.value = []
     roleCatalog.value = []
+    templates.value = []
+    customRolesEnabled.value = false
     audit.value = []
     error.value = cause instanceof Error ? cause.message : 'Не удалось загрузить роли и доступы'
   } finally {
-    loading.value = false
+    if (requestedCompany === company.value) loading.value = false
   }
 }
 
@@ -220,7 +209,7 @@ async function loadDepartments() {
 async function openEditor(row: MembershipRecord) {
   if (row.role_code === 'company_admin') return
   editingUser.value = row
-  roleDraft.value = row.role_code as Exclude<SystemRoleCode, 'company_admin'>
+  roleDraft.value = row.custom_role_id ? 'custom:' + row.custom_role_id : row.role_code
   departmentDraft.value = row.department_scopes.map(scope => scope.id)
   success.value = ''
   error.value = ''
@@ -243,8 +232,9 @@ async function saveRole() {
   success.value = ''
   try {
     await saveMembership(company.value, editingUser.value.user_id, {
-      role_code: roleDraft.value,
-      department_ids: roleDraft.value === 'department_manager' ? departmentDraft.value : [],
+      role_code: resolvedDraftRole.value,
+      custom_role_id: selectedTemplateDraft.value?.id ?? null,
+      department_ids: resolvedDraftRole.value === 'department_manager' ? departmentDraft.value : [],
     })
     editorOpen.value = false
     success.value = 'Роль пользователя сохранена.'
@@ -291,6 +281,8 @@ function onAction(id: string, row: MembershipRecord) {
 watch(company, () => {
   linkUser.value = null
   departments.value = []
+  templates.value = []
+  customRolesEnabled.value = false
   void loadMemberships()
 })
 
@@ -298,7 +290,6 @@ onMounted(async () => {
   loading.value = true
   try {
     await loadCompanies()
-    if (company.value) await loadMemberships()
   } catch (cause) {
     error.value = cause instanceof Error ? cause.message : 'Не удалось загрузить роли и доступы'
   } finally {
@@ -371,40 +362,13 @@ onMounted(async () => {
       </BaseDataTable>
     </BaseCard>
 
-    <BaseCard v-else-if="activeTab === 'permissions'" class="roles-card">
-      <div class="roles-heading">
-        <div>
-          <h1>Права системных ролей</h1>
-          <p>{{ demoMode ? 'Демонстрационная матрица прав' : 'Read-only проекция текущей серверной политики доступа' }}</p>
-        </div>
-        <BaseSelectField v-model="selectedRoleForMatrix" label="Роль" :options="matrixRoleOptions" />
-      </div>
-
-      <div class="role-summary">
-        <ShieldCheck :size="22" aria-hidden="true" />
-        <div>
-          <strong>{{ roleLabels[selectedRoleForMatrix] }}</strong>
-          <span>{{ roleDescriptions[selectedRoleForMatrix] }}</span>
-        </div>
-      </div>
-
-      <BaseDataTable :rows="capabilityRows" :columns="matrixColumns" row-key="code"
-        caption="Эффективные права роли"
-        empty-title="Права роли не получены">
-        <template #cell-enabled="{ row }">
-          <BaseStatusPill :tone="row.enabled ? 'success' : 'danger'">
-            {{ row.enabled ? 'Разрешено' : 'Нет доступа' }}
-          </BaseStatusPill>
-        </template>
-      </BaseDataTable>
-      <BaseNotice tone="info">
-        Матрица отражает backend-policy. Произвольные роли не создаются в браузере, пока для них нет отдельной серверной модели.
-      </BaseNotice>
-    </BaseCard>
+    <CompanyRoleMatrixEditor v-else-if="activeTab === 'permissions'"
+      :company="company" :role-catalog="roleCatalog" :templates="templates"
+      :enabled="customRolesEnabled" @changed="loadMemberships" />
 
     <BaseCard v-else class="roles-card">
       <div class="roles-heading">
-        <div><h1>Журнал изменений</h1><p>Последние серверные события назначения и отзыва ролей</p></div>
+        <div><h1>Журнал изменений</h1><p>Серверная история назначения, изменения и удаления ролей</p></div>
       </div>
       <BaseDataTable :rows="logRows" :columns="logColumns" row-key="id"
         caption="Журнал управления ролями"
@@ -415,8 +379,8 @@ onMounted(async () => {
       :description="editingUser ? editingUser.name + ' · ' + editingUser.email : ''"
       @close="editorOpen=false">
       <div class="drawer-form">
-        <BaseSelectField v-model="roleDraft" label="Роль" :options="assignableRoles" />
-        <fieldset v-if="roleDraft === 'department_manager'" class="department-picker">
+        <BaseSelectField v-model="roleDraft" label="Роль" :options="assignableRolesWithCustom" />
+        <fieldset v-if="resolvedDraftRole === 'department_manager'" class="department-picker">
           <legend>Доступные подразделения</legend>
           <BaseNotice v-if="!departments.length" tone="info">Подразделения в компании пока не созданы.</BaseNotice>
           <label v-for="department in departments" :key="department.id">
@@ -429,7 +393,7 @@ onMounted(async () => {
       </div>
       <template #footer>
         <BaseButton variant="secondary" @click="editorOpen=false">Отмена</BaseButton>
-        <BaseButton :disabled="saving || !editingUser || (roleDraft === 'department_manager' && !departmentDraft.length)"
+        <BaseButton :disabled="saving || !editingUser || (resolvedDraftRole === 'department_manager' && !departmentDraft.length)"
           @click="saveRole">
           {{ saving ? 'Сохранение…' : 'Сохранить роль' }}
         </BaseButton>

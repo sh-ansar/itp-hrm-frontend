@@ -26,8 +26,10 @@ test('demo Roles and access shows synthetic accounts, scoped matrix and no missi
 
       const tabs = page.getByRole('navigation', { name: 'Разделы ролей и доступов' })
       await tabs.getByRole('button', { name: 'Права ролей' }).click()
-      await page.getByRole('heading', { name: 'Права системных ролей' }).waitFor()
-      await page.getByText('Демонстрационная матрица прав').waitFor()
+      await page.getByRole('heading', { name: 'Создание роли и её права' }).waitFor()
+      await page.getByRole('heading', { name: 'Системные роли' }).waitFor()
+      await page.getByText('Создание дополнительных ролей отключено. Системные права доступны для просмотра.').waitFor()
+      assert.equal(await page.getByRole('button', { name: 'Добавить роль' }).count(), 0)
       await tabs.getByRole('button', { name: 'Назначение ролей' }).click()
       await page.getByText('Демо-администратор', { exact: true }).waitFor()
     } finally { await context.close() }

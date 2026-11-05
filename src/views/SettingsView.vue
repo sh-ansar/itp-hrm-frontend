@@ -85,7 +85,7 @@ const numberFormatModel = computed({
 })
 const startScreenModel = computed({
   get: () => startScreenOptions.value.some(option => option.id === ui.startScreen)
-    ? ui.startScreen : (startScreenOptions.value[0]?.id ?? '/'),
+    ? ui.startScreen : (startScreenOptions.value[0]?.id ?? '/app'),
   set: value => ui.setStartScreen(value as UiStartScreen),
 })
 
@@ -99,7 +99,7 @@ const sidebarOptions = computed(() => [
 ])
 const startScreenOptions = computed(() => {
   const options = [
-    { id: '/', name: t('nav.home') },
+    { id: '/app', name: t('nav.home') },
     { id: '/employees', name: t('nav.employees') },
     { id: '/organization', name: t('nav.organization') },
     { id: '/staffing', name: t('nav.organization') + ' — ' + (ui.locale === 'en' ? 'Staffing' : ui.locale === 'kk' ? 'Штат кестесі' : ui.locale === 'ka' ? 'საშტატო განრიგი' : 'Штатное расписание') },
@@ -109,7 +109,7 @@ const startScreenOptions = computed(() => {
     const capability = routeCapability(option.id)
     return capability && access.can(capability)
   })
-  return permitted.length ? permitted : [{ id: '/', name: t('nav.settings') }]
+  return permitted.length ? permitted : [{ id: '/app', name: t('nav.settings') }]
 })
 const timeZoneOptions = computed(() => {
   const options = [

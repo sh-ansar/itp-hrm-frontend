@@ -6,6 +6,7 @@ import { routeCapability } from '../../config/routeAccess'
 import { useCompanyAccessStore } from '../../stores/companyAccess'
 import { useUiPreferencesStore } from '../../stores/uiPreferences'
 import { useAppI18n } from '../../i18n'
+import { useSaasText } from '../../i18n/saas'
 import { publicAsset } from '../../utils/publicAsset'
 
 const props = defineProps<{ mobileOpen: boolean }>()
@@ -13,13 +14,19 @@ const emit = defineEmits<{ 'update:mobileOpen': [value: boolean] }>()
 const route = useRoute()
 const ui = useUiPreferencesStore()
 const { t } = useAppI18n()
+const { tr } = useSaasText()
 const access = useCompanyAccessStore()
 const connected = import.meta.env.VITE_ENABLE_BROWSER_LOGIN === 'true' && import.meta.env.VITE_DEMO_MODE !== 'true'
-const visible = (path: string) => !connected || (routeCapability(path) ? access.can(routeCapability(path)!) : true)
+const visible = (path: string) => {
+  if (path === '/billing') return connected && access.active?.role_code === 'company_admin'
+  return !connected || (routeCapability(path) ? access.can(routeCapability(path)!) : true)
+}
 const primary = computed(() => hrmNavigation.filter(link => link.section === 'primary' && visible(link.to)))
 const services = computed(() => hrmNavigation.filter(link => link.section === 'service' && visible(link.to)))
 function active(to: string) { return isHrmNavigationActive(to, route.path) }
-function linkLabel(link: { label: string; labelKey?: string }) { return t(link.labelKey ?? '', link.label) }
+function linkLabel(link: { to:string; label: string; labelKey?: string }) {
+  return link.to === '/billing' ? tr('companyBilling') : t(link.labelKey ?? '', link.label)
+}
 function closeMobile() { if (props.mobileOpen) emit('update:mobileOpen', false) }
 </script>
 
@@ -28,7 +35,7 @@ function closeMobile() { if (props.mobileOpen) emit('update:mobileOpen', false) 
     :class="{ 'sidebar--open': mobileOpen, 'hrm-sidebar--collapsed': ui.sidebarCollapsed }"
     :aria-label="t('shell.mainNavigation')">
     <div class="sidebar-head">
-      <RouterLink :to="connected && !access.can('overview.view') ? '/settings' : '/'" class="brand-link" title="ITP HRM" @click="closeMobile">
+      <RouterLink :to="connected && !access.can('overview.view') ? '/settings' : '/app'" class="brand-link" title="ITP HRM" @click="closeMobile">
         <img class="brand-mark" :src="publicAsset('brand/itp-mark.svg')" alt="ITP" width="49" height="37" />
         <span class="brand-copy">
           <strong>HRM</strong>

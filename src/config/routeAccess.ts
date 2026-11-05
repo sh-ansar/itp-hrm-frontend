@@ -6,8 +6,8 @@ import type { CapabilityKey } from '../api/access'
  */
 export function routeCapability(path: string): CapabilityKey | null {
   if (path === '/my') return 'self_service.view'
-  if (path === '/') return 'overview.view'
-  if (path === '/settings') return 'settings.view'
+  if (path === '/app') return 'overview.view'
+  if (path === '/settings' || path === '/billing') return 'settings.view'
   if (path === '/roles') return 'roles.interface'
   if (path === '/reports') return 'reports.view'
   if (path === '/employees' || path.startsWith('/employees/')) return 'employees.view'

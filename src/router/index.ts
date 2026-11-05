@@ -23,14 +23,32 @@ import { routeCapability } from '../config/routeAccess'
 import LoginView from '../views/LoginView.vue'
 import ResetPasswordView from '../views/ResetPasswordView.vue'
 import { useSessionStore } from '../stores/session'
+import { apiRequest } from '../api/client'
 
 export const browserLoginEnabled = import.meta.env.VITE_ENABLE_BROWSER_LOGIN === 'true'
 
-
+// All HRM public pages share a single prefix-aware layout. Internal routes
+// remain under the same /hrm/ Vite base with distinct product/API isolation.
 export const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
+  scrollBehavior(to, from, savedPosition) {
+    if (to.hash) return { el: to.hash, top: 92, behavior: 'smooth' }
+    if (to.meta.public || from.meta.public) return { top: 0 }
+    return savedPosition || { top: 0 }
+  },
   routes: [
-    { path: '/', name: 'overview', component: OverviewView },
+    {
+      path: '/', component: () => import('../views/public/PublicLayout.vue'),
+      meta: { public: true },
+      children: [
+        { path: '', alias: '/landing', name: 'public.home', component: () => import('../views/public/PublicHome.vue'), meta: { public: true } },
+        { path: 'pricing', name: 'public.pricing', component: () => import('../views/public/PublicPricing.vue'), meta: { public: true } },
+        { path: 'legal/:type(offer|tariff-policy|acceptable-use|personal-data-consent|privacy)', name: 'public.legal', component: () => import('../views/public/PublicLegal.vue'), meta: { public: true } },
+        { path: 'register', name: 'public.register', component: () => import('../views/public/PublicRegistration.vue'), meta: { public: true } },
+      ],
+    },
+    { path: '/app', name: 'overview', component: OverviewView },
+    { path: '/admin/:section?', name: 'platform-admin', component: () => import('../views/PlatformAdminView.vue') },
     { path: '/my', name: 'my-workspace', component: MyWorkspaceView },
     { path: '/login', name: 'login', component: LoginView },
     { path: '/reset-password', name: 'reset-password', component: ResetPasswordView },
@@ -51,24 +69,38 @@ export const router = createRouter({
     { path: '/reports', name: 'reports', component: ReportsView },
     { path: '/roles', name: 'roles', component: RolesView },
     { path: '/settings', name: 'settings', component: SettingsView },
+    { path: '/billing', name: 'company-billing', component: () => import('../views/CompanyBillingView.vue') },
     { path: '/:pathMatch(.*)*', name: 'not-found', component: NotFoundView },
   ],
 })
 
 router.beforeEach(async (to) => {
-  if (!browserLoginEnabled || to.name === 'login' || to.name === 'reset-password') return true
+  if (to.name === 'platform-admin' && !browserLoginEnabled) return { name: 'access-denied' }
+  if (to.meta.public || !browserLoginEnabled || to.name === 'login'
+    || to.name === 'reset-password' || to.name === 'not-found') return true
 
   const session = useSessionStore()
   if (!session.checked) await session.refresh()
-
   if (!session.user) return { name: 'login', query: { redirect: to.fullPath } }
-  if (to.name === 'access-denied' || to.name === 'not-found') return true
+  if (to.name === 'access-denied') return true
+
+  if (to.name === 'platform-admin') {
+    try {
+      await apiRequest('/platform-admin/overview')
+      return true
+    } catch {
+      return { name: 'access-denied' }
+    }
+  }
+
   const access = useCompanyAccessStore()
   await access.refresh()
   if (access.error) return to.name === 'settings' ? true : { name: 'access-denied' }
   const scopedCompany = typeof to.params.company === 'string' ? to.params.company : null
   if (scopedCompany && !access.chooseCompany(scopedCompany)) return { name: 'access-denied' }
-  if (to.name === 'overview' && !access.can('overview.view') && access.can('settings.view')) return { name: access.can('self_service.view') ? 'my-workspace' : 'settings' }
+  if (to.name === 'overview' && !access.can('overview.view') && access.can('settings.view')) {
+    return { name: access.can('self_service.view') ? 'my-workspace' : 'settings' }
+  }
   const required = routeCapability(to.path)
   if (required && !access.can(required)) return { name: 'access-denied' }
   return true

@@ -6,7 +6,7 @@ export type UiLocale = 'ru' | 'kk' | 'en' | 'ka'
 export type UiDateFormat = 'dd.mm.yyyy' | 'yyyy-mm-dd' | 'dd/mm/yyyy'
 export type UiTimeFormat = '24h' | '12h'
 export type UiNumberFormat = 'space' | 'comma'
-export type UiStartScreen = '/' | '/employees' | '/organization' | '/staffing'
+export type UiStartScreen = '/app' | '/employees' | '/organization' | '/staffing'
 
 function readStorage<T extends string>(key: string, allowed: readonly T[], fallback: T): T {
   if (typeof window === 'undefined') return fallback
@@ -51,7 +51,7 @@ export const useUiPreferencesStore = defineStore('ui-preferences', () => {
   const timeFormat = ref<UiTimeFormat>(readStorage<UiTimeFormat>('hrm-time-format', ['24h', '12h'], '24h'))
   const numberFormat = ref<UiNumberFormat>(readStorage<UiNumberFormat>('hrm-number-format', ['space', 'comma'], 'space'))
   const startScreen = ref<UiStartScreen>(
-    readStorage<UiStartScreen>('hrm-start-screen', ['/', '/employees', '/organization', '/staffing'], '/'),
+    readStorage<UiStartScreen>('hrm-start-screen', ['/app', '/employees', '/organization', '/staffing'], '/app'),
   )
 
   function applyTheme(value: UiTheme) {
@@ -84,7 +84,7 @@ export const useUiPreferencesStore = defineStore('ui-preferences', () => {
     dateFormat.value = 'dd.mm.yyyy'
     timeFormat.value = '24h'
     numberFormat.value = 'space'
-    startScreen.value = '/'
+    startScreen.value = '/app'
   }
 
   watch(theme, value => {

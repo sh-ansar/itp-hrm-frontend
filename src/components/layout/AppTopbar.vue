@@ -8,8 +8,12 @@ import { useCompanyAccessStore } from '../../stores/companyAccess'
 import { useUiPreferencesStore, type UiLocale } from '../../stores/uiPreferences'
 import { localeOptions, useAppI18n } from '../../i18n'
 import { browserLoginEnabled } from '../../router'
+import { apiRequest } from '../../api/client'
+import { useSaasText } from '../../i18n/saas'
 import BaseThemeToggle from '../ui/BaseThemeToggle.vue'
 
+const { tr: saasTr } = useSaasText()
+const platformAdmin = ref(false)
 const emit = defineEmits<{
   openMobileMenu: []
   logoutError: [message: string]
@@ -65,6 +69,13 @@ watch(() => [route.name, route.query.q] as const, ([name, q]) => {
   if (name === 'employees') searchTerm.value = typeof q === 'string' ? q : ''
 }, { immediate: true })
 onMounted(() => window.addEventListener('keydown', handleShortcut))
+onMounted(async () => {
+  if (!browserLoginEnabled || !session.user) return
+  try {
+    await apiRequest('/platform-admin/overview')
+    platformAdmin.value = true
+  } catch { platformAdmin.value = false }
+})
 onBeforeUnmount(() => window.removeEventListener('keydown', handleShortcut))
 </script>
 
@@ -98,6 +109,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', handleShortcut))
         </select>
       </label>
       <BaseThemeToggle />
+      <RouterLink v-if="platformAdmin" class="platform-admin-link" :to="{ name: 'platform-admin', params: { section: 'companies' } }">{{ saasTr('admin') }}</RouterLink>
       <div class="profile-summary" :title="accountName">
         <span class="user-avatar" aria-hidden="true">{{ initials }}</span>
         <span class="profile-copy">
@@ -168,6 +180,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', handleShortcut))
   border:0;border-radius:7px;background:transparent;color:var(--color-muted);
 }
 .topbar-icon:hover{background:var(--color-soft);color:var(--color-primary)}
+.platform-admin-link{display:inline-flex;align-items:center;min-height:35px;padding:0 10px;border:1px solid var(--color-stroke);border-radius:7px;color:var(--color-primary);text-decoration:none;font-size:12px;white-space:nowrap}
 .profile-summary{
   display:flex;align-items:center;gap:8px;min-width:0;max-width:255px;
   padding:2px 10px 2px 0;

@@ -33,7 +33,7 @@ function selectTab(id: string) {
 <template>
   <div class="org-staffing-navigation">
     <nav class="org-breadcrumbs" :aria-label="tr('Навигационная цепочка')">
-      <RouterLink to="/" :aria-label="tr('Главная')"><House :size="15" /></RouterLink>
+      <RouterLink to="/app" :aria-label="tr('Главная')"><House :size="15" /></RouterLink>
       <span aria-hidden="true">/</span>
       <RouterLink to="/organization">{{ tr('Оргструктура и штатка') }}</RouterLink>
       <span aria-hidden="true">/</span>

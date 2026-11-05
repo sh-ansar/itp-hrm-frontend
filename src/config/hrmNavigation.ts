@@ -11,7 +11,7 @@ export interface HrmNavigationItem {
 }
 
 export const hrmNavigation: readonly HrmNavigationItem[] = [
-  { to: '/', label: 'Главная', labelKey: 'nav.home', icon: publicAsset('prototype-icons/Home.svg'), section: 'primary' },
+  { to: '/app', label: 'Главная', labelKey: 'nav.home', icon: publicAsset('prototype-icons/Home.svg'), section: 'primary' },
   { to: '/employees', label: 'Сотрудники', labelKey: 'nav.employees', icon: publicAsset('prototype-icons/People-groupf.svg'), section: 'primary' },
   { to: '/organization', label: 'Оргструктура и штатка', labelKey: 'nav.organization', icon: publicAsset('prototype-icons/Structure.svg'), section: 'primary' },
   { to: '/personnel-actions', label: 'Кадровые процессы', labelKey: 'nav.personnelActions', icon: publicAsset('prototype-icons/processf.svg'), section: 'primary' },
@@ -21,13 +21,14 @@ export const hrmNavigation: readonly HrmNavigationItem[] = [
   { to: '/reports', label: 'Отчёты и аналитика', labelKey: 'nav.reports', icon: publicAsset('prototype-icons/Report.svg'), section: 'primary' },
   { to: '/directories', label: 'Справочники', labelKey: 'nav.directories', icon: publicAsset('prototype-icons/Storagef.svg'), section: 'service' },
   { to: '/roles', label: 'Роли и права', labelKey: 'nav.roles', icon: publicAsset('prototype-icons/People-groupf.svg'), section: 'service' },
+  { to: '/billing', label: 'Оплата и тариф', icon: publicAsset('prototype-icons/Storagef.svg'), section: 'service' },
   { to: '/settings', label: 'Настройки', labelKey: 'nav.settings', icon: publicAsset('prototype-icons/Settings.svg'), section: 'service' },
 ]
 
 /** Page navigation is different from a client-side accordion: keep its
  * states consistent for both mouse and keyboard across all viewports. */
 export function isHrmNavigationActive(to: string, routePath: string): boolean {
-  if (to === '/') return routePath === '/'
+  if (to === '/app') return routePath === '/app'
   if (to === '/employees') return routePath === '/employees'
     || routePath.startsWith('/employees/')
     || routePath === '/employees-development' || routePath === '/learning' || routePath === '/reserve'

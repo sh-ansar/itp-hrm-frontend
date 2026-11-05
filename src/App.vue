@@ -36,7 +36,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <RouterView v-if="['login', 'reset-password'].includes(String(route.name))" />
+  <RouterView v-if="route.meta.public || route.name === 'platform-admin' || ['login', 'reset-password'].includes(String(route.name))" />
   <div v-else class="app-shell" :class="{ 'app-shell--collapsed': ui.sidebarCollapsed, 'app-shell--personal': !workspaceNavigation }">
     <button v-if="mobileNavOpen" class="nav-backdrop" type="button"
       aria-label="Закрыть боковое меню" @click="closeMobileNav" />

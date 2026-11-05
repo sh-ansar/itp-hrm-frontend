@@ -9,7 +9,7 @@ import BaseButton from '../components/ui/BaseButton.vue'
     <div class="not-found" role="status">
       <div class="error-number">404</div>
       <p class="muted">Проверьте адрес страницы. Возможно, раздел был перемещён или ссылка указана неверно.</p>
-      <RouterLink to="/" custom v-slot="{ navigate }">
+      <RouterLink to="/app" custom v-slot="{ navigate }">
         <BaseButton variant="primary" @click="navigate">Перейти к обзору</BaseButton>
       </RouterLink>
     </div>

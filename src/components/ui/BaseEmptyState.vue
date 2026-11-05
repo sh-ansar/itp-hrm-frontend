@@ -18,7 +18,7 @@ withDefaults(defineProps<{
       <h2>{{ title }}</h2>
       <p>{{ description }}</p>
       <slot />
-      <RouterLink to="/" custom v-slot="{ navigate }">
+      <RouterLink to="/app" custom v-slot="{ navigate }">
         <BaseButton variant="secondary" @click="navigate">{{ actionLabel }}</BaseButton>
       </RouterLink>
     </div>

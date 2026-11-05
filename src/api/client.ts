@@ -48,7 +48,7 @@ export async function requestJson<T>(
         signal: controller.signal,
         headers: {
           Accept: 'application/json',
-          ...(request.body ? { 'Content-Type': 'application/json' } : {}),
+          ...(request.body && !(request.body instanceof FormData) ? { 'Content-Type': 'application/json' } : {}),
           ...(csrf ? { 'X-XSRF-TOKEN': csrf } : {}),
           ...request.headers,
         },
@@ -63,6 +63,7 @@ export async function requestJson<T>(
     if (!response.ok) {
       const message = response.status === 401 ? 'Требуется вход в систему'
         : response.status === 403 ? 'Недостаточно прав доступа'
+        : response.status === 402 ? 'Оплаченный тариф отсутствует или истёк'
         : response.status === 404 ? 'Запрошенная функция пока недоступна'
         : response.status === 409 ? 'Запись уже изменена. Обновите карточку перед сохранением'
         : response.status === 419 ? 'Сессия истекла или CSRF-токен устарел'
@@ -116,6 +117,12 @@ export async function apiRequest<T>(
     return mockApiRequest<T>(path, options)
   }
   return requestJson<T>(`${baseUrl}${path}`, options)
+}
+
+/** Route-safe URLs for protected same-origin documents opened by the browser. */
+export function apiHref(path: string): string {
+  if (!path.startsWith('/') || path.startsWith('//')) throw new Error('Invalid API path')
+  return `${baseUrl}${path}`
 }
 
 export interface HealthResponse {

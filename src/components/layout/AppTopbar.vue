@@ -126,7 +126,7 @@ onBeforeUnmount(() => {
 <style scoped>
 .hrm-topbar{width:100%;max-width:100%;min-width:0;position:relative;
   height:64px;min-height:64px;padding:0 24px;display:flex;align-items:center;
-  justify-content:space-between;gap:18px;background:var(--color-surface);z-index:25}
+  justify-content:space-between;gap:18px;background:transparent;z-index:25}
 .topbar-search{display:flex;align-items:center;gap:8px;flex:0 1 455px;
   min-width:0;width:100%;margin-right:auto}
 .search-field{display:flex;align-items:center;gap:9px;min-width:0;flex:1;height:38px;

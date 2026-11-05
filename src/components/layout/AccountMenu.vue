@@ -2,8 +2,8 @@
 import { computed, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import {
-  BellOff, Building2, Check, ChevronDown, ChevronRight, CircleUserRound,
-  ExternalLink, LayoutDashboard, LogOut, Package, Settings2, ShieldCheck,
+  BellOff, Building2, Check, ChevronDown, ChevronRight,
+  ExternalLink, LayoutDashboard, LogOut, Package, ShieldCheck,
   UsersRound, Wrench, X,
 } from 'lucide-vue-next'
 import { useCompanyAccessStore } from '../../stores/companyAccess'
@@ -196,14 +196,6 @@ async function navigate(to: string | { name: string; query?: Record<string, stri
           <span class="switch-track" :class="{ 'is-on': notificationsDisabled }" aria-hidden="true"><span /></span>
         </button>
 
-        <button type="button" class="action-row" @click="navigate('/my')">
-          <CircleUserRound :size="19" aria-hidden="true" /><span>{{ tr('profile') }}</span>
-          <ChevronRight :size="15" class="action-end" aria-hidden="true" />
-        </button>
-        <button type="button" class="action-row" @click="navigate({ name: 'settings', query: { tab: 'interface' } })">
-          <Settings2 :size="19" aria-hidden="true" /><span>{{ tr('settings') }}</span>
-          <ChevronRight :size="15" class="action-end" aria-hidden="true" />
-        </button>
         <button v-if="companyAdmin" type="button" class="action-row"
           @click="navigate({ name: 'settings', query: { tab: 'company' } })">
           <Building2 :size="19" aria-hidden="true" /><span>{{ tr('companySettings') }}</span>
@@ -245,7 +237,10 @@ async function navigate(to: string | { name: string; query?: Record<string, stri
 .account-popover{position:absolute;z-index:120;top:calc(100% + 12px);right:0;
   width:min(350px,calc(100vw - 24px));max-height:calc(100dvh - 84px);overflow:auto;
   border:1px solid var(--color-stroke);border-radius:12px;
-  background:var(--color-surface-raised);color:var(--color-text);
+  background:rgba(255,255,255,.88);
+  background:color-mix(in srgb,var(--color-surface-raised) 85%, transparent);
+  -webkit-backdrop-filter:blur(16px) saturate(1.18);
+  backdrop-filter:blur(16px) saturate(1.18);color:var(--color-text);
   box-shadow:0 14px 36px rgba(13,40,56,.16);padding:12px}
 .popover-heading{display:flex;align-items:center;gap:10px;padding:4px 4px 14px;
   border-bottom:1px solid var(--color-stroke)}

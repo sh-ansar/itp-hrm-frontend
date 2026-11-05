@@ -51,7 +51,10 @@ async function openSettings() {
 .notification-settings:focus-visible{outline:2px solid var(--color-focus);outline-offset:2px}
 .notification-popover{position:absolute;z-index:119;top:calc(100% + 13px);right:-77px;
   width:min(344px,calc(100vw - 24px));border:1px solid var(--color-stroke);
-  border-radius:12px;background:var(--color-surface-raised);color:var(--color-text);
+  border-radius:12px;background:rgba(255,255,255,.88);
+  background:color-mix(in srgb,var(--color-surface-raised) 85%, transparent);
+  -webkit-backdrop-filter:blur(16px) saturate(1.18);
+  backdrop-filter:blur(16px) saturate(1.18);color:var(--color-text);
   box-shadow:0 14px 36px rgba(13,40,56,.16);padding:15px}
 .notification-title{display:flex;align-items:center;justify-content:space-between;gap:10px;
   padding:0 1px 11px;border-bottom:1px solid var(--color-stroke)}

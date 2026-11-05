@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { publicAsset } from '../utils/publicAsset'
 import { useActiveCompanySelection } from '../composables/useActiveCompanySelection'
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
+import { useRoute } from 'vue-router'
+import { useAccountMenuI18n } from '../i18n/accountMenu'
 import BaseButton from '../components/ui/BaseButton.vue'
 import BaseField from '../components/ui/BaseField.vue'
 import { changePasswordSession } from '../api/session'
@@ -31,8 +33,20 @@ const connected = import.meta.env.VITE_ENABLE_BROWSER_LOGIN === 'true' && import
 const hasWorkspaceNavigation = computed(() => !connected || access.can('overview.view'))
 const ui = useUiPreferencesStore()
 const { t } = useAppI18n()
+const { tr: accountTr } = useAccountMenuI18n()
+const route = useRoute()
+const companyAdmin = computed(() => connected && access.active?.role_code === 'company_admin')
 
-const activeTab = ref('interface')
+const allowedTabs = ['interface','notifications','security','company']
+const activeTab = ref(typeof route.query.tab === 'string' && allowedTabs.includes(route.query.tab)
+  ? route.query.tab : 'interface')
+watch(() => route.query.tab, tab => {
+  if (typeof tab !== 'string' || !allowedTabs.includes(tab)) return
+  activeTab.value = tab === 'company' && !companyAdmin.value ? 'interface' : tab
+})
+watch(companyAdmin, enabled => {
+  if (!enabled && activeTab.value === 'company') activeTab.value = 'interface'
+})
 const companies = ref<CompanyRecord[]>([])
 const company = ref('')
 const { preferCompany } = useActiveCompanySelection(company)
@@ -53,6 +67,7 @@ const tabs = computed(() => [
   { id: 'interface', label: t('settings.interface') },
   { id: 'notifications', label: t('settings.notifications') },
   { id: 'security', label: t('settings.security') },
+  ...(companyAdmin.value ? [{ id: 'company', label: accountTr('companySettings') }] : []),
 ])
 
 const themeModel = computed({
@@ -349,7 +364,7 @@ onMounted(reload)
       </EmployeeProfileSection>
     </template>
 
-    <template v-else>
+    <template v-else-if="activeTab === 'security'">
       <EmployeeProfileSection :title="t('settings.authentication')">
         <div class="settings-fields">
           <div class="read-setting">
@@ -402,6 +417,20 @@ onMounted(reload)
         <div v-if="demoMode" class="settings-actions"><BaseButton @click="saveSettings">{{ t('settings.save') }}</BaseButton></div>
       </EmployeeProfileSection>
     </template>
+
+    <template v-else-if="activeTab === 'company' && companyAdmin">
+      <EmployeeProfileSection :title="accountTr('companySettings')">
+        <div class="settings-fields">
+          <div class="read-setting"><span>{{ accountTr('company') }}</span><strong>{{ access.active?.company_name || '—' }}</strong></div>
+          <div class="read-setting"><span>{{ accountTr('adminOnly') }}</span><strong>{{ accountTr('companyTools') }}</strong></div>
+        </div>
+        <div class="settings-company-links">
+          <RouterLink v-if="access.can('organization.view')" to="/organization">{{ accountTr('organization') }}</RouterLink>
+          <RouterLink v-if="access.can('roles.interface')" to="/roles">{{ accountTr('rights') }}</RouterLink>
+          <RouterLink to="/billing">{{ accountTr('billing') }}</RouterLink>
+        </div>
+      </EmployeeProfileSection>
+    </template>
   </section>
 </template>
 
@@ -419,6 +448,11 @@ onMounted(reload)
 .read-setting strong,.read-setting a{display:block;min-width:0;padding:10px 11px;border:1px solid var(--color-stroke);border-radius:var(--radius-md);font-weight:400;background:var(--color-surface);overflow-wrap:anywhere}
 .read-setting small,.settings-help{color:var(--color-muted);font-size:12px;line-height:1.5}
 .settings-actions{display:flex;gap:12px;flex-wrap:wrap;border-top:1px solid var(--color-stroke);padding-top:20px;margin-top:20px}
+.settings-company-links{display:flex;gap:12px;flex-wrap:wrap;margin-top:20px}
+.settings-company-links a{display:inline-flex;align-items:center;min-height:38px;padding:7px 13px;
+  border:1px solid var(--color-stroke);border-radius:8px;color:var(--color-text);
+  background:var(--color-surface);text-decoration:none;font-size:13px}
+.settings-company-links a:hover{border-color:var(--color-primary-stroke);color:var(--color-primary)}
 .settings-password-form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px 20px;margin-top:16px}
 .settings-password-form :deep(.base-notice),.settings-password-form .settings-actions{grid-column:1/-1}
 .toggle-setting,.security-row{display:flex;align-items:center;justify-content:space-between;gap:20px;min-height:54px;border-bottom:1px solid var(--color-stroke);font-size:13px}

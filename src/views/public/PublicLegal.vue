@@ -1,10 +1,12 @@
 <script setup lang="ts">
+import {SiteLegalContent,UnifiedSelect} from "@itpmining/vue-basic-components"
 import { onMounted, ref, watch } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { apiRequest } from '../../api/client'
-import { useSaasText } from '../../i18n/saas'
-const route = useRoute()
-const { tr, locale } = useSaasText()
+import { usePublicSiteText } from '../../i18n/publicSite'
+const route = useRoute(), router=useRouter()
+function navigateLegal(_item:unknown,event:MouseEvent){if(event.button!==0||event.ctrlKey||event.metaKey||event.shiftKey||event.altKey)return;event.preventDefault();void router.push({name:"public.legal.index"})}
+const { tr, locale, serverLocale } = usePublicSiteText()
 type Legal = { id: number; title: string; body: string; locale: string; jurisdiction: string; sha256: string; version: number; effective_at: string | null }
 const jurisdiction = ref<'KZ' | 'GE'>(route.query.jurisdiction === 'GE' ? 'GE' : 'KZ')
 let sequence = 0
@@ -17,7 +19,7 @@ async function load() {
   loading.value = true; missing.value = false; error.value = false; legal.value = null
   try {
     const type = String(route.params.type || '')
-    const result = await apiRequest<{ data: Legal | null }>('/public/legal/' + encodeURIComponent(type) + '?locale=' + locale.value + '&jurisdiction=' + jurisdiction.value)
+    const result = await apiRequest<{ data: Legal | null }>('/public/legal/' + encodeURIComponent(type) + '?locale=' + serverLocale.value + '&jurisdiction=' + jurisdiction.value)
     if (requestId !== sequence) return
     legal.value = result.data
     missing.value = !legal.value
@@ -29,20 +31,20 @@ async function load() {
   } finally { if (requestId === sequence) loading.value = false }
 }
 onMounted(load)
-watch([() => route.params.type, locale, jurisdiction], load)
+watch([() => route.params.type, serverLocale, jurisdiction], load)
 </script>
 <template>
   <div class="public-legal">
     <nav class="breadcrumb"><RouterLink :to="{ name: 'public.home' }">{{ tr('home') }}</RouterLink><span>/</span><span>{{ legal?.title || tr('resources') }}</span></nav>
-    <div class="jurisdiction-picker"><label for="legal-country">{{ tr('jurisdiction') }}</label><select id="legal-country" v-model="jurisdiction"><option value="KZ">{{ tr('countryKZ') }}</option><option value="GE">{{ tr('countryGE') }}</option></select></div>
+    <div class="jurisdiction-picker"><UnifiedSelect :label="tr('jurisdiction')" :model-value="jurisdiction" :options="[{id:'KZ',label:tr('countryKZ')},{id:'GE',label:tr('countryGE')}]" @update:model-value="jurisdiction=$event === 'GE' ? 'GE' : 'KZ'" /></div>
     <p v-if="loading" role="status">{{ tr('loading') }}</p>
     <div v-else-if="missing" class="legal-empty">{{ tr('legalNotPublished') }}</div>
     <div v-else-if="error" class="legal-empty" role="alert">{{ tr('failedLoad') }} <button @click="load">{{ tr('retry') }}</button></div>
-    <article v-else-if="legal" class="legal-paper">
-      <p v-if="legal.locale !== locale" class="legal-locale-note">{{ tr('legalFallback') }}</p>
-      <h1>{{ legal.title }}</h1><p class="legal-meta">{{ legal.jurisdiction }} · v{{ legal.version }} · {{ legal.effective_at?.slice(0,10) || '' }}</p>
+    <SiteLegalContent v-else-if="legal" :title="legal.title" :back-href="router.resolve({name:'public.legal.index'}).href" :back-label="tr('legalIndex')" @navigate="navigateLegal">
+      <p v-if="legal.locale !== locale || locale!==serverLocale" class="legal-locale-note">{{ tr('legalLanguageFallback') }}</p>
+      <p class="legal-meta">{{ legal.jurisdiction }} · v{{ legal.version }} · {{ legal.effective_at?.slice(0,10) || '' }}</p>
       <div class="legal-body">{{ legal.body }}</div>
-    </article>
+    </SiteLegalContent>
   </div>
 </template>
 <style scoped>

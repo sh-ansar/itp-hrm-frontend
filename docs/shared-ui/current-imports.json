@@ -1,0 +1,11 @@
+[
+  "src/components/ui/BaseButton.vue",
+  "src/components/ui/BaseCard.vue",
+  "src/components/ui/BaseDrawer.vue",
+  "src/components/ui/BaseFormField.vue",
+  "src/components/ui/BaseKpiGrid.vue",
+  "src/components/ui/BaseSelectField.vue",
+  "src/main.ts",
+  "src/views/public/PublicLayout.vue",
+  "src/views/public/PublicLegal.vue"
+]

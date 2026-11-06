@@ -1,23 +1,4 @@
 <script setup lang="ts">
-withDefaults(defineProps<{ columns?: 2 | 3 | 4; label?: string }>(), {
-  columns: 4,
-  label: 'Основные показатели',
-})
-</script>
-
-<template>
-  <section class="base-kpi-grid" :class="'base-kpi-grid--'+columns" :aria-label="label">
-    <slot />
-  </section>
-</template>
-
-<style scoped>
-.base-kpi-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;min-width:0;max-width:100%}
-.base-kpi-grid--3{grid-template-columns:repeat(3,minmax(0,1fr))}
-.base-kpi-grid--2{grid-template-columns:repeat(2,minmax(0,1fr))}
-/* Four compact counters fit alongside the 276px sidebar down to 1120px,
-   matching the supplied employee-registry prototype. */
-@media(max-width:1120px){.base-kpi-grid,.base-kpi-grid--3{grid-template-columns:repeat(2,minmax(0,1fr))}}
-@media(max-width:620px){.base-kpi-grid,.base-kpi-grid--3,.base-kpi-grid--2{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}}
-@media(max-width:349px){.base-kpi-grid,.base-kpi-grid--3,.base-kpi-grid--2{grid-template-columns:minmax(0,1fr)}}
-</style>
+import { KpiGrid } from '@itpmining/vue-basic-components'
+withDefaults(defineProps<{columns?:2|3|4;label?:string}>(),{columns:4,label:'Основные показатели'})
+</script><template><KpiGrid :columns="columns" :label="label" class="base-kpi-grid"><slot/></KpiGrid></template>

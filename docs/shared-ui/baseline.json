@@ -1,0 +1,641 @@
+{
+  "system": "hrm",
+  "baseCommit": "91f03d37a771a28417f9973386ff5d06d192394d",
+  "files": [
+    {
+      "path": "src/App.vue",
+      "libraryImports": [],
+      "localUi": false
+    },
+    {
+      "path": "src/components/admin/HrmPaymentProofPanel.vue",
+      "libraryImports": [],
+      "localUi": false
+    },
+    {
+      "path": "src/components/ApprovalInboxPanel.vue",
+      "libraryImports": [],
+      "localUi": false
+    },
+    {
+      "path": "src/components/BonusManagementPanel.vue",
+      "libraryImports": [],
+      "localUi": false
+    },
+    {
+      "path": "src/components/BulkTimesheetFillPanel.vue",
+      "libraryImports": [],
+      "localUi": false
+    },
+    {
+      "path": "src/components/CompanyRoleMatrixEditor.vue",
+      "libraryImports": [],
+      "localUi": false
+    },
+    {
+      "path": "src/components/DepartmentForm.vue",
+      "libraryImports": [],
+      "localUi": false
+    },
+    {
+      "path": "src/components/DepartmentTreeNode.vue",
+      "libraryImports": [],
+      "localUi": false
+    },
+    {
+      "path": "src/components/DocumentDraftForm.vue",
+      "libraryImports": [],
+      "localUi": false
+    },
+    {
+      "path": "src/components/DocumentMetadataForm.vue",
+      "libraryImports": [],
+      "localUi": false
+    },
+    {
+      "path": "src/components/DocumentMobileList.vue",
+      "libraryImports": [],
+      "localUi": false
+    },
+    {
+      "path": "src/components/DocumentUploadForm.vue",
+      "libraryImports": [],
+      "localUi": false
+    },
+    {
+      "path": "src/components/EmployeeAccountLink.vue",
+      "libraryImports": [],
+      "localUi": false
+    },
+    {
+      "path": "src/components/EmployeeAddressBook.vue",
+      "libraryImports": [],
+      "localUi": false
+    },
+    {
+      "path": "src/components/EmployeeAssignmentCreateForm.vue",
+      "libraryImports": [],
+      "localUi": false
+    },
+    {
+      "path": "src/components/EmployeeContractEditor.vue",
+      "libraryImports": [],
+      "localUi": false
+    },
+    {
+      "path": "src/components/EmployeeDataGrid.vue",
+      "libraryImports": [],
+      "localUi": false
+    },
+    {
+      "path": "src/components/EmployeeDocumentsPanel.vue",
+      "libraryImports": [],
+      "localUi": false
+    },
+    {
+      "path": "src/components/EmployeeFamilyList.vue",
+      "libraryImports": [],
+      "localUi": false
+    },
+    {
+      "path": "src/components/EmployeeLookupField.vue",
+      "libraryImports": [],
+      "localUi": false
+    },
+    {
+      "path": "src/components/EmployeeMobileList.vue",
+      "libraryImports": [],
+      "localUi": false
+    },
+    {
+      "path": "src/components/EmployeeMonthWorktime.vue",
+      "libraryImports": [],
+      "localUi": false
+    },
+    {
+      "path": "src/components/EmployeePhoto.vue",
+      "libraryImports": [],
+      "localUi": false
+    },
+    {
+      "path": "src/components/EmployeePhotoCropEditor.vue",
+      "libraryImports": [],
+      "localUi": false
+    },
+    {
+      "path": "src/components/EmployeePrivateProfileEditor.vue",
+      "libraryImports": [],
+      "localUi": false
+    },
+    {
+      "path": "src/components/EmployeePrivateRecordsManager.vue",
+      "libraryImports": [],
+      "localUi": false
+    },
+    {
+      "path": "src/components/EmployeeProfileCreateForm.vue",
+      "libraryImports": [],
+      "localUi": false
+    },
+    {
+      "path": "src/components/EmployeeProfileSection.vue",
+      "libraryImports": [],
+      "localUi": false
+    },
+    {
+      "path": "src/components/EmployeeRecordForm.vue",
+      "libraryImports": [],
+      "localUi": false
+    },
+    {
+      "path": "src/components/EmployeeRegistryTemplatesDrawer.vue",
+      "libraryImports": [],
+      "localUi": false
+    },
+    {
+      "path": "src/components/EmployeeSectionDocuments.vue",
+      "libraryImports": [],
+      "localUi": false
+    },
+    {
+      "path": "src/components/EmployeeTimesheetHistory.vue",
+      "libraryImports": [],
+      "localUi": false
+    },
+    {
+      "path": "src/components/HomeOnboardingWizard.vue",
+      "libraryImports": [],
+      "localUi": false
+    },
+    {
+      "path": "src/components/layout/AccountMenu.vue",
+      "libraryImports": [],
+      "localUi": true
+    },
+    {
+      "path": "src/components/layout/AppSidebar.vue",
+      "libraryImports": [],
+      "localUi": true
+    },
+    {
+      "path": "src/components/layout/AppTopbar.vue",
+      "libraryImports": [],
+      "localUi": true
+    },
+    {
+      "path": "src/components/layout/HeaderNotifications.vue",
+      "libraryImports": [],
+      "localUi": true
+    },
+    {
+      "path": "src/components/LeaveActualReviewDialog.vue",
+      "libraryImports": [],
+      "localUi": false
+    },
+    {
+      "path": "src/components/LeaveBalancePanel.vue",
+      "libraryImports": [],
+      "localUi": false
+    },
+    {
+      "path": "src/components/LeaveBalanceRegistryPanel.vue",
+      "libraryImports": [],
+      "localUi": false
+    },
+    {
+      "path": "src/components/LeaveCategoriesPanel.vue",
+      "libraryImports": [],
+      "localUi": false
+    },
+    {
+      "path": "src/components/LeaveManagementPanel.vue",
+      "libraryImports": [],
+      "localUi": false
+    },
+    {
+      "path": "src/components/OrderReviewControls.vue",
+      "libraryImports": [],
+      "localUi": false
+    },
+    {
+      "path": "src/components/OrgChartViewport.vue",
+      "libraryImports": [],
+      "localUi": false
+    },
+    {
+      "path": "src/components/OrgStaffingNav.vue",
+      "libraryImports": [],
+      "localUi": false
+    },
+    {
+      "path": "src/components/PersonnelActionForm.vue",
+      "libraryImports": [],
+      "localUi": false
+    },
+    {
+      "path": "src/components/PersonnelActionMobileList.vue",
+      "libraryImports": [],
+      "localUi": false
+    },
+    {
+      "path": "src/components/PositionForm.vue",
+      "libraryImports": [],
+      "localUi": false
+    },
+    {
+      "path": "src/components/ProductionCalendarEditor.vue",
+      "libraryImports": [],
+      "localUi": false
+    },
+    {
+      "path": "src/components/ProductionCalendarInlineEditor.vue",
+      "libraryImports": [],
+      "localUi": false
+    },
+    {
+      "path": "src/components/ProductionCalendarPeriodOverview.vue",
+      "libraryImports": [],
+      "localUi": false
+    },
+    {
+      "path": "src/components/ProtectedLeaveEvidencePanel.vue",
+      "libraryImports": [],
+      "localUi": false
+    },
+    {
+      "path": "src/components/public/HrmFeaturePreview.vue",
+      "libraryImports": [],
+      "localUi": true
+    },
+    {
+      "path": "src/components/public/HrmHero.vue",
+      "libraryImports": [],
+      "localUi": true
+    },
+    {
+      "path": "src/components/public/HrmInteractiveDemo.vue",
+      "libraryImports": [],
+      "localUi": true
+    },
+    {
+      "path": "src/components/public/HrmModuleExplorer.vue",
+      "libraryImports": [],
+      "localUi": true
+    },
+    {
+      "path": "src/components/public/PublicPlans.vue",
+      "libraryImports": [],
+      "localUi": true
+    },
+    {
+      "path": "src/components/ScheduleCyclePlannerPanel.vue",
+      "libraryImports": [],
+      "localUi": false
+    },
+    {
+      "path": "src/components/StaffingLineForm.vue",
+      "libraryImports": [],
+      "localUi": false
+    },
+    {
+      "path": "src/components/StaffingMobileList.vue",
+      "libraryImports": [],
+      "localUi": false
+    },
+    {
+      "path": "src/components/StaffingPlanForm.vue",
+      "libraryImports": [],
+      "localUi": false
+    },
+    {
+      "path": "src/components/TimesheetEntryEditor.vue",
+      "libraryImports": [],
+      "localUi": false
+    },
+    {
+      "path": "src/components/TimesheetPeriodReview.vue",
+      "libraryImports": [],
+      "localUi": false
+    },
+    {
+      "path": "src/components/ui/AuthAccessControls.vue",
+      "libraryImports": [],
+      "localUi": true
+    },
+    {
+      "path": "src/components/ui/BaseActionDropdown.vue",
+      "libraryImports": [],
+      "localUi": true
+    },
+    {
+      "path": "src/components/ui/BaseButton.vue",
+      "libraryImports": [],
+      "localUi": true
+    },
+    {
+      "path": "src/components/ui/BaseCard.vue",
+      "libraryImports": [],
+      "localUi": true
+    },
+    {
+      "path": "src/components/ui/BaseColumnFilterPopover.vue",
+      "libraryImports": [],
+      "localUi": true
+    },
+    {
+      "path": "src/components/ui/BaseColumnPicker.vue",
+      "libraryImports": [],
+      "localUi": true
+    },
+    {
+      "path": "src/components/ui/BaseDataTable.vue",
+      "libraryImports": [],
+      "localUi": true
+    },
+    {
+      "path": "src/components/ui/BaseDialog.vue",
+      "libraryImports": [],
+      "localUi": true
+    },
+    {
+      "path": "src/components/ui/BaseDivider.vue",
+      "libraryImports": [],
+      "localUi": true
+    },
+    {
+      "path": "src/components/ui/BaseDrawer.vue",
+      "libraryImports": [],
+      "localUi": true
+    },
+    {
+      "path": "src/components/ui/BaseEmptyState.vue",
+      "libraryImports": [],
+      "localUi": true
+    },
+    {
+      "path": "src/components/ui/BaseField.vue",
+      "libraryImports": [],
+      "localUi": true
+    },
+    {
+      "path": "src/components/ui/BaseFilterSummary.vue",
+      "libraryImports": [],
+      "localUi": true
+    },
+    {
+      "path": "src/components/ui/BaseFormField.vue",
+      "libraryImports": [],
+      "localUi": true
+    },
+    {
+      "path": "src/components/ui/BaseInfoPopover.vue",
+      "libraryImports": [],
+      "localUi": true
+    },
+    {
+      "path": "src/components/ui/BaseKpiGrid.vue",
+      "libraryImports": [],
+      "localUi": true
+    },
+    {
+      "path": "src/components/ui/BaseLoadingState.vue",
+      "libraryImports": [],
+      "localUi": true
+    },
+    {
+      "path": "src/components/ui/BaseNotice.vue",
+      "libraryImports": [],
+      "localUi": true
+    },
+    {
+      "path": "src/components/ui/BasePageHeading.vue",
+      "libraryImports": [],
+      "localUi": true
+    },
+    {
+      "path": "src/components/ui/BasePagination.vue",
+      "libraryImports": [],
+      "localUi": true
+    },
+    {
+      "path": "src/components/ui/BaseProgressBar.vue",
+      "libraryImports": [],
+      "localUi": true
+    },
+    {
+      "path": "src/components/ui/BaseRegistryMetricCard.vue",
+      "libraryImports": [],
+      "localUi": true
+    },
+    {
+      "path": "src/components/ui/BaseSearchField.vue",
+      "libraryImports": [],
+      "localUi": true
+    },
+    {
+      "path": "src/components/ui/BaseSelectField.vue",
+      "libraryImports": [],
+      "localUi": true
+    },
+    {
+      "path": "src/components/ui/BaseSelectionToolbar.vue",
+      "libraryImports": [],
+      "localUi": true
+    },
+    {
+      "path": "src/components/ui/BaseStatusPill.vue",
+      "libraryImports": [],
+      "localUi": true
+    },
+    {
+      "path": "src/components/ui/BaseTableBulkActions.vue",
+      "libraryImports": [],
+      "localUi": true
+    },
+    {
+      "path": "src/components/ui/BaseThemeToggle.vue",
+      "libraryImports": [],
+      "localUi": true
+    },
+    {
+      "path": "src/components/ui/BaseViewTabs.vue",
+      "libraryImports": [],
+      "localUi": true
+    },
+    {
+      "path": "src/components/ui/DashboardMetricCard.vue",
+      "libraryImports": [],
+      "localUi": true
+    },
+    {
+      "path": "src/components/ui/DashboardSectionHeading.vue",
+      "libraryImports": [],
+      "localUi": true
+    },
+    {
+      "path": "src/components/ui/DashboardTableToolbar.vue",
+      "libraryImports": [],
+      "localUi": true
+    },
+    {
+      "path": "src/components/WorkScheduleEditor.vue",
+      "libraryImports": [],
+      "localUi": false
+    },
+    {
+      "path": "src/components/WorktimeMatrixPanel.vue",
+      "libraryImports": [],
+      "localUi": false
+    },
+    {
+      "path": "src/views/AccessDeniedView.vue",
+      "libraryImports": [],
+      "localUi": false
+    },
+    {
+      "path": "src/views/CompanyBillingView.vue",
+      "libraryImports": [],
+      "localUi": false
+    },
+    {
+      "path": "src/views/DevelopmentView.vue",
+      "libraryImports": [],
+      "localUi": false
+    },
+    {
+      "path": "src/views/DirectoriesView.vue",
+      "libraryImports": [],
+      "localUi": false
+    },
+    {
+      "path": "src/views/DirectoryHubView.vue",
+      "libraryImports": [],
+      "localUi": false
+    },
+    {
+      "path": "src/views/DocumentsView.vue",
+      "libraryImports": [],
+      "localUi": false
+    },
+    {
+      "path": "src/views/EmployeeDetailView.vue",
+      "libraryImports": [],
+      "localUi": false
+    },
+    {
+      "path": "src/views/EmployeeDevelopmentView.vue",
+      "libraryImports": [],
+      "localUi": false
+    },
+    {
+      "path": "src/views/EmployeesView.vue",
+      "libraryImports": [],
+      "localUi": false
+    },
+    {
+      "path": "src/views/LeavesView.vue",
+      "libraryImports": [],
+      "localUi": false
+    },
+    {
+      "path": "src/views/LoginView.vue",
+      "libraryImports": [],
+      "localUi": false
+    },
+    {
+      "path": "src/views/MyWorkspaceView.vue",
+      "libraryImports": [],
+      "localUi": false
+    },
+    {
+      "path": "src/views/NotFoundView.vue",
+      "libraryImports": [],
+      "localUi": false
+    },
+    {
+      "path": "src/views/OrganizationView.vue",
+      "libraryImports": [],
+      "localUi": false
+    },
+    {
+      "path": "src/views/OverviewView.vue",
+      "libraryImports": [],
+      "localUi": false
+    },
+    {
+      "path": "src/views/PersonnelActionsView.vue",
+      "libraryImports": [],
+      "localUi": false
+    },
+    {
+      "path": "src/views/PlatformAdminView.vue",
+      "libraryImports": [],
+      "localUi": false
+    },
+    {
+      "path": "src/views/public/PublicContentPage.vue",
+      "libraryImports": [],
+      "localUi": false
+    },
+    {
+      "path": "src/views/public/PublicHome.vue",
+      "libraryImports": [],
+      "localUi": false
+    },
+    {
+      "path": "src/views/public/PublicLayout.vue",
+      "libraryImports": [],
+      "localUi": false
+    },
+    {
+      "path": "src/views/public/PublicLegal.vue",
+      "libraryImports": [],
+      "localUi": false
+    },
+    {
+      "path": "src/views/public/PublicLegalIndex.vue",
+      "libraryImports": [],
+      "localUi": false
+    },
+    {
+      "path": "src/views/public/PublicPricing.vue",
+      "libraryImports": [],
+      "localUi": false
+    },
+    {
+      "path": "src/views/public/PublicRegistration.vue",
+      "libraryImports": [],
+      "localUi": false
+    },
+    {
+      "path": "src/views/ReportsView.vue",
+      "libraryImports": [],
+      "localUi": false
+    },
+    {
+      "path": "src/views/ResetPasswordView.vue",
+      "libraryImports": [],
+      "localUi": false
+    },
+    {
+      "path": "src/views/RolesView.vue",
+      "libraryImports": [],
+      "localUi": false
+    },
+    {
+      "path": "src/views/SettingsView.vue",
+      "libraryImports": [],
+      "localUi": false
+    },
+    {
+      "path": "src/views/StaffingView.vue",
+      "libraryImports": [],
+      "localUi": false
+    },
+    {
+      "path": "src/views/TimesheetsView.vue",
+      "libraryImports": [],
+      "localUi": false
+    }
+  ]
+}

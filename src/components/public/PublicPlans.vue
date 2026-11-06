@@ -3,7 +3,8 @@ import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { Check, Minus } from 'lucide-vue-next'
 import { apiRequest } from '../../api/client'
-import { useSaasText, type SaasKey } from '../../i18n/saas'
+import { usePublicSiteText } from '../../i18n/publicSite'
+import type { SaasKey } from '../../i18n/saas'
 type Plan = { id: number; code: string; terms: {
   names: Record<string, string>; descriptions?: Record<string, string>;
   price_minor: number; currency: string; period_months?: number; limits: Record<string, number>;
@@ -12,12 +13,12 @@ const plans = ref<Plan[]>([])
 const loading = ref(true)
 const failed = ref(false)
 const router = useRouter()
-const { tr, locale } = useSaasText()
+const { tr, locale } = usePublicSiteText()
 const labels: Record<string, SaasKey> = {
   employees: 'employees', staffing: 'staffing', vacations: 'vacations', worktime: 'worktime',
   personnel: 'personnel', documents: 'documents', reporting: 'reporting', development: 'development', roles: 'roles',
 }
-function title(p: Plan) { return p.terms.names[locale.value] || p.terms.names.en || p.code }
+function title(p: Plan) { return p.terms.names[locale.value] || p.terms.names[locale.value === 'ka' ? 'ge' : 'en'] || p.terms.names.en || p.code }
 function formatPrice(p: Plan) { return new Intl.NumberFormat(locale.value === 'ka' ? 'ka-GE' : locale.value,
   { style: 'currency', currency: p.terms.currency, maximumFractionDigits: 0 })
   .format(p.terms.price_minor / 100) }
@@ -51,7 +52,7 @@ function choose(plan: Plan) { void router.push({ name: 'public.register', query:
     <div v-else class="saas-plans-grid">
       <article v-for="plan in plans" :key="plan.id" class="saas-plan-card" :data-plan="plan.code">
         <h3>{{ title(plan) }}</h3>
-        <p class="saas-plan-description">{{ plan.terms.descriptions?.[locale] || plan.terms.descriptions?.en }}</p>
+        <p class="saas-plan-description">{{ plan.terms.descriptions?.[locale] || plan.terms.descriptions?.[locale==='ka'?'ge':'en'] || plan.terms.descriptions?.en }}</p>
         <div class="saas-price">{{ formatPrice(plan) }}<small>{{ tr('perMonth') }}</small></div>
         <ul class="saas-plan-limits">
           <li><Check :size="16" />{{ tr('usersLimit') }}: {{ plan.terms.limits.users }}</li>

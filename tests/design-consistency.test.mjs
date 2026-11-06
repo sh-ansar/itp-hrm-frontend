@@ -15,7 +15,7 @@ test('BNT-derived shared tokens remain available', () => {
 test('reusable controls are present and use shared semantic tokens', () => {
   for (const name of controls) {
     const text = readFileSync(new URL('components/ui/' + name, root), 'utf8')
-    assert.match(text, /var\(--color-|var\(--control-height|var\(--radius-|var\(--font-|var\(--space-/, name + ' must use global tokens')
+    assert.match(text, /@itpmining\/vue-basic-components|var\(--color-|var\(--control-height|var\(--radius-|var\(--font-|var\(--space-/, name + ' must use shared UI or global tokens')
   }
 })
 
@@ -53,5 +53,7 @@ test('shared BNT table/button visuals use semantic tokens instead of magic color
     assert.doesNotMatch(style, /#[a-fA-F0-9]{3,8}\b/, 'base controls must not hard-code hex colors')
   }
   assert.match(table, /var\(--color-table-heading\)/)
-  assert.match(button, /var\(--control-height\)/)
+  assert.match(button, /@itpmining\/vue-basic-components/)
+  const sharedCss=readFileSync(new URL('../node_modules/@itpmining/vue-basic-components/dist/shared.css',import.meta.url),'utf8')
+  assert.match(sharedCss,/var\(--itp-ui-button-height\)/)
 })

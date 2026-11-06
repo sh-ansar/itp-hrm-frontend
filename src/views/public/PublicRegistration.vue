@@ -3,8 +3,9 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { MailCheck, LockKeyhole, Building2, CheckCircle2 } from 'lucide-vue-next'
 import { apiRequest, requestJson } from '../../api/client'
-import { useSaasText, type SaasKey } from '../../i18n/saas'
-const { tr, locale } = useSaasText()
+import { usePublicSiteText } from '../../i18n/publicSite'
+import type { SaasKey } from '../../i18n/saas'
+const { tr, locale, serverLocale } = usePublicSiteText()
 const route = useRoute()
 const router = useRouter()
 type LegalRow = { id: number; type: string; locale: string; jurisdiction: string; version: number; title: string }
@@ -39,7 +40,7 @@ async function csrf() {
 }
 async function refreshLegal() {
   const terms = await apiRequest<{ data: LegalRow[]; ready: boolean }>(
-    '/public/legal/required?locale=' + locale.value + '&jurisdiction=' + jurisdiction.value)
+    '/public/legal/required?locale=' + serverLocale.value + '&jurisdiction=' + jurisdiction.value)
   legal.value = terms.data || []
   legalReady.value = terms.ready === true && legal.value.length === 5
   accepted.value = false
@@ -54,7 +55,7 @@ async function setup() {
   finally { checking.value = false }
 }
 onMounted(setup)
-watch([locale, jurisdiction], () => {
+watch([serverLocale, jurisdiction], () => {
   if (step.value !== 'email') { step.value = 'email'; token.value = ''; code.value = '' }
   legalReady.value = false
   void refreshLegal().catch(() => { legalReady.value = false; error.value = tr('failedLoad') })
@@ -65,7 +66,7 @@ async function start() {
   try {
     await csrf()
     await apiRequest('/public/registration/start', {
-      method: 'POST', body: JSON.stringify({ email: email.value.trim(), locale: locale.value, jurisdiction: jurisdiction.value, website: website.value }),
+      method: 'POST', body: JSON.stringify({ email: email.value.trim(), locale: serverLocale.value, jurisdiction: jurisdiction.value, website: website.value }),
     })
     step.value = 'verify'
   } catch { error.value = tr('registrationError') }
@@ -96,7 +97,7 @@ async function complete() {
         company: company.value.trim(), password: password.value,
         password_confirmation: passwordConfirmation.value,
         accepted_legal_ids: legalForLocale.value.map(row => row.id),
-        locale: locale.value, jurisdiction: jurisdiction.value,
+        locale: serverLocale.value, jurisdiction: jurisdiction.value,
         plan_code: selectedPlan.value || null,
       }),
     })
@@ -115,6 +116,7 @@ function back() { error.value = ''; if (step.value === 'verify') step.value = 'e
         <h1>{{ tr('registration') }}</h1><p>{{ step === 'done' ? tr('registrationSuccess') : tr('step2') }}</p>
       </header>
       <p v-if="selectedPlan" class="chosen-plan">{{ tr('plan') }}: {{ selectedPlan }}</p>
+      <p v-if="locale!==serverLocale" class="chosen-plan">{{tr('legalLanguageFallback')}}</p>
       <p v-if="checking" role="status">{{ tr('loading') }}</p>
       <div v-else-if="!enabled" class="register-alert" role="status">{{ tr('unavailableRegistration') }}</div>
       <template v-else-if="!legalReady"><div class="register-alert" role="status">{{ tr('legalPending') }}</div><label class="jurisdiction-choice">{{ tr('jurisdiction') }}<select v-model="jurisdiction"><option value="KZ">{{ tr('countryKZ') }}</option><option value="GE">{{ tr('countryGE') }}</option></select></label></template>

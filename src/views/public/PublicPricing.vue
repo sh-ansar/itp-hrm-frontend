@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import PublicPlans from '../../components/public/PublicPlans.vue'
-import { useSaasText } from '../../i18n/saas'
-const { tr } = useSaasText()
+import { usePublicSiteText } from '../../i18n/publicSite'
+const { tr } = usePublicSiteText()
 </script>
 <template>
   <div class="public-pricing">

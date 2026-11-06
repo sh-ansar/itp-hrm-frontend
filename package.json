@@ -17,7 +17,7 @@
     "vue-router": "^4.5.0",
     "pinia": "^3.0.0",
     "lucide-vue-next": "^0.468.0",
-    "@itpmining/vue-basic-components": "file:vendor/itpmining-vue-basic-components-0.10.0-reserve.3.tgz"
+    "@itpmining/vue-basic-components": "file:vendor/itpmining-vue-basic-components-0.10.0-reserve.4.tgz"
   },
   "devDependencies": {
     "typescript": "~5.9.0",
